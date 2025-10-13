@@ -1,3 +1,17 @@
+# [1.6.0](https://github.com/mttdev382/emilsoftware-utilities/compare/v1.5.0...v1.6.0) (2025-10-02)
+
+
+### Bug Fixes
+
+* aggiunto endpoint per inserimento filtri utente ([cc718d6](https://github.com/mttdev382/emilsoftware-utilities/commit/cc718d6d2bcc2c2065e91d28492f14b5c924716e))
+* gestione unica per inserire e aggiornare i filtri ([2c56a86](https://github.com/mttdev382/emilsoftware-utilities/commit/2c56a8640b0541982e912e3385e4be79dde7f2be))
+* nuovi enpoint per filtri, gestione filtri migliorata, correzzioni interface filtri ([809b8da](https://github.com/mttdev382/emilsoftware-utilities/commit/809b8da56b59e0a84040921f6d98824cfedd4767))
+
+
+### Features
+
+* aggiunte chiamate per TipiFiltro e FiltriUtente ([63a69ff](https://github.com/mttdev382/emilsoftware-utilities/commit/63a69ffa46d3dc26e19566f5d3b6b7a62d1c7b8a))
+
 # [1.5.0-dev.3](https://github.com/mttdev382/emilsoftware-utilities/compare/v1.5.0-dev.2...v1.5.0-dev.3) (2025-10-01)
 
 
