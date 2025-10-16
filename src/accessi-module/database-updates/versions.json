@@ -1,11 +1,23 @@
 {
-    "updatePaths": [
+  "updatePaths": [
+    {
+      "fromVersion": "1.0.0",
+      "toVersion": "1.1.0",
+      "script": "V1.0.0_to_1.1.0.sql",
+      "description": "Aggiunto Tipo filtro postazione e menu MNUVERRFID"
+    },
+    {
+      "fromVersion": "1.1.0",
+      "toVersion": "1.1.1",
+      "script": "V1.1.0_to_1.1.1.sql",
+      "description": "Aggiunto FLG_ENABLED su FILTRI_TIPO"
+    },
         {
-            "fromVersion": "1.0.0",
-            "toVersion": "1.1.0",
-            "script": "V1.0.0_to_1.1.0.sql",
-            "description": "Aggiunto Tipo filtro postazione e menu MNUVERRFID"
-        }
-    ],
-    "latestVersion": "1.1.0"
+      "fromVersion": "1.1.1",
+      "toVersion": "1.1.2",
+      "script": "V1.1.1_to_1.1.2.sql",
+      "description": "Aggiunto aggiunto TIPO FILTRO VETTORE E CODVET"
+    }
+  ],
+  "latestVersion": "1.1.0"
 }

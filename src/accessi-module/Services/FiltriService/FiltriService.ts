@@ -30,7 +30,7 @@ export class FiltriService {
       let params = [];
 
       let getQuery = `SELECT CODUTE AS COD_UTE, PROG AS PROGRESSIVO, NUMREP AS NUM_REP, IDXPERS AS IDX_PERS, CODCLISUPER AS COD_CLI_SUPER, CODAGE AS COD_AGE, CODCLICOL AS COD_CLI_COL,
-        CODCLIENTI AS COD_CLIENTI, TIPFIL AS TIP_FIL, CODDIP AS COD_DIP, IDXPOS AS IDX_POS FROM FILTRI `;
+        CODCLIENTI AS COD_CLIENTI, TIPFIL AS TIP_FIL, CODDIP AS COD_DIP, IDXPOS AS IDX_POS, CODVET AS COD_VET FROM FILTRI `;
 
       if (codUte === undefined) {
         this.logger.log('Nessun utente passato, recupero i filtri di tutti gli utenti...');

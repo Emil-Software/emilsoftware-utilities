@@ -5,7 +5,7 @@ import { RestUtilities } from '../../../Utilities';
 import { AccessiOptions } from '../../AccessiModule';
 import { StatoRegistrazione } from '../../Dtos/StatoRegistrazione';
 import { EmailService } from '../EmailService/EmailService';
-import { FiltriUtente } from '../../Dtos/FiltriUtente';
+import { FILTRI_UTENTE_DB_MAPPING, FiltriUtente } from '../../Dtos/FiltriUtente';
 import { GetUsersResponse, GetUsersResult } from '../../Dtos/GetUsersResponse';
 import { PermissionService } from '../PermissionService/PermissionService';
 import { UserDto } from '../../Dtos';
@@ -165,6 +165,24 @@ export class UserService {
       (results) => results.map(RestUtilities.convertKeysToCamelCase),
     )) as UserDto[];
 
+    const filtriUtente = await this.filtriService.getFiltriUser(utenti[0]?.codiceUtente);
+
+    if (utenti.length <= 0) {
+      return null;
+    }
+
+    if (utenti.length > 0 && filtriUtente.length > 0) {
+      const user = utenti[0];
+      const filtro = filtriUtente[0];
+
+      // Type-safe mapping using type assertion
+      Object.entries(FILTRI_UTENTE_DB_MAPPING).forEach(([key]) => {
+        if (key in filtro) {
+          (user as UserDto)[key] = filtro[key as keyof FiltriUtente];
+        }
+      });
+    }
+      
     return utenti.length > 0 ? utenti[0] : null;
   }
 

@@ -89,6 +89,12 @@ export class FiltriUtente {
   @IsNumber()
   @IsOptional()
   codDip?: number
+
+  @ApiPropertyOptional({
+    description: 'Codice del vettore',
+    example: 12
+  })
+  codVet?: number
 }
 
 export class GetFiltriUtenteResponse extends BaseResponse {
@@ -118,4 +124,5 @@ export const FILTRI_UTENTE_DB_MAPPING = {
   tipFil:       { dbField: 'TIPFIL',      numeric: true  },
   idxPos:       { dbField: 'IDXPOS',      numeric: true  },
   codDip:       { dbField: 'CODDIP',      numeric: true  },
+  codVet:       { dbField: 'CODVET',      numeric: true  },
 } as const;
