@@ -1,3 +1,11 @@
+## [1.6.1-dev.1](https://github.com/Emil-Software/emilsoftware-utilities/compare/v1.6.0...v1.6.1-dev.1) (2025-10-28)
+
+
+### Bug Fixes
+
+* add codVet nei filtri ([204de06](https://github.com/Emil-Software/emilsoftware-utilities/commit/204de067f8e1f3afd03c8044a501e5de666e5ffa))
+* mttd -> emilsoftware ([345a6c4](https://github.com/Emil-Software/emilsoftware-utilities/commit/345a6c4e09e72773e42731be6b18daaa3c8e191c))
+
 # [1.6.0](https://github.com/Emil-Software/emilsoftware-utilities/compare/v1.5.0...v1.6.0) (2025-10-02)
 
 
