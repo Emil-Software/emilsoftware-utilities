@@ -64,7 +64,13 @@ export interface AccessiOptions {
 
 @Global()
 @Module({
-  controllers: [EmailController, AuthController, PermissionController, UserController, FiltriController],
+  controllers: [
+    EmailController,
+    AuthController,
+    PermissionController,
+    UserController,
+    FiltriController,
+  ],
   providers: [AuthService, UserService, EmailService, PermissionService, FiltriService],
   exports: [AuthService, UserService, EmailService, PermissionService, FiltriService],
 })
@@ -81,9 +87,16 @@ export class AccessiModule {
         UserService,
         EmailService,
         PermissionService,
-        FiltriService
+        FiltriService,
       ],
-      exports: ['ACCESSI_OPTIONS', AuthService, UserService, EmailService, PermissionService, FiltriService],
+      exports: [
+        'ACCESSI_OPTIONS',
+        AuthService,
+        UserService,
+        EmailService,
+        PermissionService,
+        FiltriService,
+      ],
     };
   }
 }

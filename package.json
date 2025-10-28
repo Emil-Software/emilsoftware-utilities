@@ -18,14 +18,14 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/mttdev382/emilsoftware-utilities.git"
+    "url": "git+https://github.com/Emil-Software/emilsoftware-utilities.git"
   },
   "author": "",
   "license": "ISC",
   "bugs": {
-    "url": "https://github.com/mttdev382/emilsoftware-utilities/issues"
+    "url": "https://github.com/Emil-Software/emilsoftware-utilities/issues"
   },
-  "homepage": "https://github.com/mttdev382/emilsoftware-utilities#readme",
+  "homepage": "https://github.com/Emil-Software/emilsoftware-utilities#readme",
   "dependencies": {
     "@nestjs/common": "^11.0.11",
     "@nestjs/core": "^11.0.11",
