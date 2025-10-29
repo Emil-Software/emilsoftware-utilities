@@ -1,4 +1,4 @@
-import { Inject, Injectable } from '@nestjs/common';
+import { Inject, Injectable, Res } from '@nestjs/common';
 import { autobind } from '../../../autobind';
 import { Orm } from '../../../Orm';
 import { RestUtilities } from '../../../Utilities';
@@ -21,6 +21,27 @@ export class UserService {
     private readonly permissionService: PermissionService,
     private readonly filtriService: FiltriService,
   ) {}
+
+  async isAdminConfigurator(codiceUtente: number): Promise<boolean> {
+    if (!codiceUtente) {
+      return false;
+    }
+    const query = `SELECT FLGADMINCONFIG AS flag_admin_configurator FROM UTENTI_CONFIG WHERE CODUTE = ?`
+    const result = await Orm.query(this.accessiOptions.databaseOptions,query,[codiceUtente]);
+
+    if (!result || result === 0) {
+      return false;
+    }
+
+    const mapped = result.map(RestUtilities.convertKeysToCamelCase)
+    const flagValue = mapped[0]?.flag_admin_configurator;
+
+    if (typeof flagValue === 'boolean'){
+      return flagValue
+    }
+
+    return flagValue === 1
+  }
 
   async getUsers(
     filters?: { email?: string; codiceUtente?: number },

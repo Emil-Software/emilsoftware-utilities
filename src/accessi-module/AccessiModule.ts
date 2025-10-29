@@ -16,6 +16,8 @@ import { PermissionController } from './Controllers/PermissionController';
 import { UserController } from './Controllers/UserController';
 import { FiltriService } from './Services/FiltriService/FiltriService';
 import { FiltriController } from './Controllers/FiltriController';
+import { ConfiguratorController } from './Controllers/ConfiguratorController';
+import { ConfiguratorService } from './Services/ConfiguratorService/ConfiguratorService';
 
 export interface JwtOptions {
   secret: string;
@@ -70,9 +72,10 @@ export interface AccessiOptions {
     PermissionController,
     UserController,
     FiltriController,
+    ConfiguratorController
   ],
-  providers: [AuthService, UserService, EmailService, PermissionService, FiltriService],
-  exports: [AuthService, UserService, EmailService, PermissionService, FiltriService],
+  providers: [AuthService, UserService, EmailService, PermissionService, FiltriService, ConfiguratorService],
+  exports: [AuthService, UserService, EmailService, PermissionService, FiltriService, ConfiguratorService],
 })
 export class AccessiModule {
   static forRoot(options: AccessiOptions): DynamicModule {
@@ -88,6 +91,7 @@ export class AccessiModule {
         EmailService,
         PermissionService,
         FiltriService,
+        ConfiguratorService
       ],
       exports: [
         'ACCESSI_OPTIONS',
@@ -96,6 +100,7 @@ export class AccessiModule {
         EmailService,
         PermissionService,
         FiltriService,
+        ConfiguratorService
       ],
     };
   }
