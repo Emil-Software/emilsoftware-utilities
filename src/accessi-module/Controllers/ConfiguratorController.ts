@@ -261,14 +261,9 @@ export class ConfiguratorController {
   }
 
   private extractUserCodeFromRequest(req: Request): number {
-    const authHeader = req.headers['authorization'];
-    if (!authHeader) {
-      throw new Error('Authorization header mancante.');
-    }
-
-    const [type, token] = authHeader.split(' ');
-    if (type !== 'Bearer' || !token) {
-      throw new Error('Token di autorizzazione non valido.');
+    const token = this.extractToken(req);
+    if (!token) {
+      throw new Error('Token di autorizzazione non trovato.');
     }
 
     const decoded = jwt.verify(token, this.options.jwtOptions.secret) as jwt.JwtPayload & {
@@ -281,6 +276,53 @@ export class ConfiguratorController {
     }
 
     return codiceUtente;
+  }
+
+  private extractToken(req: Request): string | undefined {
+    const headerCandidates = [
+      req.headers['authorization'],
+      (req.headers as Record<string, unknown>)?.['Authorization'],
+      req.headers['x-access-token'],
+      req.headers['token'],
+    ];
+
+    for (const candidate of headerCandidates) {
+      if (!candidate) continue;
+      const value = Array.isArray(candidate) ? candidate[0] : candidate;
+      if (!value) continue;
+
+      const trimmed = value.trim();
+      if (!trimmed) continue;
+
+      const parts = trimmed.split(' ');
+      if (parts.length >= 2 && /^Bearer$/i.test(parts[0])) {
+        return parts.slice(1).join(' ').trim();
+      }
+
+      if (parts.length === 1) {
+        return parts[0];
+      }
+    }
+
+    const body = req.body as Record<string, unknown> | undefined;
+    const bodyToken = body?.['token'] ?? body?.['jwt'];
+    if (typeof bodyToken === 'string' && bodyToken.trim()) {
+      return bodyToken.trim();
+    }
+
+    const query = req.query as Record<string, unknown> | undefined;
+    const queryToken = query?.['token'];
+    if (typeof queryToken === 'string' && queryToken.trim()) {
+      return queryToken.trim();
+    }
+
+    const cookies = (req as unknown as { cookies?: Record<string, unknown> })?.cookies;
+    const cookieToken = cookies?.['Authorization'] ?? cookies?.['authorization'];
+    if (typeof cookieToken === 'string' && cookieToken.trim()) {
+      return cookieToken.trim();
+    }
+
+    return undefined;
   }
 }
 
