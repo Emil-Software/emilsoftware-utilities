@@ -19,7 +19,7 @@ export class UserService {
     @Inject('ACCESSI_OPTIONS') private readonly accessiOptions: AccessiOptions,
     private readonly emailService: EmailService,
     private readonly permissionService: PermissionService,
-    private readonly filtriService: FiltriService
+    private readonly filtriService: FiltriService,
   ) {}
 
   async getUsers(
@@ -44,6 +44,7 @@ export class UserService {
                 G.CODLINGUA as codice_lingua,
                 G.CELLULARE as cellulare,
                 G.FLGSUPER as flag_super, 
+                G.FLGADMINCONFIG as flag_admin_configurator,
                 G.PAGDEF as pagina_default,
                 G.JSON_METADATA as json_metadata,
                 G.RAGSOCCLI as rag_soc_cli,
@@ -153,7 +154,8 @@ export class UserService {
                 C.FLG2FATT AS flag_due_fattori,
                 C.CODLINGUA AS codice_lingua, 
                 C.CELLULARE AS cellulare, 
-                C.FLGSUPER AS flag_super, 
+                C.FLGSUPER AS flag_super,
+                C.FLGADMINCONFIG AS flag_admin_configurator,
                 C.PAGDEF AS pagina_default,
                 C.RAGSOCCLI AS rag_soc_cli
             FROM UTENTI U
@@ -182,21 +184,20 @@ export class UserService {
         }
       });
     }
-      
+
     return utenti.length > 0 ? utenti[0] : null;
   }
 
-
   // async getUserFilters(codiceUtente: number): Promise<FiltriUtente[]> {
   //   const query = `
-  //           SELECT 
-  //               F.PROG AS progressivo, 
-  //               F.NUMREP AS numero_report, 
+  //           SELECT
+  //               F.PROG AS progressivo,
+  //               F.NUMREP AS numero_report,
   //               F.IDXPERS AS indice_personale,
-  //               F.CODCLISUPER AS codice_cliente_super, 
-  //               F.CODAGE AS cod_age, 
+  //               F.CODCLISUPER AS codice_cliente_super,
+  //               F.CODAGE AS cod_age,
   //               F.CODCLICOL AS codice_cliente_collegato,
-  //               F.CODCLIENTI AS codice_clienti, 
+  //               F.CODCLIENTI AS codice_clienti,
   //               F.TIPFIL AS tipo_filtro,
   //               F.IDXPOS AS idx_postazione
   //           FROM FILTRI F
@@ -301,6 +302,7 @@ export class UserService {
       const optionalFields: [keyof typeof registrationData, string][] = [
         ['cellulare', 'CELLULARE'],
         ['flagSuper', 'FLGSUPER'],
+        ['flagAdminConfigurator', 'FLGADMINCONFIG'],
         ['avatar', 'AVATAR'],
         ['flagDueFattori', 'FLG2FATT'],
         ['paginaDefault', 'PAGDEF'],
@@ -322,7 +324,7 @@ export class UserService {
       await Orm.execute(this.accessiOptions.databaseOptions, queryUtentiConfig, utentiConfigParams);
 
       //await this.insertUserFilters(codiceUtente, registrationData);
-      await this.filtriService.upsertFiltriUtente(codiceUtente, registrationData)
+      await this.filtriService.upsertFiltriUtente(codiceUtente, registrationData);
 
       if (!!registrationData.roles && registrationData.roles.length > 0) {
         await this.permissionService.assignRolesToUser(codiceUtente, registrationData.roles);
@@ -400,6 +402,10 @@ export class UserService {
         utentiConfigUpdates.push('flgsuper = ?');
         utentiConfigParams.push(user.flagSuper);
       }
+      if (user.flagAdminConfigurator !== undefined) {
+        utentiConfigUpdates.push('flgadminconfig = ?');
+        utentiConfigParams.push(user.flagAdminConfigurator);
+      }
       if (user.paginaDefault !== undefined) {
         utentiConfigUpdates.push('pagdef = ?');
         utentiConfigParams.push(user.paginaDefault);
@@ -434,7 +440,7 @@ export class UserService {
       }
 
       //await this.updateUserFilters(codiceUtente, user);
-      await this.filtriService.upsertFiltriUtente(codiceUtente, user)
+      await this.filtriService.upsertFiltriUtente(codiceUtente, user);
     } catch (error) {
       throw error;
     }
