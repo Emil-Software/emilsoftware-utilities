@@ -19,7 +19,7 @@ export class UserService {
     @Inject('ACCESSI_OPTIONS') private readonly accessiOptions: AccessiOptions,
     private readonly emailService: EmailService,
     private readonly permissionService: PermissionService,
-    private readonly filtriService: FiltriService
+    private readonly filtriService: FiltriService,
   ) {}
 
   async getUsers(
@@ -182,21 +182,20 @@ export class UserService {
         }
       });
     }
-      
+
     return utenti.length > 0 ? utenti[0] : null;
   }
 
-
   // async getUserFilters(codiceUtente: number): Promise<FiltriUtente[]> {
   //   const query = `
-  //           SELECT 
-  //               F.PROG AS progressivo, 
-  //               F.NUMREP AS numero_report, 
+  //           SELECT
+  //               F.PROG AS progressivo,
+  //               F.NUMREP AS numero_report,
   //               F.IDXPERS AS indice_personale,
-  //               F.CODCLISUPER AS codice_cliente_super, 
-  //               F.CODAGE AS cod_age, 
+  //               F.CODCLISUPER AS codice_cliente_super,
+  //               F.CODAGE AS cod_age,
   //               F.CODCLICOL AS codice_cliente_collegato,
-  //               F.CODCLIENTI AS codice_clienti, 
+  //               F.CODCLIENTI AS codice_clienti,
   //               F.TIPFIL AS tipo_filtro,
   //               F.IDXPOS AS idx_postazione
   //           FROM FILTRI F
@@ -274,7 +273,7 @@ export class UserService {
     await operation();
   }
 
-  async register(registrationData: RegisterRequest): Promise<string> {
+  async register(registrationData: RegisterRequest): Promise<number> {
     try {
       const existingUser = await Orm.query(
         this.accessiOptions.databaseOptions,
@@ -286,12 +285,23 @@ export class UserService {
         throw new Error('Questa e-mail è già stata utilizzata!');
       }
 
-      const queryUtenti = `INSERT INTO UTENTI (USRNAME, STAREG) VALUES (?,?) RETURNING CODUTE`;
+      const queryUtenti = `INSERT INTO UTENTI (USRNAME, STAREG) VALUES (?,?)`;
       const paramsUtenti = [registrationData.email, StatoRegistrazione.INVIO];
 
-      const codiceUtente = (
-        await Orm.query(this.accessiOptions.databaseOptions, queryUtenti, paramsUtenti)
-      ).CODUTE;
+      await Orm.execute(this.accessiOptions.databaseOptions, queryUtenti, paramsUtenti);
+
+      const codiceUtenteResult = await Orm.query(
+        this.accessiOptions.databaseOptions,
+        'SELECT FIRST 1 CODUTE FROM UTENTI WHERE USRNAME = ? ORDER BY CODUTE DESC',
+        [registrationData.email],
+      );
+
+      const codiceUtente = Number(
+        codiceUtenteResult?.[0]?.CODUTE ?? codiceUtenteResult?.[0]?.codute,
+      );
+      if (!codiceUtente) {
+        throw new Error('Creazione utente non riuscita: impossibile recuperare CODUTE.');
+      }
 
       const utentiConfigFields = ['CODUTE', 'COGNOME', 'NOME'];
       const utentiConfigPlaceholders = ['?', '?', '?'];
@@ -312,7 +322,7 @@ export class UserService {
         if (value !== undefined && value !== null) {
           utentiConfigFields.push(dbField);
           utentiConfigPlaceholders.push('?');
-          utentiConfigParams.push(value);
+          utentiConfigParams.push(Number(value));
         }
       }
 
@@ -322,7 +332,7 @@ export class UserService {
       await Orm.execute(this.accessiOptions.databaseOptions, queryUtentiConfig, utentiConfigParams);
 
       //await this.insertUserFilters(codiceUtente, registrationData);
-      await this.filtriService.upsertFiltriUtente(codiceUtente, registrationData)
+      await this.filtriService.upsertFiltriUtente(codiceUtente, registrationData);
 
       if (!!registrationData.roles && registrationData.roles.length > 0) {
         await this.permissionService.assignRolesToUser(codiceUtente, registrationData.roles);
@@ -434,7 +444,7 @@ export class UserService {
       }
 
       //await this.updateUserFilters(codiceUtente, user);
-      await this.filtriService.upsertFiltriUtente(codiceUtente, user)
+      await this.filtriService.upsertFiltriUtente(codiceUtente, user);
     } catch (error) {
       throw error;
     }
