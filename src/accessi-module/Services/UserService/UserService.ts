@@ -296,7 +296,7 @@ export class UserService {
     await operation();
   }
 
-  async register(registrationData: RegisterRequest): Promise<string> {
+  async register(registrationData: RegisterRequest): Promise<number> {
     try {
       const existingUser = await Orm.query(
         this.accessiOptions.databaseOptions,
@@ -308,12 +308,23 @@ export class UserService {
         throw new Error('Questa e-mail è già stata utilizzata!');
       }
 
-      const queryUtenti = `INSERT INTO UTENTI (USRNAME, STAREG) VALUES (?,?) RETURNING CODUTE`;
+      const queryUtenti = `INSERT INTO UTENTI (USRNAME, STAREG) VALUES (?,?)`;
       const paramsUtenti = [registrationData.email, StatoRegistrazione.INVIO];
 
-      const codiceUtente = (
-        await Orm.query(this.accessiOptions.databaseOptions, queryUtenti, paramsUtenti)
-      ).CODUTE;
+      await Orm.execute(this.accessiOptions.databaseOptions, queryUtenti, paramsUtenti);
+
+      const codiceUtenteResult = await Orm.query(
+        this.accessiOptions.databaseOptions,
+        'SELECT FIRST 1 CODUTE FROM UTENTI WHERE USRNAME = ? ORDER BY CODUTE DESC',
+        [registrationData.email],
+      );
+
+      const codiceUtente = Number(
+        codiceUtenteResult?.[0]?.CODUTE ?? codiceUtenteResult?.[0]?.codute,
+      );
+      if (!codiceUtente) {
+        throw new Error('Creazione utente non riuscita: impossibile recuperare CODUTE.');
+      }
 
       const utentiConfigFields = ['CODUTE', 'COGNOME', 'NOME'];
       const utentiConfigPlaceholders = ['?', '?', '?'];
@@ -335,7 +346,7 @@ export class UserService {
         if (value !== undefined && value !== null) {
           utentiConfigFields.push(dbField);
           utentiConfigPlaceholders.push('?');
-          utentiConfigParams.push(value);
+          utentiConfigParams.push(Number(value));
         }
       }
 

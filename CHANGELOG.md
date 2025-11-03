@@ -1,3 +1,10 @@
+## [1.6.1-dev.2](https://github.com/Emil-Software/emilsoftware-utilities/compare/v1.6.1-dev.1...v1.6.1-dev.2) (2025-10-31)
+
+
+### Bug Fixes
+
+* returning ([c0518e9](https://github.com/Emil-Software/emilsoftware-utilities/commit/c0518e973e8ada83445c89cb73ad565cdeea3a34))
+
 ## [1.6.1-dev.1](https://github.com/Emil-Software/emilsoftware-utilities/compare/v1.6.0...v1.6.1-dev.1) (2025-10-28)
 
 

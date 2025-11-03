@@ -42,12 +42,18 @@ export class PermissionService {
 
         // creazione nuovo ruolo
         if (!codiceRuolo) {
-            let createRoleQuery = `INSERT INTO RUOLI (DESRUO) VALUES (?) RETURNING CODRUO`;
-            let result = await Orm.query(this.accessiOptions.databaseOptions, createRoleQuery, [role.descrizioneRuolo]);
+            const createRoleQuery = `INSERT INTO RUOLI (DESRUO) VALUES (?)`;
+            await Orm.execute(this.accessiOptions.databaseOptions, createRoleQuery, [role.descrizioneRuolo]);
 
-            codiceRuolo = result[0].CODRUO;
-
-
+            const createdRoleResult = await Orm.query(
+                this.accessiOptions.databaseOptions,
+                'SELECT FIRST 1 CODRUO FROM RUOLI WHERE DESRUO = ? ORDER BY CODRUO DESC',
+                [role.descrizioneRuolo]
+            );
+            codiceRuolo = createdRoleResult?.[0]?.CODRUO?.toString() ?? createdRoleResult?.[0]?.codruo?.toString();
+            if (!codiceRuolo) {
+                throw new Error('Creazione ruolo non riuscita: impossibile recuperare CODRUO.');
+            }
         } else
         // aggiornamento ruolo esistente
         {
@@ -357,3 +363,5 @@ export class PermissionService {
 
 
 }
+
+
