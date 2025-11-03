@@ -26,21 +26,21 @@ export class UserService {
     if (!codiceUtente) {
       return false;
     }
-    const query = `SELECT FLGADMINCONFIG AS flag_admin_configurator FROM UTENTI_CONFIG WHERE CODUTE = ?`
-    const result = await Orm.query(this.accessiOptions.databaseOptions,query,[codiceUtente]);
+    const query = `SELECT FLGADMINCONFIG AS flag_admin_configurator FROM UTENTI_CONFIG WHERE CODUTE = ?`;
+    const result = await Orm.query(this.accessiOptions.databaseOptions, query, [codiceUtente]);
 
     if (!result || result === 0) {
       return false;
     }
 
-    const mapped = result.map(RestUtilities.convertKeysToCamelCase)
+    const mapped = result.map(RestUtilities.convertKeysToCamelCase);
     const flagValue = mapped[0]?.flag_admin_configurator;
 
-    if (typeof flagValue === 'boolean'){
-      return flagValue
+    if (typeof flagValue === 'boolean') {
+      return flagValue;
     }
 
-    return flagValue === 1
+    return flagValue === 1;
   }
 
   async getUsers(

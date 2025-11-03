@@ -1,4 +1,4 @@
-import { ApiProperty } from "@nestjs/swagger";
+import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
 import { BaseResponse } from "./BaseResponse";
 import { IsArray, ValidateNested } from "class-validator";
 import { Type } from "class-transformer";
@@ -27,6 +27,13 @@ export class GroupWithMenusEntity {
         example: 1
     })
     ordineGruppo: number;
+
+    @ApiPropertyOptional({
+        description: "Flag che indica se il gruppo e abilitato.",
+        type: Boolean,
+        example: true
+    })
+    enabled?: boolean;
 
     @ApiProperty({
         description: "Lista dei menù associati al gruppo.",
