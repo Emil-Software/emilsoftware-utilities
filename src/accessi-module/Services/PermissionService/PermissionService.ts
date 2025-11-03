@@ -103,13 +103,19 @@ export class PermissionService {
                 });
             }
 
-            if (codiceMenu) {
-                ruoliMap.get(codiceRuolo)!.menu.push({
-                    codiceMenu: codiceMenu.trim(),
-                    tipoAbilitazione,
-                    descrizioneMenu: descrizioneMenu?.trim()
-                });
+            const abilitationValue = typeof tipoAbilitazione === 'number'
+                ? tipoAbilitazione
+                : Number.parseInt(`${tipoAbilitazione ?? ''}`, 10);
+
+            if (!codiceMenu || Number.isNaN(abilitationValue) || abilitationValue <= TipoAbilitazione.NESSUNA) {
+                continue;
             }
+
+            ruoliMap.get(codiceRuolo)!.menu.push({
+                codiceMenu: codiceMenu.trim(),
+                tipoAbilitazione: abilitationValue as TipoAbilitazione,
+                descrizioneMenu: descrizioneMenu?.trim()
+            });
         }
 
         return Array.from(ruoliMap.values());
@@ -198,7 +204,11 @@ export class PermissionService {
     }
 
 
-    public async getGroupsWithMenus(): Promise<GroupWithMenusEntity[]> {
+    public async getGroupsWithMenus(includeDisabled = false): Promise<GroupWithMenusEntity[]> {
+        const filtersClause = includeDisabled
+            ? ''
+            : 'WHERE M.FLGENABLED = 1 AND (G.FLGENABLED IS NULL OR G.FLGENABLED = 1)';
+
         const query = `
                 SELECT
                     M.CODMNU AS codice_menu,
@@ -209,39 +219,67 @@ export class PermissionService {
                     M.CODTIP AS tipo,
                     M.PAGINA AS pagina,
                     G.ORDINE AS ordine_gruppo,
-                    M.ORDINE as ordine_menu
+                    M.ORDINE as ordine_menu,
+                    M.FLGENABLED AS menu_enabled,
+                    G.FLGENABLED AS group_enabled
                 FROM MENU M
                 LEFT JOIN MENU_GRP G ON M.CODGRP = G.CODGRP
-                WHERE M.FLGENABLED = 1
+                ${filtersClause}
                 ORDER BY G.CODGRP, M.CODMNU
             `;
 
         const result = await Orm.query(this.accessiOptions.databaseOptions, query, []);
 
-        // Process the result to group menus by their respective groups
-        const groupMap = new Map<string, GroupWithMenusEntity>();
+        const groupMap = new Map<
+            string,
+            GroupWithMenusEntity & { menus: (MenuEntity & { enabled?: boolean })[] }
+        >();
 
         result.forEach(row => {
-            const menu = RestUtilities.convertKeysToCamelCase(row) as MenuEntity;
-            const groupKey = menu.codiceGruppo;
+            const converted = RestUtilities.convertKeysToCamelCase(row) as MenuEntity & {
+                menuEnabled?: number | boolean;
+                groupEnabled?: number | boolean;
+            };
 
-            if (!groupMap.has(groupKey)) {
-                groupMap.set(groupKey, {
-                    codiceGruppo: menu.codiceGruppo,
-                    descrizioneGruppo: menu.descrizioneGruppo,
-                    ordineGruppo: menu.ordineGruppo,
-                    menus: []
+            const { menuEnabled, groupEnabled, ...menuBase } = converted as any;
+            const normalizedGroupKey = menuBase.codiceGruppo ?? '__UNGROUPED__';
+            const groupEnabledFlag =
+                groupEnabled === undefined ? true : Number(groupEnabled) === 1 || groupEnabled === true;
+            const menuEnabledFlag =
+                menuEnabled === undefined ? true : Number(menuEnabled) === 1 || menuEnabled === true;
+
+            if (!groupMap.has(normalizedGroupKey)) {
+                groupMap.set(normalizedGroupKey, {
+                    codiceGruppo: menuBase.codiceGruppo ?? normalizedGroupKey,
+                    descrizioneGruppo: menuBase.descrizioneGruppo,
+                    ordineGruppo: menuBase.ordineGruppo,
+                    enabled: groupEnabledFlag,
+                    menus: [],
                 });
             }
 
-
-            groupMap.get(groupKey).menus.push(menu);
-            groupMap.get(groupKey).menus = groupMap.get(groupKey).menus.sort((a, b) => a.ordineMenu - b.ordineMenu);
+            if (menuBase.codiceMenu) {
+                groupMap.get(normalizedGroupKey)!.menus.push({
+                    ...menuBase,
+                    enabled: menuEnabledFlag,
+                });
+            }
         });
 
-        let groupsArray = Array.from(groupMap.values()).sort((a, b) => a.ordineGruppo - b.ordineGruppo);
-        return groupsArray;
+        const groupsArray = Array.from(groupMap.values())
+            .map(group => ({
+                ...group,
+                menus: (group.menus ?? []).sort(
+                    (a, b) =>
+                        (a.ordineMenu ?? Number.MAX_SAFE_INTEGER) - (b.ordineMenu ?? Number.MAX_SAFE_INTEGER),
+                ),
+            }))
+            .sort(
+                (a, b) =>
+                    (a.ordineGruppo ?? Number.MAX_SAFE_INTEGER) - (b.ordineGruppo ?? Number.MAX_SAFE_INTEGER),
+            );
 
+        return groupsArray;
     }
 
 

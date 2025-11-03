@@ -30,6 +30,13 @@ export class RegisterRequest extends OmitType(FiltriUtente, ['codUte'] as const)
   @ApiPropertyOptional({ description: "Flag superutente.", example: false })
   flagSuper?: boolean;
 
+  
+  @ApiPropertyOptional({
+    description: "Flag che indica se l'utente è configuratore",
+    example: false
+  })
+  flagAdminConfigurator?: boolean;
+
   @ApiPropertyOptional({
     description: "Ruoli assegnati all'utente.",
     example: ["admin", "editor"],

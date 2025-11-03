@@ -1,5 +1,5 @@
-import { Body, Controller, Delete, Get, HttpStatus, Inject, Param, Post, Put, Res } from '@nestjs/common';
-import { ApiBody, ApiInternalServerErrorResponse, ApiOkResponse, ApiOperation, ApiParam, ApiResponse, ApiTags } from '@nestjs/swagger';
+import { Body, Controller, Delete, Get, HttpStatus, Inject, Param, Post, Put, Query, Res } from '@nestjs/common';
+import { ApiBody, ApiInternalServerErrorResponse, ApiOkResponse, ApiOperation, ApiParam, ApiQuery, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { Response } from 'express';
 import { RestUtilities } from '../../Utilities';
 import { AccessiOptions } from '../AccessiModule';
@@ -222,10 +222,20 @@ export class PermissionController {
     @ApiOkResponse({ description: 'Elenco gruppi con relativi menù', type: GetGroupsWithMenusResponse })
     @ApiResponse({ status: 200, description: "Lista dei menù recuperata con successo" })
     @ApiResponse({ status: 500, description: "Errore interno del server" })
+    @ApiQuery({
+        name: 'includeDisabled',
+        required: false,
+        type: Boolean,
+        description: 'Quando true ritorna anche i menu e gruppi disabilitati.'
+    })
     @Get('groups-with-menus')
-    async getGroupsWithMenus(@Res() res: Response) {
+    async getGroupsWithMenus(@Query('includeDisabled') includeDisabled: string, @Res() res: Response) {
         try {
-            const menus = await this.permissionService.getGroupsWithMenus();
+            const includeDisabledFlag = typeof includeDisabled === 'string'
+                ? ['true', '1', 'yes'].includes(includeDisabled.toLowerCase())
+                : false;
+
+            const menus = await this.permissionService.getGroupsWithMenus(includeDisabledFlag);
             return RestUtilities.sendBaseResponse(res, menus);
         } catch (error) {
             return RestUtilities.sendErrorMessage(res, error, PermissionController.name);

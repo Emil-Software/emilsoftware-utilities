@@ -1,4 +1,4 @@
-import { Inject, Injectable } from '@nestjs/common';
+import { Inject, Injectable, Res } from '@nestjs/common';
 import { autobind } from '../../../autobind';
 import { Orm } from '../../../Orm';
 import { RestUtilities } from '../../../Utilities';
@@ -22,6 +22,27 @@ export class UserService {
     private readonly filtriService: FiltriService,
   ) {}
 
+  async isAdminConfigurator(codiceUtente: number): Promise<boolean> {
+    if (!codiceUtente) {
+      return false;
+    }
+    const query = `SELECT FLGADMINCONFIG AS flag_admin_configurator FROM UTENTI_CONFIG WHERE CODUTE = ?`;
+    const result = await Orm.query(this.accessiOptions.databaseOptions, query, [codiceUtente]);
+
+    if (!result || result === 0) {
+      return false;
+    }
+
+    const mapped = result.map(RestUtilities.convertKeysToCamelCase);
+    const flagValue = mapped[0]?.flag_admin_configurator;
+
+    if (typeof flagValue === 'boolean') {
+      return flagValue;
+    }
+
+    return flagValue === 1;
+  }
+
   async getUsers(
     filters?: { email?: string; codiceUtente?: number },
     options?: { includeExtensionFields: boolean; includeGrants: boolean },
@@ -44,6 +65,7 @@ export class UserService {
                 G.CODLINGUA as codice_lingua,
                 G.CELLULARE as cellulare,
                 G.FLGSUPER as flag_super, 
+                G.FLGADMINCONFIG as flag_admin_configurator,
                 G.PAGDEF as pagina_default,
                 G.JSON_METADATA as json_metadata,
                 G.RAGSOCCLI as rag_soc_cli,
@@ -153,7 +175,8 @@ export class UserService {
                 C.FLG2FATT AS flag_due_fattori,
                 C.CODLINGUA AS codice_lingua, 
                 C.CELLULARE AS cellulare, 
-                C.FLGSUPER AS flag_super, 
+                C.FLGSUPER AS flag_super,
+                C.FLGADMINCONFIG AS flag_admin_configurator,
                 C.PAGDEF AS pagina_default,
                 C.RAGSOCCLI AS rag_soc_cli
             FROM UTENTI U
@@ -311,6 +334,7 @@ export class UserService {
       const optionalFields: [keyof typeof registrationData, string][] = [
         ['cellulare', 'CELLULARE'],
         ['flagSuper', 'FLGSUPER'],
+        ['flagAdminConfigurator', 'FLGADMINCONFIG'],
         ['avatar', 'AVATAR'],
         ['flagDueFattori', 'FLG2FATT'],
         ['paginaDefault', 'PAGDEF'],
@@ -409,6 +433,10 @@ export class UserService {
       if (user.flagSuper !== undefined) {
         utentiConfigUpdates.push('flgsuper = ?');
         utentiConfigParams.push(user.flagSuper);
+      }
+      if (user.flagAdminConfigurator !== undefined) {
+        utentiConfigUpdates.push('flgadminconfig = ?');
+        utentiConfigParams.push(user.flagAdminConfigurator);
       }
       if (user.paginaDefault !== undefined) {
         utentiConfigUpdates.push('pagdef = ?');

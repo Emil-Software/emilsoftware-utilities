@@ -88,6 +88,12 @@ export class UserDto extends OmitType(FiltriUtente, ['codUte'] as const)  {
   flagSuper?: boolean;
 
   @ApiPropertyOptional({
+    description: "Flag che indica se l'utente è configuratore",
+    example: false
+  })
+  flagAdminConfigurator?: boolean;
+
+  @ApiPropertyOptional({
     description: "Pagina di default dell'utente all'accesso.",
     example: '/dashboard',
   })
