@@ -1,3 +1,10 @@
+## [1.6.1-dev.3](https://github.com/Emil-Software/emilsoftware-utilities/compare/v1.6.1-dev.2...v1.6.1-dev.3) (2025-11-03)
+
+
+### Bug Fixes
+
+* jwt troppo grande per utilizzarlo a backend, gestione menu con possibilità di abilitare o meni ([2a6e3a8](https://github.com/Emil-Software/emilsoftware-utilities/commit/2a6e3a8e5bfa619c98c65aa04dfca3201dd7c64b))
+
 ## [1.6.1-dev.2](https://github.com/Emil-Software/emilsoftware-utilities/compare/v1.6.1-dev.1...v1.6.1-dev.2) (2025-10-31)
 
 
