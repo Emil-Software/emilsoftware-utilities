@@ -39,9 +39,9 @@ export class RegisterRequest extends OmitType(FiltriUtente, ['codUte'] as const)
 
   @ApiPropertyOptional({
     description: "Ruoli assegnati all'utente.",
-    example: ["admin", "editor"],
+    example: [1, 2],
   })
-  roles?: string[];
+  roles?: number[];
 
   @ApiPropertyOptional({
     description: "Permessi assegnati all'utente.",

@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, HttpStatus, Inject, Param, Post, Put, Query, Res } from '@nestjs/common';
+import { Body, Controller, Delete, Get, HttpStatus, Inject, Param, ParseIntPipe, Post, Put, Query, Res } from '@nestjs/common';
 import { ApiBody, ApiInternalServerErrorResponse, ApiOkResponse, ApiOperation, ApiParam, ApiQuery, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { Response } from 'express';
 import { RestUtilities } from '../../Utilities';
@@ -62,7 +62,8 @@ export class PermissionController {
         name: 'codiceRuolo',
         description: "Codice identificativo del ruolo da aggiornare",
         required: true,
-        example: "ROLE_ADMIN"
+        example: 101,
+        type: Number
     })
     @ApiBody({
         description: "Dati aggiornati del ruolo (escluso il codice ruolo, che è nel path)",
@@ -73,12 +74,12 @@ export class PermissionController {
     @ApiResponse({ status: 500, description: "Errore interno del server" })
     @Put('update-role/:codiceRuolo')
     async updateRole(
-        @Param('codiceRuolo') codiceRuolo: string,
+        @Param('codiceRuolo', ParseIntPipe) codiceRuolo: number,
         @Body() role: Role,
         @Res() res: Response
     ) {
         try {
-            if (!codiceRuolo) throw new Error("Il codice del ruolo è obbligatorio.");
+            if (Number.isNaN(codiceRuolo)) throw new Error("Il codice del ruolo è obbligatorio.");
             if (!role.descrizioneRuolo) throw new Error("La descrizione del ruolo non può essere vuota.");
             if (!role.menu || role.menu.length === 0) throw new Error("Il ruolo deve avere almeno un menù.");
 
@@ -118,7 +119,7 @@ export class PermissionController {
         name: 'codiceUtente',
         description: 'Codice identificativo dell\'utente a cui assegnare i ruoli',
         required: true,
-        example: 'USR123'
+        example: 22
     })
     @ApiBody({
         type: AssignRolesToUserRequest,
@@ -186,15 +187,16 @@ export class PermissionController {
         name: 'codiceRuolo',
         description: "Codice identificativo del ruolo da eliminare",
         required: true,
-        example: 382
+        example: 382,
+        type: Number
     })
     @ApiResponse({ status: 200, description: "Ruolo eliminato con successo" })
     @ApiResponse({ status: 400, description: "Errore nei parametri della richiesta" })
     @ApiResponse({ status: 500, description: "Errore interno del server" })
     @Delete('delete-role/:codiceRuolo')
-    async deleteRole(@Param('codiceRuolo') codiceRuolo: number, @Res() res: Response) {
+    async deleteRole(@Param('codiceRuolo', ParseIntPipe) codiceRuolo: number, @Res() res: Response) {
         try {
-            if (!codiceRuolo) throw new Error("Il codice del ruolo è obbligatorio.");
+            if (Number.isNaN(codiceRuolo)) throw new Error("Il codice del ruolo è obbligatorio.");
 
             await this.permissionService.deleteRole(codiceRuolo);
             return RestUtilities.sendOKMessage(res, `Il ruolo ${codiceRuolo} è stato eliminato con successo.`);
