@@ -1,3 +1,10 @@
+## [1.6.1-dev.4](https://github.com/Emil-Software/emilsoftware-utilities/compare/v1.6.1-dev.3...v1.6.1-dev.4) (2025-11-04)
+
+
+### Bug Fixes
+
+* registrazione campi opzionali ([3b7cf62](https://github.com/Emil-Software/emilsoftware-utilities/commit/3b7cf62159648c5c850e62e3e68f2e1c94c25110))
+
 ## [1.6.1-dev.3](https://github.com/Emil-Software/emilsoftware-utilities/compare/v1.6.1-dev.2...v1.6.1-dev.3) (2025-11-03)
 
 
