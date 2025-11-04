@@ -1,3 +1,10 @@
+## [1.6.1-dev.5](https://github.com/Emil-Software/emilsoftware-utilities/compare/v1.6.1-dev.4...v1.6.1-dev.5) (2025-11-04)
+
+
+### Bug Fixes
+
+* gestione ruoli ([fb3daf9](https://github.com/Emil-Software/emilsoftware-utilities/commit/fb3daf93e26fb0b6c0b42f4180b23efd3dce30ea))
+
 ## [1.6.1-dev.4](https://github.com/Emil-Software/emilsoftware-utilities/compare/v1.6.1-dev.3...v1.6.1-dev.4) (2025-11-04)
 
 
