@@ -12,6 +12,12 @@ import { UserDto } from '../../Dtos';
 import { RegisterRequest } from '../../Dtos/RegisterRequest';
 import { FiltriService } from '../FiltriService/FiltriService';
 
+interface OptionalField<T> {
+  key: keyof RegisterRequest;
+  dbField: string;
+  transform?: (value: any) => T;
+}
+
 @autobind
 @Injectable()
 export class UserService {
@@ -331,22 +337,61 @@ export class UserService {
       const utentiConfigParams = [codiceUtente, registrationData.cognome, registrationData.nome];
 
       // Mapping dei campi opzionali
-      const optionalFields: [keyof typeof registrationData, string][] = [
-        ['cellulare', 'CELLULARE'],
-        ['flagSuper', 'FLGSUPER'],
-        ['flagAdminConfigurator', 'FLGADMINCONFIG'],
-        ['avatar', 'AVATAR'],
-        ['flagDueFattori', 'FLG2FATT'],
-        ['paginaDefault', 'PAGDEF'],
-        ['ragSocCli', 'RAGSOCCLI'],
+      // const optionalFields: [keyof typeof registrationData, string][] = [
+      //   ['cellulare', 'CELLULARE'],
+      //   ['flagSuper', 'FLGSUPER'],
+      //   ['flagAdminConfigurator', 'FLGADMINCONFIG'],
+      //   ['avatar', 'AVATAR'],
+      //   ['flagDueFattori', 'FLG2FATT'],
+      //   ['paginaDefault', 'PAGDEF'],
+      //   ['ragSocCli', 'RAGSOCCLI'],
+      // ];
+
+      const optionalFields: OptionalField<any>[] = [
+        {
+          key: 'cellulare',
+          dbField: 'CELLULARE',
+          transform: (v) => String(v),
+        },
+        {
+          key: 'flagSuper',
+          dbField: 'FLGSUPER',
+          transform: (v) => (v ? 1 : 0),
+        },
+        {
+          key: 'flagAdminConfigurator',
+          dbField: 'FLGADMINCONFIG',
+          transform: (v) => (v ? 1 : 0),
+        },
+        {
+          key: 'avatar',
+          dbField: 'AVATAR',
+          transform: (v) => String(v),
+        },
+        {
+          key: 'flagDueFattori',
+          dbField: 'FLG2FATT',
+          transform: (v) => (v ? 1 : 0),
+        },
+        {
+          key: 'paginaDefault',
+          dbField: 'PAGDEF',
+          transform: (v) => String(v),
+        },
+        {
+          key: 'ragSocCli',
+          dbField: 'RAGSOCCLI',
+          transform: (v) => String(v),
+        },
       ];
 
-      for (const [key, dbField] of optionalFields) {
-        const value = registrationData[key];
+
+      for (const field of optionalFields) {
+        const value = registrationData[field.key];
         if (value !== undefined && value !== null) {
-          utentiConfigFields.push(dbField);
+          utentiConfigFields.push(field.dbField);
           utentiConfigPlaceholders.push('?');
-          utentiConfigParams.push(Number(value));
+          utentiConfigParams.push(field.transform ? field.transform(value) : value);
         }
       }
 
