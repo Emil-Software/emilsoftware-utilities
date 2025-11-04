@@ -15,3 +15,5 @@ export * from "./TipoAbilitazione";
 export * from "./TokenResult";
 export * from "./UserDto";
 
+export * from "./RuoliMenu"
+

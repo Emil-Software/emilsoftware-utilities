@@ -38,10 +38,10 @@ export class PermissionService {
         await Orm.execute(this.accessiOptions.databaseOptions, query, [codiceUtente]);
     }
 
-    public async updateOrInsertRole(role: Role, codiceRuolo: string = null): Promise<void> {
+    public async updateOrInsertRole(role: Role, codiceRuolo: number | null = null): Promise<void> {
 
         // creazione nuovo ruolo
-        if (!codiceRuolo) {
+        if (codiceRuolo == null) {
             const createRoleQuery = `INSERT INTO RUOLI (DESRUO) VALUES (?)`;
             await Orm.execute(this.accessiOptions.databaseOptions, createRoleQuery, [role.descrizioneRuolo]);
 
@@ -50,10 +50,14 @@ export class PermissionService {
                 'SELECT FIRST 1 CODRUO FROM RUOLI WHERE DESRUO = ? ORDER BY CODRUO DESC',
                 [role.descrizioneRuolo]
             );
-            codiceRuolo = createdRoleResult?.[0]?.CODRUO?.toString() ?? createdRoleResult?.[0]?.codruo?.toString();
-            if (!codiceRuolo) {
+            const rawCodiceRuolo = createdRoleResult?.[0]?.CODRUO ?? createdRoleResult?.[0]?.codruo;
+            const parsedCodiceRuolo = typeof rawCodiceRuolo === 'number'
+                ? rawCodiceRuolo
+                : Number.parseInt(`${rawCodiceRuolo ?? ''}`, 10);
+            if (Number.isNaN(parsedCodiceRuolo)) {
                 throw new Error('Creazione ruolo non riuscita: impossibile recuperare CODRUO.');
             }
+            codiceRuolo = parsedCodiceRuolo;
         } else
         // aggiornamento ruolo esistente
         {
@@ -63,6 +67,10 @@ export class PermissionService {
 
             let deleteRoleMenuQuery = `DELETE FROM RUOLI_MNU WHERE CODRUO = ?`;
             await Orm.query(this.accessiOptions.databaseOptions, deleteRoleMenuQuery, [codiceRuolo]);
+        }
+
+        if (codiceRuolo === null) {
+            throw new Error('Operazione ruolo non riuscita: codice ruolo non valorizzato.');
         }
 
         let createRoleMenuQuery = `INSERT INTO RUOLI_MNU (CODRUO, CODMNU, TIPABI) VALUES (?, ?, ?)`;
@@ -112,9 +120,9 @@ export class PermissionService {
             }
 
             ruoliMap.get(codiceRuolo)!.menu.push({
+                codiceRuolo: codiceRuolo,
                 codiceMenu: codiceMenu.trim(),
                 tipoAbilitazione: abilitationValue as TipoAbilitazione,
-                descrizioneMenu: descrizioneMenu?.trim()
             });
         }
 
@@ -122,7 +130,7 @@ export class PermissionService {
     }
 
 
-    public async assignRolesToUser(codiceUtente: number, roles: string[]): Promise<void> {
+    public async assignRolesToUser(codiceUtente: number, roles: number[]): Promise<void> {
 
         const userExistsQuery = `SELECT COUNT(*) FROM UTENTI WHERE CODUTE = ?`;
         let result = await Orm.query(this.accessiOptions.databaseOptions, userExistsQuery, [codiceUtente]);
@@ -366,9 +374,9 @@ export class PermissionService {
 
                 if (codiceMenu) {
                     ruoliMap.get(codiceRuolo)!.menu.push({
+                        codiceRuolo: codiceRuolo,
                         codiceMenu: codiceMenu.trim(),
                         tipoAbilitazione,
-                        descrizioneMenu: descrizioneMenu?.trim(),
                     });
                 }
             }

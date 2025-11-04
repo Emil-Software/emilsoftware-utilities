@@ -1,9 +1,10 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { AbilitazioneMenu } from './AbilitazioneMenu';
+import { RuoliMenu } from './RuoliMenu';
 
 export class Role {
-    @ApiPropertyOptional({ description: 'Codice univoco del ruolo', required: false })
-    codiceRuolo?: string;
+    @ApiPropertyOptional({ description: 'Codice univoco del ruolo', required: false, type: Number, example: 1 })
+    codiceRuolo?: number;
 
     @ApiProperty({ description: 'Descrizione del ruolo' })
     descrizioneRuolo: string;
@@ -11,8 +12,8 @@ export class Role {
 
     @ApiProperty({
         description: 'Lista di menù associati al ruolo',
-        type: [AbilitazioneMenu]
+        type: [RuoliMenu]
     })
-    menu: AbilitazioneMenu[];
+    menu: RuoliMenu[];
 }
 
