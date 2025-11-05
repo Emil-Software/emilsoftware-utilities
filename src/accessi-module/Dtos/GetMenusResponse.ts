@@ -92,6 +92,13 @@ export class MenuEntity {
         example: 1
     })
     tipoAbilitazione?: number;
+
+    @ApiPropertyOptional({
+        description: "Nota informativa associata al menu.",
+        type: String,
+        example: "Visibile solo agli amministratori"
+    })
+    note?: string | null;
 }
 
 export class GetMenusResponse extends BaseResponse {

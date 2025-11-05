@@ -68,4 +68,12 @@ export class AbilitazioneMenu {
   @IsString()
   @IsOptional()
   pagina?: string | null;
+
+  @ApiPropertyOptional({
+    description: 'Nota informativa associata al menu',
+    example: 'Visibile solo dopo abilitazione'
+  })
+  @IsString()
+  @IsOptional()
+  note?: string | null;
 }

@@ -88,6 +88,7 @@ export class PermissionService {
                     R.DESRUO AS descrizione_ruolo, 
                     M.CODMNU AS codice_menu, 
                     M.DESMNU AS descrizione_menu,
+                    M.NOTE AS note,
                     RM.TIPABI AS tipo_abilitazione
                 FROM RUOLI R
                 LEFT JOIN RUOLI_MNU RM ON R.CODRUO = RM.CODRUO
@@ -200,7 +201,8 @@ export class PermissionService {
                     G.DESGRP AS descrizioneGruppo,
                     M.ICON AS icona,
                     M.CODTIP AS tipo,
-                    M.PAGINA AS pagina
+                    M.PAGINA AS pagina,
+                    M.NOTE AS note
                 FROM MENU M
                 LEFT JOIN MENU_GRP G ON M.CODGRP = G.CODGRP
                 WHERE M.FLGENABLED = 1
@@ -226,6 +228,7 @@ export class PermissionService {
                     M.ICON AS icona,
                     M.CODTIP AS tipo,
                     M.PAGINA AS pagina,
+                    M.NOTE AS note,
                     G.ORDINE AS ordine_gruppo,
                     M.ORDINE as ordine_menu,
                     M.FLGENABLED AS menu_enabled,
@@ -317,7 +320,8 @@ export class PermissionService {
                         G.CODGRP AS codice_gruppo,
                         M.ICON AS icona,
                         M.CODTIP AS tipo,
-                        M.PAGINA AS pagina
+                        M.PAGINA AS pagina,
+                        M.NOTE AS note
                     FROM MENU M
                     INNER JOIN MENU_GRP G ON G.CODGRP = M.CODGRP
                     WHERE M.FLGENABLED = 1 AND G.FLGENABLED = 1
@@ -334,7 +338,8 @@ export class PermissionService {
                         G.CODGRP AS codice_gruppo,
                         M.ICON AS icona,
                         M.CODTIP AS tipo,
-                        M.PAGINA AS pagina
+                        M.PAGINA AS pagina,
+                        M.NOTE AS note
                     FROM ABILITAZIONI A
                     INNER JOIN MENU M ON A.CODMNU = M.CODMNU
                     INNER JOIN MENU_GRP G ON G.CODGRP = M.CODGRP
@@ -349,7 +354,8 @@ export class PermissionService {
                         R.DESRUO AS descrizione_ruolo,
                         RM.CODMNU AS codice_menu,
                         RM.TIPABI AS tipo_abilitazione,
-                        M.DESMNU AS descrizione_menu
+                        M.DESMNU AS descrizione_menu,
+                        M.NOTE AS note
                     FROM UTENTI_RUOLI RU
                     INNER JOIN RUOLI R ON RU.CODRUO = R.CODRUO
                     INNER JOIN RUOLI_MNU RM ON R.CODRUO = RM.CODRUO
