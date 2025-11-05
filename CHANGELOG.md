@@ -1,3 +1,10 @@
+## [1.6.1-dev.6](https://github.com/Emil-Software/emilsoftware-utilities/compare/v1.6.1-dev.5...v1.6.1-dev.6) (2025-11-05)
+
+
+### Bug Fixes
+
+* aggiunto il campo note nei menu ([66c4a1a](https://github.com/Emil-Software/emilsoftware-utilities/commit/66c4a1a9ae8d818dae0ae31e5b3bc11f957e9596))
+
 ## [1.6.1-dev.5](https://github.com/Emil-Software/emilsoftware-utilities/compare/v1.6.1-dev.4...v1.6.1-dev.5) (2025-11-04)
 
 
