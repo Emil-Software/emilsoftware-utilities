@@ -29,6 +29,10 @@ export interface EmailOptions {
   host: string;
   port: number;
   secure: boolean;
+  requireTLS : boolean;
+  tls: {
+    rejectUnauthorized: boolean,
+  }
   from: string;
   auth: {
     user: string;
