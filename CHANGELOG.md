@@ -1,3 +1,10 @@
+## [1.6.1-dev.7](https://github.com/Emil-Software/emilsoftware-utilities/compare/v1.6.1-dev.6...v1.6.1-dev.7) (2025-11-06)
+
+
+### Bug Fixes
+
+* mail ([51d2509](https://github.com/Emil-Software/emilsoftware-utilities/commit/51d250903e357ce1b642f91c94ee8f237d8ccff6))
+
 ## [1.6.1-dev.6](https://github.com/Emil-Software/emilsoftware-utilities/compare/v1.6.1-dev.5...v1.6.1-dev.6) (2025-11-05)
 
 
