@@ -1,16 +1,22 @@
-import { Inject, Injectable } from '@nestjs/common';
+import { Inject, Injectable, Res } from '@nestjs/common';
 import { autobind } from '../../../autobind';
 import { Orm } from '../../../Orm';
 import { RestUtilities } from '../../../Utilities';
 import { AccessiOptions } from '../../AccessiModule';
 import { StatoRegistrazione } from '../../Dtos/StatoRegistrazione';
 import { EmailService } from '../EmailService/EmailService';
-import { FiltriUtente } from '../../Dtos/FiltriUtente';
+import { FILTRI_UTENTE_DB_MAPPING, FiltriUtente } from '../../Dtos/FiltriUtente';
 import { GetUsersResponse, GetUsersResult } from '../../Dtos/GetUsersResponse';
 import { PermissionService } from '../PermissionService/PermissionService';
 import { UserDto } from '../../Dtos';
 import { RegisterRequest } from '../../Dtos/RegisterRequest';
 import { FiltriService } from '../FiltriService/FiltriService';
+
+interface OptionalField<T> {
+  key: keyof RegisterRequest;
+  dbField: string;
+  transform?: (value: any) => T;
+}
 
 @autobind
 @Injectable()
@@ -19,8 +25,29 @@ export class UserService {
     @Inject('ACCESSI_OPTIONS') private readonly accessiOptions: AccessiOptions,
     private readonly emailService: EmailService,
     private readonly permissionService: PermissionService,
-    private readonly filtriService: FiltriService
+    private readonly filtriService: FiltriService,
   ) {}
+
+  async isAdminConfigurator(codiceUtente: number): Promise<boolean> {
+    if (!codiceUtente) {
+      return false;
+    }
+    const query = `SELECT FLGADMINCONFIG AS flag_admin_configurator FROM UTENTI_CONFIG WHERE CODUTE = ?`;
+    const result = await Orm.query(this.accessiOptions.databaseOptions, query, [codiceUtente]);
+
+    if (!result || result === 0) {
+      return false;
+    }
+
+    const mapped = result.map(RestUtilities.convertKeysToCamelCase);
+    const flagValue = mapped[0]?.flag_admin_configurator;
+
+    if (typeof flagValue === 'boolean') {
+      return flagValue;
+    }
+
+    return flagValue === 1;
+  }
 
   async getUsers(
     filters?: { email?: string; codiceUtente?: number },
@@ -44,6 +71,7 @@ export class UserService {
                 G.CODLINGUA as codice_lingua,
                 G.CELLULARE as cellulare,
                 G.FLGSUPER as flag_super, 
+                G.FLGADMINCONFIG as flag_admin_configurator,
                 G.PAGDEF as pagina_default,
                 G.JSON_METADATA as json_metadata,
                 G.RAGSOCCLI as rag_soc_cli,
@@ -153,7 +181,8 @@ export class UserService {
                 C.FLG2FATT AS flag_due_fattori,
                 C.CODLINGUA AS codice_lingua, 
                 C.CELLULARE AS cellulare, 
-                C.FLGSUPER AS flag_super, 
+                C.FLGSUPER AS flag_super,
+                C.FLGADMINCONFIG AS flag_admin_configurator,
                 C.PAGDEF AS pagina_default,
                 C.RAGSOCCLI AS rag_soc_cli
             FROM UTENTI U
@@ -165,20 +194,37 @@ export class UserService {
       (results) => results.map(RestUtilities.convertKeysToCamelCase),
     )) as UserDto[];
 
+    const filtriUtente = await this.filtriService.getFiltriUser(utenti[0]?.codiceUtente);
+
+    if (utenti.length <= 0) {
+      return null;
+    }
+
+    if (utenti.length > 0 && filtriUtente.length > 0) {
+      const user = utenti[0];
+      const filtro = filtriUtente[0];
+
+      // Type-safe mapping using type assertion
+      Object.entries(FILTRI_UTENTE_DB_MAPPING).forEach(([key]) => {
+        if (key in filtro) {
+          (user as UserDto)[key] = filtro[key as keyof FiltriUtente];
+        }
+      });
+    }
+
     return utenti.length > 0 ? utenti[0] : null;
   }
 
-
   // async getUserFilters(codiceUtente: number): Promise<FiltriUtente[]> {
   //   const query = `
-  //           SELECT 
-  //               F.PROG AS progressivo, 
-  //               F.NUMREP AS numero_report, 
+  //           SELECT
+  //               F.PROG AS progressivo,
+  //               F.NUMREP AS numero_report,
   //               F.IDXPERS AS indice_personale,
-  //               F.CODCLISUPER AS codice_cliente_super, 
-  //               F.CODAGE AS cod_age, 
+  //               F.CODCLISUPER AS codice_cliente_super,
+  //               F.CODAGE AS cod_age,
   //               F.CODCLICOL AS codice_cliente_collegato,
-  //               F.CODCLIENTI AS codice_clienti, 
+  //               F.CODCLIENTI AS codice_clienti,
   //               F.TIPFIL AS tipo_filtro,
   //               F.IDXPOS AS idx_postazione
   //           FROM FILTRI F
@@ -256,7 +302,7 @@ export class UserService {
     await operation();
   }
 
-  async register(registrationData: RegisterRequest): Promise<string> {
+  async register(registrationData: RegisterRequest): Promise<number> {
     try {
       const existingUser = await Orm.query(
         this.accessiOptions.databaseOptions,
@@ -268,33 +314,84 @@ export class UserService {
         throw new Error('Questa e-mail è già stata utilizzata!');
       }
 
-      const queryUtenti = `INSERT INTO UTENTI (USRNAME, STAREG) VALUES (?,?) RETURNING CODUTE`;
+      const queryUtenti = `INSERT INTO UTENTI (USRNAME, STAREG) VALUES (?,?)`;
       const paramsUtenti = [registrationData.email, StatoRegistrazione.INVIO];
 
-      const codiceUtente = (
-        await Orm.query(this.accessiOptions.databaseOptions, queryUtenti, paramsUtenti)
-      ).CODUTE;
+      await Orm.execute(this.accessiOptions.databaseOptions, queryUtenti, paramsUtenti);
+
+      const codiceUtenteResult = await Orm.query(
+        this.accessiOptions.databaseOptions,
+        'SELECT FIRST 1 CODUTE FROM UTENTI WHERE USRNAME = ? ORDER BY CODUTE DESC',
+        [registrationData.email],
+      );
+
+      const codiceUtente = Number(
+        codiceUtenteResult?.[0]?.CODUTE ?? codiceUtenteResult?.[0]?.codute,
+      );
+      if (!codiceUtente) {
+        throw new Error('Creazione utente non riuscita: impossibile recuperare CODUTE.');
+      }
 
       const utentiConfigFields = ['CODUTE', 'COGNOME', 'NOME'];
       const utentiConfigPlaceholders = ['?', '?', '?'];
       const utentiConfigParams = [codiceUtente, registrationData.cognome, registrationData.nome];
 
       // Mapping dei campi opzionali
-      const optionalFields: [keyof typeof registrationData, string][] = [
-        ['cellulare', 'CELLULARE'],
-        ['flagSuper', 'FLGSUPER'],
-        ['avatar', 'AVATAR'],
-        ['flagDueFattori', 'FLG2FATT'],
-        ['paginaDefault', 'PAGDEF'],
-        ['ragSocCli', 'RAGSOCCLI'],
+      // const optionalFields: [keyof typeof registrationData, string][] = [
+      //   ['cellulare', 'CELLULARE'],
+      //   ['flagSuper', 'FLGSUPER'],
+      //   ['flagAdminConfigurator', 'FLGADMINCONFIG'],
+      //   ['avatar', 'AVATAR'],
+      //   ['flagDueFattori', 'FLG2FATT'],
+      //   ['paginaDefault', 'PAGDEF'],
+      //   ['ragSocCli', 'RAGSOCCLI'],
+      // ];
+
+      const optionalFields: OptionalField<any>[] = [
+        {
+          key: 'cellulare',
+          dbField: 'CELLULARE',
+          transform: (v) => String(v),
+        },
+        {
+          key: 'flagSuper',
+          dbField: 'FLGSUPER',
+          transform: (v) => (v ? 1 : 0),
+        },
+        {
+          key: 'flagAdminConfigurator',
+          dbField: 'FLGADMINCONFIG',
+          transform: (v) => (v ? 1 : 0),
+        },
+        {
+          key: 'avatar',
+          dbField: 'AVATAR',
+          transform: (v) => String(v),
+        },
+        {
+          key: 'flagDueFattori',
+          dbField: 'FLG2FATT',
+          transform: (v) => (v ? 1 : 0),
+        },
+        {
+          key: 'paginaDefault',
+          dbField: 'PAGDEF',
+          transform: (v) => String(v),
+        },
+        {
+          key: 'ragSocCli',
+          dbField: 'RAGSOCCLI',
+          transform: (v) => String(v),
+        },
       ];
 
-      for (const [key, dbField] of optionalFields) {
-        const value = registrationData[key];
+
+      for (const field of optionalFields) {
+        const value = registrationData[field.key];
         if (value !== undefined && value !== null) {
-          utentiConfigFields.push(dbField);
+          utentiConfigFields.push(field.dbField);
           utentiConfigPlaceholders.push('?');
-          utentiConfigParams.push(value);
+          utentiConfigParams.push(field.transform ? field.transform(value) : value);
         }
       }
 
@@ -304,7 +401,7 @@ export class UserService {
       await Orm.execute(this.accessiOptions.databaseOptions, queryUtentiConfig, utentiConfigParams);
 
       //await this.insertUserFilters(codiceUtente, registrationData);
-      await this.filtriService.upsertFiltriUtente(codiceUtente, registrationData)
+      await this.filtriService.upsertFiltriUtente(codiceUtente, registrationData);
 
       if (!!registrationData.roles && registrationData.roles.length > 0) {
         await this.permissionService.assignRolesToUser(codiceUtente, registrationData.roles);
@@ -382,6 +479,10 @@ export class UserService {
         utentiConfigUpdates.push('flgsuper = ?');
         utentiConfigParams.push(user.flagSuper);
       }
+      if (user.flagAdminConfigurator !== undefined) {
+        utentiConfigUpdates.push('flgadminconfig = ?');
+        utentiConfigParams.push(user.flagAdminConfigurator);
+      }
       if (user.paginaDefault !== undefined) {
         utentiConfigUpdates.push('pagdef = ?');
         utentiConfigParams.push(user.paginaDefault);
@@ -416,7 +517,7 @@ export class UserService {
       }
 
       //await this.updateUserFilters(codiceUtente, user);
-      await this.filtriService.upsertFiltriUtente(codiceUtente, user)
+      await this.filtriService.upsertFiltriUtente(codiceUtente, user);
     } catch (error) {
       throw error;
     }

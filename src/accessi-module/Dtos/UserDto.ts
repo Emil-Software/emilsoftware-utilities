@@ -88,6 +88,12 @@ export class UserDto extends OmitType(FiltriUtente, ['codUte'] as const)  {
   flagSuper?: boolean;
 
   @ApiPropertyOptional({
+    description: "Flag che indica se l'utente è configuratore",
+    example: false
+  })
+  flagAdminConfigurator?: boolean;
+
+  @ApiPropertyOptional({
     description: "Pagina di default dell'utente all'accesso.",
     example: '/dashboard',
   })
@@ -102,8 +108,8 @@ export class UserDto extends OmitType(FiltriUtente, ['codUte'] as const)  {
   @ApiPropertyOptional({ description: 'Ragione sociale cliente.', example: 'ACME Corp SpA' })
   ragSocCli?: string;
 
-  @ApiPropertyOptional({ description: "Ruoli assegnati all'utente.", example: ['admin', 'editor'] })
-  roles?: string[];
+  @ApiPropertyOptional({ description: "Ruoli assegnati all'utente.", example: [1,2] })
+  roles?: number[];
 
   @ApiPropertyOptional({
     description: "Permessi assegnati all'utente.",

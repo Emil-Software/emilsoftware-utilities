@@ -6,7 +6,7 @@ export class AbilitazioneMenu {
   
   @ApiProperty({
     description: 'Codice univoco del menu',
-    example: 'MENU_001'
+    example: 'MNUELENCOCLIENTI'
   })
   @IsString()
   @IsNotEmpty({ message: "Il codice menu è obbligatorio." })
@@ -16,14 +16,14 @@ export class AbilitazioneMenu {
   @ApiPropertyOptional({
     description: 'Tipo di abilitazione',
     enum: TipoAbilitazione,
-    example: TipoAbilitazione.LETTURA
+    example: TipoAbilitazione.SCRITTURA
   })
   @IsEnum(TipoAbilitazione, { message: "Il tipo di abilitazione non è valido." })
   tipoAbilitazione?: TipoAbilitazione;
 
   @ApiPropertyOptional({
     description: 'Descrizione del menu',
-    example: 'Gestione utenti'
+    example: 'Lista Clienti'
   })
   @IsString()
   @IsNotEmpty({ message: "La descrizione del menu è obbligatoria." })
@@ -39,7 +39,7 @@ export class AbilitazioneMenu {
 
   @ApiPropertyOptional({
     description: 'Codice univoco del gruppo a cui appartiene il menu',
-    example: 'GRP_ADMIN'
+    example: 'C'
   })
   @IsString()
   @IsNotEmpty({ message: "Il codice gruppo è obbligatorio." })
@@ -47,15 +47,15 @@ export class AbilitazioneMenu {
 
   @ApiPropertyOptional({
     description: 'Nome dell\'icona associata al menu',
-    example: 'fa-user'
+    example: 'people'
   })
   @IsString()
   @IsOptional()
   icona?: string | null;
 
   @ApiPropertyOptional({
-    description: 'Tipo di menu (es. statico, dinamico, ecc.)',
-    example: 'statico'
+    description: 'Tipo di menu',
+    example: 'M'
   })
   @IsString()
   @IsOptional()
@@ -63,9 +63,17 @@ export class AbilitazioneMenu {
 
   @ApiPropertyOptional({
     description: 'Percorso della pagina associata al menu',
-    example: '/admin/users'
+    example: '/lista-clienti'
   })
   @IsString()
   @IsOptional()
   pagina?: string | null;
+
+  @ApiPropertyOptional({
+    description: 'Nota informativa associata al menu',
+    example: 'Visibile solo dopo abilitazione'
+  })
+  @IsString()
+  @IsOptional()
+  note?: string | null;
 }

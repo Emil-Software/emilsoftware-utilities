@@ -38,16 +38,26 @@ export class PermissionService {
         await Orm.execute(this.accessiOptions.databaseOptions, query, [codiceUtente]);
     }
 
-    public async updateOrInsertRole(role: Role, codiceRuolo: string = null): Promise<void> {
+    public async updateOrInsertRole(role: Role, codiceRuolo: number | null = null): Promise<void> {
 
         // creazione nuovo ruolo
-        if (!codiceRuolo) {
-            let createRoleQuery = `INSERT INTO RUOLI (DESRUO) VALUES (?) RETURNING CODRUO`;
-            let result = await Orm.query(this.accessiOptions.databaseOptions, createRoleQuery, [role.descrizioneRuolo]);
+        if (codiceRuolo == null) {
+            const createRoleQuery = `INSERT INTO RUOLI (DESRUO) VALUES (?)`;
+            await Orm.execute(this.accessiOptions.databaseOptions, createRoleQuery, [role.descrizioneRuolo]);
 
-            codiceRuolo = result[0].CODRUO;
-
-
+            const createdRoleResult = await Orm.query(
+                this.accessiOptions.databaseOptions,
+                'SELECT FIRST 1 CODRUO FROM RUOLI WHERE DESRUO = ? ORDER BY CODRUO DESC',
+                [role.descrizioneRuolo]
+            );
+            const rawCodiceRuolo = createdRoleResult?.[0]?.CODRUO ?? createdRoleResult?.[0]?.codruo;
+            const parsedCodiceRuolo = typeof rawCodiceRuolo === 'number'
+                ? rawCodiceRuolo
+                : Number.parseInt(`${rawCodiceRuolo ?? ''}`, 10);
+            if (Number.isNaN(parsedCodiceRuolo)) {
+                throw new Error('Creazione ruolo non riuscita: impossibile recuperare CODRUO.');
+            }
+            codiceRuolo = parsedCodiceRuolo;
         } else
         // aggiornamento ruolo esistente
         {
@@ -57,6 +67,10 @@ export class PermissionService {
 
             let deleteRoleMenuQuery = `DELETE FROM RUOLI_MNU WHERE CODRUO = ?`;
             await Orm.query(this.accessiOptions.databaseOptions, deleteRoleMenuQuery, [codiceRuolo]);
+        }
+
+        if (codiceRuolo === null) {
+            throw new Error('Operazione ruolo non riuscita: codice ruolo non valorizzato.');
         }
 
         let createRoleMenuQuery = `INSERT INTO RUOLI_MNU (CODRUO, CODMNU, TIPABI) VALUES (?, ?, ?)`;
@@ -74,6 +88,7 @@ export class PermissionService {
                     R.DESRUO AS descrizione_ruolo, 
                     M.CODMNU AS codice_menu, 
                     M.DESMNU AS descrizione_menu,
+                    M.NOTE AS note,
                     RM.TIPABI AS tipo_abilitazione
                 FROM RUOLI R
                 LEFT JOIN RUOLI_MNU RM ON R.CODRUO = RM.CODRUO
@@ -97,20 +112,26 @@ export class PermissionService {
                 });
             }
 
-            if (codiceMenu) {
-                ruoliMap.get(codiceRuolo)!.menu.push({
-                    codiceMenu: codiceMenu.trim(),
-                    tipoAbilitazione,
-                    descrizioneMenu: descrizioneMenu?.trim()
-                });
+            const abilitationValue = typeof tipoAbilitazione === 'number'
+                ? tipoAbilitazione
+                : Number.parseInt(`${tipoAbilitazione ?? ''}`, 10);
+
+            if (!codiceMenu || Number.isNaN(abilitationValue) || abilitationValue <= TipoAbilitazione.NESSUNA) {
+                continue;
             }
+
+            ruoliMap.get(codiceRuolo)!.menu.push({
+                codiceRuolo: codiceRuolo,
+                codiceMenu: codiceMenu.trim(),
+                tipoAbilitazione: abilitationValue as TipoAbilitazione,
+            });
         }
 
         return Array.from(ruoliMap.values());
     }
 
 
-    public async assignRolesToUser(codiceUtente: number, roles: string[]): Promise<void> {
+    public async assignRolesToUser(codiceUtente: number, roles: number[]): Promise<void> {
 
         const userExistsQuery = `SELECT COUNT(*) FROM UTENTI WHERE CODUTE = ?`;
         let result = await Orm.query(this.accessiOptions.databaseOptions, userExistsQuery, [codiceUtente]);
@@ -180,7 +201,8 @@ export class PermissionService {
                     G.DESGRP AS descrizioneGruppo,
                     M.ICON AS icona,
                     M.CODTIP AS tipo,
-                    M.PAGINA AS pagina
+                    M.PAGINA AS pagina,
+                    M.NOTE AS note
                 FROM MENU M
                 LEFT JOIN MENU_GRP G ON M.CODGRP = G.CODGRP
                 WHERE M.FLGENABLED = 1
@@ -192,7 +214,11 @@ export class PermissionService {
     }
 
 
-    public async getGroupsWithMenus(): Promise<GroupWithMenusEntity[]> {
+    public async getGroupsWithMenus(includeDisabled = false): Promise<GroupWithMenusEntity[]> {
+        const filtersClause = includeDisabled
+            ? ''
+            : 'WHERE M.FLGENABLED = 1 AND (G.FLGENABLED IS NULL OR G.FLGENABLED = 1)';
+
         const query = `
                 SELECT
                     M.CODMNU AS codice_menu,
@@ -202,40 +228,69 @@ export class PermissionService {
                     M.ICON AS icona,
                     M.CODTIP AS tipo,
                     M.PAGINA AS pagina,
+                    M.NOTE AS note,
                     G.ORDINE AS ordine_gruppo,
-                    M.ORDINE as ordine_menu
+                    M.ORDINE as ordine_menu,
+                    M.FLGENABLED AS menu_enabled,
+                    G.FLGENABLED AS group_enabled
                 FROM MENU M
                 LEFT JOIN MENU_GRP G ON M.CODGRP = G.CODGRP
-                WHERE M.FLGENABLED = 1
+                ${filtersClause}
                 ORDER BY G.CODGRP, M.CODMNU
             `;
 
         const result = await Orm.query(this.accessiOptions.databaseOptions, query, []);
 
-        // Process the result to group menus by their respective groups
-        const groupMap = new Map<string, GroupWithMenusEntity>();
+        const groupMap = new Map<
+            string,
+            GroupWithMenusEntity & { menus: (MenuEntity & { enabled?: boolean })[] }
+        >();
 
         result.forEach(row => {
-            const menu = RestUtilities.convertKeysToCamelCase(row) as MenuEntity;
-            const groupKey = menu.codiceGruppo;
+            const converted = RestUtilities.convertKeysToCamelCase(row) as MenuEntity & {
+                menuEnabled?: number | boolean;
+                groupEnabled?: number | boolean;
+            };
 
-            if (!groupMap.has(groupKey)) {
-                groupMap.set(groupKey, {
-                    codiceGruppo: menu.codiceGruppo,
-                    descrizioneGruppo: menu.descrizioneGruppo,
-                    ordineGruppo: menu.ordineGruppo,
-                    menus: []
+            const { menuEnabled, groupEnabled, ...menuBase } = converted as any;
+            const normalizedGroupKey = menuBase.codiceGruppo ?? '__UNGROUPED__';
+            const groupEnabledFlag =
+                groupEnabled === undefined ? true : Number(groupEnabled) === 1 || groupEnabled === true;
+            const menuEnabledFlag =
+                menuEnabled === undefined ? true : Number(menuEnabled) === 1 || menuEnabled === true;
+
+            if (!groupMap.has(normalizedGroupKey)) {
+                groupMap.set(normalizedGroupKey, {
+                    codiceGruppo: menuBase.codiceGruppo ?? normalizedGroupKey,
+                    descrizioneGruppo: menuBase.descrizioneGruppo,
+                    ordineGruppo: menuBase.ordineGruppo,
+                    enabled: groupEnabledFlag,
+                    menus: [],
                 });
             }
 
-
-            groupMap.get(groupKey).menus.push(menu);
-            groupMap.get(groupKey).menus = groupMap.get(groupKey).menus.sort((a, b) => a.ordineMenu - b.ordineMenu);
+            if (menuBase.codiceMenu) {
+                groupMap.get(normalizedGroupKey)!.menus.push({
+                    ...menuBase,
+                    enabled: menuEnabledFlag,
+                });
+            }
         });
 
-        let groupsArray = Array.from(groupMap.values()).sort((a, b) => a.ordineGruppo - b.ordineGruppo);
-        return groupsArray;
+        const groupsArray = Array.from(groupMap.values())
+            .map(group => ({
+                ...group,
+                menus: (group.menus ?? []).sort(
+                    (a, b) =>
+                        (a.ordineMenu ?? Number.MAX_SAFE_INTEGER) - (b.ordineMenu ?? Number.MAX_SAFE_INTEGER),
+                ),
+            }))
+            .sort(
+                (a, b) =>
+                    (a.ordineGruppo ?? Number.MAX_SAFE_INTEGER) - (b.ordineGruppo ?? Number.MAX_SAFE_INTEGER),
+            );
 
+        return groupsArray;
     }
 
 
@@ -265,7 +320,8 @@ export class PermissionService {
                         G.CODGRP AS codice_gruppo,
                         M.ICON AS icona,
                         M.CODTIP AS tipo,
-                        M.PAGINA AS pagina
+                        M.PAGINA AS pagina,
+                        M.NOTE AS note
                     FROM MENU M
                     INNER JOIN MENU_GRP G ON G.CODGRP = M.CODGRP
                     WHERE M.FLGENABLED = 1 AND G.FLGENABLED = 1
@@ -282,7 +338,8 @@ export class PermissionService {
                         G.CODGRP AS codice_gruppo,
                         M.ICON AS icona,
                         M.CODTIP AS tipo,
-                        M.PAGINA AS pagina
+                        M.PAGINA AS pagina,
+                        M.NOTE AS note
                     FROM ABILITAZIONI A
                     INNER JOIN MENU M ON A.CODMNU = M.CODMNU
                     INNER JOIN MENU_GRP G ON G.CODGRP = M.CODGRP
@@ -297,7 +354,8 @@ export class PermissionService {
                         R.DESRUO AS descrizione_ruolo,
                         RM.CODMNU AS codice_menu,
                         RM.TIPABI AS tipo_abilitazione,
-                        M.DESMNU AS descrizione_menu
+                        M.DESMNU AS descrizione_menu,
+                        M.NOTE AS note
                     FROM UTENTI_RUOLI RU
                     INNER JOIN RUOLI R ON RU.CODRUO = R.CODRUO
                     INNER JOIN RUOLI_MNU RM ON R.CODRUO = RM.CODRUO
@@ -322,9 +380,9 @@ export class PermissionService {
 
                 if (codiceMenu) {
                     ruoliMap.get(codiceRuolo)!.menu.push({
+                        codiceRuolo: codiceRuolo,
                         codiceMenu: codiceMenu.trim(),
                         tipoAbilitazione,
-                        descrizioneMenu: descrizioneMenu?.trim(),
                     });
                 }
             }
@@ -357,3 +415,5 @@ export class PermissionService {
 
 
 }
+
+

@@ -80,11 +80,25 @@ export class MenuEntity {
     ordineGruppo: number;
 
     @ApiPropertyOptional({
+        description: "Flag che indica se il menu e abilitato.",
+        type: Boolean,
+        example: true
+    })
+    enabled?: boolean;
+
+    @ApiPropertyOptional({
         description: "Tipo abilitazione opzionale",
         type: Number,
         example: 1
     })
     tipoAbilitazione?: number;
+
+    @ApiPropertyOptional({
+        description: "Nota informativa associata al menu.",
+        type: String,
+        example: "Visibile solo agli amministratori"
+    })
+    note?: string | null;
 }
 
 export class GetMenusResponse extends BaseResponse {
