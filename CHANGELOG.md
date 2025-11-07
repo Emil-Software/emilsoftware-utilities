@@ -1,3 +1,17 @@
+## [1.6.1](https://github.com/Emil-Software/emilsoftware-utilities/compare/v1.6.0...v1.6.1) (2025-11-07)
+
+
+### Bug Fixes
+
+* add codVet nei filtri ([204de06](https://github.com/Emil-Software/emilsoftware-utilities/commit/204de067f8e1f3afd03c8044a501e5de666e5ffa))
+* aggiunto il campo note nei menu ([66c4a1a](https://github.com/Emil-Software/emilsoftware-utilities/commit/66c4a1a9ae8d818dae0ae31e5b3bc11f957e9596))
+* gestione ruoli ([fb3daf9](https://github.com/Emil-Software/emilsoftware-utilities/commit/fb3daf93e26fb0b6c0b42f4180b23efd3dce30ea))
+* jwt troppo grande per utilizzarlo a backend, gestione menu con possibilità di abilitare o meni ([2a6e3a8](https://github.com/Emil-Software/emilsoftware-utilities/commit/2a6e3a8e5bfa619c98c65aa04dfca3201dd7c64b))
+* mail ([51d2509](https://github.com/Emil-Software/emilsoftware-utilities/commit/51d250903e357ce1b642f91c94ee8f237d8ccff6))
+* mttd -> emilsoftware ([345a6c4](https://github.com/Emil-Software/emilsoftware-utilities/commit/345a6c4e09e72773e42731be6b18daaa3c8e191c))
+* registrazione campi opzionali ([3b7cf62](https://github.com/Emil-Software/emilsoftware-utilities/commit/3b7cf62159648c5c850e62e3e68f2e1c94c25110))
+* returning ([c0518e9](https://github.com/Emil-Software/emilsoftware-utilities/commit/c0518e973e8ada83445c89cb73ad565cdeea3a34))
+
 ## [1.6.1-dev.7](https://github.com/Emil-Software/emilsoftware-utilities/compare/v1.6.1-dev.6...v1.6.1-dev.7) (2025-11-06)
 
 
