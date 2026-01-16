@@ -50,6 +50,7 @@ Aggiungere
 export const accessiModuleOption = {
   confirmationEmailUrl: ENV.ACC_CONFIRMATION_EMAIL_URL,
   confirmationEmailReturnUrl: ENV.ACC_CONFIRMATION_RETURN_EMAIL_URL,
+  confirmationEmailPrefix: ENV.CONFIRMATIONEMAILPREFIX,
   databaseOptions: optionsAccessi,
   encryptionKey: ENV.ACC_ENCRYPTION_KEY,
   mockDemoUser: ENV.ACC_MOCK_DEMO_USER,
