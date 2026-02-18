@@ -1,3 +1,10 @@
+## [1.6.6](https://github.com/Emil-Software/emilsoftware-utilities/compare/v1.6.5...v1.6.6) (2026-02-18)
+
+
+### Bug Fixes
+
+* improve error handling logging in login method ([554e144](https://github.com/Emil-Software/emilsoftware-utilities/commit/554e1444f6526737eb54746d7c2e594f5ce36427))
+
 ## [1.6.5](https://github.com/Emil-Software/emilsoftware-utilities/compare/v1.6.4...v1.6.5) (2026-02-18)
 
 
