@@ -108,6 +108,7 @@ export class AuthController {
         return RestUtilities.sendPasswordExpired(res)
       }
 
+      
       this.logger.error('Errore durante il login', error);
       return RestUtilities.sendInvalidCredentials(res);
     }
