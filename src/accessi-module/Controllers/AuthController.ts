@@ -88,7 +88,7 @@ export class AuthController {
       }
 
       const tokenData = {
-        utente: userData.utente
+        userData,
       }
 
       userData.token = {
