@@ -1,3 +1,10 @@
+## [1.6.4](https://github.com/Emil-Software/emilsoftware-utilities/compare/v1.6.3...v1.6.4) (2026-02-18)
+
+
+### Bug Fixes
+
+* add a blank line for better readability in login error handling ([fadede4](https://github.com/Emil-Software/emilsoftware-utilities/commit/fadede4e6af5a778105eb5983609793aabd5cbfb))
+
 ## [1.6.3](https://github.com/Emil-Software/emilsoftware-utilities/compare/v1.6.2...v1.6.3) (2026-02-18)
 
 
