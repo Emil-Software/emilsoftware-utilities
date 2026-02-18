@@ -87,6 +87,7 @@ export class AuthController {
         return RestUtilities.sendInvalidCredentials(res);
       }
 
+      // Generazione del token JWT
       const tokenData = {
         userData,
       }
