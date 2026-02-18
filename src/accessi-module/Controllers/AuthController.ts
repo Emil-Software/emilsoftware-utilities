@@ -109,6 +109,7 @@ export class AuthController {
       }
 
       
+
       this.logger.error('Errore durante il login', error);
       return RestUtilities.sendInvalidCredentials(res);
     }
