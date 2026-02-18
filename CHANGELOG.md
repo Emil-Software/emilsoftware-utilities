@@ -1,3 +1,11 @@
+## [1.6.2](https://github.com/Emil-Software/emilsoftware-utilities/compare/v1.6.1...v1.6.2) (2026-02-18)
+
+
+### Bug Fixes
+
+* PUSH ([8d05720](https://github.com/Emil-Software/emilsoftware-utilities/commit/8d05720e0870351e4c3ece45599ba9245138b6a2))
+* update user data structure in token response ([14046f3](https://github.com/Emil-Software/emilsoftware-utilities/commit/14046f3b17d7a0850dea4f80ade4d8f6b277f035))
+
 ## [1.6.1](https://github.com/Emil-Software/emilsoftware-utilities/compare/v1.6.0...v1.6.1) (2025-11-07)
 
 
