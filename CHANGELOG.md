@@ -1,3 +1,10 @@
+## [1.6.3](https://github.com/Emil-Software/emilsoftware-utilities/compare/v1.6.2...v1.6.3) (2026-02-18)
+
+
+### Bug Fixes
+
+* spazio ([389b0c9](https://github.com/Emil-Software/emilsoftware-utilities/commit/389b0c92406d9b3417e69ca1c9dc5191874762d0))
+
 ## [1.6.2](https://github.com/Emil-Software/emilsoftware-utilities/compare/v1.6.1...v1.6.2) (2026-02-18)
 
 
