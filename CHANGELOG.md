@@ -1,3 +1,10 @@
+## [1.6.8](https://github.com/Emil-Software/emilsoftware-utilities/compare/v1.6.7...v1.6.8) (2026-02-18)
+
+
+### Bug Fixes
+
+* sp ([a9349aa](https://github.com/Emil-Software/emilsoftware-utilities/commit/a9349aa216a64a7fd0925669c16eced61ae09a86))
+
 ## [1.6.7](https://github.com/Emil-Software/emilsoftware-utilities/compare/v1.6.6...v1.6.7) (2026-02-18)
 
 
