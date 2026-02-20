@@ -89,7 +89,7 @@ export class AuthController {
 
       // Generazione del token JWT
       const tokenData = {
-        userData,
+        utente: userData?.utente,
       }
 
       userData.token = {
