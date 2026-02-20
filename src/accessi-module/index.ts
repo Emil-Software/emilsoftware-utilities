@@ -3,12 +3,15 @@ import { NestFactory } from "@nestjs/core";
 import { ExpressAdapter } from "@nestjs/platform-express";
 import { AccessiModule, AccessiOptions } from "./AccessiModule";
 import { Logger } from "../Logger";
+import { setAccessiAuthOptions } from "./middleware/authenticateGen";
 
 export async function initializeAccessiModule(app: Application, options: AccessiOptions) {
     const logger: Logger = new Logger("initializeAccessiModule");
 
     console.log("Accessi initialized");
     try {
+        setAccessiAuthOptions(options);
+
         // Creiamo un'istanza Express separata per NestJS
         const nestExpressInstance = new ExpressAdapter(app);
 
@@ -34,3 +37,4 @@ export async function initializeAccessiModule(app: Application, options: Accessi
 
 export { AccessiModule } from "./AccessiModule";
 export * from "./Dtos";
+export { authorizeAccessi, authenticateGen, setAccessiAuthOptions } from "./middleware/authenticateGen";
