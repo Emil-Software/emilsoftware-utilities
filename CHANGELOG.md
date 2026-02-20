@@ -1,3 +1,10 @@
+## [1.7.1](https://github.com/Emil-Software/emilsoftware-utilities/compare/v1.7.0...v1.7.1) (2026-02-20)
+
+
+### Bug Fixes
+
+* removed autenticazioni from token ([47b12bd](https://github.com/Emil-Software/emilsoftware-utilities/commit/47b12bdc1b27e5a449adbcc606bbb96bd485e852))
+
 # [1.7.0](https://github.com/Emil-Software/emilsoftware-utilities/compare/v1.6.10...v1.7.0) (2026-02-20)
 
 
