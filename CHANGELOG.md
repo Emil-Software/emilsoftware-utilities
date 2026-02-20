@@ -1,3 +1,10 @@
+# [1.7.0](https://github.com/Emil-Software/emilsoftware-utilities/compare/v1.6.10...v1.7.0) (2026-02-20)
+
+
+### Features
+
+* authenticateGen ([d0d6314](https://github.com/Emil-Software/emilsoftware-utilities/commit/d0d63145a39d2fdec6d20317af310bdfdc482212))
+
 ## [1.6.10](https://github.com/Emil-Software/emilsoftware-utilities/compare/v1.6.9...v1.6.10) (2026-02-20)
 
 
