@@ -1,3 +1,10 @@
+## [1.6.10](https://github.com/Emil-Software/emilsoftware-utilities/compare/v1.6.9...v1.6.10) (2026-02-20)
+
+
+### Bug Fixes
+
+* force deploy ([3083e8d](https://github.com/Emil-Software/emilsoftware-utilities/commit/3083e8de150d10ff150663d45ddf500367fdb9e1))
+
 ## [1.6.9](https://github.com/Emil-Software/emilsoftware-utilities/compare/v1.6.8...v1.6.9) (2026-02-20)
 
 
