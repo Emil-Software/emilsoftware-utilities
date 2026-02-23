@@ -3,15 +3,16 @@ import { NestFactory } from "@nestjs/core";
 import { ExpressAdapter } from "@nestjs/platform-express";
 import { AccessiModule, AccessiOptions } from "./AccessiModule";
 import { Logger } from "../Logger";
-import { setAccessiAuthOptions } from "./middleware/authenticateGen";
+import {
+    AuthenticateGenService,
+    setAccessiAuthService
+} from "./middleware/authenticateGen";
 
 export async function initializeAccessiModule(app: Application, options: AccessiOptions) {
     const logger: Logger = new Logger("initializeAccessiModule");
 
     console.log("Accessi initialized");
     try {
-        setAccessiAuthOptions(options);
-
         // Creiamo un'istanza Express separata per NestJS
         const nestExpressInstance = new ExpressAdapter(app);
 
@@ -28,6 +29,7 @@ export async function initializeAccessiModule(app: Application, options: Accessi
 
         // Note: Swagger setup is now handled by the unified module
         await nestApp.init();
+        setAccessiAuthService(nestApp.get(AuthenticateGenService));
 
     } catch (error) {
         logger.error("Errore in initialize AccessiModule:", error);
@@ -37,4 +39,16 @@ export async function initializeAccessiModule(app: Application, options: Accessi
 
 export { AccessiModule } from "./AccessiModule";
 export * from "./Dtos";
-export { authorizeAccessi, authenticateGen, setAccessiAuthOptions } from "./middleware/authenticateGen";
+export {
+    authorizeAccessi,
+    authenticateGen,
+    setAccessiAuthOptions,
+    setAccessiAuthService
+} from "./middleware/authenticateGen";
+export { accessiRequirement } from "./middleware/accessiRequirements";
+export type {
+    AccessiAuthorizationOptions,
+    AccessiRequirementNode,
+    AccessiCustomRequirementContext,
+    AccessiCustomRequirementHandler
+} from "./middleware/accessiRequirements";

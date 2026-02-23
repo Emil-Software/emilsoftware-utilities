@@ -1,17 +1,30 @@
 import { NextFunction, Request, Response } from "express";
 import * as jwt from "jsonwebtoken";
+import { Inject, Injectable } from "@nestjs/common";
 import { AccessiOptions } from "../AccessiModule";
 import { PermissionService } from "../Services/PermissionService/PermissionService";
+import { Logger } from "../../Logger";
+import {
+  AccessiAuthorizationOptions,
+  AccessiCustomRequirementContext,
+  GrantsResult,
+  RequirementEvaluationError,
+  buildRequirementTree,
+  evaluateRequirement,
+} from "./accessiRequirements";
 
-export type AccessiAuthorizationOptions = {
-  requisiti: { codiceMenu: string; tipoAbilitazione: number }[];
-  tipoControllo?: "AND" | "OR";
-};
+const logger = new Logger("AuthenticateGen");
 
-let accessiOptionsRef: AccessiOptions | null = null;
-
-export function setAccessiAuthOptions(options: AccessiOptions) {
-  accessiOptionsRef = options;
+class AuthMiddlewareError extends Error {
+  constructor(
+    public readonly status: number,
+    public readonly code: string,
+    message: string,
+    public readonly details?: Record<string, unknown>
+  ) {
+    super(message);
+    this.name = "AuthMiddlewareError";
+  }
 }
 
 function resolveCodiceUtente(decoded: any): number | undefined {
@@ -22,63 +35,212 @@ function resolveCodiceUtente(decoded: any): number | undefined {
   );
 }
 
+function authError(
+  status: number,
+  code: string,
+  message: string,
+  details?: Record<string, unknown>
+) {
+  return new AuthMiddlewareError(status, code, message, details);
+}
+
+function normalizeAuthError(error: unknown): AuthMiddlewareError {
+  if (error instanceof AuthMiddlewareError) return error;
+  if (error instanceof RequirementEvaluationError) {
+    return authError(500, error.code, error.message);
+  }
+  if (error instanceof Error) {
+    return authError(500, "AUTH_INTERNAL_ERROR", error.message, {
+      originalError: error.name,
+    });
+  }
+  return authError(500, "AUTH_INTERNAL_ERROR", "Unexpected authentication error");
+}
+
+function logAuthFailure(req: Request, authErr: AuthMiddlewareError) {
+  const payload = {
+    code: authErr.code,
+    status: authErr.status,
+    message: authErr.message,
+    details: authErr.details,
+    method: req.method,
+    path: req.originalUrl ?? req.url,
+    ip: req.ip,
+  };
+
+  if (authErr.status >= 500) logger.error("Authentication failure", payload);
+  else logger.warning("Authentication denied", payload);
+}
+
+async function authorizeWithDependencies(
+  req: Request,
+  res: Response,
+  next: NextFunction,
+  options: AccessiAuthorizationOptions | undefined,
+  accessiOptions: AccessiOptions,
+  permissionService: PermissionService
+) {
+  try {
+    const authHeader = req.headers.authorization;
+    if (!authHeader) {
+      throw authError(401, "AUTH_HEADER_MISSING", "Authorization header not found");
+    }
+
+    const token = authHeader.split(" ")[1];
+    if (!token) {
+      throw authError(
+        401,
+        "AUTH_TOKEN_MISSING",
+        "Token not found in Authorization header"
+      );
+    }
+
+    const secret = accessiOptions?.jwtOptions?.secret ?? process.env.ACC_JWT_SECRET;
+    if (!secret) {
+      throw authError(500, "AUTH_JWT_SECRET_MISSING", "JWT secret not configured");
+    }
+
+    let decoded: any;
+    try {
+      decoded = jwt.verify(token, secret);
+    } catch {
+      throw authError(401, "AUTH_TOKEN_INVALID", "Invalid JWT token");
+    }
+
+    const codiceUtente = resolveCodiceUtente(decoded);
+    if (!codiceUtente) {
+      throw authError(
+        401,
+        "AUTH_USER_CODE_MISSING",
+        "codiceUtente not found in token payload"
+      );
+    }
+
+    const requirementTree = buildRequirementTree(options);
+    if (requirementTree) {
+      if (!accessiOptions?.databaseOptions) {
+        throw authError(
+          500,
+          "AUTH_DATABASE_OPTIONS_MISSING",
+          "Database options not configured"
+        );
+      }
+
+      let grantsResultCache: GrantsResult | null = null;
+      const getGrantsResult = async () => {
+        if (!grantsResultCache) {
+          grantsResultCache = await permissionService.getUserRolesAndGrants(
+            codiceUtente
+          );
+        }
+        return grantsResultCache;
+      };
+
+      const requirementContext: AccessiCustomRequirementContext = {
+        req,
+        decodedToken: decoded,
+        userCode: codiceUtente,
+        getGrantsResult,
+      };
+
+      const hasPermissions = await evaluateRequirement(
+        requirementTree,
+        requirementContext,
+        options
+      );
+
+      if (!hasPermissions) {
+        throw authError(
+          403,
+          "AUTH_INSUFFICIENT_PERMISSIONS",
+          "User does not have required permissions"
+        );
+      }
+
+      (req as any).userGrants = await getGrantsResult();
+    }
+
+    (req as any).data = decoded;
+    return next();
+  } catch (error: unknown) {
+    const authErr = normalizeAuthError(error);
+    logAuthFailure(req, authErr);
+    const publicMessage =
+      authErr.status === 403
+        ? "Forbidden"
+        : authErr.status >= 500
+        ? "Internal server error"
+        : "Unauthorized";
+    return res
+      .status(authErr.status)
+      .json({ message: publicMessage, error: authErr.message, code: authErr.code });
+  }
+}
+
+@Injectable()
+export class AuthenticateGenService {
+  constructor(
+    @Inject("ACCESSI_OPTIONS")
+    private readonly accessiOptions: AccessiOptions,
+    private readonly permissionService: PermissionService
+  ) {}
+
+  async authorize(
+    req: Request,
+    res: Response,
+    next: NextFunction,
+    options?: AccessiAuthorizationOptions
+  ) {
+    return authorizeWithDependencies(
+      req,
+      res,
+      next,
+      options,
+      this.accessiOptions,
+      this.permissionService
+    );
+  }
+}
+
+let authenticateGenServiceRef: AuthenticateGenService | null = null;
+let accessiOptionsRef: AccessiOptions | null = null;
+
+export function setAccessiAuthService(service: AuthenticateGenService) {
+  authenticateGenServiceRef = service;
+}
+
+export function setAccessiAuthOptions(options: AccessiOptions) {
+  accessiOptionsRef = options;
+}
+
 export async function authorizeAccessi(
   req: Request,
   res: Response,
   next: NextFunction,
   options?: AccessiAuthorizationOptions
 ) {
-  try {
-    const authHeader = req.headers.authorization;
-    if (!authHeader) throw new Error("Authorization header not found");
-
-    const token = authHeader.split(" ")[1];
-    if (!token) throw new Error("Token not found in Authorization header");
-
-    const secret =
-      accessiOptionsRef?.jwtOptions?.secret ?? process.env.ACC_JWT_SECRET;
-    if (!secret) throw new Error("JWT secret not configured");
-
-    let decoded: any;
-    try {
-      decoded = jwt.verify(token, secret);
-    } catch (error) {
-      throw new Error("Invalid JWT token");
-    }
-
-    const codiceUtente = resolveCodiceUtente(decoded);
-    if (!codiceUtente) throw new Error("codiceUtente not found in token payload");
-
-    const requisiti = options?.requisiti ?? [];
-    if (requisiti.length > 0) {
-      if (!accessiOptionsRef?.databaseOptions) throw new Error("Database options not configured");
-      const permissionService = new PermissionService(accessiOptionsRef);
-      const grantsResult = await permissionService.getUserRolesAndGrants(
-        codiceUtente
-      );
-
-      const grants = grantsResult.grants ?? [];
-      const hasMenu = (codiceMenu: string, tipoAbilitazione: number) =>
-        grants.some(
-          (g) =>
-            g.codiceMenu == codiceMenu &&
-            Number(g.tipoAbilitazione ?? 0) >= tipoAbilitazione
-        );
-      const requireAll = (options?.tipoControllo ?? "AND") === "AND";
-      const hasAbil = requireAll
-        ? requisiti.every((r) => hasMenu(r.codiceMenu, r.tipoAbilitazione))
-        : requisiti.some((r) => hasMenu(r.codiceMenu, r.tipoAbilitazione));
-
-      if (!hasAbil) throw new Error("User does not have required permissions");
-      (req as any).userGrants = grantsResult;
-    }
-
-    (req as any).data = decoded;
-    return next();
-  } catch (error) {
-    console.error("Authentication error:", error);
-    return res.status(401).json({ message: "Unauthorized", error: error.message });
+  if (authenticateGenServiceRef) {
+    return authenticateGenServiceRef.authorize(req, res, next, options);
   }
+
+  if (!accessiOptionsRef) {
+    logger.error("Authentication service not initialized", {
+      method: req.method,
+      path: req.originalUrl ?? req.url,
+    });
+    return res
+      .status(500)
+      .json({ message: "Accessi authentication service not initialized" });
+  }
+
+  return authorizeWithDependencies(
+    req,
+    res,
+    next,
+    options,
+    accessiOptionsRef,
+    new PermissionService(accessiOptionsRef)
+  );
 }
 
 export const authenticateGen = authorizeAccessi;

@@ -19,6 +19,7 @@ import { FiltriController } from './Controllers/FiltriController';
 import { ConfiguratorController } from './Controllers/ConfiguratorController';
 import { ConfiguratorService } from './Services/ConfiguratorService/ConfiguratorService';
 import { JwtSimpleGuard } from './jwt/jwt.strategy';
+import { AuthenticateGenService } from './middleware/authenticateGen';
 
 export interface JwtOptions {
   secret: string;
@@ -79,8 +80,8 @@ export interface AccessiOptions {
     FiltriController,
     ConfiguratorController
   ],
-  providers: [AuthService, UserService, EmailService, PermissionService, FiltriService, ConfiguratorService, JwtSimpleGuard],
-  exports: [AuthService, UserService, EmailService, PermissionService, FiltriService, ConfiguratorService, JwtSimpleGuard],
+  providers: [AuthService, UserService, EmailService, PermissionService, FiltriService, ConfiguratorService, JwtSimpleGuard, AuthenticateGenService],
+  exports: [AuthService, UserService, EmailService, PermissionService, FiltriService, ConfiguratorService, JwtSimpleGuard, AuthenticateGenService],
 })
 export class AccessiModule {
   static forRoot(options: AccessiOptions): DynamicModule {
@@ -97,7 +98,8 @@ export class AccessiModule {
         PermissionService,
         FiltriService,
         ConfiguratorService,
-        JwtSimpleGuard
+        JwtSimpleGuard,
+        AuthenticateGenService
       ],
       exports: [
         'ACCESSI_OPTIONS',
@@ -107,7 +109,8 @@ export class AccessiModule {
         PermissionService,
         FiltriService,
         ConfiguratorService,
-        JwtSimpleGuard
+        JwtSimpleGuard,
+        AuthenticateGenService
       ],
     };
   }
