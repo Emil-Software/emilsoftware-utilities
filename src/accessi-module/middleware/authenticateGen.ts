@@ -68,8 +68,9 @@ function logAuthFailure(req: Request, authErr: AuthMiddlewareError) {
     ip: req.ip,
   };
 
-  if (authErr.status >= 500) logger.error("Authentication failure", payload);
-  else logger.warning("Authentication denied", payload);
+  const message = `${authErr.status >= 500 ? "Authentication failure" : "Authentication denied"} ${JSON.stringify(payload)}`;
+  if (authErr.status >= 500) logger.error(message);
+  else logger.warning(message);
 }
 
 async function authorizeWithDependencies(
@@ -224,10 +225,12 @@ export async function authorizeAccessi(
   }
 
   if (!accessiOptionsRef) {
-    logger.error("Authentication service not initialized", {
-      method: req.method,
-      path: req.originalUrl ?? req.url,
-    });
+    logger.error(
+      `Authentication service not initialized ${JSON.stringify({
+        method: req.method,
+        path: req.originalUrl ?? req.url,
+      })}`
+    );
     return res
       .status(500)
       .json({ message: "Accessi authentication service not initialized" });
