@@ -1,3 +1,10 @@
+## [1.7.2](https://github.com/Emil-Software/emilsoftware-utilities/compare/v1.7.1...v1.7.2) (2026-02-23)
+
+
+### Bug Fixes
+
+* added logging messages ([2e7044e](https://github.com/Emil-Software/emilsoftware-utilities/commit/2e7044e76b2b161b66a3af9f2816694df2c5c3d4))
+
 ## [1.7.1](https://github.com/Emil-Software/emilsoftware-utilities/compare/v1.7.0...v1.7.1) (2026-02-20)
 
 
