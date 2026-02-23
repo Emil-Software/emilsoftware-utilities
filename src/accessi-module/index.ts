@@ -5,7 +5,6 @@ import { AccessiModule, AccessiOptions } from "./AccessiModule";
 import { Logger } from "../Logger";
 import {
     AuthenticateGenService,
-    setAccessiAuthOptions,
     setAccessiAuthService
 } from "./middleware/authenticateGen";
 
@@ -14,10 +13,6 @@ export async function initializeAccessiModule(app: Application, options: Accessi
 
     console.log("Accessi initialized");
     try {
-        // Inizializza subito il fallback middleware con le options.
-        // Il servizio DI viene registrato dopo nestApp.init().
-        setAccessiAuthOptions(options);
-
         // Creiamo un'istanza Express separata per NestJS
         const nestExpressInstance = new ExpressAdapter(app);
 
@@ -46,9 +41,7 @@ export { AccessiModule } from "./AccessiModule";
 export * from "./Dtos";
 export {
     authorizeAccessi,
-    authenticateGen,
-    setAccessiAuthOptions,
-    setAccessiAuthService
+    authenticateGen
 } from "./middleware/authenticateGen";
 export { accessiRequirement } from "./middleware/accessiRequirements";
 export type {

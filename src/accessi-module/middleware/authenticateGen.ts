@@ -170,8 +170,8 @@ async function authorizeWithDependencies(
       authErr.status === 403
         ? "Forbidden"
         : authErr.status >= 500
-        ? "Internal server error"
-        : "Unauthorized";
+          ? "Internal server error"
+          : "Unauthorized";
     return res
       .status(authErr.status)
       .json({ message: publicMessage, error: authErr.message, code: authErr.code });
@@ -184,7 +184,7 @@ export class AuthenticateGenService {
     @Inject("ACCESSI_OPTIONS")
     private readonly accessiOptions: AccessiOptions,
     private readonly permissionService: PermissionService
-  ) {}
+  ) { }
 
   async authorize(
     req: Request,
@@ -204,14 +204,9 @@ export class AuthenticateGenService {
 }
 
 let authenticateGenServiceRef: AuthenticateGenService | null = null;
-let accessiOptionsRef: AccessiOptions | null = null;
 
 export function setAccessiAuthService(service: AuthenticateGenService) {
   authenticateGenServiceRef = service;
-}
-
-export function setAccessiAuthOptions(options: AccessiOptions) {
-  accessiOptionsRef = options;
 }
 
 export async function authorizeAccessi(
@@ -220,11 +215,7 @@ export async function authorizeAccessi(
   next: NextFunction,
   options?: AccessiAuthorizationOptions
 ) {
-  if (authenticateGenServiceRef) {
-    return authenticateGenServiceRef.authorize(req, res, next, options);
-  }
-
-  if (!accessiOptionsRef) {
+  if (!authenticateGenServiceRef) {
     logger.error(
       `Authentication service not initialized ${JSON.stringify({
         method: req.method,
@@ -236,14 +227,7 @@ export async function authorizeAccessi(
       .json({ message: "Accessi authentication service not initialized" });
   }
 
-  return authorizeWithDependencies(
-    req,
-    res,
-    next,
-    options,
-    accessiOptionsRef,
-    new PermissionService(accessiOptionsRef)
-  );
+  return authenticateGenServiceRef.authorize(req, res, next, options);
 }
 
 export const authenticateGen = authorizeAccessi;
