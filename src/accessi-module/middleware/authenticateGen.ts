@@ -30,28 +30,28 @@ export async function authorizeAccessi(
 ) {
   try {
     const authHeader = req.headers.authorization;
-    if (!authHeader) return res.sendStatus(401);
+    if (!authHeader) throw new Error("Authorization header not found");
 
     const token = authHeader.split(" ")[1];
-    if (!token) return res.sendStatus(401);
+    if (!token) throw new Error("Token not found in Authorization header");
 
     const secret =
       accessiOptionsRef?.jwtOptions?.secret ?? process.env.ACC_JWT_SECRET;
-    if (!secret) return res.sendStatus(500);
+    if (!secret) throw new Error("JWT secret not configured");
 
     let decoded: any;
     try {
       decoded = jwt.verify(token, secret);
     } catch (error) {
-      return res.sendStatus(401);
+      throw new Error("Invalid JWT token");
     }
 
     const codiceUtente = resolveCodiceUtente(decoded);
-    if (!codiceUtente) return res.sendStatus(401);
+    if (!codiceUtente) throw new Error("codiceUtente not found in token payload");
 
     const requisiti = options?.requisiti ?? [];
     if (requisiti.length > 0) {
-      if (!accessiOptionsRef?.databaseOptions) return res.sendStatus(500);
+      if (!accessiOptionsRef?.databaseOptions) throw new Error("Database options not configured");
       const permissionService = new PermissionService(accessiOptionsRef);
       const grantsResult = await permissionService.getUserRolesAndGrants(
         codiceUtente
@@ -69,14 +69,15 @@ export async function authorizeAccessi(
         ? requisiti.every((r) => hasMenu(r.codiceMenu, r.tipoAbilitazione))
         : requisiti.some((r) => hasMenu(r.codiceMenu, r.tipoAbilitazione));
 
-      if (!hasAbil) return res.sendStatus(401);
+      if (!hasAbil) throw new Error("User does not have required permissions");
       (req as any).userGrants = grantsResult;
     }
 
     (req as any).data = decoded;
     return next();
   } catch (error) {
-    return res.sendStatus(401);
+    console.error("Authentication error:", error);
+    return res.status(401).json({ message: "Unauthorized", error: error.message });
   }
 }
 
