@@ -1,3 +1,10 @@
+## [1.7.5](https://github.com/Emil-Software/emilsoftware-utilities/compare/v1.7.4...v1.7.5) (2026-02-23)
+
+
+### Bug Fixes
+
+* accessi options ([d0a406d](https://github.com/Emil-Software/emilsoftware-utilities/commit/d0a406dab43146d9da3c387ec78f2ae56ca10e32))
+
 ## [1.7.4](https://github.com/Emil-Software/emilsoftware-utilities/compare/v1.7.3...v1.7.4) (2026-02-23)
 
 
