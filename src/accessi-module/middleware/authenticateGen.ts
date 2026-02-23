@@ -203,19 +203,16 @@ export class AuthenticateGenService {
   }
 }
 
-let authenticateGenServiceRef: AuthenticateGenService | null = null;
-
-export function setAccessiAuthService(service: AuthenticateGenService) {
-  authenticateGenServiceRef = service;
-}
-
 export async function authorizeAccessi(
   req: Request,
   res: Response,
   next: NextFunction,
   options?: AccessiAuthorizationOptions
 ) {
-  if (!authenticateGenServiceRef) {
+  const authService = (req as any)?.app?.locals?.accessiAuthService as
+    | AuthenticateGenService
+    | undefined;
+  if (!authService) {
     logger.error(
       `Authentication service not initialized ${JSON.stringify({
         method: req.method,
@@ -227,7 +224,7 @@ export async function authorizeAccessi(
       .json({ message: "Accessi authentication service not initialized" });
   }
 
-  return authenticateGenServiceRef.authorize(req, res, next, options);
+  return authService.authorize(req, res, next, options);
 }
 
 export const authenticateGen = authorizeAccessi;
