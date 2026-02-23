@@ -1,3 +1,10 @@
+## [1.7.4](https://github.com/Emil-Software/emilsoftware-utilities/compare/v1.7.3...v1.7.4) (2026-02-23)
+
+
+### Bug Fixes
+
+* build ([c8fd755](https://github.com/Emil-Software/emilsoftware-utilities/commit/c8fd755a69d568a83bf937dd0a83208429baecd0))
+
 ## [1.7.3](https://github.com/Emil-Software/emilsoftware-utilities/compare/v1.7.2...v1.7.3) (2026-02-23)
 
 
