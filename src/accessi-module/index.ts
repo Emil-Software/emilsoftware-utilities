@@ -3,10 +3,16 @@ import { NestFactory } from "@nestjs/core";
 import { ExpressAdapter } from "@nestjs/platform-express";
 import { AccessiModule, AccessiOptions } from "./AccessiModule";
 import { Logger } from "../Logger";
-import { AuthenticateGenService } from "./middleware/authenticateGen";
+import {
+    beginAccessiAuthInitialization,
+    failAccessiAuthInitialization,
+    AuthenticateGenService,
+    setAccessiAuthService
+} from "./middleware/authenticateGen";
 
 export async function initializeAccessiModule(app: Application, options: AccessiOptions) {
     const logger: Logger = new Logger("initializeAccessiModule");
+    beginAccessiAuthInitialization();
 
     console.log("Accessi initialized");
     try {
@@ -26,9 +32,12 @@ export async function initializeAccessiModule(app: Application, options: Accessi
 
         // Note: Swagger setup is now handled by the unified module
         await nestApp.init();
-        app.locals.accessiAuthService = nestApp.get(AuthenticateGenService);
+        const authService = nestApp.get(AuthenticateGenService);
+        app.locals.accessiAuthService = authService;
+        setAccessiAuthService(authService);
 
     } catch (error) {
+        failAccessiAuthInitialization(error);
         logger.error("Errore in initialize AccessiModule:", error);
         throw error;
     }

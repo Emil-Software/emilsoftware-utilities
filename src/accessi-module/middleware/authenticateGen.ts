@@ -14,6 +14,15 @@ import {
 } from "./accessiRequirements";
 
 const logger = new Logger("AuthenticateGen");
+const ACCESSI_AUTH_SERVICE_LOCALS_KEY = "accessiAuthService";
+const ACCESSI_AUTH_SERVICE_GLOBAL_KEY = Symbol.for("emilsoftware.accessiAuthService");
+const ACCESSI_AUTH_SERVICE_WAIT_MS = 15000;
+
+type Deferred<T> = {
+  promise: Promise<T>;
+  resolve: (value: T) => void;
+  reject: (reason?: unknown) => void;
+};
 
 class AuthMiddlewareError extends Error {
   constructor(
@@ -203,25 +212,122 @@ export class AuthenticateGenService {
   }
 }
 
+let authenticateGenServiceRef: AuthenticateGenService | null = null;
+let authServiceBootstrapDeferred: Deferred<AuthenticateGenService> | null = null;
+
+function createDeferred<T>(): Deferred<T> {
+  let resolve!: (value: T) => void;
+  let reject!: (reason?: unknown) => void;
+  const promise = new Promise<T>((res, rej) => {
+    resolve = res;
+    reject = rej;
+  });
+  return { promise, resolve, reject };
+}
+
+function isAuthenticateGenService(value: unknown): value is AuthenticateGenService {
+  return Boolean(
+    value &&
+    typeof (value as { authorize?: unknown }).authorize === "function"
+  );
+}
+
+export function beginAccessiAuthInitialization() {
+  if (!authServiceBootstrapDeferred) {
+    authServiceBootstrapDeferred = createDeferred<AuthenticateGenService>();
+  }
+}
+
+export function setAccessiAuthService(service: AuthenticateGenService) {
+  authenticateGenServiceRef = service;
+  (globalThis as Record<symbol, unknown>)[ACCESSI_AUTH_SERVICE_GLOBAL_KEY] = service;
+  if (authServiceBootstrapDeferred) {
+    authServiceBootstrapDeferred.resolve(service);
+    authServiceBootstrapDeferred = null;
+  }
+}
+
+export function failAccessiAuthInitialization(error: unknown) {
+  if (authServiceBootstrapDeferred) {
+    authServiceBootstrapDeferred.reject(error);
+    authServiceBootstrapDeferred = null;
+  }
+}
+
+function getAccessiAuthServiceFromRequest(req: Request): AuthenticateGenService | null {
+  const appLocalsService = (req.app?.locals as Record<string, unknown> | undefined)?.[
+    ACCESSI_AUTH_SERVICE_LOCALS_KEY
+  ];
+
+  if (isAuthenticateGenService(appLocalsService)) {
+    return appLocalsService as AuthenticateGenService;
+  }
+
+  const globalService = (globalThis as Record<symbol, unknown>)[
+    ACCESSI_AUTH_SERVICE_GLOBAL_KEY
+  ];
+  if (isAuthenticateGenService(globalService)) {
+    return globalService as AuthenticateGenService;
+  }
+
+  return authenticateGenServiceRef;
+}
+
+async function waitForBootstrappedService(): Promise<AuthenticateGenService | null> {
+  if (!authServiceBootstrapDeferred) {
+    return null;
+  }
+
+  const bootstrapPromise = authServiceBootstrapDeferred.promise;
+  const timeoutPromise = new Promise<null>((resolve) => {
+    setTimeout(() => resolve(null), ACCESSI_AUTH_SERVICE_WAIT_MS);
+  });
+
+  try {
+    const resolved = await Promise.race([bootstrapPromise, timeoutPromise]);
+    return isAuthenticateGenService(resolved) ? resolved : null;
+  } catch {
+    return null;
+  }
+}
+
+async function resolveAccessiAuthService(req: Request): Promise<AuthenticateGenService | null> {
+  const immediateService = getAccessiAuthServiceFromRequest(req);
+  if (immediateService) {
+    return immediateService;
+  }
+
+  const bootstrappedService = await waitForBootstrappedService();
+  if (bootstrappedService) {
+    return bootstrappedService;
+  }
+
+  return getAccessiAuthServiceFromRequest(req);
+}
+
 export async function authorizeAccessi(
   req: Request,
   res: Response,
   next: NextFunction,
   options?: AccessiAuthorizationOptions
 ) {
-  const authService = (req as any)?.app?.locals?.accessiAuthService as
-    | AuthenticateGenService
-    | undefined;
+  const authService = await resolveAccessiAuthService(req);
+
   if (!authService) {
+    const status = authServiceBootstrapDeferred ? 503 : 500;
+    const message = authServiceBootstrapDeferred
+      ? "Accessi authentication service is still initializing"
+      : "Accessi authentication service not initialized";
     logger.error(
       `Authentication service not initialized ${JSON.stringify({
         method: req.method,
         path: req.originalUrl ?? req.url,
+        status,
       })}`
     );
     return res
-      .status(500)
-      .json({ message: "Accessi authentication service not initialized" });
+      .status(status)
+      .json({ message });
   }
 
   return authService.authorize(req, res, next, options);
