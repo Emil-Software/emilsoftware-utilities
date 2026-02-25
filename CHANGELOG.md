@@ -1,3 +1,10 @@
+## [1.7.8](https://github.com/Emil-Software/emilsoftware-utilities/compare/v1.7.7...v1.7.8) (2026-02-25)
+
+
+### Bug Fixes
+
+* authenticateGen ([b4b028a](https://github.com/Emil-Software/emilsoftware-utilities/commit/b4b028aa5b54f4f4010063cebb3aa3b4f0384367))
+
 ## [1.7.7](https://github.com/Emil-Software/emilsoftware-utilities/compare/v1.7.6...v1.7.7) (2026-02-25)
 
 
