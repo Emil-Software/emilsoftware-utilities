@@ -1,3 +1,10 @@
+# [1.8.0-dev.2](https://github.com/Emil-Software/emilsoftware-utilities/compare/v1.8.0-dev.1...v1.8.0-dev.2) (2026-06-23)
+
+
+### Bug Fixes
+
+* numMac in DTO e registrazione ([68ddb16](https://github.com/Emil-Software/emilsoftware-utilities/commit/68ddb167b44d603910d3829cd2f1adc0dde3529a))
+
 # [1.8.0-dev.1](https://github.com/Emil-Software/emilsoftware-utilities/compare/v1.7.8...v1.8.0-dev.1) (2026-06-23)
 
 
