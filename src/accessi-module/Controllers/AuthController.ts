@@ -87,8 +87,9 @@ export class AuthController {
         return RestUtilities.sendInvalidCredentials(res);
       }
 
+      // Generazione del token JWT
       const tokenData = {
-        utente: userData.utente
+        utente: userData?.utente,
       }
 
       userData.token = {
@@ -110,5 +111,7 @@ export class AuthController {
       this.logger.error('Errore durante il login', error);
       return RestUtilities.sendInvalidCredentials(res);
     }
+    
   }
 }
+

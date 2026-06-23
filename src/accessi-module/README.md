@@ -76,6 +76,36 @@ Per inizializzare il modulo all'avvio del backend inserire:
     });
 ```
 
+### Aggiornamento database accessi standalone
+Se vuoi aggiornare il database accessi senza avviare il backend completo, puoi lanciare solo l'updater della libreria.
+
+Esempio PowerShell:
+```powershell
+$env:ACCESSI_DB_HOST="127.0.0.1"
+$env:ACCESSI_DB_PORT="3050"
+$env:ACCESSI_DB_DATABASE="C:\dati\ACCESSI_TEST.GDB"
+$env:ACCESSI_DB_USER="SYSDBA"
+$env:ACCESSI_DB_PASSWORD="masterkey"
+npm run db:update:accessi
+```
+
+Esempio bash:
+```bash
+export ACCESSI_DB_HOST=127.0.0.1
+export ACCESSI_DB_PORT=3050
+export ACCESSI_DB_DATABASE=/path/to/ACCESSI_TEST.GDB
+export ACCESSI_DB_USER=SYSDBA
+export ACCESSI_DB_PASSWORD=masterkey
+npm run db:update:accessi
+```
+
+Il comando esegue gli aggiornamenti mancanti in modo idempotente e alla fine stampa la versione corrente del database.
+
+Se vuoi provare il file compilato invece del sorgente TypeScript:
+```bash
+npm run db:update:accessi:dist
+```
+
 ### Creazione Service per Frontend
 Una volta inizializzato il modulo per verificare che funzioni correttamente collegarsi a ``` 127.0.0.1:3000/swagger ``` per verificare che tutti gli endpoint siano configurati correttamente e funzionanti.
 

@@ -1,9 +1,15 @@
-import { Application } from "express";
+import express, { Application, Request } from "express";
 import { NestFactory } from "@nestjs/core";
 import { ExpressAdapter } from "@nestjs/platform-express";
 import { setupSwagger } from "./swagger/SwaggerConfig";
 import { Logger } from "./Logger";
 import { EmilsoftwareModule, EmilsoftwareOptions } from "./EmilsoftwareModule";
+import {
+    beginAccessiAuthInitialization,
+    failAccessiAuthInitialization,
+    AuthenticateGenService,
+    setAccessiAuthService
+} from "./accessi-module/middleware/authenticateGen";
 
 /**
  * Initializes the unified module that combines Accessi and Allegati functionality
@@ -12,9 +18,29 @@ import { EmilsoftwareModule, EmilsoftwareOptions } from "./EmilsoftwareModule";
  */
 export async function initEmilsoftwareModule(app: Application, options: EmilsoftwareOptions) {
     const logger: Logger = new Logger(initEmilsoftwareModule.name);
+    if (options?.accessiOptions) {
+        beginAccessiAuthInitialization();
+    }
 
     try {
-        const nestExpressInstance = new ExpressAdapter(app);
+        // Isolate Nest on a dedicated Express instance and dispatch only module routes.
+        // This keeps pre-existing routes/middlewares on the host app untouched.
+        const nestHostApp = express();
+        const isNestRoute = (path: string) =>
+            path === "/api" ||
+            path.startsWith("/api/") ||
+            path === "/swagger" ||
+            path.startsWith("/swagger/") ||
+            path === "/swagger-json";
+
+        app.use((req: Request, res, next) => {
+            if (!isNestRoute(req.path)) {
+                return next();
+            }
+            return nestHostApp(req, res, next);
+        });
+
+        const nestExpressInstance = new ExpressAdapter(nestHostApp);
         const nestApp = await NestFactory.create(EmilsoftwareModule.forRoot(options), nestExpressInstance, {
             bufferLogs: true
         });
@@ -29,11 +55,19 @@ export async function initEmilsoftwareModule(app: Application, options: Emilsoft
         setupSwagger(nestApp);
 
         await nestApp.init();
+        if (options?.accessiOptions) {
+            const authService = nestApp.get(AuthenticateGenService);
+            app.locals.accessiAuthService = authService;
+            setAccessiAuthService(authService);
+        }
 
         logger.info("Emilsoftware module initialized successfully");
 
     } catch (error) {
+        if (options?.accessiOptions) {
+            failAccessiAuthInitialization(error);
+        }
         logger.error("Error initializing Emilsoftware Module:", error);
         throw error;
     }
-} 
+}

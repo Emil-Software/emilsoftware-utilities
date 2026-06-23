@@ -1,3 +1,144 @@
+## [1.7.8](https://github.com/Emil-Software/emilsoftware-utilities/compare/v1.7.7...v1.7.8) (2026-02-25)
+
+
+### Bug Fixes
+
+* authenticateGen ([b4b028a](https://github.com/Emil-Software/emilsoftware-utilities/commit/b4b028aa5b54f4f4010063cebb3aa3b4f0384367))
+
+## [1.7.7](https://github.com/Emil-Software/emilsoftware-utilities/compare/v1.7.6...v1.7.7) (2026-02-25)
+
+
+### Bug Fixes
+
+* build ([19c4d70](https://github.com/Emil-Software/emilsoftware-utilities/commit/19c4d70efede38e8f41f730ec31004c8a9f98074))
+
+## [1.7.6](https://github.com/Emil-Software/emilsoftware-utilities/compare/v1.7.5...v1.7.6) (2026-02-23)
+
+
+### Bug Fixes
+
+* DI ([4003286](https://github.com/Emil-Software/emilsoftware-utilities/commit/4003286889a50a8e5f3f76c11885708f7c18ffe3))
+
+## [1.7.5](https://github.com/Emil-Software/emilsoftware-utilities/compare/v1.7.4...v1.7.5) (2026-02-23)
+
+
+### Bug Fixes
+
+* accessi options ([d0a406d](https://github.com/Emil-Software/emilsoftware-utilities/commit/d0a406dab43146d9da3c387ec78f2ae56ca10e32))
+
+## [1.7.4](https://github.com/Emil-Software/emilsoftware-utilities/compare/v1.7.3...v1.7.4) (2026-02-23)
+
+
+### Bug Fixes
+
+* build ([c8fd755](https://github.com/Emil-Software/emilsoftware-utilities/commit/c8fd755a69d568a83bf937dd0a83208429baecd0))
+
+## [1.7.3](https://github.com/Emil-Software/emilsoftware-utilities/compare/v1.7.2...v1.7.3) (2026-02-23)
+
+
+### Bug Fixes
+
+* build ([cc8f98b](https://github.com/Emil-Software/emilsoftware-utilities/commit/cc8f98be8c14df97bb76021189a84686be334db3))
+
+## [1.7.2](https://github.com/Emil-Software/emilsoftware-utilities/compare/v1.7.1...v1.7.2) (2026-02-23)
+
+
+### Bug Fixes
+
+* added logging messages ([2e7044e](https://github.com/Emil-Software/emilsoftware-utilities/commit/2e7044e76b2b161b66a3af9f2816694df2c5c3d4))
+
+## [1.7.1](https://github.com/Emil-Software/emilsoftware-utilities/compare/v1.7.0...v1.7.1) (2026-02-20)
+
+
+### Bug Fixes
+
+* removed autenticazioni from token ([47b12bd](https://github.com/Emil-Software/emilsoftware-utilities/commit/47b12bdc1b27e5a449adbcc606bbb96bd485e852))
+
+# [1.7.0](https://github.com/Emil-Software/emilsoftware-utilities/compare/v1.6.10...v1.7.0) (2026-02-20)
+
+
+### Features
+
+* authenticateGen ([d0d6314](https://github.com/Emil-Software/emilsoftware-utilities/commit/d0d63145a39d2fdec6d20317af310bdfdc482212))
+
+## [1.6.10](https://github.com/Emil-Software/emilsoftware-utilities/compare/v1.6.9...v1.6.10) (2026-02-20)
+
+
+### Bug Fixes
+
+* force deploy ([3083e8d](https://github.com/Emil-Software/emilsoftware-utilities/commit/3083e8de150d10ff150663d45ddf500367fdb9e1))
+
+## [1.6.9](https://github.com/Emil-Software/emilsoftware-utilities/compare/v1.6.8...v1.6.9) (2026-02-20)
+
+
+### Bug Fixes
+
+* force ([c7355d9](https://github.com/Emil-Software/emilsoftware-utilities/commit/c7355d9b0a2df56735c2748bfefb6d7b2afbf3e7))
+
+## [1.6.8](https://github.com/Emil-Software/emilsoftware-utilities/compare/v1.6.7...v1.6.8) (2026-02-18)
+
+
+### Bug Fixes
+
+* sp ([a9349aa](https://github.com/Emil-Software/emilsoftware-utilities/commit/a9349aa216a64a7fd0925669c16eced61ae09a86))
+
+## [1.6.7](https://github.com/Emil-Software/emilsoftware-utilities/compare/v1.6.6...v1.6.7) (2026-02-18)
+
+
+### Bug Fixes
+
+* aggiornamento ([5febe0d](https://github.com/Emil-Software/emilsoftware-utilities/commit/5febe0de62a92a87208c0d5eaf6b1f942d63ece6))
+
+## [1.6.6](https://github.com/Emil-Software/emilsoftware-utilities/compare/v1.6.5...v1.6.6) (2026-02-18)
+
+
+### Bug Fixes
+
+* improve error handling logging in login method ([554e144](https://github.com/Emil-Software/emilsoftware-utilities/commit/554e1444f6526737eb54746d7c2e594f5ce36427))
+
+## [1.6.5](https://github.com/Emil-Software/emilsoftware-utilities/compare/v1.6.4...v1.6.5) (2026-02-18)
+
+
+### Bug Fixes
+
+* spazio ([6e5dcf2](https://github.com/Emil-Software/emilsoftware-utilities/commit/6e5dcf281f0e4efd20f67aa27f83d977c6db1fb3))
+
+## [1.6.4](https://github.com/Emil-Software/emilsoftware-utilities/compare/v1.6.3...v1.6.4) (2026-02-18)
+
+
+### Bug Fixes
+
+* add a blank line for better readability in login error handling ([fadede4](https://github.com/Emil-Software/emilsoftware-utilities/commit/fadede4e6af5a778105eb5983609793aabd5cbfb))
+
+## [1.6.3](https://github.com/Emil-Software/emilsoftware-utilities/compare/v1.6.2...v1.6.3) (2026-02-18)
+
+
+### Bug Fixes
+
+* spazio ([389b0c9](https://github.com/Emil-Software/emilsoftware-utilities/commit/389b0c92406d9b3417e69ca1c9dc5191874762d0))
+
+## [1.6.2](https://github.com/Emil-Software/emilsoftware-utilities/compare/v1.6.1...v1.6.2) (2026-02-18)
+
+
+### Bug Fixes
+
+* PUSH ([8d05720](https://github.com/Emil-Software/emilsoftware-utilities/commit/8d05720e0870351e4c3ece45599ba9245138b6a2))
+* update user data structure in token response ([14046f3](https://github.com/Emil-Software/emilsoftware-utilities/commit/14046f3b17d7a0850dea4f80ade4d8f6b277f035))
+
+## [1.6.1](https://github.com/Emil-Software/emilsoftware-utilities/compare/v1.6.0...v1.6.1) (2025-11-07)
+
+
+### Bug Fixes
+
+* add codVet nei filtri ([204de06](https://github.com/Emil-Software/emilsoftware-utilities/commit/204de067f8e1f3afd03c8044a501e5de666e5ffa))
+* aggiunto il campo note nei menu ([66c4a1a](https://github.com/Emil-Software/emilsoftware-utilities/commit/66c4a1a9ae8d818dae0ae31e5b3bc11f957e9596))
+* gestione ruoli ([fb3daf9](https://github.com/Emil-Software/emilsoftware-utilities/commit/fb3daf93e26fb0b6c0b42f4180b23efd3dce30ea))
+* jwt troppo grande per utilizzarlo a backend, gestione menu con possibilità di abilitare o meni ([2a6e3a8](https://github.com/Emil-Software/emilsoftware-utilities/commit/2a6e3a8e5bfa619c98c65aa04dfca3201dd7c64b))
+* mail ([51d2509](https://github.com/Emil-Software/emilsoftware-utilities/commit/51d250903e357ce1b642f91c94ee8f237d8ccff6))
+* mttd -> emilsoftware ([345a6c4](https://github.com/Emil-Software/emilsoftware-utilities/commit/345a6c4e09e72773e42731be6b18daaa3c8e191c))
+* registrazione campi opzionali ([3b7cf62](https://github.com/Emil-Software/emilsoftware-utilities/commit/3b7cf62159648c5c850e62e3e68f2e1c94c25110))
+* returning ([c0518e9](https://github.com/Emil-Software/emilsoftware-utilities/commit/c0518e973e8ada83445c89cb73ad565cdeea3a34))
+
 ## [1.6.1-dev.7](https://github.com/Emil-Software/emilsoftware-utilities/compare/v1.6.1-dev.6...v1.6.1-dev.7) (2025-11-06)
 
 

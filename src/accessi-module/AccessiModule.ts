@@ -19,6 +19,8 @@ import { FiltriController } from './Controllers/FiltriController';
 import { ConfiguratorController } from './Controllers/ConfiguratorController';
 import { ConfiguratorService } from './Services/ConfiguratorService/ConfiguratorService';
 import { JwtSimpleGuard } from './jwt/jwt.strategy';
+import { AuthenticateGenService } from './middleware/authenticateGen';
+import { AccessiDatabaseUpdater } from './database-updates/AccessiDatabaseUpdater';
 
 export interface JwtOptions {
   secret: string;
@@ -64,6 +66,7 @@ export interface AccessiOptions {
   encryptionKey: string;
   mockDemoUser: boolean;
   passwordExpiration?: boolean;
+  autoUpdateDatabase?: boolean;
   jwtOptions: JwtOptions;
   emailOptions: EmailOptions;
   extensionFieldsOptions?: ExtensionFieldsOptions[];
@@ -79,8 +82,8 @@ export interface AccessiOptions {
     FiltriController,
     ConfiguratorController
   ],
-  providers: [AuthService, UserService, EmailService, PermissionService, FiltriService, ConfiguratorService, JwtSimpleGuard],
-  exports: [AuthService, UserService, EmailService, PermissionService, FiltriService, ConfiguratorService, JwtSimpleGuard],
+  providers: [AuthService, UserService, EmailService, PermissionService, FiltriService, ConfiguratorService, JwtSimpleGuard, AuthenticateGenService, AccessiDatabaseUpdater],
+  exports: [AuthService, UserService, EmailService, PermissionService, FiltriService, ConfiguratorService, JwtSimpleGuard, AuthenticateGenService],
 })
 export class AccessiModule {
   static forRoot(options: AccessiOptions): DynamicModule {
@@ -97,7 +100,9 @@ export class AccessiModule {
         PermissionService,
         FiltriService,
         ConfiguratorService,
-        JwtSimpleGuard
+        JwtSimpleGuard,
+        AuthenticateGenService,
+        AccessiDatabaseUpdater
       ],
       exports: [
         'ACCESSI_OPTIONS',
@@ -107,7 +112,8 @@ export class AccessiModule {
         PermissionService,
         FiltriService,
         ConfiguratorService,
-        JwtSimpleGuard
+        JwtSimpleGuard,
+        AuthenticateGenService
       ],
     };
   }

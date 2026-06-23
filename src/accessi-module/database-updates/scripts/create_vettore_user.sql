@@ -1,0 +1,127 @@
+/*
+  Script Firebird parametrico per creare o aggiornare un utente "vettore" nel modulo accessi.
+
+  Parametri da valorizzare a ogni esecuzione:
+  - P_EMAIL
+  - P_PASSWORD_ENCRYPTED
+  - P_COGNOME
+  - P_NOME
+  - P_CELLULARE
+  - P_CODVET
+  - P_PAGDEF
+
+  Abilitazioni assegnate dallo script:
+  - MNUPLANNING   = 20 (scrittura)
+  - ECONTRATTI    = 20 (scrittura)
+  - MNUDIPENDENTI = 10 (lettura)
+  - MNUCONTA      = 10 (lettura)
+
+  Nota:
+  P_PASSWORD_ENCRYPTED non e' la password in chiaro. Deve essere il valore cifrato
+  con la stessa ACC_ENCRYPTION_KEY usata dall'applicazione.
+
+  Esempio Node.js per generare P_PASSWORD_ENCRYPTED:
+
+  const crypto = require('crypto');
+  const plain = 'PasswordSceltaDaTe';
+  const key = 'your-encryption-key';
+  const cipher = crypto.createCipheriv('aes-128-ecb', Buffer.from(key, 'utf8'), null);
+  const encrypted = Buffer.concat([cipher.update(plain, 'utf8'), cipher.final()]).toString('base64');
+  console.log(encrypted);
+*/
+
+EXECUTE BLOCK AS
+  DECLARE VARIABLE P_EMAIL VARCHAR(255) = 'INSERISCI_EMAIL';
+  DECLARE VARIABLE P_PASSWORD_ENCRYPTED VARCHAR(255) = 'INSERISCI_PASSWORD_CIFRATA';
+  DECLARE VARIABLE P_COGNOME VARCHAR(100) = 'INSERISCI_COGNOME';
+  DECLARE VARIABLE P_NOME VARCHAR(100) = 'INSERISCI_NOME';
+  DECLARE VARIABLE P_CELLULARE VARCHAR(50) = NULL;
+  DECLARE VARIABLE P_CODVET INTEGER = 0;
+  DECLARE VARIABLE P_PAGDEF VARCHAR(255) = '/';
+  DECLARE VARIABLE V_CODUTE INTEGER;
+BEGIN
+  SELECT FIRST 1 U.CODUTE
+  FROM UTENTI U
+  WHERE U.USRNAME = :P_EMAIL
+  ORDER BY U.CODUTE DESC
+  INTO :V_CODUTE;
+
+  IF (V_CODUTE IS NULL) THEN
+  BEGIN
+    INSERT INTO UTENTI (USRNAME, STAREG)
+    VALUES (:P_EMAIL, 20);
+
+    SELECT FIRST 1 U.CODUTE
+    FROM UTENTI U
+    WHERE U.USRNAME = :P_EMAIL
+    ORDER BY U.CODUTE DESC
+    INTO :V_CODUTE;
+  END
+  ELSE
+  BEGIN
+    UPDATE UTENTI
+    SET USRNAME = :P_EMAIL,
+        STAREG = 20
+    WHERE CODUTE = :V_CODUTE;
+  END
+
+  UPDATE OR INSERT INTO UTENTI_CONFIG (
+    CODUTE,
+    COGNOME,
+    NOME,
+    CELLULARE,
+    FLGSUPER,
+    FLGADMINCONFIG,
+    FLG2FATT,
+    PAGDEF
+  )
+  VALUES (
+    :V_CODUTE,
+    :P_COGNOME,
+    :P_NOME,
+    :P_CELLULARE,
+    0,
+    0,
+    0,
+    :P_PAGDEF
+  )
+  MATCHING (CODUTE);
+
+  UPDATE OR INSERT INTO UTENTI_PWD (
+    CODUTE,
+    PWD
+  )
+  VALUES (
+    :V_CODUTE,
+    :P_PASSWORD_ENCRYPTED
+  )
+  MATCHING (CODUTE);
+
+  UPDATE OR INSERT INTO FILTRI (
+    CODUTE,
+    TIPFIL,
+    CODVET
+  )
+  VALUES (
+    :V_CODUTE,
+    30,
+    :P_CODVET
+  )
+  MATCHING (CODUTE);
+
+  DELETE FROM ABILITAZIONI
+  WHERE CODUTE = :V_CODUTE
+    AND CODMNU IN ('MNUPLANNING', 'ECONTRATTI', 'MNUDIPENDENTI', 'MNUCONTA');
+
+  INSERT INTO ABILITAZIONI (CODUTE, CODMNU, TIPABI)
+  VALUES (:V_CODUTE, 'MNUPLANNING', 20);
+
+  INSERT INTO ABILITAZIONI (CODUTE, CODMNU, TIPABI)
+  VALUES (:V_CODUTE, 'ECONTRATTI', 20);
+
+  INSERT INTO ABILITAZIONI (CODUTE, CODMNU, TIPABI)
+  VALUES (:V_CODUTE, 'MNUDIPENDENTI', 10);
+
+  INSERT INTO ABILITAZIONI (CODUTE, CODMNU, TIPABI)
+  VALUES (:V_CODUTE, 'MNUCONTA', 10);
+END
