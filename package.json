@@ -9,6 +9,8 @@
     "release": "semantic-release",
     "build": "tsc && npm run copy-views",
     "copy-views": "node copy-views.js",
+    "db:update:accessi": "ts-node src/accessi-module/database-updates/runAccessiDbUpdate.ts",
+    "db:update:accessi:dist": "npm run build && node dist/accessi-module/database-updates/runAccessiDbUpdate.js",
     "prepublishOnly": "npm run build",
     "test:allegati": "ts-node src/tests/allegati/allegati.ts",
     "test:accessi": "npm run build && ts-node test/index.js"

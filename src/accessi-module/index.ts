@@ -44,6 +44,7 @@ export async function initializeAccessiModule(app: Application, options: Accessi
 }
 
 export { AccessiModule } from "./AccessiModule";
+export { AccessiDatabaseUpdater } from "./database-updates/AccessiDatabaseUpdater";
 export * from "./Dtos";
 export {
     authorizeAccessi,
