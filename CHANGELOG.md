@@ -1,3 +1,10 @@
+# [1.8.0-dev.1](https://github.com/Emil-Software/emilsoftware-utilities/compare/v1.7.8...v1.8.0-dev.1) (2026-06-23)
+
+
+### Features
+
+* add Accessi database updater and related scripts for standalone updates ([f562f39](https://github.com/Emil-Software/emilsoftware-utilities/commit/f562f39878b6ac3e07d5a189c833594a15226f7a))
+
 ## [1.7.8](https://github.com/Emil-Software/emilsoftware-utilities/compare/v1.7.7...v1.7.8) (2026-02-25)
 
 
