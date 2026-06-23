@@ -100,6 +100,12 @@ export class UserDto extends OmitType(FiltriUtente, ['codUte'] as const)  {
   paginaDefault?: string;
 
   @ApiPropertyOptional({
+    description: "Numero MAC associato all'utente.",
+    example: 12,
+  })
+  nummac?: number;
+
+  @ApiPropertyOptional({
     description: 'Metadata JSON personalizzato.',
     example: '{"theme": "dark"}',
   })

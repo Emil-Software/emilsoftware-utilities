@@ -75,6 +75,7 @@ export class UserService {
                 G.PAGDEF as pagina_default,
                 G.JSON_METADATA as json_metadata,
                 G.RAGSOCCLI as rag_soc_cli,
+                G.NUMMAC as nummac,
                 F.NUMREP AS num_rep,
                 F.IDXPERS AS idx_pers,
                 F.CODCLISUPER AS cod_cli_super,
@@ -184,6 +185,7 @@ export class UserService {
                 C.FLGSUPER AS flag_super,
                 C.FLGADMINCONFIG AS flag_admin_configurator,
                 C.PAGDEF AS pagina_default,
+                C.NUMMAC AS nummac,
                 C.RAGSOCCLI AS rag_soc_cli
             FROM UTENTI U
             INNER JOIN UTENTI_CONFIG C ON C.CODUTE = U.CODUTE
@@ -377,6 +379,11 @@ export class UserService {
           key: 'paginaDefault',
           dbField: 'PAGDEF',
           transform: (v) => String(v),
+        },
+        {
+          key: 'nummac',
+          dbField: 'NUMMAC',
+          transform: (v) => Number(v),
         },
         {
           key: 'ragSocCli',

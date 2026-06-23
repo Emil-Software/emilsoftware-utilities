@@ -76,6 +76,12 @@ export class RegisterRequest extends OmitType(FiltriUtente, ['codUte'] as const)
   paginaDefault?: string;
 
   @ApiPropertyOptional({
+    description: "Numero MAC associato all'utente.",
+    example: 12,
+  })
+  nummac?: number;
+
+  @ApiPropertyOptional({
     description: "Ragione sociale cliente.",
     example: "ALIVAL STOCK",
   })
