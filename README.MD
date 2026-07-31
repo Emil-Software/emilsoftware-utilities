@@ -32,3 +32,7 @@ Poi:
 git push origin dev
 Oppure:
 git push origin main
+
+## Accessi
+
+La documentazione operativa del modulo accessi si trova in [src/accessi-module/README.md](src/accessi-module/README.md).
