@@ -1,3 +1,13 @@
+# [2.0.0-dev.1](https://github.com/Emil-Software/emilsoftware-utilities/compare/v1.8.0-dev.2...v2.0.0-dev.1) (2026-08-19)
+
+
+* feat!: harden accessi auth and validation ([1762714](https://github.com/Emil-Software/emilsoftware-utilities/commit/1762714c2f8c3b1d59d9c42e7c4a854ca1d3b609))
+
+
+### BREAKING CHANGES
+
+* accessi endpoints now enforce stricter validation and authorization rules
+
 # [1.8.0-dev.2](https://github.com/Emil-Software/emilsoftware-utilities/compare/v1.8.0-dev.1...v1.8.0-dev.2) (2026-06-23)
 
 
