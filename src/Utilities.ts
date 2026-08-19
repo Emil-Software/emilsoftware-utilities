@@ -293,6 +293,135 @@ export class CryptUtilities {
     }
 }
 
+export class PasswordUtilities {
+    private static readonly HASH_PREFIX = "scrypt";
+    private static readonly LEGACY_HASH_PREFIX = "scrypt-legacy";
+    private static readonly SCRYPT_N = 16384;
+    private static readonly SCRYPT_R = 8;
+    private static readonly SCRYPT_P = 1;
+    private static readonly SALT_LENGTH = 16;
+
+    private static hashSecret(secretValue: string, prefix: string): string {
+        if (typeof secretValue !== "string" || secretValue.length === 0) {
+            throw new Error("Il valore da proteggere non puo essere vuoto.");
+        }
+        const salt = crypto.randomBytes(this.SALT_LENGTH).toString("hex");
+        const derivedKey = crypto.scryptSync(
+            secretValue,
+            salt,
+            64,
+            {
+                N: this.SCRYPT_N,
+                r: this.SCRYPT_R,
+                p: this.SCRYPT_P,
+                maxmem: 64 * 1024 * 1024,
+            },
+        );
+
+        return [
+            prefix,
+            this.SCRYPT_N,
+            this.SCRYPT_R,
+            this.SCRYPT_P,
+            salt,
+            derivedKey.toString("hex"),
+        ].join("$");
+    }
+
+    private static hasPrefix(value: string, prefix: string): boolean {
+        return typeof value === "string" && value.startsWith(`${prefix}$`);
+    }
+
+    private static parseHash(
+        storedPassword: string,
+        expectedPrefix: string
+    ): {
+        salt: string;
+        expectedHash: Buffer;
+        N: number;
+        r: number;
+        p: number;
+    } | null {
+        if (!this.hasPrefix(storedPassword, expectedPrefix)) {
+            return null;
+        }
+
+        const [, rawN, rawR, rawP, salt, expectedHashHex] = storedPassword.split("$");
+        const N = Number(rawN);
+        const r = Number(rawR);
+        const p = Number(rawP);
+
+        if (!salt || !expectedHashHex || !Number.isFinite(N) || !Number.isFinite(r) || !Number.isFinite(p)) {
+            return null;
+        }
+
+        const expectedHash = Buffer.from(expectedHashHex, "hex");
+        if (expectedHash.length === 0) {
+            return null;
+        }
+
+        return {
+            salt,
+            expectedHash,
+            N,
+            r,
+            p,
+        };
+    }
+
+    private static verifySecret(secretValue: string, storedPassword: string, expectedPrefix: string): boolean {
+        if (typeof secretValue !== "string") {
+            return false;
+        }
+
+        const parsedHash = this.parseHash(storedPassword, expectedPrefix);
+        if (!parsedHash) {
+            return false;
+        }
+
+        const derivedKey = crypto.scryptSync(
+            secretValue,
+            parsedHash.salt,
+            parsedHash.expectedHash.length,
+            {
+                N: parsedHash.N,
+                r: parsedHash.r,
+                p: parsedHash.p,
+                maxmem: 64 * 1024 * 1024,
+            },
+        );
+
+        return crypto.timingSafeEqual(derivedKey, parsedHash.expectedHash);
+    }
+
+    public static hashPassword(plainPassword: string): string {
+        return this.hashSecret(plainPassword, this.HASH_PREFIX);
+    }
+
+    public static hashLegacyEncryptedPassword(legacyEncryptedPassword: string): string {
+        return this.hashSecret(legacyEncryptedPassword, this.LEGACY_HASH_PREFIX);
+    }
+
+    public static isPasswordHash(value: string): boolean {
+        return this.hasPrefix(value, this.HASH_PREFIX);
+    }
+
+    public static isLegacyPasswordHash(value: string): boolean {
+        return this.hasPrefix(value, this.LEGACY_HASH_PREFIX);
+    }
+
+    public static verifyPassword(plainPassword: string, storedPassword: string): boolean {
+        return this.verifySecret(plainPassword, storedPassword, this.HASH_PREFIX);
+    }
+
+    public static verifyLegacyEncryptedPassword(
+        legacyEncryptedPassword: string,
+        storedPassword: string
+    ): boolean {
+        return this.verifySecret(legacyEncryptedPassword, storedPassword, this.LEGACY_HASH_PREFIX);
+    }
+}
+
 
 
 

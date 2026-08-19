@@ -4,7 +4,10 @@ import { AccessiOptions } from '../../AccessiModule';
 import { Orm } from '../../../Orm';
 import { Inject, Injectable } from '@nestjs/common';
 import { StatoRegistrazione } from '../../Dtos/StatoRegistrazione';
-import { Logger } from '../../../Logger';
+import {
+  createPasswordResetToken,
+  getAccessiJwtSecret,
+} from '../../security/passwordResetToken';
 
 @Injectable()
 export class EmailService {
@@ -17,38 +20,68 @@ export class EmailService {
   private transporter = nodemailer.createTransport(this.accessiOptions.emailOptions);
 
   public async sendPasswordResetEmail(email: string, htmlMail?: string): Promise<void> {
-    try {
-      const resetToken = uuidv4(); // Generiamo un nuovo token unico
+    let codiceUtente: number | null = null;
+    let resetToken: string | null = null;
 
-      console.log('Generated reset token:', resetToken);
-      // Aggiorna il campo keyReg nel database
-      const result = await Orm.execute(
+    try {
+      if (typeof email !== 'string' || email.trim() === '') {
+        return;
+      }
+
+      const normalizedEmail = email.trim().toLowerCase();
+      const userResult = await Orm.query(
         this.accessiOptions.databaseOptions,
-        'UPDATE UTENTI SET KEYREG = ?, STAREG = ? WHERE USRNAME = ? ',
-        [resetToken, StatoRegistrazione.INVIO, email],
+        'SELECT FIRST 1 CODUTE as codice_utente, STAREG as stato_registrazione FROM UTENTI WHERE LOWER(USRNAME) = ?',
+        [normalizedEmail],
+      );
+      const user = userResult.map((row) => ({
+        codiceUtente: Number(row.CODICE_UTENTE ?? row.codice_utente ?? row.CODUTE ?? row.codute),
+        statoRegistrazione: Number(
+          row.STATO_REGISTRAZIONE ?? row.stato_registrazione ?? row.STAREG ?? row.stareg,
+        ),
+      }))[0];
+
+      if (
+        !user?.codiceUtente ||
+        user.statoRegistrazione === StatoRegistrazione.BLOCC ||
+        user.statoRegistrazione === StatoRegistrazione.DELETE
+      ) {
+        return;
+      }
+
+      codiceUtente = user.codiceUtente;
+      const nonce = uuidv4();
+      const secret = getAccessiJwtSecret(this.accessiOptions);
+      resetToken = createPasswordResetToken(codiceUtente, nonce, secret);
+
+      await Orm.execute(
+        this.accessiOptions.databaseOptions,
+        'UPDATE UTENTI SET KEYREG = ? WHERE CODUTE = ? ',
+        [nonce, codiceUtente],
       );
 
       //costruizione dei queryparams
       const returnUrlQueryParams =
         '?returnUrl=' +
-        this.accessiOptions.confirmationEmailReturnUrl +
+        encodeURIComponent(this.accessiOptions.confirmationEmailReturnUrl) +
         '&prefix=' +
-        (this.accessiOptions.confirmationEmailPrefix ?? '');
+        encodeURIComponent(this.accessiOptions.confirmationEmailPrefix ?? '');
       const { confirmationEmailUrl, customResetPage } = this.accessiOptions;
 
       // costruisco l'url di base
-      let resetUrl = `${confirmationEmailUrl}/api/accessi/email/reset-password-page/${resetToken}${returnUrlQueryParams}`;
+      let resetUrl = `${confirmationEmailUrl}/api/accessi/email/reset-password-page/${encodeURIComponent(
+        resetToken,
+      )}${returnUrlQueryParams}`;
 
       //solo se gli do la customResetPage
       if (customResetPage) {
-        resetUrl = customResetPage + '?token=' + resetToken;
+        resetUrl = `${customResetPage}?token=${encodeURIComponent(resetToken)}`;
       }
 
       let sPhrase: string;
 
       if (htmlMail) {
-        sPhrase = htmlMail;
-        sPhrase.replace('#link_conferma_password_url', resetUrl);
+        sPhrase = htmlMail.replace('#link_conferma_password_url', resetUrl);
       } else {
         sPhrase = ` Gentile utente,<br>
                         abbiamo ricevuto la tua richiesta.<br><br>
@@ -75,6 +108,13 @@ export class EmailService {
 
       await this.transporter.sendMail(mailOptions);
     } catch (error) {
+      if (codiceUtente) {
+        await Orm.execute(
+          this.accessiOptions.databaseOptions,
+          'UPDATE UTENTI SET KEYREG = NULL WHERE CODUTE = ?',
+          [codiceUtente],
+        ).catch(() => undefined);
+      }
       console.error("Errore nell'invio dell'email di reset password:", error);
       throw new Error("Errore durante l'invio dell'email di reset password.");
     }

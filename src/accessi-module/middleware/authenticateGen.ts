@@ -3,6 +3,7 @@ import * as jwt from "jsonwebtoken";
 import { Inject, Injectable } from "@nestjs/common";
 import { AccessiOptions } from "../AccessiModule";
 import { PermissionService } from "../Services/PermissionService/PermissionService";
+import { UserService } from "../Services/UserService/UserService";
 import { Logger } from "../../Logger";
 import {
   AccessiAuthorizationOptions,
@@ -12,6 +13,11 @@ import {
   buildRequirementTree,
   evaluateRequirement,
 } from "./accessiRequirements";
+import {
+  buildAuthenticatedTokenPayload,
+  isAuthenticatedUserEnabledForJwt,
+  resolveCodiceUtenteFromTokenPayload,
+} from "../security/authenticatedToken";
 
 const logger = new Logger("AuthenticateGen");
 const ACCESSI_AUTH_SERVICE_LOCALS_KEY = "accessiAuthService";
@@ -34,14 +40,6 @@ class AuthMiddlewareError extends Error {
     super(message);
     this.name = "AuthMiddlewareError";
   }
-}
-
-function resolveCodiceUtente(decoded: any): number | undefined {
-  return (
-    decoded?.userData?.utente?.codiceUtente ??
-    decoded?.utente?.codiceUtente ??
-    decoded?.codiceUtente
-  );
 }
 
 function authError(
@@ -88,7 +86,8 @@ async function authorizeWithDependencies(
   next: NextFunction,
   options: AccessiAuthorizationOptions | undefined,
   accessiOptions: AccessiOptions,
-  permissionService: PermissionService
+  permissionService: PermissionService,
+  userService: UserService
 ) {
   try {
     const authHeader = req.headers.authorization;
@@ -117,7 +116,7 @@ async function authorizeWithDependencies(
       throw authError(401, "AUTH_TOKEN_INVALID", "Invalid JWT token");
     }
 
-    const codiceUtente = resolveCodiceUtente(decoded);
+    const codiceUtente = resolveCodiceUtenteFromTokenPayload(decoded);
     if (!codiceUtente) {
       throw authError(
         401,
@@ -125,6 +124,17 @@ async function authorizeWithDependencies(
         "codiceUtente not found in token payload"
       );
     }
+
+    const currentUser = await userService.getAuthenticatedUserSnapshot(codiceUtente);
+    if (!isAuthenticatedUserEnabledForJwt(currentUser)) {
+      throw authError(
+        401,
+        "AUTH_USER_DISABLED",
+        "User is no longer authorized"
+      );
+    }
+
+    const authenticatedPayload = buildAuthenticatedTokenPayload(decoded, currentUser);
 
     const requirementTree = buildRequirementTree(options);
     if (requirementTree) {
@@ -148,7 +158,7 @@ async function authorizeWithDependencies(
 
       const requirementContext: AccessiCustomRequirementContext = {
         req,
-        decodedToken: decoded,
+        decodedToken: authenticatedPayload,
         userCode: codiceUtente,
         getGrantsResult,
       };
@@ -170,7 +180,8 @@ async function authorizeWithDependencies(
       (req as any).userGrants = await getGrantsResult();
     }
 
-    (req as any).data = decoded;
+    (req as any).user = authenticatedPayload;
+    (req as any).data = authenticatedPayload;
     return next();
   } catch (error: unknown) {
     const authErr = normalizeAuthError(error);
@@ -192,7 +203,8 @@ export class AuthenticateGenService {
   constructor(
     @Inject("ACCESSI_OPTIONS")
     private readonly accessiOptions: AccessiOptions,
-    private readonly permissionService: PermissionService
+    private readonly permissionService: PermissionService,
+    private readonly userService: UserService
   ) { }
 
   async authorize(
@@ -207,7 +219,8 @@ export class AuthenticateGenService {
       next,
       options,
       this.accessiOptions,
-      this.permissionService
+      this.permissionService,
+      this.userService
     );
   }
 }

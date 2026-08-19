@@ -50,6 +50,20 @@ export interface ExtensionFieldsOptions {
   tableJoinFieldName: string;
 }
 
+export interface PublicAuthRateLimitRuleOptions {
+  windowMs: number;
+  maxAttempts: number;
+}
+
+export interface PublicAuthRateLimitOptions {
+  enabled?: boolean;
+  login?: PublicAuthRateLimitRuleOptions;
+  register?: PublicAuthRateLimitRuleOptions;
+  passwordResetEmail?: PublicAuthRateLimitRuleOptions;
+  passwordResetConfirm?: PublicAuthRateLimitRuleOptions;
+  getUserByToken?: PublicAuthRateLimitRuleOptions;
+}
+
 export interface AccessiOptions {
   databaseOptions: Options;
   /**
@@ -66,9 +80,12 @@ export interface AccessiOptions {
   encryptionKey: string;
   mockDemoUser: boolean;
   passwordExpiration?: boolean;
+  passwordExpirationDays?: number;
+  legacyPasswordMigrationOnStartup?: boolean;
   autoUpdateDatabase?: boolean;
   jwtOptions: JwtOptions;
   emailOptions: EmailOptions;
+  publicAuthRateLimit?: PublicAuthRateLimitOptions;
   extensionFieldsOptions?: ExtensionFieldsOptions[];
 }
 

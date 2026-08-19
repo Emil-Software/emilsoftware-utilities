@@ -1,17 +1,21 @@
 import { Body, Controller, Get, Inject, Param, Post, Query, Req, Res } from '@nestjs/common';
-import { ApiOperation, ApiTags, ApiResponse, ApiParam, ApiBody, ApiQuery } from '@nestjs/swagger';
-import { Response, Request } from 'express';
+import { ApiBody, ApiOperation, ApiParam, ApiQuery, ApiResponse, ApiTags } from '@nestjs/swagger';
+import { Request, Response } from 'express';
 import { join } from 'path';
 import { RestUtilities } from '../../Utilities';
 import { AccessiOptions } from '../AccessiModule';
 import { EmailService } from '../Services/EmailService/EmailService';
-import { IsOptional } from 'class-validator';
+import {
+  checkPublicAuthRateLimit,
+  sendPublicAuthRateLimitExceeded,
+} from '../security/publicAuthRateLimit';
+
 @ApiTags('Email')
 @Controller('accessi/email')
 export class EmailController {
   constructor(
+    @Inject('ACCESSI_OPTIONS') private readonly accessiOptions: AccessiOptions,
     private readonly emailService: EmailService,
-    @Inject('ACCESSI_OPTIONS') private readonly options: AccessiOptions,
   ) {}
 
   @ApiOperation({
@@ -21,7 +25,7 @@ export class EmailController {
   @ApiParam({ name: 'token', description: 'Token per il reset della password', required: true })
   @ApiQuery({
     name: 'returnUrl',
-    description: 'Url di ritorno della pagina. Default: https://google.com',
+    description: 'Url di ritorno della pagina',
     required: false,
   })
   @ApiResponse({ status: 200, description: 'Pagina di reset password servita con successo' })
@@ -45,20 +49,15 @@ export class EmailController {
           type: 'string',
           description: "L'email dell'utente che richiede il reset",
         },
-        htmlMail: {
-          type: 'string',
-          description: 'Corpo della mail in HTML',
-        },
       },
       required: ['email'],
     },
   })
-  @ApiResponse({ status: 200, description: "L'email di reset è stata inviata con successo" })
+  @ApiResponse({ status: 200, description: "L'email di reset e stata gestita con successo" })
   @ApiResponse({
-    status: 400,
-    description: 'Errore nella richiesta: protocollo o host non impostati',
+    status: 500,
+    description: "Errore interno durante l'invio dell'email",
   })
-  @ApiResponse({ status: 500, description: "Errore interno durante l'invio dell'email" })
   @Post('send-reset-password-email')
   async sendPasswordResetEmail(
     @Req() request: Request,
@@ -70,13 +69,20 @@ export class EmailController {
     @Res() res: Response,
   ) {
     try {
-      await this.emailService.sendPasswordResetEmail(
-        sendResetPasswordData.email,
-        sendResetPasswordData.htmlMail,
+      const rateLimitDecision = checkPublicAuthRateLimit(
+        this.accessiOptions,
+        'passwordResetEmail',
+        request,
+        [sendResetPasswordData?.email],
       );
+      if (!rateLimitDecision.allowed) {
+        return sendPublicAuthRateLimitExceeded(res, rateLimitDecision.retryAfterSeconds);
+      }
+
+      await this.emailService.sendPasswordResetEmail(sendResetPasswordData.email);
       return RestUtilities.sendOKMessage(
         res,
-        "L'email di reset è stata inoltrata al destinatario.",
+        "Se l'account esiste, l'email di reset e stata inoltrata al destinatario.",
       );
     } catch (error) {
       return RestUtilities.sendErrorMessage(res, error, EmailController.name);

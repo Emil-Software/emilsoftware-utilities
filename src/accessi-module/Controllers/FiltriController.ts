@@ -1,14 +1,22 @@
-import { Body, Controller, Get, Inject, Post, Query, Res } from '@nestjs/common';
-import { ApiOperation, ApiQuery, ApiResponse, ApiTags } from '@nestjs/swagger';
-import { Response } from 'express';
+import { Body, Controller, Get, Inject, Post, Query, Req, Res, UseGuards } from '@nestjs/common';
+import { ApiBearerAuth, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
+import { Request, Response } from 'express';
 import { RestUtilities } from '../../Utilities';
 import { AccessiOptions } from '../AccessiModule';
-import { BaseResponse, FiltriUtente, GetFiltriUtenteRequest, GetFiltriUtenteResponse } from '../Dtos';
-import { GetFiltriRequest, GetFiltriResponse, TipoFiltro } from '../Dtos/TipoFiltro';
+import { FiltriUtente, GetFiltriUtenteRequest, GetFiltriUtenteResponse } from '../Dtos';
+import { GetFiltriResponse } from '../Dtos/TipoFiltro';
 import { FiltriService } from '../Services/FiltriService/FiltriService';
+import { JwtSimpleGuard } from '../jwt/jwt.strategy';
+import {
+  ensureSelfOrSuperUser,
+  ensureSuperUser,
+  getAuthenticatedAccessiUser,
+} from '../security/accessControl';
 
 @ApiTags('Filtri')
+@ApiBearerAuth()
 @Controller('accessi/filtri')
+@UseGuards(JwtSimpleGuard)
 export class FiltriController {
   constructor(
     private readonly filtriService: FiltriService,
@@ -47,13 +55,32 @@ export class FiltriController {
   })
   @ApiResponse({
     status: 200,
-    description: 'Lista dei filtri dell’utente recuperata con successo',
+    description: "Lista dei filtri dell'utente recuperata con successo",
     type: GetFiltriUtenteResponse,
   })
-  async getFiltriUtente(@Res() res: Response, @Query() req: GetFiltriUtenteRequest) {
+  async getFiltriUtente(
+    @Req() request: Request,
+    @Res() res: Response,
+    @Query() req: GetFiltriUtenteRequest,
+  ) {
     try {
-      let {codUte} = req
-      const response = await this.filtriService.getFiltriUser(codUte);
+      const authenticatedUser = getAuthenticatedAccessiUser(request);
+      const targetUserCode = req?.codUte;
+
+      if (targetUserCode === undefined) {
+        ensureSuperUser(
+          authenticatedUser,
+          'Solo gli amministratori possono consultare i filtri di tutti gli utenti.',
+        );
+      } else {
+        ensureSelfOrSuperUser(
+          authenticatedUser,
+          Number(targetUserCode),
+          'Puoi consultare solo i tuoi filtri.',
+        );
+      }
+
+      const response = await this.filtriService.getFiltriUser(targetUserCode);
       return RestUtilities.sendBaseResponse(res, response);
     } catch (error) {
       return RestUtilities.sendErrorMessage(res, error, FiltriController.name);
@@ -64,22 +91,41 @@ export class FiltriController {
   @ApiOperation({
     operationId: 'saveFiltriUtente',
     summary: 'Inserisce o aggiorna i filtri di un utente',
-    description: 'Permette di salvare (inserire o aggiornare) i filtri associati ad un utente specifico'
+    description: 'Permette di salvare i filtri associati ad un utente specifico',
   })
   @ApiResponse({
     status: 200,
-    description: 'Filtri utente salvati con successo'
+    description: 'Filtri utente salvati con successo',
   })
   @ApiResponse({
     status: 500,
     description: 'Errore interno durante il salvataggio dei filtri utente',
   })
-  async saveFiltriUtente(@Res() res : Response, @Body() req: FiltriUtente) {
+  async saveFiltriUtente(
+    @Req() request: Request,
+    @Res() res: Response,
+    @Body() req: FiltriUtente,
+  ) {
     try {
-      const response = await this.filtriService.upsertFiltriUtente(req.codUte, req)
-      return RestUtilities.sendOKMessage(res,`Aggiornamento filtri per l'utente ${req.codUte} effettuato correttamente`)
+      const authenticatedUser = getAuthenticatedAccessiUser(request);
+      const targetUserCode = req?.codUte ?? authenticatedUser.codiceUtente;
+
+      ensureSelfOrSuperUser(
+        authenticatedUser,
+        Number(targetUserCode),
+        'Puoi modificare solo i tuoi filtri.',
+      );
+
+      await this.filtriService.upsertFiltriUtente(targetUserCode, {
+        ...req,
+        codUte: targetUserCode,
+      });
+      return RestUtilities.sendOKMessage(
+        res,
+        `Aggiornamento filtri per l'utente ${targetUserCode} effettuato correttamente`,
+      );
     } catch (error) {
-      return RestUtilities.sendErrorMessage(res,error,FiltriController.name)
+      return RestUtilities.sendErrorMessage(res, error, FiltriController.name);
     }
   }
 }
