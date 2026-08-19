@@ -14,6 +14,7 @@ ensureEsNodeFirebirdCompatibilityPatch();
 
 export class Orm {
     private static logger: Logger = new Logger(Orm.name);
+    private static compatibilityProfileCache: Map<string, FirebirdOptions> = new Map<string, FirebirdOptions>();
 
     public static quote(value: string): string {
         return "\"" + value + "\"";
@@ -21,6 +22,7 @@ export class Orm {
 
     private static getTimeoutMs(options: Options): number {
         const candidate = (options as FirebirdOptions).connectTimeoutMs
+            ?? (options as FirebirdOptions).compatibilityTotalTimeoutMs
             ?? (options as FirebirdOptions).connectTimeout
             ?? 15000;
 
@@ -31,6 +33,61 @@ export class Orm {
         const target = `${options.host ?? "?"}:${options.port ?? "?"} -> ${options.database ?? "?"}`;
         const suffix = query ? ` | sql=${query.replace(/\s+/g, " ").trim()}` : "";
         return new Error(`Timeout during Firebird ${stage} after ${timeoutMs} ms on ${target}${suffix}`);
+    }
+
+    private static createCompatibilityCacheKey(options: Options): string {
+        return [
+            options.host ?? "?",
+            options.port ?? "?",
+            options.database ?? "?",
+            options.user ?? "?",
+        ].join("|");
+    }
+
+    private static getProbeTimeoutMs(options: Options, candidateCount: number): number {
+        const configured = (options as FirebirdOptions).compatibilityProbeTimeoutMs;
+        if (Number.isFinite(configured) && configured! > 0) {
+            return Math.trunc(configured!);
+        }
+
+        const totalTimeoutMs = this.getTimeoutMs(options);
+        if (candidateCount <= 1) {
+            return totalTimeoutMs;
+        }
+
+        return Math.max(2500, Math.min(5000, Math.trunc(totalTimeoutMs / candidateCount)));
+    }
+
+    private static reorderCandidatesWithCache(options: Options, candidates: FirebirdOptions[]): FirebirdOptions[] {
+        const cacheKey = this.createCompatibilityCacheKey(options);
+        const cachedCandidate = this.compatibilityProfileCache.get(cacheKey);
+        if (!cachedCandidate) {
+            return candidates;
+        }
+
+        const ordered = [...candidates];
+        const cachedDescription = describeFirebirdCompatibilityOptions(cachedCandidate);
+        const cachedIndex = ordered.findIndex((candidate) => describeFirebirdCompatibilityOptions(candidate) === cachedDescription);
+
+        if (cachedIndex <= 0) {
+            return ordered;
+        }
+
+        const [matchedCandidate] = ordered.splice(cachedIndex, 1);
+        ordered.unshift(matchedCandidate);
+        return ordered;
+    }
+
+    private static createCompatibilitySummaryError(options: Options, attempts: { candidate: FirebirdOptions, error: unknown }[]): Error {
+        const target = `${options.host ?? "?"}:${options.port ?? "?"} -> ${options.database ?? "?"}`;
+        const attemptsSummary = attempts
+            .map(({ candidate, error }) => {
+                const errorMessage = String((error as { message?: unknown })?.message ?? error ?? "Unknown error");
+                return `[${describeFirebirdCompatibilityOptions(candidate)} => ${errorMessage}]`;
+            })
+            .join("; ");
+
+        return new Error(`Unable to attach Firebird database after compatibility probing on ${target}. Attempts: ${attemptsSummary}`);
     }
 
     private static async detachQuietly(db: Database | undefined): Promise<void> {
@@ -47,9 +104,8 @@ export class Orm {
         });
     }
 
-    private static attachOnceWithTimeout(options: Options): Promise<Database> {
+    private static attachOnceWithTimeout(options: Options, timeoutMs = this.getTimeoutMs(options)): Promise<Database> {
         return new Promise((resolve, reject): void => {
-            const timeoutMs = this.getTimeoutMs(options);
             let settled = false;
             const timeoutId = setTimeout(() => {
                 if (settled) {
@@ -80,34 +136,57 @@ export class Orm {
     }
 
     private static async attachWithTimeout(options: Options): Promise<Database> {
-        const candidates = buildFirebirdCompatibilityCandidates(options);
-        let lastError: unknown;
+        const totalTimeoutMs = this.getTimeoutMs(options);
+        const candidates = this.reorderCandidatesWithCache(options, buildFirebirdCompatibilityCandidates(options));
+        const probeTimeoutMs = this.getProbeTimeoutMs(options, candidates.length);
+        const startedAt = Date.now();
+        const attempts: { candidate: FirebirdOptions, error: unknown }[] = [];
+        const cacheKey = this.createCompatibilityCacheKey(options);
 
         for (let index = 0; index < candidates.length; index++) {
             const candidate = candidates[index];
+            const elapsedMs = Date.now() - startedAt;
+            const remainingMs = totalTimeoutMs - elapsedMs;
+
+            if (remainingMs <= 0) {
+                break;
+            }
+
+            const attemptTimeoutMs = index === 0 && candidates.length === 1
+                ? remainingMs
+                : Math.min(probeTimeoutMs, remainingMs);
 
             try {
-                if (index > 0) {
-                    this.logger.warning(
-                        `Retry Firebird attach with compatibility fallback ${index + 1}/${candidates.length}: ${describeFirebirdCompatibilityOptions(candidate)}`
+                if (candidates.length > 1) {
+                    this.logger.info(
+                        `Firebird compatibility probe ${index + 1}/${candidates.length}: ${describeFirebirdCompatibilityOptions(candidate)} (timeout ${attemptTimeoutMs} ms)`
                     );
                 }
 
-                return await this.attachOnceWithTimeout(candidate);
+                const db = await this.attachOnceWithTimeout(candidate, attemptTimeoutMs);
+                this.compatibilityProfileCache.set(cacheKey, candidate);
+
+                if (candidates.length > 1) {
+                    this.logger.info(
+                        `Firebird compatibility profile selected: ${describeFirebirdCompatibilityOptions(candidate)}`
+                    );
+                }
+
+                return db;
             } catch (error) {
-                lastError = error;
+                attempts.push({ candidate, error });
 
                 if (!shouldRetryFirebirdCompatibility(error) || index === candidates.length - 1) {
-                    throw error;
+                    throw this.createCompatibilitySummaryError(options, attempts);
                 }
 
                 this.logger.warning(
-                    `Firebird attach failed with ${describeFirebirdCompatibilityOptions(candidate)}. Retrying compatibility fallback. Error: ${String((error as { message?: unknown })?.message ?? error)}`
+                    `Firebird attach failed with ${describeFirebirdCompatibilityOptions(candidate)}. Trying next compatibility profile. Error: ${String((error as { message?: unknown })?.message ?? error)}`
                 );
             }
         }
 
-        throw lastError;
+        throw this.createCompatibilitySummaryError(options, attempts);
     }
 
     public static async testConnection(options: Options): Promise<boolean> {

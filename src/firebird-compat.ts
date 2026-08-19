@@ -10,6 +10,8 @@ export type FirebirdOptions = Options & {
     authPlugins?: FirebirdAuthPlugin[];
     connectTimeoutMs?: number;
     connectTimeout?: number;
+    compatibilityProbeTimeoutMs?: number;
+    compatibilityTotalTimeoutMs?: number;
 };
 
 const CNCT_PLUGIN_NAME = 8;
@@ -107,7 +109,8 @@ function isRetryableCompatibilityError(error: unknown): boolean {
     return message.includes("incompatible wire encryption")
         || message.includes("no matching plugins on server")
         || message.includes("unknown auth plugin")
-        || message.includes("unknow auth plugin");
+        || message.includes("unknow auth plugin")
+        || message.includes("timeout during firebird attach");
 }
 
 function pushUniqueCandidate(target: FirebirdOptions[], candidate: FirebirdOptions): void {
@@ -121,6 +124,17 @@ function pushUniqueCandidate(target: FirebirdOptions[], candidate: FirebirdOptio
     if (!alreadyPresent) {
         target.push(normalized);
     }
+}
+
+function appendPluginCandidates(
+    target: FirebirdOptions[],
+    base: FirebirdOptions,
+    pluginName: FirebirdAuthPlugin,
+    wireCryptModes: FirebirdWireCryptMode[],
+): void {
+    wireCryptModes.forEach((wireCrypt) => {
+        pushUniqueCandidate(target, { ...base, pluginName, wireCrypt });
+    });
 }
 
 export function buildFirebirdCompatibilityCandidates(options: Options): FirebirdOptions[] {
@@ -137,23 +151,24 @@ export function buildFirebirdCompatibilityCandidates(options: Options): Firebird
     }
 
     if (hasExplicitPlugin) {
-        pushUniqueCandidate(candidates, { ...normalized, wireCrypt: "disabled" });
-        pushUniqueCandidate(candidates, { ...normalized, wireCrypt: "enabled" });
+        const wireCryptModes = normalized.pluginName === "Legacy_Auth"
+            ? ["disabled", "enabled"] as FirebirdWireCryptMode[]
+            : ["enabled", "required", "disabled"] as FirebirdWireCryptMode[];
+
+        appendPluginCandidates(candidates, normalized, normalized.pluginName!, wireCryptModes);
         return candidates;
     }
 
     if (hasExplicitWireCrypt) {
-        pushUniqueCandidate(candidates, { ...normalized, pluginName: "Srp256" });
-        pushUniqueCandidate(candidates, { ...normalized, pluginName: "Srp" });
-        pushUniqueCandidate(candidates, { ...normalized, pluginName: "Legacy_Auth" });
+        appendPluginCandidates(candidates, normalized, "Srp256", [normalized.wireCrypt!]);
+        appendPluginCandidates(candidates, normalized, "Srp", [normalized.wireCrypt!]);
+        appendPluginCandidates(candidates, normalized, "Legacy_Auth", [normalized.wireCrypt!]);
         return candidates;
     }
 
-    pushUniqueCandidate(candidates, { ...normalized, pluginName: "Srp256", wireCrypt: "enabled" });
-    pushUniqueCandidate(candidates, { ...normalized, pluginName: "Srp", wireCrypt: "enabled" });
-    pushUniqueCandidate(candidates, { ...normalized, pluginName: "Srp256", wireCrypt: "disabled" });
-    pushUniqueCandidate(candidates, { ...normalized, pluginName: "Srp", wireCrypt: "disabled" });
-    pushUniqueCandidate(candidates, { ...normalized, pluginName: "Legacy_Auth", wireCrypt: "disabled" });
+    appendPluginCandidates(candidates, normalized, "Srp256", ["enabled", "required", "disabled"]);
+    appendPluginCandidates(candidates, normalized, "Srp", ["enabled", "required", "disabled"]);
+    appendPluginCandidates(candidates, normalized, "Legacy_Auth", ["disabled", "enabled"]);
     return candidates;
 }
 
