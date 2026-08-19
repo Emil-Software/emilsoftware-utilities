@@ -156,11 +156,18 @@ END`
       return;
     }
 
+    AccessiDatabaseUpdater.logger.info("Avvio updater database accessi.");
     await AccessiDatabaseUpdater.run(this.accessiOptions);
+    AccessiDatabaseUpdater.logger.info("Updater database accessi completato.");
   }
 
   static async run(options: AccessiOptions): Promise<void> {
+    const startedAt = performance.now();
+    this.logger.info(
+      `Verifica schema accessi su ${options.databaseOptions.host ?? "?"}:${options.databaseOptions.port ?? "?"} -> ${options.databaseOptions.database ?? "?"}`
+    );
     await this.createParametersTable(options.databaseOptions);
+    this.logger.info("Tabella PARAMETRI verificata.");
 
     const currentVersion = await this.getDatabaseVersion(options.databaseOptions);
     const currentIndex = this.updates.findIndex(
@@ -184,12 +191,20 @@ END`
 
     for (let index = startIndex; index < this.updates.length; index++) {
       const update = this.updates[index];
+      const stepStartedAt = performance.now();
       this.logger.info(
         `Applico aggiornamento accessi ${update.fromVersion} -> ${update.toVersion}: ${update.description}`
       );
       await update.apply(options);
       await this.setDatabaseVersion(options.databaseOptions, update.toVersion);
+      this.logger.info(
+        `Aggiornamento accessi ${update.toVersion} completato in ${(performance.now() - stepStartedAt).toFixed(2)} ms`
+      );
     }
+
+    this.logger.info(
+      `Verifica/aggiornamento database accessi completato in ${(performance.now() - startedAt).toFixed(2)} ms`
+    );
   }
 
   static async getCurrentVersion(options: AccessiOptions): Promise<string | null> {

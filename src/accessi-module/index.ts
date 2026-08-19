@@ -12,12 +12,28 @@ import {
     setAccessiAuthService
 } from "./middleware/authenticateGen";
 
+function describeDatabaseTarget(options: AccessiOptions): string {
+    const dbOptions = options.databaseOptions as {
+        host?: string;
+        port?: number;
+        database?: string;
+        user?: string;
+    };
+
+    return `${dbOptions.host ?? "?"}:${dbOptions.port ?? "?"} -> ${dbOptions.database ?? "?"} as ${dbOptions.user ?? "?"}`;
+}
+
 export async function initializeAccessiModule(app: Application, options: AccessiOptions) {
     const logger: Logger = new Logger("initializeAccessiModule");
     beginAccessiAuthInitialization();
+    const startedAt = performance.now();
 
-    console.log("Accessi initialized");
     try {
+        logger.info("Inizializzazione modulo accessi avviata.");
+        logger.info(`Target database accessi: ${describeDatabaseTarget(options)}`);
+        logger.info(
+            `Configurazione accessi: autoUpdateDatabase=${options.autoUpdateDatabase !== false}, legacyPasswordMigrationOnStartup=${options.legacyPasswordMigrationOnStartup !== false}`
+        );
         // Creiamo un'istanza Express separata per NestJS
         const nestExpressInstance = new ExpressAdapter(app);
 
@@ -25,6 +41,7 @@ export async function initializeAccessiModule(app: Application, options: Accessi
         const nestApp = await NestFactory.create(AccessiModule.forRoot(options), nestExpressInstance, {
             bufferLogs: true
         });
+        logger.info("Applicazione Nest accessi creata.");
 
         nestApp.enableCors();
         nestApp.useGlobalPipes(
@@ -43,15 +60,21 @@ export async function initializeAccessiModule(app: Application, options: Accessi
         });
 
         // Note: Swagger setup is now handled by the unified module
+        logger.info("Avvio init del modulo accessi.");
         await nestApp.init();
+        logger.info("Init del modulo accessi completata.");
         if (options.legacyPasswordMigrationOnStartup !== false) {
+            logger.info("Avvio migrazione password legacy accessi.");
             const passwordMigrationService = nestApp.get(AuthService);
             await passwordMigrationService.migrateLegacyEncryptedPasswords();
+            logger.info("Migrazione password legacy accessi completata.");
         }
 
         const accessiAuthService = nestApp.get(AuthenticateGenService);
         app.locals.accessiAuthService = accessiAuthService;
         setAccessiAuthService(accessiAuthService);
+        const elapsedMs = performance.now() - startedAt;
+        logger.info(`Accessi initialized. Tempo totale bootstrap: ${elapsedMs.toFixed(2)} ms`);
 
     } catch (error) {
         failAccessiAuthInitialization(error);

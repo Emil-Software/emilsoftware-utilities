@@ -18,9 +18,12 @@ import {
   getAccessiJwtSecret,
   verifyPasswordResetToken,
 } from "../../security/passwordResetToken";
+import { Logger } from "../../../Logger";
 
 @Injectable()
 export class AuthService {
+  private readonly logger = new Logger(AuthService.name);
+
   constructor(
     private userService: UserService,
     private permissionService: PermissionService,
@@ -186,6 +189,8 @@ export class AuthService {
   }
 
   public async migrateLegacyEncryptedPasswords(): Promise<void> {
+    const startedAt = performance.now();
+    this.logger.info("Avvio migrazione password legacy accessi.");
     const results = await Orm.query(
       this.accessiOptions.databaseOptions,
       "SELECT CODUTE AS codice_utente, PWD AS password FROM UTENTI_PWD WHERE PWD IS NOT NULL",
@@ -196,6 +201,8 @@ export class AuthService {
       codiceUtente?: number;
       password?: string;
     }[];
+    let migratedCount = 0;
+    let skippedCount = 0;
 
     for (const row of rows) {
       const codiceUtente = Number(row.codiceUtente);
@@ -207,6 +214,7 @@ export class AuthService {
         PasswordUtilities.isPasswordHash(storedPassword) ||
         PasswordUtilities.isLegacyPasswordHash(storedPassword)
       ) {
+        skippedCount += 1;
         continue;
       }
 
@@ -218,7 +226,12 @@ export class AuthService {
         "UPDATE UTENTI_PWD SET PWD = ? WHERE CODUTE = ? AND PWD = ?",
         [protectedLegacyPassword, codiceUtente, storedPassword]
       );
+      migratedCount += 1;
     }
+
+    this.logger.info(
+      `Migrazione password legacy accessi completata. Letti=${rows.length}, migrati=${migratedCount}, ignorati=${skippedCount}, durataMs=${(performance.now() - startedAt).toFixed(2)}`
+    );
   }
 
   async verifyPassword(
