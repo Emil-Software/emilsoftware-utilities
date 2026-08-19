@@ -1,4 +1,6 @@
 import { ApiProperty } from "@nestjs/swagger";
+import { IsEnum, IsString, Length } from "class-validator";
+import { TipoAbilitazione } from "./TipoAbilitazione";
 
 export class Permission {
     @ApiProperty({
@@ -6,6 +8,8 @@ export class Permission {
         type: String,
         example: "MNU001"
     })
+    @IsString({ message: "Il codice menu deve essere una stringa." })
+    @Length(3, 50, { message: "Il codice menu deve essere compreso tra 3 e 50 caratteri." })
     codiceMenu: string;
 
     @ApiProperty({
@@ -13,5 +17,6 @@ export class Permission {
         type: Number,
         example: 30
     })
+    @IsEnum(TipoAbilitazione, { message: "Il tipo di abilitazione non e valido." })
     tipoAbilitazione: number;
 }

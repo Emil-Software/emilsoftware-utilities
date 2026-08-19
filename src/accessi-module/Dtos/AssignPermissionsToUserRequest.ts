@@ -1,4 +1,6 @@
 import { ApiProperty } from '@nestjs/swagger';
+import { Type } from 'class-transformer';
+import { ArrayNotEmpty, IsArray, ValidateNested } from 'class-validator';
 import { Permission } from './Permission';
 
 export class AssignPermissionsToUserRequest {
@@ -10,5 +12,9 @@ export class AssignPermissionsToUserRequest {
             { codiceMenu: "MNU002", tipoAbilitazione: 10 }
         ]
     })
+    @IsArray({ message: 'Le abilitazioni devono essere un array.' })
+    @ArrayNotEmpty({ message: 'E necessario fornire almeno una abilitazione.' })
+    @ValidateNested({ each: true })
+    @Type(() => Permission)
     permissions: Permission[];
 }

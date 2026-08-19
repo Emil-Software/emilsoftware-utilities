@@ -1,12 +1,16 @@
-import { Body, Controller, Inject, Param, Post, Res } from '@nestjs/common';
+import { Body, Controller, HttpStatus, Inject, Param, Post, Req, Res } from '@nestjs/common';
 import { ApiOperation, ApiTags, ApiResponse, ApiParam, ApiBody } from '@nestjs/swagger';
-import { Response } from 'express';
+import { Request, Response } from 'express';
 import * as jwt from 'jsonwebtoken';
 import { RestUtilities } from '../../Utilities';
 import { AccessiOptions } from '../AccessiModule';
 import { AuthService } from '../Services/AuthService/AuthService';
 import { LoginRequest, LoginResponse } from '../Dtos';
 import { Logger } from '../../Logger';
+import {
+  checkPublicAuthRateLimit,
+  sendPublicAuthRateLimitExceeded,
+} from '../security/publicAuthRateLimit';
 
 @ApiTags('Auth')
 @Controller('accessi/auth')
@@ -24,12 +28,26 @@ export class AuthController {
   @ApiResponse({ status: 200, description: 'Password aggiornata con successo' })
   @ApiResponse({ status: 400, description: 'Errore nella richiesta o token non valido' })
   @Post('confirm-reset-password/:token')
-  async resetPassword(@Res() res: Response, @Param('token') token: string, @Body("newPassword") newPassword: string) {
+  async resetPassword(
+    @Req() request: Request,
+    @Res() res: Response,
+    @Param('token') token: string,
+    @Body("newPassword") newPassword: string,
+  ) {
     try {
+      const rateLimitDecision = checkPublicAuthRateLimit(
+        this.options,
+        'passwordResetConfirm',
+        request,
+      );
+      if (!rateLimitDecision.allowed) {
+        return sendPublicAuthRateLimitExceeded(res, rateLimitDecision.retryAfterSeconds);
+      }
+
       await this.authService.confirmResetPassword(token, newPassword);
       return RestUtilities.sendOKMessage(res, 'Password aggiornata con successo!');
     } catch (error) {
-      return RestUtilities.sendErrorMessage(res, error, AuthController.name);
+      return RestUtilities.sendErrorMessage(res, error, AuthController.name, HttpStatus.BAD_REQUEST);
     }
   }
 
@@ -38,14 +56,34 @@ export class AuthController {
   @ApiResponse({ status: 200, description: 'Informazioni utente recuperate con successo' })
   @ApiResponse({ status: 401, description: 'Token non valido o scaduto' })
   @Post('get-user-by-token')
-  async getUserByToken(@Body('token') token: string, @Res() res: Response) {
+  async getUserByToken(
+    @Req() request: Request,
+    @Body('token') token: string,
+    @Res() res: Response,
+  ) {
     try {
-      if (!token) return RestUtilities.sendErrorMessage(res, 'Token non fornito', AuthController.name);
-      const decoded = jwt.verify(token, this.options.jwtOptions.secret);
-      if (!decoded) return RestUtilities.sendUnauthorized(res);
-      return RestUtilities.sendBaseResponse(res, { userData: decoded });
+      const rateLimitDecision = checkPublicAuthRateLimit(
+        this.options,
+        'getUserByToken',
+        request,
+      );
+      if (!rateLimitDecision.allowed) {
+        return sendPublicAuthRateLimitExceeded(res, rateLimitDecision.retryAfterSeconds);
+      }
+
+      if (!token) {
+        return RestUtilities.sendErrorMessage(
+          res,
+          'Token non fornito',
+          AuthController.name,
+          HttpStatus.BAD_REQUEST,
+        );
+      }
+
+      const authenticatedPayload = await this.authService.getAuthenticatedTokenPayload(token);
+      return RestUtilities.sendBaseResponse(res, { userData: authenticatedPayload });
     } catch (error) {
-      return RestUtilities.sendErrorMessage(res, error, AuthController.name);
+      return RestUtilities.sendErrorMessage(res, error, AuthController.name, HttpStatus.UNAUTHORIZED);
     }
   }
 
@@ -79,8 +117,17 @@ export class AuthController {
     }
   })
   @Post('login')
-  async login(@Body() loginRequest: LoginRequest, @Res() res: Response) {
+  async login(@Req() request: Request, @Body() loginRequest: LoginRequest, @Res() res: Response) {
     try {
+      const rateLimitDecision = checkPublicAuthRateLimit(
+        this.options,
+        'login',
+        request,
+        [loginRequest?.email],
+      );
+      if (!rateLimitDecision.allowed) {
+        return sendPublicAuthRateLimitExceeded(res, rateLimitDecision.retryAfterSeconds);
+      }
 
       const userData = await this.authService.login(loginRequest);
       if (!userData) {

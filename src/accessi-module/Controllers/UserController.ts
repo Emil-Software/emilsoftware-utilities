@@ -1,40 +1,55 @@
 import {
-  Controller,
-  Get,
-  Post,
   Body,
-  Inject,
-  Res,
-  Param,
-  Req,
+  Controller,
   Delete,
-  Put,
-  Patch,
+  Get,
+  HttpException,
   HttpStatus,
-  Query,
+  Param,
   ParseBoolPipe,
+  ParseIntPipe,
+  Patch,
+  Post,
+  Put,
+  Query,
+  Inject,
+  Req,
+  Res,
+  UseGuards,
 } from '@nestjs/common';
-import { Response, Request } from 'express';
+import { Request, Response } from 'express';
 import {
-  ApiTags,
-  ApiOperation,
-  ApiResponse,
-  ApiParam,
+  ApiBearerAuth,
   ApiBody,
   ApiCreatedResponse,
+  ApiOperation,
+  ApiParam,
   ApiQuery,
+  ApiResponse,
+  ApiTags,
 } from '@nestjs/swagger';
+import { join } from 'path';
+import { Logger } from '../../Logger';
 import { RestUtilities } from '../../Utilities';
 import { AccessiOptions } from '../AccessiModule';
-import { UserService } from '../Services/UserService/UserService';
-import { EmailService } from '../Services/EmailService/EmailService';
-import { join } from 'path';
 import { GetUsersResponse } from '../Dtos/GetUsersResponse';
-import { StatoRegistrazione, UserDto } from '../Dtos';
-import { RegisterResponse } from '../Dtos/RegisterResponse';
 import { RegisterRequest } from '../Dtos/RegisterRequest';
-import { Logger } from '../../Logger';
+import { RegisterResponse } from '../Dtos/RegisterResponse';
 import { SetStatoRegistrazioneDto } from '../Dtos/SetStatoRegistrazione';
+import { UserDto } from '../Dtos/UserDto';
+import { EmailService } from '../Services/EmailService/EmailService';
+import { UserService } from '../Services/UserService/UserService';
+import { JwtSimpleGuard } from '../jwt/jwt.strategy';
+import {
+  checkPublicAuthRateLimit,
+  sendPublicAuthRateLimitExceeded,
+} from '../security/publicAuthRateLimit';
+import {
+  ensureSelfOrSuperUser,
+  ensureSuperUser,
+  getAuthenticatedAccessiUser,
+  hasPrivilegedUserChanges,
+} from '../security/accessControl';
 
 @ApiTags('User')
 @Controller('accessi/user')
@@ -42,13 +57,19 @@ export class UserController {
   private readonly logger = new Logger(UserController.name);
 
   constructor(
+    @Inject('ACCESSI_OPTIONS') private readonly accessiOptions: AccessiOptions,
     private readonly userService: UserService,
     private readonly emailService: EmailService,
-    @Inject('ACCESSI_OPTIONS') private readonly options: AccessiOptions,
   ) {}
 
+  private sendControllerError(res: Response, error: unknown) {
+    const status =
+      error instanceof HttpException ? error.getStatus() : HttpStatus.INTERNAL_SERVER_ERROR;
+    return RestUtilities.sendErrorMessage(res, error, UserController.name, status);
+  }
+
   @ApiOperation({
-    summary: 'Servire la pagina di reset password',
+    summary: 'Serve la pagina di reset password',
     operationId: 'serveResetPasswordPageUser',
   })
   @ApiParam({
@@ -84,15 +105,18 @@ export class UserController {
   @ApiQuery({
     name: 'includeExtensionFields',
     required: false,
-    description: 'Includi extension fields (chiamata più pesante)',
+    description: 'Includi extension fields',
   })
   @ApiQuery({
     name: 'includeGrants',
     required: false,
-    description: 'Includi Permessi (chiamata più pesante)',
+    description: 'Includi permessi',
   })
+  @ApiBearerAuth()
+  @UseGuards(JwtSimpleGuard)
   @Get('get-users')
   async getUsers(
+    @Req() request: Request,
     @Res() res: Response,
     @Query('email') email?: string,
     @Query('codiceUtente') codiceUtente?: number,
@@ -102,30 +126,35 @@ export class UserController {
     includeGrants?: boolean,
   ) {
     try {
-      let filters = { email, codiceUtente };
-      let options = {
+      ensureSuperUser(
+        getAuthenticatedAccessiUser(request),
+        'Solo gli amministratori possono consultare gli utenti.',
+      );
+
+      const filters = { email, codiceUtente };
+      const options = {
         includeExtensionFields: includeExtensionFields ?? true,
         includeGrants: includeGrants ?? true,
       };
+
       const users = await this.userService.getUsers(filters, options);
       return RestUtilities.sendBaseResponse(res, users);
     } catch (error) {
       this.logger.error('Errore durante il recupero degli utenti: ', error);
-      return RestUtilities.sendErrorMessage(res, error, UserController.name);
+      return this.sendControllerError(res, error);
     }
   }
 
   @ApiOperation({
     summary: 'Elimina un utente',
     operationId: 'deleteUser',
-    description: `Imposta lo stato di un utente a 50(eliminato)
-    Non esegue una eliminazione dei record`,
+    description: 'Imposta lo stato di un utente a eliminato senza rimuovere i record.',
   })
   @ApiParam({
     name: 'codiceUtente',
     description: "Codice identificativo dell'utente da eliminare",
     required: true,
-    example: 'USR123',
+    example: '123',
   })
   @ApiResponse({ status: 200, description: 'Utente eliminato con successo' })
   @ApiResponse({
@@ -133,28 +162,30 @@ export class UserController {
     description: 'Errore nei parametri della richiesta',
   })
   @ApiResponse({ status: 500, description: 'Errore interno del server' })
+  @ApiBearerAuth()
+  @UseGuards(JwtSimpleGuard)
   @Delete('delete-user/:codiceUtente')
-  async deleteUser(@Param('codiceUtente') codiceUtente: number, @Res() res: Response) {
+  async deleteUser(
+    @Req() request: Request,
+    @Param('codiceUtente', ParseIntPipe) codiceUtente: number,
+    @Res() res: Response,
+  ) {
     try {
-      if (!codiceUtente) throw new Error('Il campo "Codice Utente" è obbligatorio.');
+      ensureSuperUser(
+        getAuthenticatedAccessiUser(request),
+        'Solo gli amministratori possono eliminare utenti.',
+      );
 
       await this.userService.deleteUser(codiceUtente);
-      return RestUtilities.sendOKMessage(res, "L'utente è stato eliminato con successo.");
+      return RestUtilities.sendOKMessage(res, "L'utente e' stato eliminato con successo.");
     } catch (error) {
-      return RestUtilities.sendErrorMessage(res, error);
+      return this.sendControllerError(res, error);
     }
   }
 
   @ApiOperation({
     summary: 'Imposta lo stato di registrazione di un utente',
     operationId: 'setStatoRegistrazione',
-    description: `Imposta lo stato di registrazione di un utente. Stati possibili:
-    - 0: NULL (non definito)
-    - 5: INSERT (inserito)
-    - 10: INVIO (inviato)
-    - 20: CONF (confermato)
-    - 50: DELETE (eliminato)
-    - 99: BLOCC (bloccato)`,
   })
   @ApiResponse({
     status: 200,
@@ -169,21 +200,33 @@ export class UserController {
     description: 'Errore interno del server',
   })
   @ApiBody({ type: SetStatoRegistrazioneDto })
+  @ApiBearerAuth()
+  @UseGuards(JwtSimpleGuard)
   @Post('set-stato')
-  async setStatoRegistrazione(@Body() body: SetStatoRegistrazioneDto, @Res() res: Response) {
+  async setStatoRegistrazione(
+    @Req() request: Request,
+    @Body() body: SetStatoRegistrazioneDto,
+    @Res() res: Response,
+  ) {
     try {
-      let { codiceUtente, statoRegistrazione } = body;
-      if (!codiceUtente) throw new Error('Il codice utente è obbligatorio.');
-      if (statoRegistrazione === undefined)
-        throw new Error('Lo stato registrazione è obbligatorio.');
+      ensureSuperUser(
+        getAuthenticatedAccessiUser(request),
+        'Solo gli amministratori possono modificare lo stato di registrazione.',
+      );
+
+      const { codiceUtente, statoRegistrazione } = body;
+      if (!codiceUtente) throw new Error('Il codice utente e\' obbligatorio.');
+      if (statoRegistrazione === undefined) {
+        throw new Error('Lo stato registrazione e\' obbligatorio.');
+      }
 
       await this.userService.setStato(codiceUtente, statoRegistrazione);
       return RestUtilities.sendOKMessage(
         res,
-        `Lo stato dell'utente ${codiceUtente} è stato aggiornato a ${statoRegistrazione}.`,
+        `Lo stato dell'utente ${codiceUtente} e' stato aggiornato a ${statoRegistrazione}.`,
       );
     } catch (error) {
-      return RestUtilities.sendErrorMessage(res, error, UserController.name);
+      return this.sendControllerError(res, error);
     }
   }
 
@@ -197,17 +240,16 @@ export class UserController {
   })
   @ApiCreatedResponse({
     description:
-      'Utente registrato con successo. Restituisce il codice utente e invia una mail di conferma/reset password.',
+      'Utente registrato con successo. Restituisce il codice utente e invia una mail di reset password.',
     type: RegisterResponse,
   })
   @ApiResponse({
     status: HttpStatus.BAD_REQUEST,
-    description:
-      'Errore nella registrazione. Potrebbe essere dovuto a dati mancanti, email già esistente o configurazione non valida.',
+    description: 'Errore nella registrazione.',
   })
   @ApiResponse({
     status: HttpStatus.INTERNAL_SERVER_ERROR,
-    description: 'Errore interno del server durante la registrazione o l’invio dell’email.',
+    description: 'Errore interno del server durante la registrazione o l\'invio email.',
   })
   @Post('register')
   async register(
@@ -216,20 +258,26 @@ export class UserController {
     @Res() res: Response,
   ) {
     try {
-      const codiceUtente = await this.userService.register(registrationData);
-      await this.emailService.sendPasswordResetEmail(
-        registrationData.email,
-        registrationData.htmlMail,
+      const rateLimitDecision = checkPublicAuthRateLimit(
+        this.accessiOptions,
+        'register',
+        request,
+        [registrationData?.email],
       );
+      if (!rateLimitDecision.allowed) {
+        return sendPublicAuthRateLimitExceeded(res, rateLimitDecision.retryAfterSeconds);
+      }
 
+      const codiceUtente = await this.userService.register(registrationData, {
+        allowPrivilegedFields: false,
+      });
+
+      await this.emailService.sendPasswordResetEmail(registrationData.email);
       return RestUtilities.sendBaseResponse(res, codiceUtente);
     } catch (error) {
-      return RestUtilities.sendErrorMessage(
-        res,
-        error,
-        UserController.name,
-        HttpStatus.BAD_REQUEST,
-      );
+      const status =
+        error instanceof HttpException ? error.getStatus() : HttpStatus.BAD_REQUEST;
+      return RestUtilities.sendErrorMessage(res, error, UserController.name, status);
     }
   }
 
@@ -241,33 +289,57 @@ export class UserController {
     name: 'codiceUtente',
     description: "Codice identificativo dell'utente da aggiornare",
     required: true,
-    example: 'USR123',
+    example: '123',
   })
   @ApiBody({
     type: UserDto,
-    description: "Dati aggiornati dell'utente (escluso il codice utente, che è nel path)",
+    description: "Dati aggiornati dell'utente",
   })
   @ApiResponse({
     status: HttpStatus.OK,
     description: 'Utente aggiornato con successo',
   })
   @ApiResponse({ status: 400, description: "Errore nell'aggiornamento" })
+  @ApiBearerAuth()
+  @UseGuards(JwtSimpleGuard)
   @Put('update-user/:codiceUtente')
   async updateUtente(
-    @Param('codiceUtente') codiceUtente: number,
+    @Req() request: Request,
+    @Param('codiceUtente', ParseIntPipe) codiceUtente: number,
     @Body() user: UserDto,
     @Res() res: Response,
   ) {
     try {
-      if (!codiceUtente) throw new Error('Il codice utente è obbligatorio.');
+      const authenticatedUser = getAuthenticatedAccessiUser(request);
+      const isPrivilegedUpdate = hasPrivilegedUserChanges(user);
 
-      await this.userService.updateUser(codiceUtente, user);
+      if (isPrivilegedUpdate) {
+        ensureSuperUser(
+          authenticatedUser,
+          'Solo gli amministratori possono modificare ruoli, permessi o flag privilegiati.',
+        );
+      } else {
+        ensureSelfOrSuperUser(
+          authenticatedUser,
+          codiceUtente,
+          'Puoi modificare solo il tuo profilo.',
+        );
+      }
+
+      if (user.codiceUtente !== undefined && user.codiceUtente !== codiceUtente) {
+        throw new Error('Il codice utente nel body non coincide con quello del path.');
+      }
+
+      await this.userService.updateUser(codiceUtente, user, {
+        allowPrivilegedChanges: authenticatedUser.flagSuper,
+      });
+
       return RestUtilities.sendOKMessage(
         res,
-        `L'utente ${codiceUtente} è stato aggiornato con successo.`,
+        `L'utente ${codiceUtente} e' stato aggiornato con successo.`,
       );
     } catch (error) {
-      return RestUtilities.sendErrorMessage(res, error, UserController.name);
+      return this.sendControllerError(res, error);
     }
   }
 
@@ -279,22 +351,32 @@ export class UserController {
     name: 'codiceUtente',
     description: "Codice identificativo dell'utente che accetta il GDPR",
     required: true,
-    example: 'USR123',
+    example: '123',
   })
   @ApiResponse({
     status: 200,
     description: 'Consenso GDPR impostato con successo',
   })
   @ApiResponse({ status: 400, description: 'Errore nella richiesta' })
+  @ApiBearerAuth()
+  @UseGuards(JwtSimpleGuard)
   @Patch('set-gdpr/:codiceUtente')
-  async setGdpr(@Param('codiceUtente') codiceUtente: number, @Res() res: Response) {
+  async setGdpr(
+    @Req() request: Request,
+    @Param('codiceUtente', ParseIntPipe) codiceUtente: number,
+    @Res() res: Response,
+  ) {
     try {
-      if (!codiceUtente) throw new Error('Il codice utente è obbligatorio.');
+      ensureSelfOrSuperUser(
+        getAuthenticatedAccessiUser(request),
+        codiceUtente,
+        'Puoi impostare il GDPR solo sul tuo utente.',
+      );
 
       await this.userService.setGdpr(codiceUtente);
       return RestUtilities.sendOKMessage(res, `L'utente ${codiceUtente} ha accettato il GDPR.`);
     } catch (error) {
-      return RestUtilities.sendErrorMessage(res, error, UserController.name);
+      return this.sendControllerError(res, error);
     }
   }
 }

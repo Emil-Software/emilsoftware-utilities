@@ -1,16 +1,17 @@
-import { Inject, Injectable, Res } from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
 import { autobind } from '../../../autobind';
 import { Orm } from '../../../Orm';
 import { RestUtilities } from '../../../Utilities';
 import { AccessiOptions } from '../../AccessiModule';
-import { StatoRegistrazione } from '../../Dtos/StatoRegistrazione';
-import { EmailService } from '../EmailService/EmailService';
 import { FILTRI_UTENTE_DB_MAPPING, FiltriUtente } from '../../Dtos/FiltriUtente';
-import { GetUsersResponse, GetUsersResult } from '../../Dtos/GetUsersResponse';
-import { PermissionService } from '../PermissionService/PermissionService';
-import { UserDto } from '../../Dtos';
+import { GetUsersResult } from '../../Dtos/GetUsersResponse';
 import { RegisterRequest } from '../../Dtos/RegisterRequest';
+import { StatoRegistrazione } from '../../Dtos/StatoRegistrazione';
+import { UserDto } from '../../Dtos/UserDto';
+import { AccessiAuthenticatedUserSnapshot } from '../../security/authenticatedToken';
+import { EmailService } from '../EmailService/EmailService';
 import { FiltriService } from '../FiltriService/FiltriService';
+import { PermissionService } from '../PermissionService/PermissionService';
 
 interface OptionalField<T> {
   key: keyof RegisterRequest;
@@ -28,10 +29,42 @@ export class UserService {
     private readonly filtriService: FiltriService,
   ) {}
 
+  private normalizeDatabaseBoolean(value: unknown): boolean {
+    return value === true || value === 1 || value === '1';
+  }
+
+  private normalizeEmail(email: string): string {
+    if (typeof email !== 'string' || email.trim() === '') {
+      throw new Error("L'email e' obbligatoria.");
+    }
+
+    return email.trim().toLowerCase();
+  }
+
+  private async ensureEmailIsAvailable(email: string, currentUserCode?: number): Promise<void> {
+    const result = await Orm.query(
+      this.accessiOptions.databaseOptions,
+      'SELECT FIRST 1 CODUTE as codice_utente FROM UTENTI WHERE LOWER(USRNAME) = ?',
+      [email],
+    );
+
+    const existingUser = result.map(RestUtilities.convertKeysToCamelCase)[0] as
+      | { codiceUtente?: number }
+      | undefined;
+
+    if (
+      existingUser?.codiceUtente &&
+      (!currentUserCode || existingUser.codiceUtente !== currentUserCode)
+    ) {
+      throw new Error("Questa e-mail e' gia stata utilizzata!");
+    }
+  }
+
   async isAdminConfigurator(codiceUtente: number): Promise<boolean> {
     if (!codiceUtente) {
       return false;
     }
+
     const query = `SELECT FLGADMINCONFIG AS flag_admin_configurator FROM UTENTI_CONFIG WHERE CODUTE = ?`;
     const result = await Orm.query(this.accessiOptions.databaseOptions, query, [codiceUtente]);
 
@@ -47,6 +80,52 @@ export class UserService {
     }
 
     return flagValue === 1;
+  }
+
+  async getAuthenticatedUserSnapshot(
+    codiceUtente: number,
+  ): Promise<AccessiAuthenticatedUserSnapshot | null> {
+    if (!codiceUtente || codiceUtente <= 0) {
+      return null;
+    }
+
+    const result = await Orm.query(
+      this.accessiOptions.databaseOptions,
+      `
+        SELECT
+          U.CODUTE AS codice_utente,
+          U.USRNAME AS email,
+          U.STAREG AS stato_registrazione,
+          C.FLGSUPER AS flag_super,
+          C.FLGADMINCONFIG AS flag_admin_configurator
+        FROM UTENTI U
+        LEFT JOIN UTENTI_CONFIG C ON C.CODUTE = U.CODUTE
+        WHERE U.CODUTE = ?
+      `,
+      [codiceUtente],
+    );
+
+    const user = result.map(RestUtilities.convertKeysToCamelCase)[0] as
+      | {
+          codiceUtente?: number;
+          email?: string;
+          statoRegistrazione?: StatoRegistrazione | number;
+          flagSuper?: unknown;
+          flagAdminConfigurator?: unknown;
+        }
+      | undefined;
+
+    if (!user?.codiceUtente) {
+      return null;
+    }
+
+    return {
+      codiceUtente: Number(user.codiceUtente),
+      email: typeof user.email === 'string' ? user.email : undefined,
+      statoRegistrazione: Number(user.statoRegistrazione) as StatoRegistrazione,
+      flagSuper: this.normalizeDatabaseBoolean(user.flagSuper),
+      flagAdminConfigurator: this.normalizeDatabaseBoolean(user.flagAdminConfigurator),
+    };
   }
 
   async getUsers(
@@ -89,14 +168,14 @@ export class UserService {
             WHERE 1=1
             `;
 
-      let queryParams: any[] = [];
+      const queryParams: any[] = [];
 
-      if (filters.email) {
+      if (filters?.email) {
         query += ` AND LOWER(U.USRNAME) = ? `;
         queryParams.push(filters.email.trim().toLowerCase());
       }
 
-      if (filters.codiceUtente) {
+      if (filters?.codiceUtente) {
         query += ` AND U.CODUTE = ? `;
         queryParams.push(filters.codiceUtente);
       }
@@ -110,19 +189,18 @@ export class UserService {
       )) as UserDto[];
       users = users.map(RestUtilities.convertKeysToCamelCase);
 
-      let usersResponse: GetUsersResult[] = [];
+      const usersResponse: GetUsersResult[] = [];
 
-      console.log('OPTIONS: ', options);
       for (const user of users) {
         let userGrants = null;
 
-        if (options.includeGrants)
+        if (options?.includeGrants) {
           userGrants = await this.permissionService.getUserRolesAndGrants(user.codiceUtente);
+        }
 
-        let extensionFields = options.includeExtensionFields ? {} : null;
+        let extensionFields = options?.includeExtensionFields ? {} : null;
 
-        //todo: se non è prendente extensionFieldOptions va in errore. Risolvere il problema
-        if (options.includeExtensionFields) {
+        if (options?.includeExtensionFields && this.accessiOptions.extensionFieldsOptions) {
           for (const ext of this.accessiOptions.extensionFieldsOptions) {
             const values = (
               await Orm.query(
@@ -138,16 +216,12 @@ export class UserService {
           }
         }
 
-        let userResult: GetUsersResult = {
+        usersResponse.push({
           utente: user,
-          userGrants: userGrants,
-          extensionFields: extensionFields,
-        };
-
-        usersResponse.push(userResult);
+          userGrants,
+          extensionFields,
+        });
       }
-
-      console.log('OPTIONS: ', options);
 
       return usersResponse;
     } catch (error) {
@@ -204,7 +278,6 @@ export class UserService {
       const user = utenti[0];
       const filtro = filtriUtente[0];
 
-      // Type-safe mapping using type assertion
       Object.entries(FILTRI_UTENTE_DB_MAPPING).forEach(([key]) => {
         if (key in filtro) {
           (user as UserDto)[key] = filtro[key as keyof FiltriUtente];
@@ -214,27 +287,6 @@ export class UserService {
 
     return utenti.length > 0 ? utenti[0] : null;
   }
-
-  // async getUserFilters(codiceUtente: number): Promise<FiltriUtente[]> {
-  //   const query = `
-  //           SELECT
-  //               F.PROG AS progressivo,
-  //               F.NUMREP AS numero_report,
-  //               F.IDXPERS AS indice_personale,
-  //               F.CODCLISUPER AS codice_cliente_super,
-  //               F.CODAGE AS cod_age,
-  //               F.CODCLICOL AS codice_cliente_collegato,
-  //               F.CODCLIENTI AS codice_clienti,
-  //               F.TIPFIL AS tipo_filtro,
-  //               F.IDXPOS AS idx_postazione
-  //           FROM FILTRI F
-  //           WHERE F.CODUTE = ?
-  //       `;
-
-  //   return (await Orm.query(this.accessiOptions.databaseOptions, query, [codiceUtente]).then(
-  //     (results) => results.map(RestUtilities.convertKeysToCamelCase),
-  //   )) as FiltriUtente[];
-  // }
 
   async insertUserFilters(codiceUtente: number, filterData: RegisterRequest): Promise<void> {
     try {
@@ -302,27 +354,35 @@ export class UserService {
     await operation();
   }
 
-  async register(registrationData: RegisterRequest): Promise<number> {
+  async register(
+    registrationData: RegisterRequest,
+    options?: { allowPrivilegedFields?: boolean },
+  ): Promise<number> {
     try {
-      const existingUser = await Orm.query(
-        this.accessiOptions.databaseOptions,
-        'SELECT CODUTE FROM UTENTI WHERE USRNAME = ?',
-        [registrationData.email],
-      );
+      const allowPrivilegedFields = options?.allowPrivilegedFields === true;
+      const normalizedEmail = this.normalizeEmail(registrationData.email);
 
-      if (existingUser.length > 0) {
-        throw new Error('Questa e-mail è già stata utilizzata!');
+      if (
+        !allowPrivilegedFields &&
+        (registrationData.flagSuper !== undefined ||
+          registrationData.flagAdminConfigurator !== undefined ||
+          registrationData.roles !== undefined ||
+          registrationData.permissions !== undefined)
+      ) {
+        throw new Error('I campi privilegiati non sono consentiti nella registrazione pubblica.');
       }
 
+      await this.ensureEmailIsAvailable(normalizedEmail);
+
       const queryUtenti = `INSERT INTO UTENTI (USRNAME, STAREG) VALUES (?,?)`;
-      const paramsUtenti = [registrationData.email, StatoRegistrazione.INVIO];
+      const paramsUtenti = [normalizedEmail, StatoRegistrazione.INVIO];
 
       await Orm.execute(this.accessiOptions.databaseOptions, queryUtenti, paramsUtenti);
 
       const codiceUtenteResult = await Orm.query(
         this.accessiOptions.databaseOptions,
         'SELECT FIRST 1 CODUTE FROM UTENTI WHERE USRNAME = ? ORDER BY CODUTE DESC',
-        [registrationData.email],
+        [normalizedEmail],
       );
 
       const codiceUtente = Number(
@@ -336,32 +396,11 @@ export class UserService {
       const utentiConfigPlaceholders = ['?', '?', '?'];
       const utentiConfigParams = [codiceUtente, registrationData.cognome, registrationData.nome];
 
-      // Mapping dei campi opzionali
-      // const optionalFields: [keyof typeof registrationData, string][] = [
-      //   ['cellulare', 'CELLULARE'],
-      //   ['flagSuper', 'FLGSUPER'],
-      //   ['flagAdminConfigurator', 'FLGADMINCONFIG'],
-      //   ['avatar', 'AVATAR'],
-      //   ['flagDueFattori', 'FLG2FATT'],
-      //   ['paginaDefault', 'PAGDEF'],
-      //   ['ragSocCli', 'RAGSOCCLI'],
-      // ];
-
       const optionalFields: OptionalField<any>[] = [
         {
           key: 'cellulare',
           dbField: 'CELLULARE',
           transform: (v) => String(v),
-        },
-        {
-          key: 'flagSuper',
-          dbField: 'FLGSUPER',
-          transform: (v) => (v ? 1 : 0),
-        },
-        {
-          key: 'flagAdminConfigurator',
-          dbField: 'FLGADMINCONFIG',
-          transform: (v) => (v ? 1 : 0),
         },
         {
           key: 'avatar',
@@ -385,6 +424,20 @@ export class UserService {
         },
       ];
 
+      if (allowPrivilegedFields) {
+        optionalFields.push(
+          {
+            key: 'flagSuper',
+            dbField: 'FLGSUPER',
+            transform: (v) => (v ? 1 : 0),
+          },
+          {
+            key: 'flagAdminConfigurator',
+            dbField: 'FLGADMINCONFIG',
+            transform: (v) => (v ? 1 : 0),
+          },
+        );
+      }
 
       for (const field of optionalFields) {
         const value = registrationData[field.key];
@@ -400,14 +453,17 @@ export class UserService {
       )}) VALUES (${utentiConfigPlaceholders.join(', ')})`;
       await Orm.execute(this.accessiOptions.databaseOptions, queryUtentiConfig, utentiConfigParams);
 
-      //await this.insertUserFilters(codiceUtente, registrationData);
       await this.filtriService.upsertFiltriUtente(codiceUtente, registrationData);
 
-      if (!!registrationData.roles && registrationData.roles.length > 0) {
+      if (allowPrivilegedFields && !!registrationData.roles && registrationData.roles.length > 0) {
         await this.permissionService.assignRolesToUser(codiceUtente, registrationData.roles);
       }
 
-      if (!!registrationData.permissions && registrationData.permissions.length > 0) {
+      if (
+        allowPrivilegedFields &&
+        !!registrationData.permissions &&
+        registrationData.permissions.length > 0
+      ) {
         await this.permissionService.assignPermissionsToUser(
           codiceUtente,
           registrationData.permissions,
@@ -420,23 +476,40 @@ export class UserService {
     }
   }
 
-  async updateUser(codiceUtente: number, user: UserDto): Promise<void> {
+  async updateUser(
+    codiceUtente: number,
+    user: UserDto,
+    options?: { allowPrivilegedChanges?: boolean },
+  ): Promise<void> {
     try {
       if (!codiceUtente) throw new Error('Impossibile aggiornare senza codice utente.');
+      const allowPrivilegedChanges = options?.allowPrivilegedChanges === true;
 
-      // Costruzione dinamica della query per UTENTI
+      if (
+        !allowPrivilegedChanges &&
+        (user.statoRegistrazione !== undefined ||
+          user.flagSuper !== undefined ||
+          user.flagAdminConfigurator !== undefined ||
+          user.roles !== undefined ||
+          user.permissions !== undefined)
+      ) {
+        throw new Error('Non e consentito modificare campi privilegiati.');
+      }
+
       const utentiUpdates = [];
       const utentiParams = [];
 
       if (user.email !== undefined) {
+        const normalizedEmail = this.normalizeEmail(user.email);
+        await this.ensureEmailIsAvailable(normalizedEmail, codiceUtente);
         utentiUpdates.push('usrname = ?');
-        utentiParams.push(user.email);
+        utentiParams.push(normalizedEmail);
       }
       if (user.flagGdpr !== undefined) {
         utentiUpdates.push('flggdpr = ?');
         utentiParams.push(user.flagGdpr);
       }
-      if (user.statoRegistrazione !== undefined) {
+      if (allowPrivilegedChanges && user.statoRegistrazione !== undefined) {
         utentiUpdates.push('stareg = ?');
         utentiParams.push(user.statoRegistrazione);
       }
@@ -447,7 +520,6 @@ export class UserService {
         await Orm.execute(this.accessiOptions.databaseOptions, queryUtenti, utentiParams);
       }
 
-      // Costruzione dinamica della query per UTENTI_CONFIG
       const utentiConfigUpdates = [];
       const utentiConfigParams = [];
 
@@ -475,11 +547,11 @@ export class UserService {
         utentiConfigUpdates.push('cellulare = ?');
         utentiConfigParams.push(user.cellulare);
       }
-      if (user.flagSuper !== undefined) {
+      if (allowPrivilegedChanges && user.flagSuper !== undefined) {
         utentiConfigUpdates.push('flgsuper = ?');
         utentiConfigParams.push(user.flagSuper);
       }
-      if (user.flagAdminConfigurator !== undefined) {
+      if (allowPrivilegedChanges && user.flagAdminConfigurator !== undefined) {
         utentiConfigUpdates.push('flgadminconfig = ?');
         utentiConfigParams.push(user.flagAdminConfigurator);
       }
@@ -508,15 +580,14 @@ export class UserService {
         );
       }
 
-      if (!!user.roles && user.roles.length > 0) {
+      if (allowPrivilegedChanges && !!user.roles && user.roles.length > 0) {
         await this.permissionService.assignRolesToUser(codiceUtente, user.roles);
       }
 
-      if (!!user.permissions && user.permissions.length > 0) {
+      if (allowPrivilegedChanges && !!user.permissions && user.permissions.length > 0) {
         await this.permissionService.assignPermissionsToUser(codiceUtente, user.permissions);
       }
 
-      //await this.updateUserFilters(codiceUtente, user);
       await this.filtriService.upsertFiltriUtente(codiceUtente, user);
     } catch (error) {
       throw error;
@@ -543,7 +614,6 @@ export class UserService {
       const fieldsToUpdate = Object.entries(fieldMapping)
         .filter(([tsField]) => {
           const value = user[tsField as keyof UserDto];
-          // Includiamo il campo se è definito (anche se è una stringa vuota)
           return value !== undefined && value !== null;
         })
         .map(([tsField, config]) => {
@@ -564,7 +634,6 @@ export class UserService {
       }
 
       await this.executeInTransaction(async () => {
-        // Prima verifichiamo se esiste il record
         const checkQuery = `SELECT COUNT(*) as CNT FROM FILTRI WHERE CODUTE = ?`;
         const existingRecord = await Orm.query(this.accessiOptions.databaseOptions, checkQuery, [
           codiceUtente,
@@ -572,13 +641,11 @@ export class UserService {
         const exists = existingRecord[0].CNT > 0;
 
         if (exists) {
-          // Se esiste, facciamo l'UPDATE
           const updates = fieldsToUpdate.map((f) => `${f.dbField} = ?`).join(', ');
           const values = [...fieldsToUpdate.map((f) => f.value), codiceUtente];
           const updateQuery = `UPDATE FILTRI SET ${updates} WHERE CODUTE = ?`;
           await Orm.execute(this.accessiOptions.databaseOptions, updateQuery, values);
         } else {
-          // Se non esiste, facciamo l'INSERT
           const dbFields = ['CODUTE', ...fieldsToUpdate.map((f) => f.dbField)];
           const placeholders = dbFields.map(() => '?');
           const insertValues = [codiceUtente, ...fieldsToUpdate.map((f) => f.value)];
@@ -621,10 +688,9 @@ export class UserService {
 
   public async setGdpr(codiceUtente: number) {
     try {
-      let query = ` UPDATE OR INSERT UTENTI_GDPR SET CODUTE = ?, GDPR = ? `;
-      let params = [codiceUtente, true];
-      let result = await Orm.execute(this.accessiOptions.databaseOptions, query, params);
-      return result;
+      const query = ` UPDATE OR INSERT UTENTI_GDPR SET CODUTE = ?, GDPR = ? `;
+      const params = [codiceUtente, true];
+      return await Orm.execute(this.accessiOptions.databaseOptions, query, params);
     } catch (error) {
       throw error;
     }

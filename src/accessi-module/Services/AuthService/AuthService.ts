@@ -1,13 +1,23 @@
-import { Orm } from "../../../Orm";
-import { CryptUtilities, RestUtilities } from "../../../Utilities";
-import { AccessiOptions } from "../../AccessiModule";
-import { StatoRegistrazione } from "../../Dtos/StatoRegistrazione";
 import { Inject, Injectable } from "@nestjs/common";
+import * as jwt from "jsonwebtoken";
+import { Orm } from "../../../Orm";
+import { CryptUtilities, PasswordUtilities, RestUtilities } from "../../../Utilities";
+import { AccessiOptions } from "../../AccessiModule";
+import { LoginRequest } from "../../Dtos/LoginRequest";
+import { LoginResult } from "../../Dtos/LoginResponse";
+import { StatoRegistrazione } from "../../Dtos/StatoRegistrazione";
 import { UserService } from "../UserService/UserService";
 import { PermissionService } from "../PermissionService/PermissionService";
-import { LoginRequest } from "../../Dtos/LoginRequest";
-import { LoginResponse, LoginResult } from "../../Dtos/LoginResponse";
 import { FiltriService } from "../FiltriService/FiltriService";
+import {
+  buildAuthenticatedTokenPayload,
+  isAuthenticatedUserEnabledForJwt,
+  resolveCodiceUtenteFromTokenPayload,
+} from "../../security/authenticatedToken";
+import {
+  getAccessiJwtSecret,
+  verifyPasswordResetToken,
+} from "../../security/passwordResetToken";
 
 @Injectable()
 export class AuthService {
@@ -18,30 +28,52 @@ export class AuthService {
     @Inject("ACCESSI_OPTIONS") private readonly accessiOptions: AccessiOptions
   ) {}
 
+  private async refreshPasswordExpiration(codiceUtente: number): Promise<void> {
+    if (!this.accessiOptions.passwordExpiration) {
+      return;
+    }
+
+    const configuredDays = Number(this.accessiOptions.passwordExpirationDays);
+    const expirationDays =
+      Number.isFinite(configuredDays) && configuredDays > 0
+        ? Math.trunc(configuredDays)
+        : 90;
+
+    const query = `UPDATE UTENTI SET DATSCAPWD = DATEADD(${expirationDays} DAY TO CURRENT_TIMESTAMP) WHERE CODUTE = ?`;
+    await Orm.execute(this.accessiOptions.databaseOptions, query, [codiceUtente]);
+  }
+
+  private isMockDemoUserEnabled(): boolean {
+    if (!this.accessiOptions.mockDemoUser) {
+      return false;
+    }
+
+    const nodeEnv = (process.env.NODE_ENV ?? "production").toLowerCase();
+    return nodeEnv !== "production" || process.env.ACCESSI_ALLOW_MOCK_DEMO_USER === "true";
+  }
+
   async login(request: LoginRequest): Promise<LoginResult> {
+    const mockDemoUserEnabled = this.isMockDemoUserEnabled();
+
     if (
-      this.accessiOptions.mockDemoUser &&
+      mockDemoUserEnabled &&
       request.email.toLowerCase() === "demo"
-    )
+    ) {
       return this.getDemoUser();
+    }
 
     if (
-      this.accessiOptions.mockDemoUser &&
+      mockDemoUserEnabled &&
       request.email.toLowerCase() === "admin"
-    )
+    ) {
       return this.getAdminUser();
-
-    const passwordCifrata = CryptUtilities.encrypt(
-      request.password,
-      this.accessiOptions.encryptionKey
-    );
+    }
 
     const utente = await this.userService.getUserByEmail(
       request.email.toLowerCase()
     );
     if (!utente) throw new Error("Nome utente o password errata!");
 
-    // Verifica lo stato della registrazione
     switch (utente.statoRegistrazione) {
       case undefined:
         throw new Error(
@@ -60,10 +92,9 @@ export class AuthService {
       );
     }
 
-    // Verifica la password
     const isPasswordValid = await this.verifyPassword(
       utente.codiceUtente,
-      passwordCifrata
+      request.password
     );
     if (!isPasswordValid) throw new Error("Nome utente o password errata!");
 
@@ -79,12 +110,10 @@ export class AuthService {
       }
     }
 
-    // Recupera i grants
     const userGrants = await this.permissionService.getUserRolesAndGrants(
       utente.codiceUtente
     );
 
-    // Recupera i filtri
     const filtri = await this.filtriService.getFiltriUser(utente.codiceUtente);
 
     const updateLastAccessDateQuery =
@@ -95,7 +124,7 @@ export class AuthService {
       [utente.codiceUtente]
     );
 
-    let extensionFields = {};
+    const extensionFields = {};
 
     if (
       this.accessiOptions.extensionFieldsOptions &&
@@ -115,29 +144,86 @@ export class AuthService {
         extensionFields[ext.objectKey] = values;
       }
     }
+
     return { utente, filtri, userGrants, extensionFields };
+  }
+
+  public async getAuthenticatedTokenPayload(token: string): Promise<Record<string, unknown>> {
+    if (typeof token !== "string" || token.trim() === "") {
+      throw new Error("Token non fornito.");
+    }
+
+    const secret = getAccessiJwtSecret(this.accessiOptions);
+    const decoded = jwt.verify(token.trim(), secret);
+    const codiceUtente = resolveCodiceUtenteFromTokenPayload(decoded);
+
+    if (!codiceUtente) {
+      throw new Error("Token non valido.");
+    }
+
+    const currentUser = await this.userService.getAuthenticatedUserSnapshot(codiceUtente);
+    if (!isAuthenticatedUserEnabledForJwt(currentUser)) {
+      throw new Error("Token non valido o utente non autorizzato.");
+    }
+
+    return buildAuthenticatedTokenPayload(decoded, currentUser);
   }
 
   public async setPassword(codiceUtente: number, nuovaPassword: string) {
     try {
       const query = `UPDATE OR INSERT INTO UTENTI_PWD (CODUTE, PWD) VALUES (?, ?)`;
-      const hashedPassword = CryptUtilities.encrypt(
-        nuovaPassword,
-        this.accessiOptions.encryptionKey
-      );
+      const hashedPassword = PasswordUtilities.hashPassword(nuovaPassword);
 
-      return await Orm.execute(this.accessiOptions.databaseOptions, query, [
+      const result = await Orm.execute(this.accessiOptions.databaseOptions, query, [
         codiceUtente,
         hashedPassword,
       ]);
+      await this.refreshPasswordExpiration(codiceUtente);
+      return result;
     } catch (error) {
       throw error;
     }
   }
 
+  public async migrateLegacyEncryptedPasswords(): Promise<void> {
+    const results = await Orm.query(
+      this.accessiOptions.databaseOptions,
+      "SELECT CODUTE AS codice_utente, PWD AS password FROM UTENTI_PWD WHERE PWD IS NOT NULL",
+      []
+    );
+
+    const rows = results.map(RestUtilities.convertKeysToCamelCase) as {
+      codiceUtente?: number;
+      password?: string;
+    }[];
+
+    for (const row of rows) {
+      const codiceUtente = Number(row.codiceUtente);
+      const storedPassword = typeof row.password === "string" ? row.password : null;
+
+      if (
+        !codiceUtente ||
+        !storedPassword ||
+        PasswordUtilities.isPasswordHash(storedPassword) ||
+        PasswordUtilities.isLegacyPasswordHash(storedPassword)
+      ) {
+        continue;
+      }
+
+      const protectedLegacyPassword =
+        PasswordUtilities.hashLegacyEncryptedPassword(storedPassword);
+
+      await Orm.execute(
+        this.accessiOptions.databaseOptions,
+        "UPDATE UTENTI_PWD SET PWD = ? WHERE CODUTE = ? AND PWD = ?",
+        [protectedLegacyPassword, codiceUtente, storedPassword]
+      );
+    }
+  }
+
   async verifyPassword(
     codiceUtente: number,
-    passwordCifrata: string
+    plainPassword: string
   ): Promise<boolean> {
     const query = `SELECT PWD AS password FROM UTENTI_PWD WHERE CODUTE = ?`;
     const result = (await Orm.query(
@@ -148,11 +234,45 @@ export class AuthService {
       password: string;
     }[];
 
-    return result.length > 0 && result[0].password === passwordCifrata;
+    if (result.length === 0 || typeof result[0].password !== "string") {
+      return false;
+    }
+
+    const storedPassword = result[0].password;
+
+    if (PasswordUtilities.isPasswordHash(storedPassword)) {
+      return PasswordUtilities.verifyPassword(plainPassword, storedPassword);
+    }
+
+    const legacyEncryptedPassword = CryptUtilities.encrypt(
+      plainPassword,
+      this.accessiOptions.encryptionKey
+    );
+
+    if (PasswordUtilities.isLegacyPasswordHash(storedPassword)) {
+      const isMigratedLegacyPasswordValid =
+        PasswordUtilities.verifyLegacyEncryptedPassword(
+          legacyEncryptedPassword,
+          storedPassword
+        );
+
+      if (isMigratedLegacyPasswordValid) {
+        await this.setPassword(codiceUtente, plainPassword);
+      }
+
+      return isMigratedLegacyPasswordValid;
+    }
+
+    const isLegacyPasswordValid = storedPassword === legacyEncryptedPassword;
+
+    if (isLegacyPasswordValid) {
+      await this.setPassword(codiceUtente, plainPassword);
+    }
+
+    return isLegacyPasswordValid;
   }
 
   async getAdminUser(): Promise<LoginResult> {
-    ///const filtri = await this.userService.getUserFilters(6789);
     return {
       utente: {
         codiceUtente: 6789,
@@ -211,35 +331,49 @@ export class AuthService {
     newPassword: string
   ): Promise<void> {
     try {
-      // Controlliamo se il token esiste
-      const result = await Orm.query(
-        this.accessiOptions.databaseOptions,
-        "SELECT CODUTE FROM UTENTI WHERE KEYREG = ?",
-        [token]
-      );
-
-      if (result.length === 0) {
-        throw new Error("Token non valido o già usato.");
+      if (typeof token !== "string" || token.trim() === "") {
+        throw new Error("Token non valido.");
       }
 
-      // Hashiamo la nuova password
-      const hashedPassword = CryptUtilities.encrypt(
-        newPassword,
-        this.accessiOptions.encryptionKey
-      );
+      if (
+        typeof newPassword !== "string" ||
+        newPassword.length < 8 ||
+        newPassword.length > 100
+      ) {
+        throw new Error("La nuova password deve essere compresa tra 8 e 100 caratteri.");
+      }
 
-      // Aggiorniamo la password e rimuoviamo il token di reset
+      const secret = getAccessiJwtSecret(this.accessiOptions);
+      const { codiceUtente, nonce } = verifyPasswordResetToken(token.trim(), secret);
+
+      const result = (await Orm.query(
+        this.accessiOptions.databaseOptions,
+        "SELECT CODUTE AS codice_utente, STAREG AS stato_registrazione FROM UTENTI WHERE CODUTE = ? AND KEYREG = ?",
+        [codiceUtente, nonce]
+      ).then((rows) => rows.map(RestUtilities.convertKeysToCamelCase))) as {
+        codiceUtente?: number;
+        statoRegistrazione?: StatoRegistrazione | number;
+      }[];
+
+      if (result.length === 0) {
+        throw new Error("Token non valido o gia usato.");
+      }
+
+      const currentState = Number(result[0].statoRegistrazione);
+      if (
+        currentState === StatoRegistrazione.BLOCC ||
+        currentState === StatoRegistrazione.DELETE
+      ) {
+        throw new Error("Utente non autorizzato a completare il reset password.");
+      }
+
       await Orm.query(
         this.accessiOptions.databaseOptions,
         "UPDATE UTENTI SET KEYREG = NULL, STAREG = ? WHERE CODUTE = ?",
-        [StatoRegistrazione.CONF, result[0].CODUTE]
+        [StatoRegistrazione.CONF, codiceUtente]
       );
 
-      await Orm.query(
-        this.accessiOptions.databaseOptions,
-        "UPDATE OR INSERT INTO UTENTI_PWD (CODUTE, PWD) VALUES (?, ?)",
-        [result[0].CODUTE, hashedPassword]
-      );
+      await this.setPassword(codiceUtente, newPassword);
     } catch (error) {
       throw error;
     }

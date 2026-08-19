@@ -1,8 +1,10 @@
 import { Application } from "express";
+import { ValidationPipe } from "@nestjs/common";
 import { NestFactory } from "@nestjs/core";
 import { ExpressAdapter } from "@nestjs/platform-express";
 import { AccessiModule, AccessiOptions } from "./AccessiModule";
 import { Logger } from "../Logger";
+import { AuthService } from "./Services/AuthService/AuthService";
 import {
     beginAccessiAuthInitialization,
     failAccessiAuthInitialization,
@@ -25,6 +27,16 @@ export async function initializeAccessiModule(app: Application, options: Accessi
         });
 
         nestApp.enableCors();
+        nestApp.useGlobalPipes(
+            new ValidationPipe({
+                whitelist: true,
+                forbidNonWhitelisted: true,
+                transform: true,
+                transformOptions: {
+                    enableImplicitConversion: true,
+                },
+            }),
+        );
 
         nestApp.setGlobalPrefix('api', {
             exclude: ['/swagger', '/swagger/(.*)']
@@ -32,9 +44,14 @@ export async function initializeAccessiModule(app: Application, options: Accessi
 
         // Note: Swagger setup is now handled by the unified module
         await nestApp.init();
-        const authService = nestApp.get(AuthenticateGenService);
-        app.locals.accessiAuthService = authService;
-        setAccessiAuthService(authService);
+        if (options.legacyPasswordMigrationOnStartup !== false) {
+            const passwordMigrationService = nestApp.get(AuthService);
+            await passwordMigrationService.migrateLegacyEncryptedPasswords();
+        }
+
+        const accessiAuthService = nestApp.get(AuthenticateGenService);
+        app.locals.accessiAuthService = accessiAuthService;
+        setAccessiAuthService(accessiAuthService);
 
     } catch (error) {
         failAccessiAuthInitialization(error);
