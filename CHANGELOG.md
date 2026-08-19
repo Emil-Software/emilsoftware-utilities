@@ -1,3 +1,10 @@
+# [2.0.0-dev.2](https://github.com/Emil-Software/emilsoftware-utilities/compare/v2.0.0-dev.1...v2.0.0-dev.2) (2026-08-19)
+
+
+### Bug Fixes
+
+* centralize firebird compatibility ([a7bf766](https://github.com/Emil-Software/emilsoftware-utilities/commit/a7bf76651f57a990ff3992d76750b01a42736184))
+
 # [2.0.0-dev.1](https://github.com/Emil-Software/emilsoftware-utilities/compare/v1.8.0-dev.2...v2.0.0-dev.1) (2026-08-19)
 
 
