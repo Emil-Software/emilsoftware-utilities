@@ -1,5 +1,6 @@
 import { Response } from 'express';
 import { Options } from "es-node-firebird";
+import { FirebirdOptions } from "./firebird-compat";
 import crypto from "crypto";
 
 
@@ -457,7 +458,7 @@ export class DatabaseUtilities {
         database: string,
         username = 'SYSDBA',
         password = 'masterkey'
-    ): Options {
+    ): FirebirdOptions {
         return {
             host,                   // The hostname or IP address of the database server.
             port,                   // The port number used by the database server.
@@ -469,6 +470,10 @@ export class DatabaseUtilities {
             pageSize: 100000,       // The page size for database transactions. Default: 100,000.
             retryConnectionInterval: 1000, // The interval (in ms) to retry a failed connection. Default: 1,000 ms.
             blobAsText: true,       // Determines if BLOB fields should be treated as text. Default: true.
+            wireCrypt: 'enabled',
+            pluginName: 'Srp',
+            authPlugins: ['Srp256', 'Srp', 'Legacy_Auth'],
+            connectTimeoutMs: 15000,
         };
     }
 }
