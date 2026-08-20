@@ -1,3 +1,10 @@
+# [2.0.0-dev.3](https://github.com/Emil-Software/emilsoftware-utilities/compare/v2.0.0-dev.2...v2.0.0-dev.3) (2026-08-20)
+
+
+### Bug Fixes
+
+* probe firebird compatibility profiles ([84d8bcd](https://github.com/Emil-Software/emilsoftware-utilities/commit/84d8bcd90f808157c7733a4ac735be3c719f4366))
+
 # [2.0.0-dev.2](https://github.com/Emil-Software/emilsoftware-utilities/compare/v2.0.0-dev.1...v2.0.0-dev.2) (2026-08-19)
 
 
