@@ -1,3 +1,10 @@
+# [2.0.0-dev.12](https://github.com/Emil-Software/emilsoftware-utilities/compare/v2.0.0-dev.11...v2.0.0-dev.12) (2026-08-24)
+
+
+### Bug Fixes
+
+* empty chars ([c8535e7](https://github.com/Emil-Software/emilsoftware-utilities/commit/c8535e72c32e5a143892d3f953c86594192da413))
+
 # [2.0.0-dev.11](https://github.com/Emil-Software/emilsoftware-utilities/compare/v2.0.0-dev.10...v2.0.0-dev.11) (2026-08-24)
 
 
