@@ -4,6 +4,7 @@ import { Request, Response } from 'express';
 import { join } from 'path';
 import { RestUtilities } from '../../Utilities';
 import { AccessiOptions } from '../AccessiModule';
+import { ActionResponse, ErrorResponse, SendResetPasswordEmailRequest } from '../Dtos';
 import { EmailService } from '../Services/EmailService/EmailService';
 import {
   checkPublicAuthRateLimit,
@@ -42,30 +43,21 @@ export class EmailController {
     summary: 'Invia una e-mail per il reset della password',
     operationId: 'sendPasswordResetEmail',
   })
-  @ApiBody({
-    schema: {
-      properties: {
-        email: {
-          type: 'string',
-          description: "L'email dell'utente che richiede il reset",
-        },
-      },
-      required: ['email'],
-    },
+  @ApiBody({ type: SendResetPasswordEmailRequest })
+  @ApiResponse({
+    status: 200,
+    description: "L'email di reset e stata gestita con successo",
+    type: ActionResponse,
   })
-  @ApiResponse({ status: 200, description: "L'email di reset e stata gestita con successo" })
   @ApiResponse({
     status: 500,
     description: "Errore interno durante l'invio dell'email",
+    type: ErrorResponse,
   })
   @Post('send-reset-password-email')
   async sendPasswordResetEmail(
     @Req() request: Request,
-    @Body()
-    sendResetPasswordData: {
-      email: string;
-      htmlMail?: string;
-    },
+    @Body() sendResetPasswordData: SendResetPasswordEmailRequest,
     @Res() res: Response,
   ) {
     try {

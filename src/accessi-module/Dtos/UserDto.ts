@@ -18,7 +18,7 @@ import { TipoAbilitazione } from './TipoAbilitazione';
 import { FiltriUtente } from './FiltriUtente';
 
 export class UserDto extends OmitType(FiltriUtente, ['codUte'] as const) {
-  @ApiProperty({ description: "Codice identificativo univoco dell'utente.", example: 'USR123' })
+  @ApiProperty({ description: "Codice identificativo univoco dell'utente.", example: 123 })
   @IsOptional()
   @Type(() => Number)
   @IsInt({ message: 'Il codice utente deve essere un intero.' })
@@ -159,6 +159,10 @@ export class UserDto extends OmitType(FiltriUtente, ['codUte'] as const) {
     description: "Numero MAC associato all'utente.",
     example: 12,
   })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt({ message: 'Il numero MAC deve essere un intero.' })
+  @Min(0, { message: 'Il numero MAC non puo essere negativo.' })
   nummac?: number;
 
   @ApiPropertyOptional({

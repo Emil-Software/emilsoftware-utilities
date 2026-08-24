@@ -3,8 +3,8 @@ import { BaseResponse } from './BaseResponse';
 
 export class RegisterResponse extends BaseResponse {
   @ApiProperty({
-    description: 'Codice identificativo univoco dell’utente registrato',
-    example: 'USR-123456'
+    description: "Codice identificativo univoco dell'utente registrato",
+    example: 123,
   })
-  Result: string;
+  Result: number;
 }

@@ -49,7 +49,6 @@ export class FiltriService {
 
   public async upsertFiltriUtente(codUte: number, dto: Partial<FiltriUtente>): Promise<void> {
     try {
-      console.debug('Dati utente da aggiornare: ', dto)
       if (!codUte || codUte <= 0) throw new Error('Codice utente non valido');
 
       const dbFields: string[] = ['CODUTE'];
@@ -57,12 +56,10 @@ export class FiltriService {
 
       //aggiungo solo campi valorizzati
       for (const [key, cfg] of Object.entries(FILTRI_UTENTE_DB_MAPPING)) {
-        console.log('valuto campo: ', key)
         const value = (dto as any)[key];
 
         //gestione campi vuoti, null o undefined
         if (value === undefined) {
-          console.log(`Campo ${key} vuoto: ${value}`)
           continue
         }
 
@@ -71,14 +68,6 @@ export class FiltriService {
           values.push(null);
           continue
         }
-
-
-
-        // if (value === undefined || value === null || value === '') {
-        //   console.log(`Campo ${key} vuoto: ${value}`)
-        //   continue;
-        // }
-
         if (cfg.numeric && typeof value !== 'number') {
           throw new Error(`Il campo ${key} deve essere un numero`);
         }

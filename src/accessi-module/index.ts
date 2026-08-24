@@ -41,6 +41,7 @@ export async function initializeAccessiModule(app: Application, options: Accessi
             path.startsWith("/api/accessi/") ||
             path === "/accessi/swagger" ||
             path.startsWith("/accessi/swagger/") ||
+            path === "/accessi/swagger.json" ||
             path === "/accessi/swagger-json";
 
         app.use((req: Request, res, next) => {
@@ -76,6 +77,7 @@ export async function initializeAccessiModule(app: Application, options: Accessi
 
         setupSwagger(nestApp, {
             swaggerPath: "accessi/swagger",
+            swaggerJsonPath: "accessi/swagger.json",
             title: "Accessi API Documentation",
             description: "API del modulo accessi",
         });

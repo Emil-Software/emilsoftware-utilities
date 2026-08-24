@@ -4,6 +4,7 @@ import { Logger } from "../Logger";
 
 export type SwaggerSetupOptions = {
     swaggerPath?: string;
+    swaggerJsonPath?: string;
     title?: string;
     description?: string;
 };
@@ -11,7 +12,11 @@ export type SwaggerSetupOptions = {
 export function setupSwagger(app: INestApplication, options?: SwaggerSetupOptions) {
     const logger: Logger = new Logger("SwaggerConfig");
     const swaggerPath = options?.swaggerPath ?? "swagger";
-    const swaggerJsonPath = `${swaggerPath}-json`;
+    const defaultSwaggerJsonPath = swaggerPath.includes("/")
+        ? `${swaggerPath.substring(0, swaggerPath.lastIndexOf("/") + 1)}swagger.json`
+        : "swagger.json";
+    const swaggerJsonPath = options?.swaggerJsonPath ?? defaultSwaggerJsonPath;
+    const legacySwaggerJsonPath = `${swaggerPath}-json`;
 
     const config = new DocumentBuilder()
         .setTitle(options?.title ?? "API Documentation")
@@ -28,9 +33,19 @@ export function setupSwagger(app: INestApplication, options?: SwaggerSetupOption
         res.send(document);
     });
 
+    if (legacySwaggerJsonPath !== swaggerJsonPath) {
+        app.use(`/${legacySwaggerJsonPath}`, (_, res) => {
+            res.setHeader("Content-Type", "application/json");
+            res.send(document);
+        });
+    }
+
     let port = app.getHttpServer()?.address?.port || 3000;
 
     logger.info(
         `Swagger documentation available at: http://localhost:${port}/${swaggerPath}`
+    );
+    logger.info(
+        `Swagger OpenAPI JSON available at: http://localhost:${port}/${swaggerJsonPath}`
     );
 }

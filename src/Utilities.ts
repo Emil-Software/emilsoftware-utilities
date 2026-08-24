@@ -259,7 +259,7 @@ export class CryptUtilities {
 
             // Restituisce il risultato cifrato codificato
             return encryptedBuffer.toString(outputEncoding);
-        } catch (error) {
+        } catch (error: any) {
             // Gestisce eventuali errori di cifratura
             throw new Error(`Errore durante la cifratura: ${error.message}`);
         }

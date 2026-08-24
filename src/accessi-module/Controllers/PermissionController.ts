@@ -27,6 +27,7 @@ import {
 } from '@nestjs/swagger';
 import { Request, Response } from 'express';
 import { RestUtilities } from '../../Utilities';
+import { ActionResponse, ErrorResponse } from '../Dtos/BaseResponse';
 import { AssignPermissionsToUserRequest } from '../Dtos/AssignPermissionsToUserRequest';
 import { AssignRolesToUserRequest } from '../Dtos/AssignRolesToUserRequest';
 import { GetGroupsWithMenusResponse } from '../Dtos/GetGroupsWithMenusResponse';
@@ -34,6 +35,7 @@ import { GetMenusResponse } from '../Dtos/GetMenusResponse';
 import { GetRolesResponse } from '../Dtos/GetRolesResponse';
 import { Role } from '../Dtos/Role';
 import { UserGrantsDto } from '../Dtos/UserGrantsDto';
+import { UserGrantsResponse } from '../Dtos/UserGrantsResponse';
 import { PermissionService } from '../Services/PermissionService/PermissionService';
 import { JwtSimpleGuard } from '../jwt/jwt.strategy';
 import {
@@ -61,11 +63,12 @@ export class PermissionController {
     description: 'Recupera tutti i ruoli presenti nel sistema con le relative voci di menu.',
   })
   @ApiOkResponse({ description: 'Elenco dei ruoli con i rispettivi menu', type: GetRolesResponse })
-  @ApiInternalServerErrorResponse({ description: 'Errore interno del server' })
-  @ApiResponse({ status: HttpStatus.OK, description: 'Lista dei ruoli restituita con successo.' })
+  @ApiInternalServerErrorResponse({ description: 'Errore interno del server', type: ErrorResponse })
+  @ApiResponse({ status: HttpStatus.OK, description: 'Lista dei ruoli restituita con successo.', type: GetRolesResponse })
   @ApiResponse({
     status: HttpStatus.INTERNAL_SERVER_ERROR,
     description: 'Errore interno del server durante il recupero dei ruoli.',
+    type: ErrorResponse,
   })
   @Get('roles')
   async getRoles(@Res() res: Response): Promise<void> {
@@ -90,9 +93,9 @@ export class PermissionController {
     description: 'Dati aggiornati del ruolo',
     type: Role,
   })
-  @ApiResponse({ status: 200, description: 'Il ruolo e stato aggiornato con successo' })
-  @ApiResponse({ status: 400, description: 'Errore di validazione nei dati inviati' })
-  @ApiResponse({ status: 500, description: 'Errore interno del server' })
+  @ApiResponse({ status: 200, description: 'Il ruolo e stato aggiornato con successo', type: ActionResponse })
+  @ApiResponse({ status: 400, description: 'Errore di validazione nei dati inviati', type: ErrorResponse })
+  @ApiResponse({ status: 500, description: 'Errore interno del server', type: ErrorResponse })
   @Put('update-role/:codiceRuolo')
   async updateRole(
     @Req() request: Request,
@@ -123,9 +126,9 @@ export class PermissionController {
   }
 
   @ApiOperation({ summary: 'Crea un nuovo ruolo', operationId: 'createRole' })
-  @ApiResponse({ status: 201, description: 'Il ruolo e stato creato con successo' })
-  @ApiResponse({ status: 400, description: 'Errore di validazione nei dati inviati' })
-  @ApiResponse({ status: 500, description: 'Errore interno del server' })
+  @ApiResponse({ status: 201, description: 'Il ruolo e stato creato con successo', type: ActionResponse })
+  @ApiResponse({ status: 400, description: 'Errore di validazione nei dati inviati', type: ErrorResponse })
+  @ApiResponse({ status: 500, description: 'Errore interno del server', type: ErrorResponse })
   @ApiBody({
     description: 'Dati del nuovo ruolo',
     required: true,
@@ -163,9 +166,9 @@ export class PermissionController {
     type: AssignRolesToUserRequest,
     description: "Lista dei ruoli da assegnare all'utente",
   })
-  @ApiResponse({ status: 200, description: "Ruoli assegnati con successo all'utente" })
-  @ApiResponse({ status: 400, description: 'Errore di validazione nei dati inviati' })
-  @ApiResponse({ status: 500, description: 'Errore interno del server' })
+  @ApiResponse({ status: 200, description: "Ruoli assegnati con successo all'utente", type: ActionResponse })
+  @ApiResponse({ status: 400, description: 'Errore di validazione nei dati inviati', type: ErrorResponse })
+  @ApiResponse({ status: 500, description: 'Errore interno del server', type: ErrorResponse })
   @Post('assign-roles/:codiceUtente')
   async assignRolesToUser(
     @Req() request: Request,
@@ -207,9 +210,9 @@ export class PermissionController {
     type: AssignPermissionsToUserRequest,
     description: "Lista delle abilitazioni da assegnare all'utente",
   })
-  @ApiResponse({ status: 200, description: "Abilitazioni assegnate con successo all'utente" })
-  @ApiResponse({ status: 400, description: 'Errore di validazione nei dati inviati' })
-  @ApiResponse({ status: 500, description: 'Errore interno del server' })
+  @ApiResponse({ status: 200, description: "Abilitazioni assegnate con successo all'utente", type: ActionResponse })
+  @ApiResponse({ status: 400, description: 'Errore di validazione nei dati inviati', type: ErrorResponse })
+  @ApiResponse({ status: 500, description: 'Errore interno del server', type: ErrorResponse })
   @Post('assign-permissions/:codiceUtente')
   async assignPermissionsToUser(
     @Req() request: Request,
@@ -248,9 +251,9 @@ export class PermissionController {
     example: 382,
     type: Number,
   })
-  @ApiResponse({ status: 200, description: 'Ruolo eliminato con successo' })
-  @ApiResponse({ status: 400, description: 'Errore nei parametri della richiesta' })
-  @ApiResponse({ status: 500, description: 'Errore interno del server' })
+  @ApiResponse({ status: 200, description: 'Ruolo eliminato con successo', type: ActionResponse })
+  @ApiResponse({ status: 400, description: 'Errore nei parametri della richiesta', type: ErrorResponse })
+  @ApiResponse({ status: 500, description: 'Errore interno del server', type: ErrorResponse })
   @Delete('delete-role/:codiceRuolo')
   async deleteRole(
     @Req() request: Request,
@@ -275,8 +278,8 @@ export class PermissionController {
 
   @ApiOperation({ summary: 'Recupera tutti i menu disponibili', operationId: 'getMenus' })
   @ApiOkResponse({ description: 'Elenco menu', type: GetMenusResponse })
-  @ApiResponse({ status: 200, description: 'Lista dei menu recuperata con successo' })
-  @ApiResponse({ status: 500, description: 'Errore interno del server' })
+  @ApiResponse({ status: 200, description: 'Lista dei menu recuperata con successo', type: GetMenusResponse })
+  @ApiResponse({ status: 500, description: 'Errore interno del server', type: ErrorResponse })
   @Get('menus')
   async getMenus(@Res() res: Response) {
     try {
@@ -295,8 +298,8 @@ export class PermissionController {
     description: 'Elenco gruppi con relativi menu',
     type: GetGroupsWithMenusResponse,
   })
-  @ApiResponse({ status: 200, description: 'Lista dei menu recuperata con successo' })
-  @ApiResponse({ status: 500, description: 'Errore interno del server' })
+  @ApiResponse({ status: 200, description: 'Lista dei menu recuperata con successo', type: GetGroupsWithMenusResponse })
+  @ApiResponse({ status: 500, description: 'Errore interno del server', type: ErrorResponse })
   @ApiQuery({
     name: 'includeDisabled',
     required: false,
@@ -322,9 +325,9 @@ export class PermissionController {
     summary: 'Recupera i ruoli e i menu di un utente',
     operationId: 'getUserRolesAndGrants',
   })
-  @ApiOkResponse({ description: 'Elenco menu', type: UserGrantsDto })
-  @ApiResponse({ status: 200, description: 'Lista dei menu recuperata con successo' })
-  @ApiResponse({ status: 500, description: 'Errore interno del server' })
+  @ApiOkResponse({ description: 'Elenco grant utente', type: UserGrantsResponse })
+  @ApiResponse({ status: 200, description: 'Grant utente recuperati con successo', type: UserGrantsResponse })
+  @ApiResponse({ status: 500, description: 'Errore interno del server', type: ErrorResponse })
   @Get('grants/:codiceUtente')
   async getUserRolesAndGrants(
     @Req() request: Request,

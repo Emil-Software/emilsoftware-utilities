@@ -1,12 +1,21 @@
 import { Body, Controller, HttpStatus, Inject, Param, Post, Req, Res } from '@nestjs/common';
-import { ApiOperation, ApiTags, ApiResponse, ApiParam, ApiBody } from '@nestjs/swagger';
+import { ApiBody, ApiOperation, ApiParam, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { Request, Response } from 'express';
 import * as jwt from 'jsonwebtoken';
+import { Logger } from '../../Logger';
 import { RestUtilities } from '../../Utilities';
 import { AccessiOptions } from '../AccessiModule';
+import {
+  ActionResponse,
+  ConfirmResetPasswordRequest,
+  ErrorResponse,
+  GetUserByTokenRequest,
+  GetUserByTokenResponse,
+  LoginRequest,
+  LoginResponse,
+  PasswordExpiredResponse,
+} from '../Dtos';
 import { AuthService } from '../Services/AuthService/AuthService';
-import { LoginRequest, LoginResponse } from '../Dtos';
-import { Logger } from '../../Logger';
 import {
   checkPublicAuthRateLimit,
   sendPublicAuthRateLimitExceeded,
@@ -15,24 +24,32 @@ import {
 @ApiTags('Auth')
 @Controller('accessi/auth')
 export class AuthController {
-
   logger: Logger = new Logger(AuthController.name);
+
   constructor(
     private readonly authService: AuthService,
-    @Inject('ACCESSI_OPTIONS') private readonly options: AccessiOptions
-  ) { }
+    @Inject('ACCESSI_OPTIONS') private readonly options: AccessiOptions,
+  ) {}
 
-  @ApiOperation({ summary: 'Conferma il reset della password', operationId: "resetPassword" })
+  @ApiOperation({ summary: 'Conferma il reset della password', operationId: 'resetPassword' })
   @ApiParam({ name: 'token', description: 'Token per il reset della password', required: true })
-  @ApiBody({ schema: { properties: { newPassword: { type: 'string', description: 'Nuova password da impostare' } } } })
-  @ApiResponse({ status: 200, description: 'Password aggiornata con successo' })
-  @ApiResponse({ status: 400, description: 'Errore nella richiesta o token non valido' })
+  @ApiBody({ type: ConfirmResetPasswordRequest })
+  @ApiResponse({
+    status: 200,
+    description: 'Password aggiornata con successo',
+    type: ActionResponse,
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Errore nella richiesta o token non valido',
+    type: ErrorResponse,
+  })
   @Post('confirm-reset-password/:token')
   async resetPassword(
     @Req() request: Request,
     @Res() res: Response,
     @Param('token') token: string,
-    @Body("newPassword") newPassword: string,
+    @Body() body: ConfirmResetPasswordRequest,
   ) {
     try {
       const rateLimitDecision = checkPublicAuthRateLimit(
@@ -44,21 +61,32 @@ export class AuthController {
         return sendPublicAuthRateLimitExceeded(res, rateLimitDecision.retryAfterSeconds);
       }
 
-      await this.authService.confirmResetPassword(token, newPassword);
+      await this.authService.confirmResetPassword(token, body.newPassword);
       return RestUtilities.sendOKMessage(res, 'Password aggiornata con successo!');
     } catch (error) {
       return RestUtilities.sendErrorMessage(res, error, AuthController.name, HttpStatus.BAD_REQUEST);
     }
   }
 
-  @ApiOperation({ summary: 'Recupera le informazioni utente dal token JWT', operationId: "getUserByToken" })
-  @ApiBody({ schema: { properties: { token: { type: 'string', description: 'JWT dell\'utente' } } } })
-  @ApiResponse({ status: 200, description: 'Informazioni utente recuperate con successo' })
-  @ApiResponse({ status: 401, description: 'Token non valido o scaduto' })
+  @ApiOperation({
+    summary: 'Recupera le informazioni utente dal token JWT',
+    operationId: 'getUserByToken',
+  })
+  @ApiBody({ type: GetUserByTokenRequest })
+  @ApiResponse({
+    status: 200,
+    description: 'Informazioni utente recuperate con successo',
+    type: GetUserByTokenResponse,
+  })
+  @ApiResponse({
+    status: 401,
+    description: 'Token non valido o scaduto',
+    type: ErrorResponse,
+  })
   @Post('get-user-by-token')
   async getUserByToken(
     @Req() request: Request,
-    @Body('token') token: string,
+    @Body() body: GetUserByTokenRequest,
     @Res() res: Response,
   ) {
     try {
@@ -71,7 +99,7 @@ export class AuthController {
         return sendPublicAuthRateLimitExceeded(res, rateLimitDecision.retryAfterSeconds);
       }
 
-      if (!token) {
+      if (!body?.token) {
         return RestUtilities.sendErrorMessage(
           res,
           'Token non fornito',
@@ -80,7 +108,7 @@ export class AuthController {
         );
       }
 
-      const authenticatedPayload = await this.authService.getAuthenticatedTokenPayload(token);
+      const authenticatedPayload = await this.authService.getAuthenticatedTokenPayload(body.token);
       return RestUtilities.sendBaseResponse(res, { userData: authenticatedPayload });
     } catch (error) {
       return RestUtilities.sendErrorMessage(res, error, AuthController.name, HttpStatus.UNAUTHORIZED);
@@ -89,7 +117,8 @@ export class AuthController {
 
   @ApiOperation({
     summary: 'Effettua il login utente',
-    description: 'Autentica l\'utente con email e password. Restituisce un token JWT e i dati dell\'utente se le credenziali sono corrette.',
+    description:
+      "Autentica l'utente con email e password. Restituisce un token JWT e i dati dell'utente se le credenziali sono corrette.",
     operationId: 'login',
   })
   @ApiBody({ type: LoginRequest })
@@ -101,20 +130,12 @@ export class AuthController {
   @ApiResponse({
     status: 401,
     description: 'Credenziali non valide',
+    type: ErrorResponse,
   })
   @ApiResponse({
     status: 403,
-    description: "Password scaduta, è necessatio aggiornarla. ",
-    schema: {
-      example: {
-        message: {
-          severity: 'warning',
-          statusCode: 2, // o il valore di StatusCode.Warning
-          code: 'PASSWORD_EXPIRED',
-          message: 'Password scaduta. È necessario aggiornarla.',
-        }
-      }
-    }
+    description: 'Password scaduta, e necessario aggiornarla.',
+    type: PasswordExpiredResponse,
   })
   @Post('login')
   async login(@Req() request: Request, @Body() loginRequest: LoginRequest, @Res() res: Response) {
@@ -134,10 +155,9 @@ export class AuthController {
         return RestUtilities.sendInvalidCredentials(res);
       }
 
-      // Generazione del token JWT
       const tokenData = {
         utente: userData?.utente,
-      }
+      };
 
       userData.token = {
         expiresIn: this.options.jwtOptions.expiresIn,
@@ -149,16 +169,13 @@ export class AuthController {
 
       return RestUtilities.sendBaseResponse(res, userData);
     } catch (error) {
-
-      if (error.message === 'PASSWORD_EXPIRED') {
-        this.logger.warning('Password scaduta, cambiare password ', error)
-        return RestUtilities.sendPasswordExpired(res)
+      if ((error as Error)?.message === 'PASSWORD_EXPIRED') {
+        this.logger.warning('Password scaduta, cambiare password ', error);
+        return RestUtilities.sendPasswordExpired(res);
       }
 
       this.logger.error('Errore durante il login', error);
       return RestUtilities.sendInvalidCredentials(res);
     }
-    
   }
 }
-

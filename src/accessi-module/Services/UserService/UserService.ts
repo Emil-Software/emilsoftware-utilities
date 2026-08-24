@@ -291,65 +291,7 @@ export class UserService {
   }
 
   async insertUserFilters(codiceUtente: number, filterData: RegisterRequest): Promise<void> {
-    try {
-      if (!codiceUtente || codiceUtente <= 0) {
-        throw new Error('Codice utente non valido');
-      }
-
-      const fieldMapping: Record<string, { dbField: string; type: 'string' | 'number' }> = {
-        numeroReport: { dbField: 'NUMREP', type: 'number' },
-        indicePersonale: { dbField: 'IDXPERS', type: 'number' },
-        codiceClienteSuper: { dbField: 'CODCLISUPER', type: 'number' },
-        codAge: { dbField: 'CODAGE', type: 'number' },
-        codiceClienteCollegato: { dbField: 'CODCLICOL', type: 'number' },
-        codiceClienti: { dbField: 'CODCLIENTI', type: 'string' },
-        tipFil: { dbField: 'TIPFIL', type: 'number' },
-        idxPostazione: { dbField: 'IDXPOS', type: 'number' },
-      };
-
-      const fieldsToInsert = Object.entries(fieldMapping)
-        .filter(([tsField]) => {
-          const value = filterData[tsField as keyof RegisterRequest];
-          return value !== undefined && value !== null && value !== '';
-        })
-        .map(([tsField, config]) => {
-          const value = filterData[tsField as keyof RegisterRequest];
-
-          if (config.type === 'number' && typeof value !== 'number') {
-            throw new Error(`Il campo ${tsField} deve essere un numero`);
-          }
-          if (config.type === 'string' && typeof value !== 'string') {
-            throw new Error(`Il campo ${tsField} deve essere una stringa`);
-          }
-
-          return { tsField, dbField: config.dbField, value };
-        });
-
-      if (fieldsToInsert.length === 0) {
-        return;
-      }
-
-      await this.executeInTransaction(async () => {
-        await Orm.execute(
-          this.accessiOptions.databaseOptions,
-          'DELETE FROM FILTRI WHERE CODUTE = ?',
-          [codiceUtente],
-        );
-
-        const dbFields = ['CODUTE', ...fieldsToInsert.map((f) => f.dbField)];
-        const placeholders = dbFields.map(() => '?');
-        const values = [codiceUtente, ...fieldsToInsert.map((f) => f.value)];
-
-        const insertQuery = `INSERT INTO FILTRI (${dbFields.join(
-          ', ',
-        )}) VALUES (${placeholders.join(', ')})`;
-        await Orm.execute(this.accessiOptions.databaseOptions, insertQuery, values);
-      });
-    } catch (error) {
-      throw new Error(
-        `Errore durante l'inserimento dei filtri per utente ${codiceUtente}: ${error.message}`,
-      );
-    }
+    await this.filtriService.upsertFiltriUtente(codiceUtente, filterData);
   }
 
   private async executeInTransaction(operation: () => Promise<void>): Promise<void> {
@@ -602,71 +544,7 @@ export class UserService {
   }
 
   async updateUserFilters(codiceUtente: number, user: UserDto): Promise<void> {
-    try {
-      if (!codiceUtente || codiceUtente <= 0) {
-        throw new Error('Codice utente non valido');
-      }
-
-      const fieldMapping: Record<string, { dbField: string; type: 'string' | 'number' }> = {
-        numRep: { dbField: 'NUMREP', type: 'number' },
-        idxPers: { dbField: 'IDXPERS', type: 'number' },
-        codCliSuper: { dbField: 'CODCLISUPER', type: 'number' },
-        codAge: { dbField: 'CODAGE', type: 'number' },
-        codCliCol: { dbField: 'CODCLICOL', type: 'number' },
-        codiceClienti: { dbField: 'CODCLIENTI', type: 'string' },
-        tipFil: { dbField: 'TIPFIL', type: 'number' },
-        idxPostazione: { dbField: 'IDXPOS', type: 'number' },
-      };
-
-      const fieldsToUpdate = Object.entries(fieldMapping)
-        .filter(([tsField]) => {
-          const value = user[tsField as keyof UserDto];
-          return value !== undefined && value !== null;
-        })
-        .map(([tsField, config]) => {
-          const value = user[tsField as keyof UserDto];
-
-          if (config.type === 'number' && typeof value !== 'number') {
-            throw new Error(`Il campo ${tsField} deve essere un numero`);
-          }
-          if (config.type === 'string' && typeof value !== 'string') {
-            throw new Error(`Il campo ${tsField} deve essere una stringa`);
-          }
-
-          return { tsField, dbField: config.dbField, value };
-        });
-
-      if (fieldsToUpdate.length === 0) {
-        return;
-      }
-
-      await this.executeInTransaction(async () => {
-        const checkQuery = `SELECT COUNT(*) as CNT FROM FILTRI WHERE CODUTE = ?`;
-        const existingRecord = await Orm.query(this.accessiOptions.databaseOptions, checkQuery, [
-          codiceUtente,
-        ]);
-        const exists = existingRecord[0].CNT > 0;
-
-        if (exists) {
-          const updates = fieldsToUpdate.map((f) => `${f.dbField} = ?`).join(', ');
-          const values = [...fieldsToUpdate.map((f) => f.value), codiceUtente];
-          const updateQuery = `UPDATE FILTRI SET ${updates} WHERE CODUTE = ?`;
-          await Orm.execute(this.accessiOptions.databaseOptions, updateQuery, values);
-        } else {
-          const dbFields = ['CODUTE', ...fieldsToUpdate.map((f) => f.dbField)];
-          const placeholders = dbFields.map(() => '?');
-          const insertValues = [codiceUtente, ...fieldsToUpdate.map((f) => f.value)];
-          const insertQuery = `INSERT INTO FILTRI (${dbFields.join(
-            ', ',
-          )}) VALUES (${placeholders.join(', ')})`;
-          await Orm.execute(this.accessiOptions.databaseOptions, insertQuery, insertValues);
-        }
-      });
-    } catch (error) {
-      throw new Error(
-        `Errore durante l'aggiornamento dei filtri per utente ${codiceUtente}: ${error.message}`,
-      );
-    }
+    await this.filtriService.upsertFiltriUtente(codiceUtente, user);
   }
 
   async deleteUser(codiceCliente: number): Promise<void> {

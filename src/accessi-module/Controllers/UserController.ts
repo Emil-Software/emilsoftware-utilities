@@ -32,8 +32,9 @@ import { join } from 'path';
 import { Logger } from '../../Logger';
 import { RestUtilities } from '../../Utilities';
 import { AccessiOptions } from '../AccessiModule';
+import { ActionResponse, ErrorResponse } from '../Dtos/BaseResponse';
 import { GetUsersResponse } from '../Dtos/GetUsersResponse';
-import { RegisterRequest } from '../Dtos/RegisterRequest';
+import { PublicRegisterRequest } from '../Dtos/PublicRegisterRequest';
 import { RegisterResponse } from '../Dtos/RegisterResponse';
 import { SetStatoRegistrazioneDto } from '../Dtos/SetStatoRegistrazione';
 import { UserDto } from '../Dtos/UserDto';
@@ -91,26 +92,32 @@ export class UserController {
     description: 'Lista utenti recuperata con successo',
     type: GetUsersResponse,
   })
-  @ApiResponse({ status: 401, description: 'Credenziali non valide' })
+  @ApiResponse({ status: 401, description: 'Credenziali non valide', type: ErrorResponse })
+  @ApiResponse({ status: 403, description: 'Operazione non autorizzata', type: ErrorResponse })
+  @ApiResponse({ status: 500, description: 'Errore interno del server', type: ErrorResponse })
   @ApiQuery({
     name: 'email',
     required: false,
     description: "Email dell'utente da cercare",
+    type: String,
   })
   @ApiQuery({
     name: 'codiceUtente',
     required: false,
     description: "Codice dell'utente da cercare",
+    type: Number,
   })
   @ApiQuery({
     name: 'includeExtensionFields',
     required: false,
     description: 'Includi extension fields',
+    type: Boolean,
   })
   @ApiQuery({
     name: 'includeGrants',
     required: false,
     description: 'Includi permessi',
+    type: Boolean,
   })
   @ApiBearerAuth()
   @UseGuards(JwtSimpleGuard)
@@ -119,7 +126,7 @@ export class UserController {
     @Req() request: Request,
     @Res() res: Response,
     @Query('email') email?: string,
-    @Query('codiceUtente') codiceUtente?: number,
+    @Query('codiceUtente', new ParseIntPipe({ optional: true })) codiceUtente?: number,
     @Query('includeExtensionFields', new ParseBoolPipe({ optional: true }))
     includeExtensionFields?: boolean,
     @Query('includeGrants', new ParseBoolPipe({ optional: true }))
@@ -154,14 +161,15 @@ export class UserController {
     name: 'codiceUtente',
     description: "Codice identificativo dell'utente da eliminare",
     required: true,
-    example: '123',
+    example: 123,
   })
-  @ApiResponse({ status: 200, description: 'Utente eliminato con successo' })
+  @ApiResponse({ status: 200, description: 'Utente eliminato con successo', type: ActionResponse })
   @ApiResponse({
     status: 400,
     description: 'Errore nei parametri della richiesta',
+    type: ErrorResponse,
   })
-  @ApiResponse({ status: 500, description: 'Errore interno del server' })
+  @ApiResponse({ status: 500, description: 'Errore interno del server', type: ErrorResponse })
   @ApiBearerAuth()
   @UseGuards(JwtSimpleGuard)
   @Delete('delete-user/:codiceUtente')
@@ -190,14 +198,17 @@ export class UserController {
   @ApiResponse({
     status: 200,
     description: 'Stato registrazione aggiornato con successo',
+    type: ActionResponse,
   })
   @ApiResponse({
     status: 400,
     description: 'Errore nei parametri della richiesta',
+    type: ErrorResponse,
   })
   @ApiResponse({
     status: 500,
     description: 'Errore interno del server',
+    type: ErrorResponse,
   })
   @ApiBody({ type: SetStatoRegistrazioneDto })
   @ApiBearerAuth()
@@ -235,7 +246,7 @@ export class UserController {
     operationId: 'register',
   })
   @ApiBody({
-    type: RegisterRequest,
+    type: PublicRegisterRequest,
     description: "Dati necessari per la registrazione dell'utente",
   })
   @ApiCreatedResponse({
@@ -246,15 +257,17 @@ export class UserController {
   @ApiResponse({
     status: HttpStatus.BAD_REQUEST,
     description: 'Errore nella registrazione.',
+    type: ErrorResponse,
   })
   @ApiResponse({
     status: HttpStatus.INTERNAL_SERVER_ERROR,
     description: 'Errore interno del server durante la registrazione o l\'invio email.',
+    type: ErrorResponse,
   })
   @Post('register')
   async register(
     @Req() request: Request,
-    @Body() registrationData: RegisterRequest,
+    @Body() registrationData: PublicRegisterRequest,
     @Res() res: Response,
   ) {
     try {
@@ -289,7 +302,7 @@ export class UserController {
     name: 'codiceUtente',
     description: "Codice identificativo dell'utente da aggiornare",
     required: true,
-    example: '123',
+    example: 123,
   })
   @ApiBody({
     type: UserDto,
@@ -298,8 +311,11 @@ export class UserController {
   @ApiResponse({
     status: HttpStatus.OK,
     description: 'Utente aggiornato con successo',
+    type: ActionResponse,
   })
-  @ApiResponse({ status: 400, description: "Errore nell'aggiornamento" })
+  @ApiResponse({ status: 400, description: "Errore nell'aggiornamento", type: ErrorResponse })
+  @ApiResponse({ status: 403, description: 'Operazione non autorizzata', type: ErrorResponse })
+  @ApiResponse({ status: 500, description: 'Errore interno del server', type: ErrorResponse })
   @ApiBearerAuth()
   @UseGuards(JwtSimpleGuard)
   @Put('update-user/:codiceUtente')
@@ -351,13 +367,15 @@ export class UserController {
     name: 'codiceUtente',
     description: "Codice identificativo dell'utente che accetta il GDPR",
     required: true,
-    example: '123',
+    example: 123,
   })
   @ApiResponse({
     status: 200,
     description: 'Consenso GDPR impostato con successo',
+    type: ActionResponse,
   })
-  @ApiResponse({ status: 400, description: 'Errore nella richiesta' })
+  @ApiResponse({ status: 400, description: 'Errore nella richiesta', type: ErrorResponse })
+  @ApiResponse({ status: 403, description: 'Operazione non autorizzata', type: ErrorResponse })
   @ApiBearerAuth()
   @UseGuards(JwtSimpleGuard)
   @Patch('set-gdpr/:codiceUtente')

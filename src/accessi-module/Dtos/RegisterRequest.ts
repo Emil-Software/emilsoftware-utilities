@@ -5,6 +5,7 @@ import {
   IsArray,
   IsBoolean,
   IsInt,
+  Min,
   IsOptional,
   IsString,
   Length,
@@ -116,6 +117,10 @@ export class RegisterRequest extends OmitType(FiltriUtente, ['codUte'] as const)
     description: "Numero MAC associato all'utente.",
     example: 12,
   })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt({ message: 'Il numero MAC deve essere un intero.' })
+  @Min(0, { message: 'Il numero MAC non puo essere negativo.' })
   nummac?: number;
 
   @ApiPropertyOptional({

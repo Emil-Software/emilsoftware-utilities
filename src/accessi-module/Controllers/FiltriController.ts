@@ -3,6 +3,7 @@ import { ApiBearerAuth, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagg
 import { Request, Response } from 'express';
 import { RestUtilities } from '../../Utilities';
 import { AccessiOptions } from '../AccessiModule';
+import { ActionResponse, ErrorResponse } from '../Dtos/BaseResponse';
 import { FiltriUtente, GetFiltriUtenteRequest, GetFiltriUtenteResponse } from '../Dtos';
 import { GetFiltriResponse } from '../Dtos/TipoFiltro';
 import { FiltriService } from '../Services/FiltriService/FiltriService';
@@ -37,6 +38,7 @@ export class FiltriController {
   @ApiResponse({
     status: 500,
     description: 'Errore interno durante il recupero dei tipi di filtri',
+    type: ErrorResponse,
   })
   async getTipoFiltri(@Res() res: Response) {
     try {
@@ -57,6 +59,21 @@ export class FiltriController {
     status: 200,
     description: "Lista dei filtri dell'utente recuperata con successo",
     type: GetFiltriUtenteResponse,
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Errore nella richiesta.',
+    type: ErrorResponse,
+  })
+  @ApiResponse({
+    status: 403,
+    description: 'Operazione non autorizzata.',
+    type: ErrorResponse,
+  })
+  @ApiResponse({
+    status: 500,
+    description: 'Errore interno del server.',
+    type: ErrorResponse,
   })
   async getFiltriUtente(
     @Req() request: Request,
@@ -96,10 +113,22 @@ export class FiltriController {
   @ApiResponse({
     status: 200,
     description: 'Filtri utente salvati con successo',
+    type: ActionResponse,
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Errore di validazione nei dati inviati.',
+    type: ErrorResponse,
+  })
+  @ApiResponse({
+    status: 403,
+    description: 'Operazione non autorizzata.',
+    type: ErrorResponse,
   })
   @ApiResponse({
     status: 500,
     description: 'Errore interno durante il salvataggio dei filtri utente',
+    type: ErrorResponse,
   })
   async saveFiltriUtente(
     @Req() request: Request,
