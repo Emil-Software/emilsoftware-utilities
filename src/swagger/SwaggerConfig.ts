@@ -2,14 +2,20 @@ import { INestApplication } from "@nestjs/common";
 import { DocumentBuilder, SwaggerModule } from "@nestjs/swagger";
 import { Logger } from "../Logger";
 
-export function setupSwagger(app: INestApplication) {
+export type SwaggerSetupOptions = {
+    swaggerPath?: string;
+    title?: string;
+    description?: string;
+};
+
+export function setupSwagger(app: INestApplication, options?: SwaggerSetupOptions) {
     const logger: Logger = new Logger("SwaggerConfig");
-    const swaggerPath = "swagger";
+    const swaggerPath = options?.swaggerPath ?? "swagger";
     const swaggerJsonPath = `${swaggerPath}-json`;
 
     const config = new DocumentBuilder()
-        .setTitle("API Documentation")
-        .setDescription("API per la gestione di accessi utenti e allegati")
+        .setTitle(options?.title ?? "API Documentation")
+        .setDescription(options?.description ?? "API per la gestione di accessi utenti e allegati")
         .setVersion("1.0")
         .addBearerAuth() // Per abilitare l'autenticazione JWT
         .build();
@@ -27,4 +33,4 @@ export function setupSwagger(app: INestApplication) {
     logger.info(
         `Swagger documentation available at: http://localhost:${port}/${swaggerPath}`
     );
-} 
+}

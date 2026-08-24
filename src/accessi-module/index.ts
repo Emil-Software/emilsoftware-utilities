@@ -1,4 +1,4 @@
-import { Application } from "express";
+import express, { Application, Request } from "express";
 import { ValidationPipe } from "@nestjs/common";
 import { NestFactory } from "@nestjs/core";
 import { ExpressAdapter } from "@nestjs/platform-express";
@@ -35,10 +35,24 @@ export async function initializeAccessiModule(app: Application, options: Accessi
         logger.info(
             `Configurazione accessi: autoUpdateDatabase=${options.autoUpdateDatabase !== false}, legacyPasswordMigrationOnStartup=${options.legacyPasswordMigrationOnStartup !== false}`
         );
-        // Creiamo un'istanza Express separata per NestJS
-        const nestExpressInstance = new ExpressAdapter(app);
+        const nestHostApp = express();
+        const isNestRoute = (path: string) =>
+            path === "/api/accessi" ||
+            path.startsWith("/api/accessi/") ||
+            path === "/accessi/swagger" ||
+            path.startsWith("/accessi/swagger/") ||
+            path === "/accessi/swagger-json";
 
-        // Creiamo l'app NestJS attaccata a Express
+        app.use((req: Request, res, next) => {
+            if (!isNestRoute(req.path)) {
+                return next();
+            }
+
+            return nestHostApp(req, res, next);
+        });
+
+        const nestExpressInstance = new ExpressAdapter(nestHostApp);
+
         const nestApp = await NestFactory.create(AccessiModule.forRoot(options), nestExpressInstance, {
             bufferLogs: true
         });
@@ -60,7 +74,11 @@ export async function initializeAccessiModule(app: Application, options: Accessi
             exclude: ['/swagger', '/swagger/(.*)']
         });
 
-        setupSwagger(nestApp);
+        setupSwagger(nestApp, {
+            swaggerPath: "accessi/swagger",
+            title: "Accessi API Documentation",
+            description: "API del modulo accessi",
+        });
         logger.info("Avvio init del modulo accessi.");
         await nestApp.init();
         logger.info("Init del modulo accessi completata.");
