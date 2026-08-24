@@ -1,3 +1,10 @@
+# [2.0.0-dev.8](https://github.com/Emil-Software/emilsoftware-utilities/compare/v2.0.0-dev.7...v2.0.0-dev.8) (2026-08-24)
+
+
+### Bug Fixes
+
+* trigger dev release ([7f1af86](https://github.com/Emil-Software/emilsoftware-utilities/commit/7f1af86b54d961311be6d7c09b25abb818742aa9))
+
 # [2.0.0-dev.7](https://github.com/Emil-Software/emilsoftware-utilities/compare/v2.0.0-dev.6...v2.0.0-dev.7) (2026-08-24)
 
 
