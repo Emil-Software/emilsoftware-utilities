@@ -79,7 +79,12 @@ export async function initializeAccessiModule(app: Application, options: Accessi
 
     } catch (error) {
         failAccessiAuthInitialization(error);
-        logger.error("Errore in initialize AccessiModule:", error);
+        logger.error(
+            "Errore in initialize AccessiModule:",
+            error instanceof Error
+                ? { name: error.name, message: error.message, stack: error.stack }
+                : { error: String(error) }
+        );
         throw error;
     }
 }
