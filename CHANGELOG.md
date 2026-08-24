@@ -1,3 +1,10 @@
+# [2.0.0-dev.4](https://github.com/Emil-Software/emilsoftware-utilities/compare/v2.0.0-dev.3...v2.0.0-dev.4) (2026-08-24)
+
+
+### Bug Fixes
+
+* allow firebird compatibility auto-probing ([17d878f](https://github.com/Emil-Software/emilsoftware-utilities/commit/17d878f00ae8b02443e729d8270b93310da97fd3))
+
 # [2.0.0-dev.3](https://github.com/Emil-Software/emilsoftware-utilities/compare/v2.0.0-dev.2...v2.0.0-dev.3) (2026-08-20)
 
 
