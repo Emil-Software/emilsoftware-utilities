@@ -1,3 +1,10 @@
+# [2.0.0-dev.11](https://github.com/Emil-Software/emilsoftware-utilities/compare/v2.0.0-dev.10...v2.0.0-dev.11) (2026-08-24)
+
+
+### Features
+
+* harden accessi swagger contracts ([e690afe](https://github.com/Emil-Software/emilsoftware-utilities/commit/e690afec3a58f2d99efe446b3873d0f429d46b16))
+
 # [2.0.0-dev.10](https://github.com/Emil-Software/emilsoftware-utilities/compare/v2.0.0-dev.9...v2.0.0-dev.10) (2026-08-24)
 
 
