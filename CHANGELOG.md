@@ -1,3 +1,10 @@
+# [2.0.0-dev.9](https://github.com/Emil-Software/emilsoftware-utilities/compare/v2.0.0-dev.8...v2.0.0-dev.9) (2026-08-24)
+
+
+### Bug Fixes
+
+* deploy ([f098478](https://github.com/Emil-Software/emilsoftware-utilities/commit/f0984781cc9960a718dfdab1fa8262766ffee559))
+
 # [2.0.0-dev.8](https://github.com/Emil-Software/emilsoftware-utilities/compare/v2.0.0-dev.7...v2.0.0-dev.8) (2026-08-24)
 
 
