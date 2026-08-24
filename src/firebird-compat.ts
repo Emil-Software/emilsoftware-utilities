@@ -98,8 +98,12 @@ export function normalizeFirebirdOptions(options: Options): FirebirdOptions {
     const compatibilityOptions = options as FirebirdOptions;
     return {
         ...options,
-        wireCrypt: normalizeWireCryptMode(compatibilityOptions.wireCrypt),
-        pluginName: normalizeAuthPlugin(compatibilityOptions.pluginName),
+        wireCrypt: compatibilityOptions.wireCrypt === undefined
+            ? undefined
+            : normalizeWireCryptMode(compatibilityOptions.wireCrypt),
+        pluginName: compatibilityOptions.pluginName === undefined
+            ? undefined
+            : normalizeAuthPlugin(compatibilityOptions.pluginName),
         authPlugins: normalizeAuthPluginList(compatibilityOptions.authPlugins),
     };
 }
@@ -108,6 +112,7 @@ function isRetryableCompatibilityError(error: unknown): boolean {
     const message = String((error as { message?: unknown })?.message ?? error ?? "").toLowerCase();
     return message.includes("incompatible wire encryption")
         || message.includes("no matching plugins on server")
+        || message.includes("server don't accept plugin")
         || message.includes("unknown auth plugin")
         || message.includes("unknow auth plugin")
         || message.includes("timeout during firebird attach");
@@ -144,9 +149,8 @@ export function buildFirebirdCompatibilityCandidates(options: Options): Firebird
     const hasExplicitWireCrypt = compatibilityOptions.wireCrypt !== undefined;
     const candidates: FirebirdOptions[] = [];
 
-    pushUniqueCandidate(candidates, normalized);
-
     if (hasExplicitPlugin && hasExplicitWireCrypt) {
+        pushUniqueCandidate(candidates, normalized);
         return candidates;
     }
 
@@ -166,7 +170,7 @@ export function buildFirebirdCompatibilityCandidates(options: Options): Firebird
         return candidates;
     }
 
-    appendPluginCandidates(candidates, normalized, "Srp256", ["enabled", "required", "disabled"]);
+    appendPluginCandidates(candidates, normalized, "Srp256", ["required", "enabled", "disabled"]);
     appendPluginCandidates(candidates, normalized, "Srp", ["enabled", "required", "disabled"]);
     appendPluginCandidates(candidates, normalized, "Legacy_Auth", ["disabled", "enabled"]);
     return candidates;
