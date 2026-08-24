@@ -1,7 +1,7 @@
 import { DynamicModule, Global, Module } from "@nestjs/common";
 import { AllegatiService } from "./Services/AllegatiService/AllegatiService";
 import { AllegatiController } from "./Controllers/AllegatiController";
-import { Options } from "es-node-firebird";
+import { Options } from "node-firebird";
 import { Logger } from "../Logger";
 
 export interface AllegatiOptions {

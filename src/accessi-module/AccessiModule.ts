@@ -4,7 +4,7 @@
  * @module AccessiModule
  * @author mttdev382
  */
-import { Options } from 'es-node-firebird';
+import { Options } from 'node-firebird';
 import { DynamicModule, Global, Module } from '@nestjs/common';
 import { AuthService } from './Services/AuthService/AuthService';
 import { EmailService } from './Services/EmailService/EmailService';

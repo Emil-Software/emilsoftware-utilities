@@ -85,6 +85,7 @@ export async function initializeAccessiModule(app: Application, options: Accessi
 
 export { AccessiModule } from "./AccessiModule";
 export { AccessiDatabaseUpdater } from "./database-updates/AccessiDatabaseUpdater";
+export type { AccessiOptions, EmailOptions, JwtOptions, ExtensionFieldsOptions, PublicAuthRateLimitOptions, PublicAuthRateLimitRuleOptions } from "./AccessiModule";
 export * from "./Dtos";
 export {
     authorizeAccessi,

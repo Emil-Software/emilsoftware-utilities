@@ -1,6 +1,6 @@
 import { Orm } from "./Orm";
 import { Logger } from "./Logger";
-import { Options } from "es-node-firebird";
+import { Options } from "node-firebird";
 
 export abstract class DatabaseUpdater {
   //#region Fields and Options

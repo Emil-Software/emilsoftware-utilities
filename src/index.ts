@@ -1,6 +1,6 @@
 import { DatabaseUpdater } from "./DatabaseUpdater";
 import { ExecutionTimeLogger } from "./ExecutionTimeLogger"
-import * as Firebird from "es-node-firebird";
+import * as Firebird from "node-firebird";
 import { LogLevels, Logger } from "./Logger";
 import { Orm } from "./Orm";
 import { DateUtilities, RestUtilities, DatabaseUtilities, StatusCode } from "./Utilities";
@@ -20,7 +20,7 @@ export * from "./firebird-compat";
 
 export * from "./accessi-module";
 export * from "./allegati-module";
-export * from "es-node-firebird";
+export * from "node-firebird";
 export { autobind, ExecutionTimeLogger, Logger, LogLevels, Orm, DateUtilities, RestUtilities, DatabaseUtilities, DatabaseUpdater, StatusCode, DocumentGenerator, Firebird };
 // Unified module exports
 export * from "./swagger/SwaggerConfig";
