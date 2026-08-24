@@ -13,6 +13,7 @@ export type FirebirdOptions = Options & {
     compatibilityProbeTimeoutMs?: number;
     compatibilityTotalTimeoutMs?: number;
     firebirdDriver?: FirebirdDriverStrategy;
+    trimStringResults?: boolean;
 };
 
 type FirebirdErrorContext = {
@@ -185,12 +186,14 @@ export function normalizeFirebirdOptions(options: Options): FirebirdOptions {
         compatibilityTotalTimeoutMs,
         connectTimeoutMs,
         firebirdDriver: _firebirdDriver,
+        trimStringResults,
         ...baseOptions
     } = compatibilityOptions;
 
     const normalizedOptions: FirebirdOptions = {
         ...baseOptions,
         pluginName: normalizeAuthPlugin(compatibilityOptions.pluginName),
+        trimStringResults,
         wireCrypt: normalizeWireCryptMode(compatibilityOptions.wireCrypt),
     };
 

@@ -42,6 +42,38 @@ export class Orm {
         });
     }
 
+    private static shouldTrimStringResults(options: Options): boolean {
+        const normalizedOptions = normalizeFirebirdOptions(options);
+        return normalizedOptions.trimStringResults !== false;
+    }
+
+    private static normalizeResultValue(value: any, trimStringResults: boolean): any {
+        if (!trimStringResults || value === undefined || value === null) {
+            return value;
+        }
+
+        if (typeof value === "string" || value instanceof String) {
+            return String(value).trimEnd();
+        }
+
+        if (Array.isArray(value)) {
+            return value.map((item) => this.normalizeResultValue(item, trimStringResults));
+        }
+
+        if (value instanceof Date || Buffer.isBuffer(value)) {
+            return value;
+        }
+
+        if (typeof value === "object") {
+            return Object.keys(value).reduce((normalized: Record<string, any>, key: string) => {
+                normalized[key] = this.normalizeResultValue(value[key], trimStringResults);
+                return normalized;
+            }, {});
+        }
+
+        return value;
+    }
+
     private static attachWithTimeout(options: Options): Promise<Database> {
         return new Promise((resolve, reject): void => {
             const normalizedOptions = normalizeFirebirdOptions(options);
@@ -140,7 +172,7 @@ export class Orm {
                         return reject(enhanceFirebirdError(error, normalizedOptions, { stage: "query", sql: query }));
                     }
 
-                    return resolve(result);
+                    return resolve(this.normalizeResultValue(result, this.shouldTrimStringResults(normalizedOptions)));
                 });
             });
         } catch (error) {
@@ -192,7 +224,7 @@ export class Orm {
                         return reject(enhanceFirebirdError(error, normalizedOptions, { stage: "execute", sql: query }));
                     }
 
-                    return resolve(result);
+                    return resolve(this.normalizeResultValue(result, this.shouldTrimStringResults(normalizedOptions)));
                 });
             });
         } catch (error) {

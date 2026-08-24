@@ -472,6 +472,7 @@ export class DatabaseUtilities {
             blobAsText: true,       // Determines if BLOB fields should be treated as text. Default: true.
             connectTimeout: 15000,
             connectTimeoutMs: 15000,
+            trimStringResults: true,
         };
     }
 }
