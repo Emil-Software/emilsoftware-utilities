@@ -1,3 +1,10 @@
+# [2.0.0-dev.5](https://github.com/Emil-Software/emilsoftware-utilities/compare/v2.0.0-dev.4...v2.0.0-dev.5) (2026-08-24)
+
+
+### Bug Fixes
+
+* retry compatible firebird plugin negotiation ([475798d](https://github.com/Emil-Software/emilsoftware-utilities/commit/475798dd0a6f21dcca638334067b924480910750))
+
 # [2.0.0-dev.4](https://github.com/Emil-Software/emilsoftware-utilities/compare/v2.0.0-dev.3...v2.0.0-dev.4) (2026-08-24)
 
 
