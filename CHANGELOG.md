@@ -1,3 +1,10 @@
+# [2.0.0-dev.6](https://github.com/Emil-Software/emilsoftware-utilities/compare/v2.0.0-dev.5...v2.0.0-dev.6) (2026-08-24)
+
+
+### Bug Fixes
+
+* use official firebird driver across supported versions ([392d91b](https://github.com/Emil-Software/emilsoftware-utilities/commit/392d91b53c139015e23e4e8ff9ca0d0c725b32ec))
+
 # [2.0.0-dev.5](https://github.com/Emil-Software/emilsoftware-utilities/compare/v2.0.0-dev.4...v2.0.0-dev.5) (2026-08-24)
 
 
