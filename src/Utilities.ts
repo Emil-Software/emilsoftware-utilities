@@ -470,8 +470,6 @@ export class DatabaseUtilities {
             pageSize: 100000,       // The page size for database transactions. Default: 100,000.
             retryConnectionInterval: 1000, // The interval (in ms) to retry a failed connection. Default: 1,000 ms.
             blobAsText: true,       // Determines if BLOB fields should be treated as text. Default: true.
-            wireCrypt: 'enabled',
-            pluginName: 'Srp',
             authPlugins: ['Srp256', 'Srp', 'Legacy_Auth'],
             connectTimeoutMs: 15000,
         };
