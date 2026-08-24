@@ -5,6 +5,7 @@ import { ExpressAdapter } from "@nestjs/platform-express";
 import { AccessiModule, AccessiOptions } from "./AccessiModule";
 import { Logger } from "../Logger";
 import { AuthService } from "./Services/AuthService/AuthService";
+import { setupSwagger } from "../swagger/SwaggerConfig";
 import {
     beginAccessiAuthInitialization,
     failAccessiAuthInitialization,
@@ -59,7 +60,7 @@ export async function initializeAccessiModule(app: Application, options: Accessi
             exclude: ['/swagger', '/swagger/(.*)']
         });
 
-        // Note: Swagger setup is now handled by the unified module
+        setupSwagger(nestApp);
         logger.info("Avvio init del modulo accessi.");
         await nestApp.init();
         logger.info("Init del modulo accessi completata.");
