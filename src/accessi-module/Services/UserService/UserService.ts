@@ -73,13 +73,7 @@ export class UserService {
     }
 
     const mapped = result.map(RestUtilities.convertKeysToCamelCase);
-    const flagValue = mapped[0]?.flag_admin_configurator;
-
-    if (typeof flagValue === 'boolean') {
-      return flagValue;
-    }
-
-    return flagValue === 1;
+    return this.normalizeDatabaseBoolean(mapped[0]?.flagAdminConfigurator);
   }
 
   async getAuthenticatedUserSnapshot(

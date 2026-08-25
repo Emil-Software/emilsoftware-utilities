@@ -23,6 +23,7 @@ import { ActionResponse, ErrorResponse, UpdateEnabledStatusRequest } from '../Dt
 import { ConfiguratorService } from '../Services/ConfiguratorService/ConfiguratorService';
 import { UserService } from '../Services/UserService/UserService';
 import { JwtSimpleGuard } from '../jwt/jwt.strategy';
+import { getAuthenticatedAccessiUser } from '../security/accessControl';
 
 @ApiBearerAuth()
 @ApiTags('Configurator')
@@ -62,20 +63,12 @@ export class ConfiguratorController {
       if (!codiceMenu) throw new Error('Il codice del menu e obbligatorio.');
       if (body?.enabled === undefined) throw new Error('Lo stato di abilitazione e obbligatorio.');
 
-      const user = (req as any)?.user;
-      const codiceUtente = user?.utente?.codiceUtente;
-      if (!codiceUtente) {
-        return RestUtilities.sendErrorMessage(
-          res,
-          'Utente non riconosciuto dal token.',
-          ConfiguratorController.name,
-          401,
-        );
-      }
+      const authenticatedUser = getAuthenticatedAccessiUser(req);
 
       const canConfigure =
-        user?.utente?.flagAdminConfigurator ||
-        (await this.userService.isAdminConfigurator(codiceUtente));
+        authenticatedUser.flagSuper ||
+        authenticatedUser.flagAdminConfigurator ||
+        (await this.userService.isAdminConfigurator(authenticatedUser.codiceUtente));
       if (!canConfigure) {
         return RestUtilities.sendErrorMessage(
           res,
@@ -124,20 +117,12 @@ export class ConfiguratorController {
       if (!codiceGruppo) throw new Error('Il codice del gruppo e obbligatorio.');
       if (body?.enabled === undefined) throw new Error('Lo stato di abilitazione e obbligatorio.');
 
-      const user = (req as any)?.user;
-      const codiceUtente = user?.utente?.codiceUtente;
-      if (!codiceUtente) {
-        return RestUtilities.sendErrorMessage(
-          res,
-          'Utente non riconosciuto dal token.',
-          ConfiguratorController.name,
-          401,
-        );
-      }
+      const authenticatedUser = getAuthenticatedAccessiUser(req);
 
       const canConfigure =
-        user?.utente?.flagAdminConfigurator ||
-        (await this.userService.isAdminConfigurator(codiceUtente));
+        authenticatedUser.flagSuper ||
+        authenticatedUser.flagAdminConfigurator ||
+        (await this.userService.isAdminConfigurator(authenticatedUser.codiceUtente));
       if (!canConfigure) {
         return RestUtilities.sendErrorMessage(
           res,

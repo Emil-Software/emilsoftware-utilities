@@ -79,7 +79,8 @@ Per la logica di salvataggio usa `UPDATE OR INSERT ... MATCHING (CODUTE)`.
 - `MENU.FLGENABLED`
 - `MENU_GRP.FLGENABLED`
 
-Le rotte sono protette da JWT e dal controllo `flagAdminConfigurator`.
+Le rotte sono protette da JWT e accessibili agli utenti con `flagSuper` o
+`flagAdminConfigurator`.
 
 ## Endpoint correlati
 
