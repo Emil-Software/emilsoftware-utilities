@@ -1,3 +1,10 @@
+# [2.0.0-dev.13](https://github.com/Emil-Software/emilsoftware-utilities/compare/v2.0.0-dev.12...v2.0.0-dev.13) (2026-08-25)
+
+
+### Bug Fixes
+
+* typo in accessi edit permissions ([f02e077](https://github.com/Emil-Software/emilsoftware-utilities/commit/f02e0776e67de14275ec8cca91c969953b3c1382))
+
 # [2.0.0-dev.12](https://github.com/Emil-Software/emilsoftware-utilities/compare/v2.0.0-dev.11...v2.0.0-dev.12) (2026-08-24)
 
 
