@@ -8,6 +8,7 @@ import { GetUsersResult } from '../../Dtos/GetUsersResponse';
 import { RegisterRequest } from '../../Dtos/RegisterRequest';
 import { StatoRegistrazione } from '../../Dtos/StatoRegistrazione';
 import { UserDto } from '../../Dtos/UserDto';
+import { UserGrantsDto } from '../../Dtos/UserGrantsDto';
 import { AccessiAuthenticatedUserSnapshot } from '../../security/authenticatedToken';
 import { EmailService } from '../EmailService/EmailService';
 import { FiltriService } from '../FiltriService/FiltriService';
@@ -187,15 +188,19 @@ export class UserService {
       const usersResponse: GetUsersResult[] = [];
 
       for (const user of users) {
-        let userGrants = null;
+        let userGrants: UserGrantsDto | undefined;
 
         if (options?.includeGrants) {
           userGrants = await this.permissionService.getUserRolesAndGrants(user.codiceUtente);
         }
 
-        let extensionFields = options?.includeExtensionFields ? {} : null;
+        let extensionFields: Record<string, unknown[]> | undefined;
 
-        if (options?.includeExtensionFields && this.accessiOptions.extensionFieldsOptions) {
+        if (options?.includeExtensionFields) {
+          extensionFields = {};
+        }
+
+        if (extensionFields && this.accessiOptions.extensionFieldsOptions) {
           for (const ext of this.accessiOptions.extensionFieldsOptions) {
             const values = (
               await Orm.query(
@@ -273,12 +278,15 @@ export class UserService {
     if (utenti.length > 0 && filtriUtente.length > 0) {
       const user = utenti[0];
       const filtro = filtriUtente[0];
+      const filterValues: Record<string, unknown> = {};
 
       Object.entries(FILTRI_UTENTE_DB_MAPPING).forEach(([key]) => {
         if (key in filtro) {
-          (user as UserDto)[key] = filtro[key as keyof FiltriUtente];
+          filterValues[key] = filtro[key as keyof FiltriUtente];
         }
       });
+
+      Object.assign(user, filterValues);
     }
 
     return utenti.length > 0 ? utenti[0] : null;
