@@ -1,3 +1,20 @@
+# [2.0.0-dev.16](https://github.com/Emil-Software/emilsoftware-utilities/compare/v2.0.0-dev.15...v2.0.0-dev.16) (2026-08-27)
+
+
+### Bug Fixes
+
+* deploy ([5aa12eb](https://github.com/Emil-Software/emilsoftware-utilities/commit/5aa12eb06db043d822d7175aeeb0c33473682a8b))
+* deploy ([d663a45](https://github.com/Emil-Software/emilsoftware-utilities/commit/d663a45f32116ac3a62af77c076068fdac03dd0e))
+* deploy ([82df4f8](https://github.com/Emil-Software/emilsoftware-utilities/commit/82df4f82b20cf13aa3263b4f3b279b33c1557038))
+* deploy ([3782548](https://github.com/Emil-Software/emilsoftware-utilities/commit/3782548f4dca37ed714a71928653a968fd8414d4))
+
+
+### Features
+
+* align accessi persistence release ([1c1b2ac](https://github.com/Emil-Software/emilsoftware-utilities/commit/1c1b2ac1f0d4490ef797c6263843c58fd0a239d0))
+* prepare accessi permission persistence release ([a99e148](https://github.com/Emil-Software/emilsoftware-utilities/commit/a99e148c02c76d2d269726c2f15a8c98f97a2b3c))
+* verify persisted accessi role assignments ([be48180](https://github.com/Emil-Software/emilsoftware-utilities/commit/be481808facfe0d2c059082e6a1cd7c5980e3da5))
+
 # [2.0.0-dev.15](https://github.com/Emil-Software/emilsoftware-utilities/compare/v2.0.0-dev.14...v2.0.0-dev.15) (2026-08-27)
 
 
