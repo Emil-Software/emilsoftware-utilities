@@ -22,6 +22,96 @@ export class PermissionService {
         return typeof rawValue === 'number' ? rawValue : Number.parseInt(`${rawValue ?? '0'}`, 10);
     }
 
+    private async getAllActiveMenusAsGrants(): Promise<AbilitazioneMenu[]> {
+        const query = `
+                SELECT
+                    M.CODMNU AS codice_menu,
+                    30 AS tipo_abilitazione,
+                    M.DESMNU AS descrizione_menu,
+                    G.DESGRP AS descrizione_gruppo,
+                    G.CODGRP AS codice_gruppo,
+                    M.ICON AS icona,
+                    M.CODTIP AS tipo,
+                    M.PAGINA AS pagina,
+                    M.NOTE AS note
+                FROM MENU M
+                LEFT JOIN MENU_GRP G ON G.CODGRP = M.CODGRP
+                WHERE M.FLGENABLED = 1 AND COALESCE(G.FLGENABLED, 1) = 1
+            `;
+
+        return await Orm.query(this.accessiOptions.databaseOptions, query, [])
+            .then(results => results.map(RestUtilities.convertKeysToCamelCase)) as AbilitazioneMenu[];
+    }
+
+    private async getUserDirectPermissions(codiceUtente: number): Promise<AbilitazioneMenu[]> {
+        const queryAbilitazioni = `
+                SELECT
+                    A.CODMNU AS codice_menu,
+                    A.TIPABI AS tipo_abilitazione,
+                    M.DESMNU AS descrizione_menu,
+                    G.DESGRP AS descrizione_gruppo,
+                    G.CODGRP AS codice_gruppo,
+                    M.ICON AS icona,
+                    M.CODTIP AS tipo,
+                    M.PAGINA AS pagina,
+                    M.NOTE AS note
+                FROM ABILITAZIONI A
+                INNER JOIN MENU M ON A.CODMNU = M.CODMNU
+                LEFT JOIN MENU_GRP G ON G.CODGRP = M.CODGRP
+                WHERE A.CODUTE = ? AND M.FLGENABLED = 1 AND COALESCE(G.FLGENABLED, 1) = 1
+            `;
+
+        return await Orm.query(this.accessiOptions.databaseOptions, queryAbilitazioni, [codiceUtente])
+            .then(results => results.map(RestUtilities.convertKeysToCamelCase)) as AbilitazioneMenu[];
+    }
+
+    private async getUserRoles(codiceUtente: number): Promise<Role[]> {
+        const queryRuoli = `
+                SELECT
+                    R.CODRUO AS codice_ruolo,
+                    R.DESRUO AS descrizione_ruolo,
+                    RM.CODMNU AS codice_menu,
+                    RM.TIPABI AS tipo_abilitazione,
+                    M.DESMNU AS descrizione_menu,
+                    M.NOTE AS note
+                FROM UTENTI_RUOLI RU
+                INNER JOIN RUOLI R ON RU.CODRUO = R.CODRUO
+                LEFT JOIN RUOLI_MNU RM ON R.CODRUO = RM.CODRUO
+                LEFT JOIN MENU M
+                    ON RM.CODMNU = M.CODMNU
+                    AND M.FLGENABLED = 1
+                LEFT JOIN MENU_GRP G
+                    ON G.CODGRP = M.CODGRP
+                    AND COALESCE(G.FLGENABLED, 1) = 1
+                WHERE RU.CODUTE = ?
+            `;
+        let ruoliResult = await Orm.query(this.accessiOptions.databaseOptions, queryRuoli, [codiceUtente]);
+        ruoliResult = ruoliResult.map(RestUtilities.convertKeysToCamelCase);
+
+        const ruoliMap = new Map<number, Role>();
+        for (const row of ruoliResult) {
+            const { codiceRuolo, descrizioneRuolo, codiceMenu, descrizioneMenu, tipoAbilitazione } = row;
+
+            if (!ruoliMap.has(codiceRuolo)) {
+                ruoliMap.set(codiceRuolo, {
+                    codiceRuolo,
+                    descrizioneRuolo: descrizioneRuolo?.trim(),
+                    menu: []
+                });
+            }
+
+            if (codiceMenu && descrizioneMenu) {
+                ruoliMap.get(codiceRuolo)!.menu.push({
+                    codiceRuolo: codiceRuolo,
+                    codiceMenu: codiceMenu.trim(),
+                    tipoAbilitazione,
+                });
+            }
+        }
+
+        return Array.from(ruoliMap.values());
+    }
+
 
     public async addAbilitazioni(codiceUtente: number, menuAbilitazioni: any[]): Promise<void> {
         const deleteQuery = `DELETE FROM ABILITAZIONI WHERE CODUTE = ?`;
@@ -383,92 +473,8 @@ export class PermissionService {
         result = result.map(RestUtilities.convertKeysToCamelCase) as { flagSuper: boolean }[];
         const isSuperAdmin = result[0].flagSuper;
 
-        let abilitazioni: AbilitazioneMenu[] = [];
-        let ruoli: Role[] = [];
-
-        if (isSuperAdmin) {
-            const query = `
-                    SELECT
-                        M.CODMNU AS codice_menu,
-                        30 AS tipo_abilitazione,
-                        M.DESMNU AS descrizione_menu,
-                        G.DESGRP AS descrizione_gruppo,
-                        G.CODGRP AS codice_gruppo,
-                        M.ICON AS icona,
-                        M.CODTIP AS tipo,
-                        M.PAGINA AS pagina,
-                        M.NOTE AS note
-                    FROM MENU M
-                    LEFT JOIN MENU_GRP G ON G.CODGRP = M.CODGRP
-                    WHERE M.FLGENABLED = 1 AND COALESCE(G.FLGENABLED, 1) = 1
-            `;
-            abilitazioni = await Orm.query(this.accessiOptions.databaseOptions, query, [])
-                .then(results => results.map(RestUtilities.convertKeysToCamelCase)) as AbilitazioneMenu[];
-        } else {
-            const queryAbilitazioni = `
-                    SELECT
-                        A.CODMNU AS codice_menu,
-                        A.TIPABI AS tipo_abilitazione,
-                        M.DESMNU AS descrizione_menu,
-                        G.DESGRP AS descrizione_gruppo,
-                        G.CODGRP AS codice_gruppo,
-                        M.ICON AS icona,
-                        M.CODTIP AS tipo,
-                        M.PAGINA AS pagina,
-                        M.NOTE AS note
-                    FROM ABILITAZIONI A
-                    INNER JOIN MENU M ON A.CODMNU = M.CODMNU
-                    LEFT JOIN MENU_GRP G ON G.CODGRP = M.CODGRP
-                    WHERE A.CODUTE = ? AND M.FLGENABLED = 1 AND COALESCE(G.FLGENABLED, 1) = 1
-                `;
-            abilitazioni = await Orm.query(this.accessiOptions.databaseOptions, queryAbilitazioni, [codiceUtente])
-                .then(results => results.map(RestUtilities.convertKeysToCamelCase)) as AbilitazioneMenu[];
-
-            const queryRuoli = `
-                    SELECT
-                        R.CODRUO AS codice_ruolo,
-                        R.DESRUO AS descrizione_ruolo,
-                        RM.CODMNU AS codice_menu,
-                        RM.TIPABI AS tipo_abilitazione,
-                        M.DESMNU AS descrizione_menu,
-                        M.NOTE AS note
-                    FROM UTENTI_RUOLI RU
-                    INNER JOIN RUOLI R ON RU.CODRUO = R.CODRUO
-                    LEFT JOIN RUOLI_MNU RM ON R.CODRUO = RM.CODRUO
-                    LEFT JOIN MENU M
-                        ON RM.CODMNU = M.CODMNU
-                        AND M.FLGENABLED = 1
-                    LEFT JOIN MENU_GRP G
-                        ON G.CODGRP = M.CODGRP
-                        AND COALESCE(G.FLGENABLED, 1) = 1
-                    WHERE RU.CODUTE = ?
-                `;
-            let ruoliResult = await Orm.query(this.accessiOptions.databaseOptions, queryRuoli, [codiceUtente]);
-            ruoliResult = ruoliResult.map(RestUtilities.convertKeysToCamelCase);
-
-            const ruoliMap = new Map<number, Role>();
-            for (const row of ruoliResult) {
-                const { codiceRuolo, descrizioneRuolo, codiceMenu, descrizioneMenu, tipoAbilitazione } = row;
-
-                if (!ruoliMap.has(codiceRuolo)) {
-                    ruoliMap.set(codiceRuolo, {
-                        codiceRuolo,
-                        descrizioneRuolo: descrizioneRuolo?.trim(),
-                        menu: []
-                    });
-                }
-
-                if (codiceMenu && descrizioneMenu) {
-                    ruoliMap.get(codiceRuolo)!.menu.push({
-                        codiceRuolo: codiceRuolo,
-                        codiceMenu: codiceMenu.trim(),
-                        tipoAbilitazione,
-                    });
-                }
-            }
-
-            ruoli = Array.from(ruoliMap.values());
-        }
+        const abilitazioni = await this.getUserDirectPermissions(codiceUtente);
+        const ruoli = await this.getUserRoles(codiceUtente);
 
         // Merge user-specific and role-based permissions
         const grantsMap = new Map<string, AbilitazioneMenu>();
@@ -487,7 +493,9 @@ export class PermissionService {
             }
         }
 
-        const grants = Array.from(grantsMap.values());
+        const grants = isSuperAdmin
+            ? await this.getAllActiveMenusAsGrants()
+            : Array.from(grantsMap.values());
 
         return { abilitazioni, ruoli, grants };
     }
