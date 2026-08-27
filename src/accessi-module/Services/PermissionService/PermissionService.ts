@@ -58,24 +58,22 @@ export class PermissionService {
                 throw new Error('Creazione ruolo non riuscita: impossibile recuperare CODRUO.');
             }
             codiceRuolo = parsedCodiceRuolo;
-        } else
-        // aggiornamento ruolo esistente
-        {
+        } else {
+            // aggiornamento ruolo esistente
+            const updateRoleQuery = `UPDATE RUOLI SET DESRUO = ? WHERE CODRUO = ?`;
+            await Orm.execute(this.accessiOptions.databaseOptions, updateRoleQuery, [role.descrizioneRuolo, codiceRuolo]);
 
-            let updateRoleQuery = `UPDATE RUOLI SET DESRUO = ? WHERE CODRUO = ?`;
-            await Orm.query(this.accessiOptions.databaseOptions, updateRoleQuery, [role.descrizioneRuolo, codiceRuolo]);
-
-            let deleteRoleMenuQuery = `DELETE FROM RUOLI_MNU WHERE CODRUO = ?`;
-            await Orm.query(this.accessiOptions.databaseOptions, deleteRoleMenuQuery, [codiceRuolo]);
+            const deleteRoleMenuQuery = `DELETE FROM RUOLI_MNU WHERE CODRUO = ?`;
+            await Orm.execute(this.accessiOptions.databaseOptions, deleteRoleMenuQuery, [codiceRuolo]);
         }
 
         if (codiceRuolo === null) {
             throw new Error('Operazione ruolo non riuscita: codice ruolo non valorizzato.');
         }
 
-        let createRoleMenuQuery = `INSERT INTO RUOLI_MNU (CODRUO, CODMNU, TIPABI) VALUES (?, ?, ?)`;
-        for (let menu of role.menu) {
-            await Orm.query(this.accessiOptions.databaseOptions, createRoleMenuQuery, [codiceRuolo, menu.codiceMenu, menu.tipoAbilitazione]);
+        const createRoleMenuQuery = `INSERT INTO RUOLI_MNU (CODRUO, CODMNU, TIPABI) VALUES (?, ?, ?)`;
+        for (const menu of role.menu) {
+            await Orm.execute(this.accessiOptions.databaseOptions, createRoleMenuQuery, [codiceRuolo, menu.codiceMenu, menu.tipoAbilitazione]);
         }
 
     }
@@ -141,12 +139,12 @@ export class PermissionService {
         }
 
         const deleteQuery = `DELETE FROM UTENTI_RUOLI WHERE CODUTE = ?`;
-        await Orm.query(this.accessiOptions.databaseOptions, deleteQuery, [codiceUtente]);
+        await Orm.execute(this.accessiOptions.databaseOptions, deleteQuery, [codiceUtente]);
 
         const insertQuery = `INSERT INTO UTENTI_RUOLI (CODUTE, CODRUO) VALUES (?, ?)`;
 
         for (const codiceRuolo of roles) {
-            await Orm.query(this.accessiOptions.databaseOptions, insertQuery, [codiceUtente, codiceRuolo]);
+            await Orm.execute(this.accessiOptions.databaseOptions, insertQuery, [codiceUtente, codiceRuolo]);
         }
     }
 
@@ -181,13 +179,13 @@ export class PermissionService {
         }
 
         const deleteRoleMenusQuery = `DELETE FROM RUOLI_MNU WHERE CODRUO = ?`;
-        await Orm.query(this.accessiOptions.databaseOptions, deleteRoleMenusQuery, [codiceRuolo]);
+        await Orm.execute(this.accessiOptions.databaseOptions, deleteRoleMenusQuery, [codiceRuolo]);
 
         const deleteRoleUsersQuery = `DELETE FROM UTENTI_RUOLI WHERE CODRUO = ?`;
-        await Orm.query(this.accessiOptions.databaseOptions, deleteRoleUsersQuery, [codiceRuolo]);
+        await Orm.execute(this.accessiOptions.databaseOptions, deleteRoleUsersQuery, [codiceRuolo]);
 
         const deleteRoleQuery = `DELETE FROM RUOLI WHERE CODRUO = ?`;
-        await Orm.query(this.accessiOptions.databaseOptions, deleteRoleQuery, [codiceRuolo]);
+        await Orm.execute(this.accessiOptions.databaseOptions, deleteRoleQuery, [codiceRuolo]);
 
     }
 
@@ -323,9 +321,9 @@ export class PermissionService {
                         M.PAGINA AS pagina,
                         M.NOTE AS note
                     FROM MENU M
-                    INNER JOIN MENU_GRP G ON G.CODGRP = M.CODGRP
-                    WHERE M.FLGENABLED = 1 AND G.FLGENABLED = 1
-                `;
+                    LEFT JOIN MENU_GRP G ON G.CODGRP = M.CODGRP
+                    WHERE M.FLGENABLED = 1 AND COALESCE(G.FLGENABLED, 1) = 1
+            `;
             abilitazioni = await Orm.query(this.accessiOptions.databaseOptions, query, [])
                 .then(results => results.map(RestUtilities.convertKeysToCamelCase)) as AbilitazioneMenu[];
         } else {
@@ -342,8 +340,8 @@ export class PermissionService {
                         M.NOTE AS note
                     FROM ABILITAZIONI A
                     INNER JOIN MENU M ON A.CODMNU = M.CODMNU
-                    INNER JOIN MENU_GRP G ON G.CODGRP = M.CODGRP
-                    WHERE A.CODUTE = ? AND M.FLGENABLED = 1 AND G.FLGENABLED = 1
+                    LEFT JOIN MENU_GRP G ON G.CODGRP = M.CODGRP
+                    WHERE A.CODUTE = ? AND M.FLGENABLED = 1 AND COALESCE(G.FLGENABLED, 1) = 1
                 `;
             abilitazioni = await Orm.query(this.accessiOptions.databaseOptions, queryAbilitazioni, [codiceUtente])
                 .then(results => results.map(RestUtilities.convertKeysToCamelCase)) as AbilitazioneMenu[];
@@ -360,8 +358,8 @@ export class PermissionService {
                     INNER JOIN RUOLI R ON RU.CODRUO = R.CODRUO
                     INNER JOIN RUOLI_MNU RM ON R.CODRUO = RM.CODRUO
                     INNER JOIN MENU M ON RM.CODMNU = M.CODMNU
-                    INNER JOIN MENU_GRP G ON G.CODGRP = M.CODGRP
-                    WHERE RU.CODUTE = ? AND M.FLGENABLED = 1 AND G.FLGENABLED = 1
+                    LEFT JOIN MENU_GRP G ON G.CODGRP = M.CODGRP
+                    WHERE RU.CODUTE = ? AND M.FLGENABLED = 1 AND COALESCE(G.FLGENABLED, 1) = 1
                 `;
             let ruoliResult = await Orm.query(this.accessiOptions.databaseOptions, queryRuoli, [codiceUtente]);
             ruoliResult = ruoliResult.map(RestUtilities.convertKeysToCamelCase);
