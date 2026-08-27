@@ -1,3 +1,10 @@
+# [2.0.0-dev.17](https://github.com/Emil-Software/emilsoftware-utilities/compare/v2.0.0-dev.16...v2.0.0-dev.17) (2026-08-27)
+
+
+### Bug Fixes
+
+* ruoli ([6f943cb](https://github.com/Emil-Software/emilsoftware-utilities/commit/6f943cb82242a80b350cd46ba15d9f06e053ecb3))
+
 # [2.0.0-dev.16](https://github.com/Emil-Software/emilsoftware-utilities/compare/v2.0.0-dev.15...v2.0.0-dev.16) (2026-08-27)
 
 
