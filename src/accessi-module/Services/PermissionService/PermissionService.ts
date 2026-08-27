@@ -434,10 +434,14 @@ export class PermissionService {
                         M.NOTE AS note
                     FROM UTENTI_RUOLI RU
                     INNER JOIN RUOLI R ON RU.CODRUO = R.CODRUO
-                    INNER JOIN RUOLI_MNU RM ON R.CODRUO = RM.CODRUO
-                    INNER JOIN MENU M ON RM.CODMNU = M.CODMNU
-                    LEFT JOIN MENU_GRP G ON G.CODGRP = M.CODGRP
-                    WHERE RU.CODUTE = ? AND M.FLGENABLED = 1 AND COALESCE(G.FLGENABLED, 1) = 1
+                    LEFT JOIN RUOLI_MNU RM ON R.CODRUO = RM.CODRUO
+                    LEFT JOIN MENU M
+                        ON RM.CODMNU = M.CODMNU
+                        AND M.FLGENABLED = 1
+                    LEFT JOIN MENU_GRP G
+                        ON G.CODGRP = M.CODGRP
+                        AND COALESCE(G.FLGENABLED, 1) = 1
+                    WHERE RU.CODUTE = ?
                 `;
             let ruoliResult = await Orm.query(this.accessiOptions.databaseOptions, queryRuoli, [codiceUtente]);
             ruoliResult = ruoliResult.map(RestUtilities.convertKeysToCamelCase);
@@ -454,7 +458,7 @@ export class PermissionService {
                     });
                 }
 
-                if (codiceMenu) {
+                if (codiceMenu && descrizioneMenu) {
                     ruoliMap.get(codiceRuolo)!.menu.push({
                         codiceRuolo: codiceRuolo,
                         codiceMenu: codiceMenu.trim(),
