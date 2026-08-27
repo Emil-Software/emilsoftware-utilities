@@ -1,3 +1,10 @@
+# [2.0.0-dev.15](https://github.com/Emil-Software/emilsoftware-utilities/compare/v2.0.0-dev.14...v2.0.0-dev.15) (2026-08-27)
+
+
+### Features
+
+* harden accessi permission persistence ([cf3eb7d](https://github.com/Emil-Software/emilsoftware-utilities/commit/cf3eb7dd51b57d178bfa40e37e7f226aa32cbf68))
+
 # [2.0.0-dev.14](https://github.com/Emil-Software/emilsoftware-utilities/compare/v2.0.0-dev.13...v2.0.0-dev.14) (2026-08-25)
 
 
