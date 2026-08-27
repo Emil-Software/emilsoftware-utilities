@@ -15,6 +15,13 @@ export class PermissionService {
         @Inject('ACCESSI_OPTIONS') private readonly accessiOptions: AccessiOptions
     ) { }
 
+    private getCountFromResult(result: any[], fieldName = 'COUNT'): number {
+        const rawValue = result?.[0]?.[fieldName]
+            ?? result?.[0]?.[fieldName.toLowerCase()]
+            ?? result?.[0]?.count;
+        return typeof rawValue === 'number' ? rawValue : Number.parseInt(`${rawValue ?? '0'}`, 10);
+    }
+
 
     public async addAbilitazioni(codiceUtente: number, menuAbilitazioni: any[]): Promise<void> {
         const deleteQuery = `DELETE FROM ABILITAZIONI WHERE CODUTE = ?`;
@@ -134,17 +141,49 @@ export class PermissionService {
         const userExistsQuery = `SELECT COUNT(*) FROM UTENTI WHERE CODUTE = ?`;
         let result = await Orm.query(this.accessiOptions.databaseOptions, userExistsQuery, [codiceUtente]);
 
-        if (result[0].COUNT === 0) {
+        if (this.getCountFromResult(result) === 0) {
             throw new Error(`L'utente con codice ${codiceUtente} non esiste.`);
         }
 
-        const deleteQuery = `DELETE FROM UTENTI_RUOLI WHERE CODUTE = ?`;
-        await Orm.execute(this.accessiOptions.databaseOptions, deleteQuery, [codiceUtente]);
+        const normalizedRoles = Array.from(
+            new Set(
+                roles
+                    .map((role) => Number.parseInt(`${role ?? ''}`, 10))
+                    .filter((role) => Number.isInteger(role) && role > 0),
+            ),
+        );
 
-        const insertQuery = `INSERT INTO UTENTI_RUOLI (CODUTE, CODRUO) VALUES (?, ?)`;
+        if (normalizedRoles.length === 0) {
+            throw new Error('Nessun ruolo valido da assegnare.');
+        }
 
-        for (const codiceRuolo of roles) {
-            await Orm.execute(this.accessiOptions.databaseOptions, insertQuery, [codiceUtente, codiceRuolo]);
+        const roleExistsQuery = `SELECT COUNT(*) FROM RUOLI WHERE CODRUO = ?`;
+        for (const codiceRuolo of normalizedRoles) {
+            const roleResult = await Orm.query(this.accessiOptions.databaseOptions, roleExistsQuery, [codiceRuolo]);
+            if (this.getCountFromResult(roleResult) === 0) {
+                throw new Error(`Il ruolo con codice ${codiceRuolo} non esiste.`);
+            }
+        }
+
+        const queriesWithParams = [
+            { query: `DELETE FROM UTENTI_RUOLI WHERE CODUTE = ?`, params: [codiceUtente] },
+            ...normalizedRoles.map((codiceRuolo) => ({
+                query: `INSERT INTO UTENTI_RUOLI (CODUTE, CODRUO) VALUES (?, ?)`,
+                params: [codiceUtente, codiceRuolo],
+            })),
+        ];
+        await Orm.executeMultiple(this.accessiOptions.databaseOptions, queriesWithParams);
+
+        const assignedRolesResult = await Orm.query(
+            this.accessiOptions.databaseOptions,
+            `SELECT COUNT(*) FROM UTENTI_RUOLI WHERE CODUTE = ?`,
+            [codiceUtente],
+        );
+        const assignedRolesCount = this.getCountFromResult(assignedRolesResult);
+        if (assignedRolesCount !== normalizedRoles.length) {
+            throw new Error(
+                `Persistenza ruoli non coerente per utente ${codiceUtente}: attesi ${normalizedRoles.length}, trovati ${assignedRolesCount}.`,
+            );
         }
     }
 
@@ -154,17 +193,56 @@ export class PermissionService {
         const userExistsQuery = `SELECT COUNT(*) FROM UTENTI WHERE CODUTE = ?`;
         let result = await Orm.query(this.accessiOptions.databaseOptions, userExistsQuery, [codiceUtente]);
 
-        if (result[0].COUNT === 0) {
+        if (this.getCountFromResult(result) === 0) {
             throw new Error(`L'utente con codice ${codiceUtente} non esiste.`);
         }
 
-        const deleteQuery = `DELETE FROM ABILITAZIONI WHERE CODUTE = ?`;
-        await Orm.execute(this.accessiOptions.databaseOptions, deleteQuery, [codiceUtente]);
+        const normalizedPermissions = Array.from(
+            new Map(
+                permissions
+                    .map((permission) => ({
+                        codiceMenu: `${permission?.codiceMenu ?? ''}`.trim(),
+                        tipoAbilitazione: Number.parseInt(`${permission?.tipoAbilitazione ?? ''}`, 10),
+                    }))
+                    .filter(
+                        (permission) =>
+                            permission.codiceMenu.length > 0 && Number.isInteger(permission.tipoAbilitazione),
+                    )
+                    .map((permission) => [permission.codiceMenu, permission] as const),
+            ).values(),
+        );
 
-        const insertQuery = `INSERT INTO ABILITAZIONI (CODUTE, CODMNU, TIPABI) VALUES (?, ?, ?)`;
+        if (normalizedPermissions.length === 0) {
+            throw new Error('Nessuna abilitazione valida da assegnare.');
+        }
 
-        for (const permission of permissions) {
-            await Orm.execute(this.accessiOptions.databaseOptions, insertQuery, [codiceUtente, permission.codiceMenu, permission.tipoAbilitazione]);
+        const menuExistsQuery = `SELECT COUNT(*) FROM MENU WHERE CODMNU = ?`;
+        for (const permission of normalizedPermissions) {
+            const menuResult = await Orm.query(this.accessiOptions.databaseOptions, menuExistsQuery, [permission.codiceMenu]);
+            if (this.getCountFromResult(menuResult) === 0) {
+                throw new Error(`Il menu con codice ${permission.codiceMenu} non esiste.`);
+            }
+        }
+
+        const queriesWithParams = [
+            { query: `DELETE FROM ABILITAZIONI WHERE CODUTE = ?`, params: [codiceUtente] },
+            ...normalizedPermissions.map((permission) => ({
+                query: `INSERT INTO ABILITAZIONI (CODUTE, CODMNU, TIPABI) VALUES (?, ?, ?)`,
+                params: [codiceUtente, permission.codiceMenu, permission.tipoAbilitazione],
+            })),
+        ];
+        await Orm.executeMultiple(this.accessiOptions.databaseOptions, queriesWithParams);
+
+        const assignedPermissionsResult = await Orm.query(
+            this.accessiOptions.databaseOptions,
+            `SELECT COUNT(*) FROM ABILITAZIONI WHERE CODUTE = ?`,
+            [codiceUtente],
+        );
+        const assignedPermissionsCount = this.getCountFromResult(assignedPermissionsResult);
+        if (assignedPermissionsCount !== normalizedPermissions.length) {
+            throw new Error(
+                `Persistenza abilitazioni non coerente per utente ${codiceUtente}: attese ${normalizedPermissions.length}, trovate ${assignedPermissionsCount}.`,
+            );
         }
     }
 
