@@ -182,14 +182,14 @@ export class PermissionController {
         'Solo gli amministratori possono assegnare ruoli agli utenti.',
       );
 
-      if (!assignRolesRequest.roles || assignRolesRequest.roles.length === 0) {
-        throw new Error('E necessario fornire almeno un ruolo.');
-      }
-
       await this.permissionService.assignRolesToUser(codiceUtente, assignRolesRequest.roles);
+      const responseMessage =
+        assignRolesRequest.roles.length === 0
+          ? `Tutti i ruoli sono stati rimossi dall'utente ${codiceUtente}.`
+          : `I ruoli ${assignRolesRequest.roles.join(', ')} sono stati assegnati all'utente ${codiceUtente}.`;
       return RestUtilities.sendOKMessage(
         res,
-        `I ruoli ${assignRolesRequest.roles.join(', ')} sono stati assegnati all'utente ${codiceUtente}.`,
+        responseMessage,
       );
     } catch (error) {
       return this.sendControllerError(res, error);
@@ -226,17 +226,17 @@ export class PermissionController {
         'Solo gli amministratori possono assegnare permessi agli utenti.',
       );
 
-      if (!assignPermissionsRequest.permissions || assignPermissionsRequest.permissions.length === 0) {
-        throw new Error('E necessario fornire almeno una abilitazione.');
-      }
-
       await this.permissionService.assignPermissionsToUser(
         codiceUtente,
         assignPermissionsRequest.permissions,
       );
+      const responseMessage =
+        assignPermissionsRequest.permissions.length === 0
+          ? `Tutte le abilitazioni sono state rimosse dall'utente ${codiceUtente}.`
+          : `Le abilitazioni sono state assegnate all'utente ${codiceUtente}.`;
       return RestUtilities.sendOKMessage(
         res,
-        `Le abilitazioni sono state assegnate all'utente ${codiceUtente}.`,
+        responseMessage,
       );
     } catch (error) {
       return this.sendControllerError(res, error);

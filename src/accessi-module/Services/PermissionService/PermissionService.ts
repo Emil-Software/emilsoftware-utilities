@@ -243,18 +243,6 @@ export class PermissionService {
             ),
         );
 
-        if (normalizedRoles.length === 0) {
-            throw new Error('Nessun ruolo valido da assegnare.');
-        }
-
-        const roleExistsQuery = `SELECT COUNT(*) FROM RUOLI WHERE CODRUO = ?`;
-        for (const codiceRuolo of normalizedRoles) {
-            const roleResult = await Orm.query(this.accessiOptions.databaseOptions, roleExistsQuery, [codiceRuolo]);
-            if (this.getCountFromResult(roleResult) === 0) {
-                throw new Error(`Il ruolo con codice ${codiceRuolo} non esiste.`);
-            }
-        }
-
         const queriesWithParams = [
             { query: `DELETE FROM UTENTI_RUOLI WHERE CODUTE = ?`, params: [codiceUtente] },
             ...normalizedRoles.map((codiceRuolo) => ({
@@ -262,6 +250,17 @@ export class PermissionService {
                 params: [codiceUtente, codiceRuolo],
             })),
         ];
+
+        if (normalizedRoles.length > 0) {
+            const roleExistsQuery = `SELECT COUNT(*) FROM RUOLI WHERE CODRUO = ?`;
+            for (const codiceRuolo of normalizedRoles) {
+                const roleResult = await Orm.query(this.accessiOptions.databaseOptions, roleExistsQuery, [codiceRuolo]);
+                if (this.getCountFromResult(roleResult) === 0) {
+                    throw new Error(`Il ruolo con codice ${codiceRuolo} non esiste.`);
+                }
+            }
+        }
+
         await Orm.executeMultiple(this.accessiOptions.databaseOptions, queriesWithParams);
 
         const assignedRolesResult = await Orm.query(
@@ -302,18 +301,6 @@ export class PermissionService {
             ).values(),
         );
 
-        if (normalizedPermissions.length === 0) {
-            throw new Error('Nessuna abilitazione valida da assegnare.');
-        }
-
-        const menuExistsQuery = `SELECT COUNT(*) FROM MENU WHERE CODMNU = ?`;
-        for (const permission of normalizedPermissions) {
-            const menuResult = await Orm.query(this.accessiOptions.databaseOptions, menuExistsQuery, [permission.codiceMenu]);
-            if (this.getCountFromResult(menuResult) === 0) {
-                throw new Error(`Il menu con codice ${permission.codiceMenu} non esiste.`);
-            }
-        }
-
         const queriesWithParams = [
             { query: `DELETE FROM ABILITAZIONI WHERE CODUTE = ?`, params: [codiceUtente] },
             ...normalizedPermissions.map((permission) => ({
@@ -321,6 +308,17 @@ export class PermissionService {
                 params: [codiceUtente, permission.codiceMenu, permission.tipoAbilitazione],
             })),
         ];
+
+        if (normalizedPermissions.length > 0) {
+            const menuExistsQuery = `SELECT COUNT(*) FROM MENU WHERE CODMNU = ?`;
+            for (const permission of normalizedPermissions) {
+                const menuResult = await Orm.query(this.accessiOptions.databaseOptions, menuExistsQuery, [permission.codiceMenu]);
+                if (this.getCountFromResult(menuResult) === 0) {
+                    throw new Error(`Il menu con codice ${permission.codiceMenu} non esiste.`);
+                }
+            }
+        }
+
         await Orm.executeMultiple(this.accessiOptions.databaseOptions, queriesWithParams);
 
         const assignedPermissionsResult = await Orm.query(
