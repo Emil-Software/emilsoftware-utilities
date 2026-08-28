@@ -1,3 +1,10 @@
+# [2.0.0-dev.19](https://github.com/Emil-Software/emilsoftware-utilities/compare/v2.0.0-dev.18...v2.0.0-dev.19) (2026-08-28)
+
+
+### Bug Fixes
+
+* allow empty roles and grants ([c8d9029](https://github.com/Emil-Software/emilsoftware-utilities/commit/c8d9029de4f8fa92e0a8485cb5e12d54549ef979))
+
 # [2.0.0-dev.18](https://github.com/Emil-Software/emilsoftware-utilities/compare/v2.0.0-dev.17...v2.0.0-dev.18) (2026-08-27)
 
 
