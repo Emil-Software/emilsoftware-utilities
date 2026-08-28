@@ -1,3 +1,10 @@
+# [2.0.0-dev.21](https://github.com/Emil-Software/emilsoftware-utilities/compare/v2.0.0-dev.20...v2.0.0-dev.21) (2026-08-28)
+
+
+### Bug Fixes
+
+* otpional progressive number ([f22f171](https://github.com/Emil-Software/emilsoftware-utilities/commit/f22f171eff5724fa24004b33cfb9c02b8fa24da3))
+
 # [2.0.0-dev.20](https://github.com/Emil-Software/emilsoftware-utilities/compare/v2.0.0-dev.19...v2.0.0-dev.20) (2026-08-28)
 
 
