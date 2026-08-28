@@ -16,6 +16,7 @@ export class FiltriUtente {
     description: 'Progressivo identificativo del filtro',
     example: 1,
   })
+  @IsOptional()
   @IsInt({ message: 'Il progressivo deve essere un numero intero.' })
   @Min(1, { message: 'Il progressivo deve essere maggiore di 0.' })
   progressivo?: number;
