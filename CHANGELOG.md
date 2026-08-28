@@ -1,3 +1,10 @@
+# [2.0.0-dev.22](https://github.com/Emil-Software/emilsoftware-utilities/compare/v2.0.0-dev.21...v2.0.0-dev.22) (2026-08-28)
+
+
+### Bug Fixes
+
+* aa ([82eed73](https://github.com/Emil-Software/emilsoftware-utilities/commit/82eed73af13d0207846e695c47cebd9058b6471c))
+
 # [2.0.0-dev.21](https://github.com/Emil-Software/emilsoftware-utilities/compare/v2.0.0-dev.20...v2.0.0-dev.21) (2026-08-28)
 
 
