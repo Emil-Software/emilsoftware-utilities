@@ -1,8 +1,7 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
-import { IsIn, IsInt, IsNumber, IsOptional, IsPort, IsString, Min, ValidateNested } from 'class-validator';
+import { IsInt, IsNumber, IsOptional, IsPort, IsString, Min, ValidateNested } from 'class-validator';
 import { BaseResponse } from './BaseResponse';
-import { TipoFiltro } from './TipoFiltro';
 
 export class FiltriUtente {
 
@@ -10,7 +9,7 @@ export class FiltriUtente {
     description: 'Codice dell\'utente',
     example: 1
   })
-  codUte: number
+  codUte!: number
 
   @ApiPropertyOptional({
     description: 'Progressivo identificativo del filtro',
@@ -102,7 +101,7 @@ export class GetFiltriUtenteResponse extends BaseResponse {
       @ApiProperty({ type: FiltriUtente })
       @ValidateNested({ each: true })
       @Type(() => FiltriUtente)
-    Result : FiltriUtente[]
+    Result!: FiltriUtente[]
 }
 
 export class GetFiltriUtenteRequest {
