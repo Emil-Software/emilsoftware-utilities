@@ -1,3 +1,10 @@
+# [2.0.0-dev.23](https://github.com/Emil-Software/emilsoftware-utilities/compare/v2.0.0-dev.22...v2.0.0-dev.23) (2026-09-11)
+
+
+### Features
+
+* trigger test release ([5976596](https://github.com/Emil-Software/emilsoftware-utilities/commit/597659681467f1dccc378f6885af4aee37e41fae))
+
 # [2.0.0-dev.22](https://github.com/Emil-Software/emilsoftware-utilities/compare/v2.0.0-dev.21...v2.0.0-dev.22) (2026-08-28)
 
 
