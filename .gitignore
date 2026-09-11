@@ -8,3 +8,4 @@
 /logs
 .env
 .vscode/settings.json
+!/test/accessi-schema.cjs

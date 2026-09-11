@@ -1,7 +1,7 @@
 import { HttpStatus } from '@nestjs/common';
 import { Request, Response } from 'express';
 import { RestUtilities } from '../../Utilities';
-import { AccessiOptions, PublicAuthRateLimitRuleOptions } from '../AccessiModule';
+import type { AccessiOptions, PublicAuthRateLimitRuleOptions } from '../AccessiModule';
 
 export type PublicAuthRateLimitScope =
   | 'login'

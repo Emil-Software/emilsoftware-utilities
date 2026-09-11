@@ -1,7 +1,7 @@
 import { NextFunction, Request, Response } from "express";
 import * as jwt from "jsonwebtoken";
 import { Inject, Injectable } from "@nestjs/common";
-import { AccessiOptions } from "../AccessiModule";
+import type { AccessiOptions } from "../AccessiModule";
 import { PermissionService } from "../Services/PermissionService/PermissionService";
 import { UserService } from "../Services/UserService/UserService";
 import { Logger } from "../../Logger";

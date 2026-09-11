@@ -29,6 +29,6 @@ Se stai cercando solo il tema database, leggi direttamente [Aggiornamento databa
 
 ## Autenticazione opzionale con codice email
 
-La 2FA per utente, l'accesso con solo codice e la combinazione con SSO sono descritti in [Codici di accesso, 2FA e SSO](docs/two-factor.md). Le impostazioni sono gestibili dalla console e richiedono lo schema Accessi 1.4.0. Il flag 2FA resta disattivo per default.
+La 2FA per utente, l'accesso con solo codice e la combinazione con SSO sono descritti in [Codici di accesso, 2FA e SSO](docs/two-factor.md). Le impostazioni sono gestibili dalla console e richiedono lo schema Accessi corrente 1.5.0, verificato a ogni avvio (vedi [migrazioni](docs/database-update.md)). Il flag 2FA resta disattivo per default.
 
 Per le correzioni su permessi, reset password e log giornalieri: [revisione Accessi e logging](docs/review-accessi-logging.md).

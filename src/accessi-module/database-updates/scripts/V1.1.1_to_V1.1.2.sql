@@ -1,8 +1,2 @@
-
-INSERT INTO FILTRI_TIPO (TIPFIL, DESFIL, FLDFIL, FLGENABLED) VALUES (30, 'VETTORE', 'CODVET', 1);
-
-ALTER TABLE FILTRI
-ADD CODVET INTEGER
-
-COMMENT ON COLUMN FILTRI.CODVET IS
-'CODICE DEL VETTORE DA INSERIRE SE COME FILTRO HA 30'
+-- Historical version retained for compatibility. No library schema changes.
+-- Application-specific schema and catalog data are managed by the host application.

@@ -1,7 +1,7 @@
 
 import { Orm } from "../../../Orm";
 import { RestUtilities } from "../../../Utilities";
-import { AccessiOptions } from "../../AccessiModule";
+import type { AccessiOptions } from "../../AccessiModule";
 import { Permission, TipoAbilitazione } from "../../Dtos";
 import { AbilitazioneMenu } from "../../Dtos/AbilitazioneMenu";
 import { GroupWithMenusEntity } from "../../Dtos/GetGroupsWithMenusResponse";

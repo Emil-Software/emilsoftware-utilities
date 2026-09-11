@@ -1,2 +1,2 @@
-ALTER TABLE UTENTI_CONFIG ADD NUMMAC INTEGER;
-COMMENT ON COLUMN UTENTI_CONFIG.NUMMAC IS 'Numero macchina DESPOST PROLAV';
+-- Historical version retained for compatibility. No library schema changes.
+-- Application-specific schema and catalog data are managed by the host application.

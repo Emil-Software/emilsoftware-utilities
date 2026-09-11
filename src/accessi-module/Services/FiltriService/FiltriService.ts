@@ -1,5 +1,6 @@
-import { Inject, Injectable } from '@nestjs/common';
-import { AccessiOptions } from '../../AccessiModule';
+import { BadRequestException, Inject, Injectable } from '@nestjs/common';
+import { getTableColumns, optionalColumn } from '../../database-updates/optionalColumns';
+import type { AccessiOptions } from '../../AccessiModule';
 import { TipoFiltro } from '../../Dtos/TipoFiltro';
 import { Orm } from '../../../Orm';
 import { RestUtilities } from '../../../Utilities';
@@ -32,8 +33,10 @@ export class FiltriService {
     try {
       let params = [];
 
-      let getQuery = `SELECT CODUTE AS COD_UTE, PROG AS PROGRESSIVO, NUMREP AS NUM_REP, IDXPERS AS IDX_PERS, CODCLISUPER AS COD_CLI_SUPER, CODAGE AS COD_AGE, CODCLICOL AS COD_CLI_COL,
-        CODCLIENTI AS COD_CLIENTI, TIPFIL AS TIP_FIL, CODDIP AS COD_DIP, IDXPOS AS IDX_POS, CODVET AS COD_VET FROM FILTRI `;
+      const columns = await getTableColumns(this.accessiOptions, 'FILTRI');
+      const aliases = { PROG: 'PROGRESSIVO', NUMREP: 'NUM_REP', IDXPERS: 'IDX_PERS', CODCLISUPER: 'COD_CLI_SUPER', CODAGE: 'COD_AGE', CODCLICOL: 'COD_CLI_COL', CODCLIENTI: 'COD_CLIENTI', TIPFIL: 'TIP_FIL', CODDIP: 'COD_DIP', IDXPOS: 'IDX_POS', CODVET: 'COD_VET' };
+      const selections = Object.values(FILTRI_UTENTE_DB_MAPPING).map(cfg => optionalColumn(columns, cfg.dbField, 'F', aliases[cfg.dbField], cfg.numeric));
+      let getQuery = `SELECT F.CODUTE AS COD_UTE, ${selections.join(', ')} FROM FILTRI F `;
 
       if (codUte === undefined) {
         this.logger.log('Nessun utente passato, recupero i filtri di tutti gli utenti...');
@@ -50,6 +53,18 @@ export class FiltriService {
     }
   }
 
+  /** Validate before a caller creates or updates any user data. */
+  public async validateSupportedFields(dto: Partial<FiltriUtente>, columns?: Set<string>): Promise<Set<string>> {
+    columns ??= await getTableColumns(this.accessiOptions, 'FILTRI');
+    for (const [key, cfg] of Object.entries(FILTRI_UTENTE_DB_MAPPING)) {
+      const value = dto[key];
+      if (value !== undefined && value !== null && value !== '' && !columns.has(cfg.dbField)) {
+        throw new BadRequestException(`Filtro applicativo non configurato: FILTRI.${cfg.dbField}`);
+      }
+    }
+    return columns;
+  }
+
   /**
    * Upserts only supplied mapped fields. `undefined` leaves a field unchanged; `null` or an empty string clears it.
    * The mapping is centralized in `FILTRI_UTENTE_DB_MAPPING` to keep DTO and database names decoupled.
@@ -58,6 +73,7 @@ export class FiltriService {
     try {
       if (!codUte || codUte <= 0) throw new Error('Codice utente non valido');
 
+      const columns = await this.validateSupportedFields(dto);
       const dbFields: string[] = ['CODUTE'];
       const values: any[] = [codUte];
 
@@ -66,7 +82,7 @@ export class FiltriService {
         const value = (dto as any)[key];
 
         //gestione campi vuoti, null o undefined
-        if (value === undefined) {
+        if (value === undefined || !columns.has(cfg.dbField)) {
           continue
         }
 

@@ -1,5 +1,5 @@
 import * as jwt from 'jsonwebtoken';
-import { AccessiOptions } from '../AccessiModule';
+import type { AccessiOptions } from '../AccessiModule';
 
 /** Durata predefinita del token di reset. La monouso e garantita anche dal nonce persistito in `UTENTI.KEYREG`. */
 export const DEFAULT_PASSWORD_RESET_EXPIRES_IN = '1h';

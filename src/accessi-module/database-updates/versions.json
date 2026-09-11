@@ -4,7 +4,7 @@
       "fromVersion": "1.0.0",
       "toVersion": "1.1.0",
       "script": "V1.0.0_to_V1.1.0.sql",
-      "description": "Aggiunto Tipo filtro postazione e menu MNUVERRFID"
+      "description": "Versione storica senza modifiche allo schema generico"
     },
     {
       "fromVersion": "1.1.0",
@@ -16,7 +16,7 @@
       "fromVersion": "1.1.1",
       "toVersion": "1.1.2",
       "script": "V1.1.1_to_V1.1.2.sql",
-      "description": "Aggiunto aggiunto TIPO FILTRO VETTORE E CODVET"
+      "description": "Versione storica senza modifiche allo schema generico"
     },
     {
       "fromVersion": "1.1.2",
@@ -40,7 +40,7 @@
       "fromVersion": "1.1.5",
       "toVersion": "1.1.6",
       "script": "V1.1.5_to_V1.1.6.sql",
-      "description": "Aggiunta colonna NUMMAC su UTENTI_CONFIG"
+      "description": "Versione storica senza modifiche allo schema generico"
     },
     {
       "fromVersion": "1.1.6",
@@ -59,7 +59,13 @@
       "toVersion": "1.4.0",
       "script": "V1.3.0_to_V1.4.0.sql",
       "description": "Codici di accesso e policy senza password"
+    },
+    {
+      "fromVersion": "1.4.0",
+      "toVersion": "1.5.0",
+      "description": "Riconciliazione dello schema effettivo tramite AccessiDatabaseUpdater; versione dedicata AccessiVersion",
+      "updater": "AccessiDatabaseUpdater.run"
     }
   ],
-  "latestVersion": "1.4.0"
+  "latestVersion": "1.5.0"
 }

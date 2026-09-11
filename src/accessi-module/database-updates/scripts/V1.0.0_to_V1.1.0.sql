@@ -1,10 +1,2 @@
-INSERT INTO FILTRI_TIPO (TIPFIL, DESFIL, FLDFIL) VALUES (20, 'POSTAZIONE', 'IDXPOS');
-
-ALTER TABLE FILTRI
-ADD IDXPOS SMALLINT;
-COMMENT ON COLUMN FILTRI.IDXPOS IS
-'idx della postazione nella tabella ANTENNE_POS di PROLAV';
-
-
-
-INSERT INTO MENU (CODMNU, DESMNU, CODGRP, FLGENABLED, ICON, ORDINE, CODTIP, PAGINA, RIFMENU) VALUES ('MNUVERRFID', 'Verifica RFID', 'F', 1, 'hardware-chip-outline', 10, 'M', '/verifica-rfid', NULL);
+-- Historical version retained for compatibility. No library schema changes.
+-- Application-specific schema and catalog data are managed by the host application.

@@ -98,7 +98,7 @@ export interface PublicRegistrationOptions {
 export interface FederatedAuthenticationOptions {
   /** Attiva le API SSO generiche; con `false` il comportamento password storico rimane invariato. */
   enabled?: boolean;
-  /** Creates the additive SSO identity, password-policy and provider-catalog schema at startup. Default false for DBA-managed deployments. */
+  /** @deprecated Schema management is centralized in autoUpdateDatabase. This legacy flag no longer starts separate SSO migrations. */
   autoUpdateSchema?: boolean;
   /** Allows a backend to create a user from a verified external identity without a master user. Default false. */
   allowSelfRegistration?: boolean;
@@ -134,7 +134,7 @@ export interface AccessiOptions {
   passwordExpirationDays?: number;
   /** Esegue al bootstrap la conversione non distruttiva delle password legacy. Default `true`. */
   legacyPasswordMigrationOnStartup?: boolean;
-  /** Esegue al bootstrap le migrazioni standard della base dati Accessi. Default `true`. */
+  /** Riconcilia lo schema al bootstrap (default `true`). Con `false` verifica comunque la compatibilita in sola lettura e blocca avvii incompatibili. */
   autoUpdateDatabase?: boolean;
   /** Parametri JWT dei token emessi da Accessi. */
   jwtOptions: JwtOptions;

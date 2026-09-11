@@ -33,7 +33,7 @@ async function generateAccessiOpenApi(): Promise<void> {
     { logger: false },
   );
   app.setGlobalPrefix('api');
-  await app.init();
+  // Decorator inspection requires no lifecycle hooks or database connection.
 
   const document = SwaggerModule.createDocument(
     app,

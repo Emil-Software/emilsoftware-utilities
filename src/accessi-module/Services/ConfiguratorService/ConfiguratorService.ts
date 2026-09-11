@@ -1,6 +1,6 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { autobind } from '../../../autobind';
-import { AccessiOptions } from '../../AccessiModule';
+import type { AccessiOptions } from '../../AccessiModule';
 import { Orm } from '../../../Orm';
 
 @autobind

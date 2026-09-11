@@ -17,7 +17,9 @@
     "prepublishOnly": "npm run build",
     "test:allegati": "ts-node src/tests/allegati/allegati.ts",
     "test:accessi": "npm run build && node --test test/accessi-regressions.cjs test/password-reset-regressions.cjs test/two-factor.cjs",
-    "test:accessi-console": "npm run build && node test/console-two-factor.cjs"
+    "test:accessi-console": "npm run build && node test/console-two-factor.cjs",
+    "test:accessi-schema": "node --test test/accessi-schema.cjs",
+    "db:check:accessi": "ts-node src/accessi-module/database-updates/runAccessiDbUpdate.ts --check"
   },
   "publishConfig": {
     "access": "public"

@@ -3,7 +3,7 @@ import { TwoFactorService, TwoFactorProof } from '../TwoFactorService/TwoFactorS
 import * as jwt from "jsonwebtoken";
 import { Orm } from "../../../Orm";
 import { CryptUtilities, PasswordUtilities, RestUtilities } from "../../../Utilities";
-import { AccessiOptions } from "../../AccessiModule";
+import type { AccessiOptions } from "../../AccessiModule";
 import { LoginRequest } from "../../Dtos/LoginRequest";
 import { LoginResult } from "../../Dtos/LoginResponse";
 import { StatoRegistrazione } from "../../Dtos/StatoRegistrazione";

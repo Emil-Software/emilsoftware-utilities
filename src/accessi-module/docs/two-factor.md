@@ -67,7 +67,7 @@ Prima di emettere il JWT vengono ricontrollati stato utente, email e policy; per
 
 ## Database e posta
 
-Schema richiesto: **1.4.0**. L'updater standard aggiunge `FLGPWDLESS` e `ACCESSI_2FA` con relativi indici. Con `autoUpdateDatabase=true` (default) avviene all'avvio. Se si gestisce lo schema manualmente, eseguire l'updater su un ambiente di collaudo e poi nel deployment previsto, oppure applicare lo script `V1.3.0_to_V1.4.0.sql` dopo gli aggiornamenti precedenti. Non e necessario abilitare SSO per usare i codici email.
+La 2FA e stata introdotta nello schema 1.4.0; questa versione della libreria richiede lo schema generico **1.5.0**. L'updater riconcilia le strutture effettive e le verifica a ogni avvio, anche con aggiornamenti automatici disabilitati. Seguire [Aggiornamento database](database-update.md) per installazione, verifica e migrazione. Non e necessario abilitare SSO per usare i codici email.
 
 La posta usa `AccessiOptions.emailOptions`, gia impiegato dal reset password. Il database conserva un HMAC del codice, non il codice in chiaro; `jwtOptions.secret` deve essere uguale fra le istanze del backend. Le scritture condizionali e le transazioni rendono persistenti i tentativi e impediscono il riuso concorrente. I challenge scaduti da oltre un giorno vengono eliminati quando ne viene creato uno nuovo. Non vengono registrati codice o challenge nelle query di log.
 

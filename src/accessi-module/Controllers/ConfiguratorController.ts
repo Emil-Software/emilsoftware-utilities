@@ -18,7 +18,7 @@ import {
 } from '@nestjs/swagger';
 import { Request, Response } from 'express';
 import { RestUtilities } from '../../Utilities';
-import { AccessiOptions } from '../AccessiModule';
+import type { AccessiOptions } from '../AccessiModule';
 import { ActionResponse, ErrorResponse, UpdateEnabledStatusRequest } from '../Dtos';
 import { ConfiguratorService } from '../Services/ConfiguratorService/ConfiguratorService';
 import { UserService } from '../Services/UserService/UserService';

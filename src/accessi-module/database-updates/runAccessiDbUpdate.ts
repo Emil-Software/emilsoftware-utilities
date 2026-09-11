@@ -1,4 +1,4 @@
-import { AccessiOptions } from "../AccessiModule";
+import type { AccessiOptions } from "../AccessiModule";
 import { AccessiDatabaseUpdater } from "./AccessiDatabaseUpdater";
 import { DatabaseUtilities } from "../../Utilities";
 
@@ -62,12 +62,14 @@ function createAccessiOptionsFromEnv(): AccessiOptions {
 async function main(): Promise<void> {
   const options = createAccessiOptionsFromEnv();
 
-  console.log("[Accessi DB Update] Avvio aggiornamento database...");
+  const checkOnly = process.argv.includes('--check');
+  console.log(checkOnly ? '[Accessi DB Update] Verifica schema in sola lettura...' : '[Accessi DB Update] Avvio aggiornamento database...');
   console.log(
     `[Accessi DB Update] Target: ${options.databaseOptions.host}:${options.databaseOptions.port} -> ${options.databaseOptions.database}`
   );
 
-  await AccessiDatabaseUpdater.run(options);
+  if (checkOnly) await AccessiDatabaseUpdater.assertCompatible(options);
+  else await AccessiDatabaseUpdater.run(options);
 
   const currentVersion = await AccessiDatabaseUpdater.getCurrentVersion(options);
   console.log(

@@ -7,7 +7,7 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import * as jwt from 'jsonwebtoken';
-import { AccessiOptions } from '../AccessiModule';
+import type { AccessiOptions } from '../AccessiModule';
 import { UserService } from '../Services/UserService/UserService';
 import {
   buildAuthenticatedTokenPayload,

@@ -1,6 +1,6 @@
 import nodemailer from 'nodemailer';
 import { v4 as uuidv4 } from 'uuid';
-import { AccessiOptions } from '../../AccessiModule';
+import type { AccessiOptions } from '../../AccessiModule';
 import { Orm } from '../../../Orm';
 import { Inject, Injectable } from '@nestjs/common';
 import { StatoRegistrazione } from '../../Dtos/StatoRegistrazione';

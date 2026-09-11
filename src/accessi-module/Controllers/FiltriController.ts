@@ -2,7 +2,7 @@ import { Body, Controller, Get, Inject, Post, Query, Req, Res, UseGuards } from 
 import { ApiBearerAuth, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { Request, Response } from 'express';
 import { RestUtilities } from '../../Utilities';
-import { AccessiOptions } from '../AccessiModule';
+import type { AccessiOptions } from '../AccessiModule';
 import { ActionResponse, ErrorResponse } from '../Dtos/BaseResponse';
 import { FiltriUtente, GetFiltriUtenteRequest, GetFiltriUtenteResponse } from '../Dtos';
 import { GetFiltriResponse } from '../Dtos/TipoFiltro';

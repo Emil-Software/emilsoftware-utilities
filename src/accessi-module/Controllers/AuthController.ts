@@ -4,7 +4,7 @@ import { ApiBody, ApiOperation, ApiParam, ApiResponse, ApiTags } from '@nestjs/s
 import { Request, Response } from 'express';
 import { Logger } from '../../Logger';
 import { RestUtilities } from '../../Utilities';
-import { AccessiOptions } from '../AccessiModule';
+import type { AccessiOptions } from '../AccessiModule';
 import {
   ActionResponse,
   ConfirmResetPasswordRequest,

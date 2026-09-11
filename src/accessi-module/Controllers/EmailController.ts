@@ -3,7 +3,7 @@ import { ApiBody, ApiOperation, ApiParam, ApiQuery, ApiResponse, ApiTags } from 
 import { Request, Response } from 'express';
 import { join } from 'path';
 import { RestUtilities } from '../../Utilities';
-import { AccessiOptions } from '../AccessiModule';
+import type { AccessiOptions } from '../AccessiModule';
 import { ActionResponse, ErrorResponse, SendResetPasswordEmailRequest } from '../Dtos';
 import { EmailService } from '../Services/EmailService/EmailService';
 import {

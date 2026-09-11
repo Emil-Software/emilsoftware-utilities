@@ -2,7 +2,7 @@ import { HttpException, Inject, Injectable, ServiceUnavailableException, Unautho
 import { createHmac, randomBytes, randomInt, timingSafeEqual } from 'crypto';
 import { Orm } from '../../../Orm';
 import { RestUtilities } from '../../../Utilities';
-import { AccessiOptions } from '../../AccessiModule';
+import type { AccessiOptions } from '../../AccessiModule';
 import { TwoFactorChallengeDto } from '../../Dtos/TwoFactorDtos';
 import { getAccessiJwtSecret } from '../../security/passwordResetToken';
 import { EmailService } from '../EmailService/EmailService';

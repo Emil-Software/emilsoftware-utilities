@@ -212,9 +212,6 @@ export abstract class DatabaseUpdater {
           options,
           "ALTER TABLE PARAMETRI ADD CONSTRAINT PK_PARAMETRI PRIMARY KEY (CODPAR);"
         );
-
-        await Orm.query(options, "GRANT ALL ON PARAMETRI TO PUBLIC;");
-        await Orm.query(options, "GRANT SELECT ON PARAMETRI TO TABX;");
       }
 
       const versioneDb = await this.getDatabaseVersion(options);

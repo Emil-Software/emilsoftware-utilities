@@ -31,7 +31,7 @@ import {
 import { join } from 'path';
 import { Logger } from '../../Logger';
 import { RestUtilities } from '../../Utilities';
-import { AccessiOptions } from '../AccessiModule';
+import type { AccessiOptions } from '../AccessiModule';
 import { ActionResponse, ErrorResponse } from '../Dtos/BaseResponse';
 import { GetUsersResponse } from '../Dtos/GetUsersResponse';
 import { PublicRegisterRequest } from '../Dtos/PublicRegisterRequest';

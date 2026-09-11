@@ -1,8 +1,9 @@
 import { BadRequestException, ConflictException, ForbiddenException, Inject, Injectable, InternalServerErrorException, NotFoundException, OnModuleInit, ServiceUnavailableException } from '@nestjs/common';
 import { createHash } from 'crypto';
+import { AccessiDatabaseUpdater } from '../database-updates/AccessiDatabaseUpdater';
 import { Orm } from '../../Orm';
 import { RestUtilities } from '../../Utilities';
-import { AccessiOptions } from '../AccessiModule';
+import type { AccessiOptions } from '../AccessiModule';
 import { RegisterRequest } from '../Dtos/RegisterRequest';
 import { StatoRegistrazione } from '../Dtos/StatoRegistrazione';
 import { AuthService } from '../Services/AuthService/AuthService';
@@ -44,11 +45,9 @@ export class FederatedAuthService implements OnModuleInit {
     private readonly authService: AuthService,
   ) {}
 
-  /** Ensures optional schema only when federated auth was explicitly enabled and requested. */
+  /** Await the same schema barrier as the module updater; never race two DDL implementations. */
   async onModuleInit(): Promise<void> {
-    if (this.isEnabled() && this.options.federatedAuthentication?.autoUpdateSchema === true) {
-      await this.ensureSchema();
-    }
+    await AccessiDatabaseUpdater.initialize(this.options);
   }
 
   /** Returns true only when the host application opted in to federated authentication. */
@@ -343,122 +342,9 @@ export class FederatedAuthService implements OnModuleInit {
     await Orm.execute(this.options.databaseOptions, `UPDATE UTENTI_IDENTITA_EXT SET ${changes.join(', ')} WHERE IDNKEY = ?`, params);
   }
 
-  /** Creates the optional Firebird schema. It is safe to call repeatedly. */
-  /**
-   * Crea in modo additivo le tabelle SSO opzionali. E destinato al bootstrap controllato (`autoUpdateSchema`);
-   * in installazioni DBA-managed applicare gli script versionati invece di invocarlo dalla logica applicativa.
-   */
+  /** Explicit administrative schema reconciliation, shared with the standard updater. */
   async ensureSchema(): Promise<void> {
-    if (!this.isEnabled()) return;
-    const schema = await this.getSchemaState();
-    if (!schema.identityTable) {
-      await Orm.execute(this.options.databaseOptions, `CREATE TABLE UTENTI_IDENTITA_EXT (
-        IDNKEY CHAR(64) CHARACTER SET ASCII NOT NULL,
-        CODUTE INTEGER NOT NULL,
-        PROVIDER VARCHAR(64) CHARACTER SET ASCII NOT NULL,
-        SUBJECT VARCHAR(512) CHARACTER SET UTF8 NOT NULL,
-        FLGATTIVO SMALLINT DEFAULT 1 NOT NULL,
-        DATINS TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
-        DATLASTLOGIN TIMESTAMP,
-        DATDISATT TIMESTAMP,
-        NOTA VARCHAR(500) CHARACTER SET UTF8
-      )`);
-      await Orm.execute(this.options.databaseOptions, 'ALTER TABLE UTENTI_IDENTITA_EXT ADD CONSTRAINT PK_UTEIDEXT PRIMARY KEY (IDNKEY)');
-      await Orm.execute(this.options.databaseOptions, 'ALTER TABLE UTENTI_IDENTITA_EXT ADD CONSTRAINT FK_UTEIDEXT_UTENTE FOREIGN KEY (CODUTE) REFERENCES UTENTI (CODUTE) ON DELETE CASCADE');
-      await Orm.execute(this.options.databaseOptions, 'ALTER TABLE UTENTI_IDENTITA_EXT ADD CONSTRAINT CK_UTEIDEXT_ATTIVO CHECK (FLGATTIVO IN (0, 1))');
-      await Orm.execute(this.options.databaseOptions, 'CREATE INDEX IDX_UTEIDEXT_CODUTE ON UTENTI_IDENTITA_EXT (CODUTE)');
-    }
-    if (!schema.policyTable) {
-      await Orm.execute(this.options.databaseOptions, 'ALTER TABLE UTENTI_CONFIG ADD FLGPASSWORD SMALLINT DEFAULT 1 NOT NULL');
-    }
-
-    // Keep database metadata documented even when the optional schema is created at application startup.
-    for (const statement of [
-      "COMMENT ON TABLE UTENTI_IDENTITA_EXT IS 'Associa identita esterne gia verificate dal backend agli utenti Accessi; non memorizza token, segreti o claim SSO.'",
-      "COMMENT ON COLUMN UTENTI_IDENTITA_EXT.IDNKEY IS 'SHA-256 calcolato dalla libreria su provider e subject; chiave tecnica di lookup.'",
-      "COMMENT ON COLUMN UTENTI_IDENTITA_EXT.CODUTE IS 'Codice dell utente Accessi proprietario dell identita esterna.'",
-      "COMMENT ON COLUMN UTENTI_IDENTITA_EXT.PROVIDER IS 'Namespace stabile dichiarato dal backend, non configurazione o segreto del provider SSO.'",
-      "COMMENT ON COLUMN UTENTI_IDENTITA_EXT.SUBJECT IS 'Identificativo opaco e stabile gia verificato dal backend presso il provider.'",
-      "COMMENT ON COLUMN UTENTI_IDENTITA_EXT.FLGATTIVO IS '1 identita utilizzabile per login; 0 collegamento disabilitato logicamente.'",
-      "COMMENT ON COLUMN UTENTI_IDENTITA_EXT.DATINS IS 'Istante di creazione del collegamento.'",
-      "COMMENT ON COLUMN UTENTI_IDENTITA_EXT.DATLASTLOGIN IS 'Ultimo login SSO riuscito con questa identita.'",
-      "COMMENT ON COLUMN UTENTI_IDENTITA_EXT.DATDISATT IS 'Istante di disabilitazione logica del collegamento.'",
-      "COMMENT ON COLUMN UTENTI_IDENTITA_EXT.NOTA IS 'Nota amministrativa opzionale; non memorizzare token o dati personali non necessari.'",
-      "COMMENT ON COLUMN UTENTI_CONFIG.FLGPASSWORD IS '1 consente login locale con password; 0 rende utente SSO-only. Default 1 preserva utenti esistenti.'",
-    ]) {
-      await Orm.execute(this.options.databaseOptions, statement);
-    }
-    await this.ensureProviderSchema();
-  }
-
-  /** Mirrors the provider-catalog migration for installations that opt in to autoUpdateSchema only. */
-  private async ensureProviderSchema(): Promise<void> {
-    const table = await Orm.query(
-      this.options.databaseOptions,
-      "SELECT 1 FROM RDB$RELATIONS WHERE RDB$RELATION_NAME = 'SSO_PROVIDER'",
-    );
-    if (table.length === 0) {
-      await Orm.execute(this.options.databaseOptions, `CREATE TABLE SSO_PROVIDER (
-        PROVIDER VARCHAR(64) CHARACTER SET ASCII NOT NULL,
-        DESCRIZIONE VARCHAR(160) CHARACTER SET UTF8 NOT NULL,
-        FLGATTIVO SMALLINT DEFAULT 1 NOT NULL,
-        DATINS TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
-        NOTA VARCHAR(500) CHARACTER SET UTF8
-      )`);
-    }
-    const primaryKey = await Orm.query(
-      this.options.databaseOptions,
-      "SELECT 1 FROM RDB$RELATION_CONSTRAINTS WHERE RDB$CONSTRAINT_NAME = 'PK_SSO_PROVIDER'",
-    );
-    if (primaryKey.length === 0) {
-      await Orm.execute(this.options.databaseOptions, 'ALTER TABLE SSO_PROVIDER ADD CONSTRAINT PK_SSO_PROVIDER PRIMARY KEY (PROVIDER)');
-    }
-    const activeCheck = await Orm.query(
-      this.options.databaseOptions,
-      "SELECT 1 FROM RDB$RELATION_CONSTRAINTS WHERE RDB$CONSTRAINT_NAME = 'CK_SSO_PROVIDER_ATTIVO'",
-    );
-    if (activeCheck.length === 0) {
-      await Orm.execute(this.options.databaseOptions, 'ALTER TABLE SSO_PROVIDER ADD CONSTRAINT CK_SSO_PROVIDER_ATTIVO CHECK (FLGATTIVO IN (0, 1))');
-    }
-    await Orm.execute(this.options.databaseOptions, `INSERT INTO SSO_PROVIDER (PROVIDER, DESCRIZIONE, FLGATTIVO, NOTA)
-      SELECT DISTINCT I.PROVIDER, I.PROVIDER, 1, NULL
-      FROM UTENTI_IDENTITA_EXT I
-      WHERE NOT EXISTS (SELECT 1 FROM SSO_PROVIDER P WHERE P.PROVIDER = I.PROVIDER)`);
-    const foreignKey = await Orm.query(
-      this.options.databaseOptions,
-      "SELECT 1 FROM RDB$RELATION_CONSTRAINTS WHERE RDB$CONSTRAINT_NAME = 'FK_UTEIDEXT_PROVIDER'",
-    );
-    if (foreignKey.length === 0) {
-      await Orm.execute(this.options.databaseOptions, 'ALTER TABLE UTENTI_IDENTITA_EXT ADD CONSTRAINT FK_UTEIDEXT_PROVIDER FOREIGN KEY (PROVIDER) REFERENCES SSO_PROVIDER (PROVIDER)');
-    }
-    const providerIndex = await Orm.query(
-      this.options.databaseOptions,
-      "SELECT 1 FROM RDB$INDICES WHERE RDB$INDEX_NAME = 'IDX_UTEIDEXT_PROVIDER'",
-    );
-    if (providerIndex.length === 0) {
-      await Orm.execute(this.options.databaseOptions, 'CREATE INDEX IDX_UTEIDEXT_PROVIDER ON UTENTI_IDENTITA_EXT (PROVIDER)');
-    }
-    for (const statement of [
-      "COMMENT ON TABLE SSO_PROVIDER IS 'Catalogo dei provider SSO ammessi da Accessi. Configurazioni, issuer, token e segreti restano nel backend ospitante.'",
-      "COMMENT ON COLUMN SSO_PROVIDER.PROVIDER IS 'Chiave ASCII stabile configurata anche nel backend. Deve distinguere tenant e ambiente quando necessario.'",
-      "COMMENT ON COLUMN SSO_PROVIDER.DESCRIZIONE IS 'Descrizione amministrativa leggibile del provider SSO.'",
-      "COMMENT ON COLUMN SSO_PROVIDER.FLGATTIVO IS '1 consente nuovi login e collegamenti SSO; 0 conserva lo storico ma blocca le nuove sessioni.'",
-      "COMMENT ON COLUMN SSO_PROVIDER.DATINS IS 'Istante di censimento del provider nel catalogo Accessi.'",
-      "COMMENT ON COLUMN SSO_PROVIDER.NOTA IS 'Nota amministrativa opzionale; non memorizzare token, segreti o dati personali non necessari.'",
-      "COMMENT ON COLUMN UTENTI_IDENTITA_EXT.PROVIDER IS 'Chiave del catalogo SSO_PROVIDER. Insieme a SUBJECT identifica l''identita esterna verificata dal backend.'",
-    ]) {
-      await Orm.execute(this.options.databaseOptions, statement);
-    }
-  }
-
-  private async getSchemaState(): Promise<{ identityTable: boolean; policyTable: boolean }> {
-    const rows = await Orm.query(
-      this.options.databaseOptions,
-      "SELECT RDB$RELATION_NAME AS relation_name FROM RDB$RELATIONS WHERE RDB$RELATION_NAME = 'UTENTI_IDENTITA_EXT'",
-    );
-    const names = new Set(rows.map(RestUtilities.convertKeysToCamelCase).map((row: { relationName?: string }) => row.relationName?.trim()));
-    const columns = await Orm.query(this.options.databaseOptions, "SELECT RDB$FIELD_NAME FROM RDB$RELATION_FIELDS WHERE RDB$RELATION_NAME = 'UTENTI_CONFIG' AND RDB$FIELD_NAME = 'FLGPASSWORD'");
-    return { identityTable: names.has('UTENTI_IDENTITA_EXT'), policyTable: columns.length > 0 };
+    if (this.isEnabled()) await AccessiDatabaseUpdater.run(this.options);
   }
 
   private async findIdentity(identity: VerifiedFederatedIdentity, onlyActive: boolean): Promise<FederatedIdentity | null> {

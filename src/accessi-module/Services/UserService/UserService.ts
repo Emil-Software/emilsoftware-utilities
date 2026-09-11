@@ -1,8 +1,9 @@
 import { BadRequestException, ConflictException, Inject, Injectable } from '@nestjs/common';
+import { getTableColumns, optionalColumn } from '../../database-updates/optionalColumns';
 import { autobind } from '../../../autobind';
 import { Orm } from '../../../Orm';
 import { RestUtilities } from '../../../Utilities';
-import { AccessiOptions } from '../../AccessiModule';
+import type { AccessiOptions } from '../../AccessiModule';
 import { FILTRI_UTENTE_DB_MAPPING, FiltriUtente } from '../../Dtos/FiltriUtente';
 import { GetUsersResult } from '../../Dtos/GetUsersResponse';
 import { RegisterRequest } from '../../Dtos/RegisterRequest';
@@ -29,6 +30,21 @@ export class UserService {
     private readonly permissionService: PermissionService,
     private readonly filtriService: FiltriService,
   ) {}
+
+  private async validateApplicationFields(value: { nummac?: number; ragSocCli?: string } & Partial<FiltriUtente>): Promise<void> {
+    const fields = [['nummac', 'NUMMAC'], ['ragSocCli', 'RAGSOCCLI']];
+    if (fields.some(([key]) => value[key] !== undefined && value[key] !== null)) {
+      const columns = await getTableColumns(this.accessiOptions, 'UTENTI_CONFIG');
+      for (const [key, column] of fields) {
+        if (value[key] !== undefined && value[key] !== null && !columns.has(column)) {
+          throw new BadRequestException(`Campo applicativo non configurato: UTENTI_CONFIG.${column}`);
+        }
+      }
+    }
+    if (Object.keys(FILTRI_UTENTE_DB_MAPPING).some(key => value[key] !== undefined && value[key] !== null && value[key] !== '')) {
+      await this.filtriService.validateSupportedFields(value);
+    }
+  }
 
   private normalizeDatabaseBoolean(value: unknown): boolean {
     return value === true || value === 1 || value === '1';
@@ -156,6 +172,8 @@ export class UserService {
     options?: { includeExtensionFields: boolean; includeGrants: boolean },
   ): Promise<GetUsersResult[]> {
     try {
+      const configColumns = await getTableColumns(this.accessiOptions, 'UTENTI_CONFIG');
+      const filterColumns = await getTableColumns(this.accessiOptions, 'FILTRI');
       let query = ` 
             SELECT  
                 U.CODUTE as codice_utente, 
@@ -178,16 +196,16 @@ export class UserService {
                 COALESCE(G.FLGPASSWORD, 1) as password_login_enabled,
                 G.PAGDEF as pagina_default,
                 G.JSON_METADATA as json_metadata,
-                G.RAGSOCCLI as rag_soc_cli,
-                G.NUMMAC as nummac,
-                F.NUMREP AS num_rep,
-                F.IDXPERS AS idx_pers,
-                F.CODCLISUPER AS cod_cli_super,
-                F.CODAGE AS cod_age,
-                F.CODCLICOL AS cod_cli_col,
-                F.CODCLIENTI AS cod_clienti,
+                ${optionalColumn(configColumns, 'RAGSOCCLI', 'G', 'rag_soc_cli', false)},
+                ${optionalColumn(configColumns, 'NUMMAC', 'G', 'nummac')},
+                ${optionalColumn(filterColumns, 'NUMREP', 'F', 'num_rep', true)},
+                ${optionalColumn(filterColumns, 'IDXPERS', 'F', 'idx_pers', true)},
+                ${optionalColumn(filterColumns, 'CODCLISUPER', 'F', 'cod_cli_super', true)},
+                ${optionalColumn(filterColumns, 'CODAGE', 'F', 'cod_age', true)},
+                ${optionalColumn(filterColumns, 'CODCLICOL', 'F', 'cod_cli_col', true)},
+                ${optionalColumn(filterColumns, 'CODCLIENTI', 'F', 'cod_clienti', false)},
                 F.TIPFIL AS tip_fil,
-                F.IDXPOS AS idx_postazione
+                ${optionalColumn(filterColumns, 'IDXPOS', 'F', 'idx_postazione', true)}
             FROM UTENTI U 
             INNER JOIN UTENTI_CONFIG G ON U.CODUTE = G.CODUTE
             LEFT JOIN FILTRI F ON F.CODUTE = U.CODUTE
@@ -274,6 +292,7 @@ export class UserService {
 
   /** Recupera il profilo locale usato dal login, compresi filtri Accessi eventualmente presenti. */
   async getUserByEmail(email: string): Promise<UserDto | null> {
+    const configColumns = await getTableColumns(this.accessiOptions, 'UTENTI_CONFIG');
     const query = `
             SELECT 
                 U.CODUTE AS codice_utente, 
@@ -292,8 +311,8 @@ export class UserService {
                 C.FLGADMINCONFIG AS flag_admin_configurator,
                 COALESCE(C.FLGPASSWORD, 1) AS password_login_enabled,
                 C.PAGDEF AS pagina_default,
-                C.NUMMAC AS nummac,
-                C.RAGSOCCLI AS rag_soc_cli
+                ${optionalColumn(configColumns, 'NUMMAC', 'C', 'nummac')},
+                ${optionalColumn(configColumns, 'RAGSOCCLI', 'C', 'rag_soc_cli', false)}
             FROM UTENTI U
             INNER JOIN UTENTI_CONFIG C ON C.CODUTE = U.CODUTE
             WHERE LOWER(U.USRNAME) = ?
@@ -303,11 +322,8 @@ export class UserService {
       (results) => results.map(RestUtilities.convertKeysToCamelCase),
     )) as UserDto[];
 
-    const filtriUtente = await this.filtriService.getFiltriUser(utenti[0]?.codiceUtente);
-
-    if (utenti.length <= 0) {
-      return null;
-    }
+    if (utenti.length <= 0) return null;
+    const filtriUtente = await this.filtriService.getFiltriUser(utenti[0].codiceUtente);
 
     if (utenti.length > 0 && filtriUtente.length > 0) {
       const user = utenti[0];
@@ -364,6 +380,7 @@ export class UserService {
         throw new Error('I campi privilegiati non sono consentiti nella registrazione pubblica.');
       }
 
+      await this.validateApplicationFields(registrationData);
       await this.ensureEmailIsAvailable(normalizedEmail);
 
       const queryUtenti = `INSERT INTO UTENTI (USRNAME, STAREG) VALUES (?,?)`;
@@ -516,6 +533,7 @@ export class UserService {
         }
       }
 
+      await this.validateApplicationFields(user);
       const utentiUpdates = [];
       const utentiParams = [];
 
@@ -591,7 +609,7 @@ export class UserService {
         utentiConfigUpdates.push('json_metadata = ?');
         utentiConfigParams.push(user.jsonMetadata);
       }
-      if (user.ragSocCli !== undefined) {
+      if (user.ragSocCli !== undefined && (user.ragSocCli !== null || (await getTableColumns(this.accessiOptions, 'UTENTI_CONFIG')).has('RAGSOCCLI'))) {
         utentiConfigUpdates.push('ragsoccli = ?');
         utentiConfigParams.push(user.ragSocCli);
       }

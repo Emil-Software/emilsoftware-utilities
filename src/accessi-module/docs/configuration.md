@@ -16,7 +16,7 @@ Il modulo non legge direttamente il file `.env`: riceve un oggetto `AccessiOptio
 - `jwtOptions.expiresIn`: durata JWT
 - `emailOptions`: configurazione SMTP per le mail di reset
 - `extensionFieldsOptions`: tabelle esterne opzionali da allegare al login
-- `autoUpdateDatabase`: se `false`, disabilita le migrazioni automatiche al boot
+- `autoUpdateDatabase`: se `false`, disabilita le modifiche automatiche ma verifica comunque lo schema al boot e blocca avvii incompatibili; dettagli in [Aggiornamento database](database-update.md)
 
 ## Differenza tra modulo e updater
 
