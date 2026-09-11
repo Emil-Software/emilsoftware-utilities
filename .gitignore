@@ -1,6 +1,10 @@
 /node_modules
 /dist
-/test
+/test/*
+!/test/accessi-example/
+!/test/accessi-example/**
+/test/accessi-example/.env
+/test/accessi-example/node_modules/
 /logs
 .env
 .vscode/settings.json

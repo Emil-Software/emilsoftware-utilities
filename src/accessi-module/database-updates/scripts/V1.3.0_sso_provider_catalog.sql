@@ -1,0 +1,71 @@
+/*
+  Accessi database migration 1.2.0 -> 1.3.0.
+
+  Creates the generic SSO provider catalog. Provider validation details,
+  client secrets, issuer URLs and tokens deliberately remain in each hosting
+  backend: Accessi stores only the stable provider key used for identity lookup.
+
+  Existing PROVIDER values are imported before the foreign key is added, so the
+  migration is additive and preserves all historic external identities.
+*/
+
+SET TERM ^ ;
+
+EXECUTE BLOCK
+AS
+BEGIN
+  IF (NOT EXISTS (
+    SELECT 1 FROM RDB$RELATIONS WHERE RDB$RELATION_NAME = 'SSO_PROVIDER'
+  )) THEN
+    EXECUTE STATEMENT '
+      CREATE TABLE SSO_PROVIDER (
+        PROVIDER VARCHAR(64) CHARACTER SET ASCII NOT NULL,
+        DESCRIZIONE VARCHAR(160) CHARACTER SET UTF8 NOT NULL,
+        FLGATTIVO SMALLINT DEFAULT 1 NOT NULL,
+        DATINS TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
+        NOTA VARCHAR(500) CHARACTER SET UTF8
+      )';
+
+  IF (NOT EXISTS (
+    SELECT 1 FROM RDB$RELATION_CONSTRAINTS WHERE RDB$CONSTRAINT_NAME = 'PK_SSO_PROVIDER'
+  )) THEN
+    EXECUTE STATEMENT 'ALTER TABLE SSO_PROVIDER ADD CONSTRAINT PK_SSO_PROVIDER PRIMARY KEY (PROVIDER)';
+
+  IF (NOT EXISTS (
+    SELECT 1 FROM RDB$RELATION_CONSTRAINTS WHERE RDB$CONSTRAINT_NAME = 'CK_SSO_PROVIDER_ATTIVO'
+  )) THEN
+    EXECUTE STATEMENT 'ALTER TABLE SSO_PROVIDER ADD CONSTRAINT CK_SSO_PROVIDER_ATTIVO CHECK (FLGATTIVO IN (0, 1))';
+
+  IF (NOT EXISTS (
+    SELECT 1 FROM RDB$INDICES WHERE RDB$INDEX_NAME = 'IDX_UTEIDEXT_PROVIDER'
+  )) THEN
+    EXECUTE STATEMENT 'CREATE INDEX IDX_UTEIDEXT_PROVIDER ON UTENTI_IDENTITA_EXT (PROVIDER)';
+END^
+
+SET TERM ; ^
+
+INSERT INTO SSO_PROVIDER (PROVIDER, DESCRIZIONE, FLGATTIVO, NOTA)
+SELECT DISTINCT I.PROVIDER, I.PROVIDER, 1, NULL
+FROM UTENTI_IDENTITA_EXT I
+WHERE NOT EXISTS (SELECT 1 FROM SSO_PROVIDER P WHERE P.PROVIDER = I.PROVIDER);
+
+SET TERM ^ ;
+
+EXECUTE BLOCK
+AS
+BEGIN
+  IF (NOT EXISTS (
+    SELECT 1 FROM RDB$RELATION_CONSTRAINTS WHERE RDB$CONSTRAINT_NAME = 'FK_UTEIDEXT_PROVIDER'
+  )) THEN
+    EXECUTE STATEMENT 'ALTER TABLE UTENTI_IDENTITA_EXT ADD CONSTRAINT FK_UTEIDEXT_PROVIDER FOREIGN KEY (PROVIDER) REFERENCES SSO_PROVIDER (PROVIDER)';
+END^
+
+SET TERM ; ^
+
+COMMENT ON TABLE SSO_PROVIDER IS 'Catalogo dei provider SSO ammessi da Accessi. Configurazioni, issuer, token e segreti restano nel backend ospitante.';
+COMMENT ON COLUMN SSO_PROVIDER.PROVIDER IS 'Chiave ASCII stabile configurata anche nel backend. Deve distinguere tenant e ambiente quando necessario.';
+COMMENT ON COLUMN SSO_PROVIDER.DESCRIZIONE IS 'Descrizione amministrativa leggibile del provider SSO.';
+COMMENT ON COLUMN SSO_PROVIDER.FLGATTIVO IS '1 consente nuovi login e collegamenti SSO; 0 conserva lo storico ma blocca le nuove sessioni.';
+COMMENT ON COLUMN SSO_PROVIDER.DATINS IS 'Istante di censimento del provider nel catalogo Accessi.';
+COMMENT ON COLUMN SSO_PROVIDER.NOTA IS 'Nota amministrativa opzionale; non memorizzare token, segreti o dati personali non necessari.';
+COMMENT ON COLUMN UTENTI_IDENTITA_EXT.PROVIDER IS 'Chiave del catalogo SSO_PROVIDER. Insieme a SUBJECT identifica l''identita esterna verificata dal backend.';

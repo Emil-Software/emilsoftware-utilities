@@ -70,7 +70,7 @@ export class PermissionService {
                 SELECT
                     R.CODRUO AS codice_ruolo,
                     R.DESRUO AS descrizione_ruolo,
-                    RM.CODMNU AS codice_menu,
+                    CASE WHEN COALESCE(G.FLGENABLED, 1) = 1 THEN M.CODMNU END AS codice_menu,
                     RM.TIPABI AS tipo_abilitazione,
                     M.DESMNU AS descrizione_menu,
                     M.NOTE AS note
@@ -82,7 +82,6 @@ export class PermissionService {
                     AND M.FLGENABLED = 1
                 LEFT JOIN MENU_GRP G
                     ON G.CODGRP = M.CODGRP
-                    AND COALESCE(G.FLGENABLED, 1) = 1
                 WHERE RU.CODUTE = ?
             `;
         let ruoliResult = await Orm.query(this.accessiOptions.databaseOptions, queryRuoli, [codiceUtente]);
@@ -113,6 +112,10 @@ export class PermissionService {
     }
 
 
+    /**
+     * API legacy per salvare grant dalla struttura storica menu/gruppi.
+     * Sostituisce tutti i grant diretti dell'utente; per le nuove integrazioni preferire `assignPermissionsToUser`.
+     */
     public async addAbilitazioni(codiceUtente: number, menuAbilitazioni: any[]): Promise<void> {
         const deleteQuery = `DELETE FROM ABILITAZIONI WHERE CODUTE = ?`;
         await Orm.execute(this.accessiOptions.databaseOptions, deleteQuery, [codiceUtente]);
@@ -130,11 +133,16 @@ export class PermissionService {
     }
 
 
+    /** Rimuove tutti i grant diretti, senza toccare ruoli o menu ereditati dai ruoli. */
     public async resetAbilitazioni(codiceUtente: number): Promise<void> {
         const query = "DELETE FROM ABILITAZIONI WHERE CODUTE = ?";
         await Orm.execute(this.accessiOptions.databaseOptions, query, [codiceUtente]);
     }
 
+    /**
+     * Crea o aggiorna un ruolo. In aggiornamento la lista `role.menu` sostituisce integralmente i menu del ruolo.
+     * Validare i codici menu nel chiamante quando si usano dati non provenienti dalla console o dalle API Accessi.
+     */
     public async updateOrInsertRole(role: Role, codiceRuolo: number | null = null): Promise<void> {
 
         // creazione nuovo ruolo
@@ -176,6 +184,7 @@ export class PermissionService {
     }
 
 
+    /** Restituisce il catalogo ruoli con ogni associazione menu e livello, inclusi ruoli senza menu. */
     public async getRolesWithMenus(): Promise<Role[]> {
         const query = `
                 SELECT 
@@ -226,6 +235,10 @@ export class PermissionService {
     }
 
 
+    /**
+     * Sostituisce l'intera lista di ruoli dell'utente con codici univoci e verificati.
+     * Non modifica i grant diretti: il calcolo effettivo li unisce in `getUserRolesAndGrants`.
+     */
     public async assignRolesToUser(codiceUtente: number, roles: number[]): Promise<void> {
 
         const userExistsQuery = `SELECT COUNT(*) FROM UTENTI WHERE CODUTE = ?`;
@@ -277,6 +290,10 @@ export class PermissionService {
     }
 
 
+    /**
+     * Sostituisce tutti i grant diretti dell'utente. I ruoli rimangono invariati e i loro grant sono aggiunti
+     * solo nel risultato effettivo; un grant diretto dello stesso menu ha precedenza nella composizione.
+     */
     public async assignPermissionsToUser(codiceUtente: number, permissions: Permission[]): Promise<void> {
 
         const userExistsQuery = `SELECT COUNT(*) FROM UTENTI WHERE CODUTE = ?`;
@@ -335,6 +352,7 @@ export class PermissionService {
     }
 
 
+    /** Elimina fisicamente ruolo, associazioni menu e assegnazioni utente. Operazione amministrativa irreversibile. */
     public async deleteRole(codiceRuolo: number): Promise<void> {
 
         const existsQuery = `SELECT COUNT(*) FROM RUOLI WHERE CODRUO = ?`;
@@ -356,6 +374,7 @@ export class PermissionService {
     }
 
 
+    /** Restituisce solo menu abilitati; per il catalogo amministrativo usare `getGroupsWithMenus(true)`. */
     public async getMenus(): Promise<MenuEntity[]> {
         const query = `
                 SELECT 
@@ -369,7 +388,7 @@ export class PermissionService {
                     M.NOTE AS note
                 FROM MENU M
                 LEFT JOIN MENU_GRP G ON M.CODGRP = G.CODGRP
-                WHERE M.FLGENABLED = 1
+                WHERE M.FLGENABLED = 1 AND COALESCE(G.FLGENABLED, 1) = 1
                 ORDER BY G.CODGRP, M.CODMNU
             `;
 
@@ -378,6 +397,10 @@ export class PermissionService {
     }
 
 
+    /**
+     * Restituisce il catalogo ordinato per gruppo e menu. `includeDisabled` e riservato a console e amministrazione:
+     * i flussi applicativi di autorizzazione devono usare il comportamento predefinito, che nasconde voci disabilitate.
+     */
     public async getGroupsWithMenus(includeDisabled = false): Promise<GroupWithMenusEntity[]> {
         const filtersClause = includeDisabled
             ? ''
@@ -419,7 +442,7 @@ export class PermissionService {
             const { menuEnabled, groupEnabled, ...menuBase } = converted as any;
             const normalizedGroupKey = menuBase.codiceGruppo ?? '__UNGROUPED__';
             const groupEnabledFlag =
-                groupEnabled === undefined ? true : Number(groupEnabled) === 1 || groupEnabled === true;
+                groupEnabled == null ? true : Number(groupEnabled) === 1 || groupEnabled === true;
             const menuEnabledFlag =
                 menuEnabled === undefined ? true : Number(menuEnabled) === 1 || menuEnabled === true;
 
@@ -459,6 +482,10 @@ export class PermissionService {
 
 
 
+    /**
+     * Calcola l'autorizzazione effettiva: grant diretti e grant dei ruoli sono uniti per codice menu.
+     * Per compatibilita storica un grant diretto prevale su quello del ruolo; i superutenti ricevono tutti i menu attivi.
+     */
     public async getUserRolesAndGrants(codiceUtente: number): Promise<{
         abilitazioni: AbilitazioneMenu[],
         ruoli: Role[],
@@ -469,7 +496,8 @@ export class PermissionService {
         if (!result || result.length == 0) throw new Error("Nessun utente trovato con il codice utente " + codiceUtente);
 
         result = result.map(RestUtilities.convertKeysToCamelCase) as { flagSuper: boolean }[];
-        const isSuperAdmin = result[0].flagSuper;
+        const rawSuperFlag: unknown = result[0].flagSuper;
+        const isSuperAdmin = rawSuperFlag === true || rawSuperFlag === 1 || rawSuperFlag === '1';
 
         const abilitazioni = await this.getUserDirectPermissions(codiceUtente);
         const ruoli = await this.getUserRoles(codiceUtente);
@@ -482,10 +510,13 @@ export class PermissionService {
             grantsMap.set(abilitazione.codiceMenu, abilitazione);
         }
 
-        // Add role-based permissions if not already present
+        // Direct grants (including explicit denial) override roles; roles combine by maximum level.
+        const directMenuCodes = new Set(abilitazioni.map(grant => grant.codiceMenu));
         for (const ruolo of ruoli) {
             for (const menu of ruolo.menu) {
-                if (!grantsMap.has(menu.codiceMenu)) {
+                const existing = grantsMap.get(menu.codiceMenu);
+                if (!directMenuCodes.has(menu.codiceMenu) &&
+                    (!existing || Number(menu.tipoAbilitazione) > Number(existing.tipoAbilitazione))) {
                     grantsMap.set(menu.codiceMenu, menu);
                 }
             }

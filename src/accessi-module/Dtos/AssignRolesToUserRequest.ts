@@ -5,7 +5,7 @@ import { IsArray, IsInt } from 'class-validator';
 export class AssignRolesToUserRequest {
     @ApiProperty({
         description: "Lista dei codici dei ruoli da assegnare all'utente.",
-        type: [String],
+        type: [Number],
         example: [1, 2, 3]
     })
     @IsArray({ message: 'I ruoli devono essere un array.' })

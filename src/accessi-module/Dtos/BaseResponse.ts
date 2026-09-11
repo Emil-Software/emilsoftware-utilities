@@ -63,12 +63,29 @@ export class ErrorResponse {
   @IsString()
   message: string;
 
+  @ApiPropertyOptional({
+    example: 'ACCESSI_DATABASE_SCHEMA_OUTDATED',
+    description: 'Codice stabile leggibile dal client. Non contiene dettagli tecnici o dati sensibili.',
+  })
+  @IsOptional()
+  @IsString()
+  code?: string;
+
   @ApiProperty({
-    example: '[UserController]: Error: Parametro non valido',
-    description: 'Dettaglio testuale dell errore con tag sorgente.',
+    example: 'ACCESSI_REQUEST_ERROR',
+    description: 'Campo legacy che riporta il codice stabile dell errore, senza SQL o stack trace.',
   })
   @IsString()
   error: string;
+
+  @ApiPropertyOptional({
+    example: ['email: deve essere una stringa.'],
+    description: 'Dettagli di validazione sicuri, presenti solo per ACCESSI_VALIDATION_ERROR.',
+    type: [String],
+  })
+  @IsOptional()
+  @IsString({ each: true })
+  details?: string[];
 }
 
 export class PasswordExpiredResponse {

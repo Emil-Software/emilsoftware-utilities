@@ -7,13 +7,17 @@
   "types": "dist/index.d.ts",
   "scripts": {
     "release": "semantic-release",
-    "build": "tsc && npm run copy-views",
+    "build": "tsc && npm run generate:accessi-openapi && npm run generate:accessi-client && tsc && tsc -p tsconfig.console.json --noEmit && npm run build:accessi-console && npm run copy-views",
+    "generate:accessi-openapi": "node dist/scripts/generateAccessiOpenApi.js",
+    "generate:accessi-client": "orval --config orval.config.ts",
+    "build:accessi-console": "esbuild src/accessi-module/Console/console.ts --bundle --platform=browser --format=esm --target=es2020 --outfile=dist/accessi-module/Console/console.js",
     "copy-views": "node copy-views.js",
     "db:update:accessi": "ts-node src/accessi-module/database-updates/runAccessiDbUpdate.ts",
     "db:update:accessi:dist": "npm run build && node dist/accessi-module/database-updates/runAccessiDbUpdate.js",
     "prepublishOnly": "npm run build",
     "test:allegati": "ts-node src/tests/allegati/allegati.ts",
-    "test:accessi": "npm run build && ts-node test/index.js"
+    "test:accessi": "npm run build && node --test test/accessi-regressions.cjs test/password-reset-regressions.cjs test/two-factor.cjs",
+    "test:accessi-console": "npm run build && node test/console-two-factor.cjs"
   },
   "publishConfig": {
     "access": "public"
@@ -48,7 +52,8 @@
     "swagger-jsdoc": "^6.2.8",
     "swagger-ui-express": "^5.0.1",
     "uuid": "^11.0.5",
-    "winston": "^3.11.0"
+    "winston": "^3.11.0",
+    "winston-transport": "^4.9.0"
   },
   "devDependencies": {
     "@semantic-release/changelog": "^6.0.3",
@@ -67,7 +72,9 @@
     "@types/swagger-ui-express": "^4.1.7",
     "commitizen": "^4.3.1",
     "cz-conventional-changelog": "^3.3.0",
+    "esbuild": "^0.28.2",
     "fs-extra": "^11.3.0",
+    "orval": "^6.31.0",
     "semantic-release": "^24.2.7",
     "ts-node": "^10.9.2",
     "typescript": "^5.8.3"

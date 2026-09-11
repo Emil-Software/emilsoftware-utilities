@@ -48,6 +48,10 @@ import {
 @ApiBearerAuth()
 @Controller('accessi/permission')
 @UseGuards(JwtSimpleGuard)
+/**
+ * API amministrative per ruoli, grant e catalogo menu. Le assegnazioni sono sostitutive, non incrementali:
+ * il client deve inviare l'intera lista desiderata per non rimuovere voci involontariamente.
+ */
 export class PermissionController {
   constructor(private readonly permissionService: PermissionService) {}
 
@@ -71,13 +75,12 @@ export class PermissionController {
     type: ErrorResponse,
   })
   @Get('roles')
-  async getRoles(@Res() res: Response): Promise<void> {
+  async getRoles(@Res() res: Response): Promise<Response> {
     try {
       const roles = await this.permissionService.getRolesWithMenus();
-      RestUtilities.sendBaseResponse(res, roles);
+      return RestUtilities.sendBaseResponse(res, roles);
     } catch (error) {
-      this.sendControllerError(res, error);
-      throw error;
+      return this.sendControllerError(res, error);
     }
   }
 
@@ -149,7 +152,7 @@ export class PermissionController {
       }
 
       await this.permissionService.updateOrInsertRole(role);
-      return RestUtilities.sendOKMessage(res, 'Il ruolo e stato creato con successo.');
+      return RestUtilities.sendOKMessage(res, 'Il ruolo e stato creato con successo.', HttpStatus.CREATED);
     } catch (error) {
       return this.sendControllerError(res, error);
     }

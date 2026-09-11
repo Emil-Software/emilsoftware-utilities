@@ -1,4 +1,4 @@
-import { Inject, Injectable } from '@nestjs/common';
+import { BadRequestException, ConflictException, Inject, Injectable } from '@nestjs/common';
 import { autobind } from '../../../autobind';
 import { Orm } from '../../../Orm';
 import { RestUtilities } from '../../../Utilities';
@@ -34,9 +34,19 @@ export class UserService {
     return value === true || value === 1 || value === '1';
   }
 
+  private normalizeUserFlags(user: UserDto): UserDto {
+    return { ...user,
+      flagSuper: this.normalizeDatabaseBoolean(user.flagSuper),
+      flagAdminConfigurator: this.normalizeDatabaseBoolean(user.flagAdminConfigurator),
+      flagDueFattori: this.normalizeDatabaseBoolean(user.flagDueFattori),
+      passwordlessLoginEnabled: this.normalizeDatabaseBoolean(user.passwordlessLoginEnabled),
+      passwordLoginEnabled: user.passwordLoginEnabled == null || this.normalizeDatabaseBoolean(user.passwordLoginEnabled),
+    };
+  }
+
   private normalizeEmail(email: string): string {
     if (typeof email !== 'string' || email.trim() === '') {
-      throw new Error("L'email e' obbligatoria.");
+      throw new BadRequestException({ code: 'ACCESSI_EMAIL_REQUIRED', message: "L'email è obbligatoria." });
     }
 
     return email.trim().toLowerCase();
@@ -57,10 +67,11 @@ export class UserService {
       existingUser?.codiceUtente &&
       (!currentUserCode || existingUser.codiceUtente !== currentUserCode)
     ) {
-      throw new Error("Questa e-mail e' gia stata utilizzata!");
+      throw new ConflictException({ code: 'ACCESSI_EMAIL_ALREADY_EXISTS', message: "L'email è già associata a un utente Accessi." });
     }
   }
 
+  /** Determina se l'utente puo amministrare il configuratore Accessi (`FLGADMINCONFIG`). */
   async isAdminConfigurator(codiceUtente: number): Promise<boolean> {
     if (!codiceUtente) {
       return false;
@@ -77,6 +88,10 @@ export class UserService {
     return this.normalizeDatabaseBoolean(mapped[0]?.flagAdminConfigurator);
   }
 
+  /**
+   * Legge il minimo profilo autorevole usato da JWT e middleware. Restituisce `null` per utenti inesistenti.
+   * Non usare `UserDto` dal token per decisioni di sicurezza: i flag vengono sempre riletti qui.
+   */
   async getAuthenticatedUserSnapshot(
     codiceUtente: number,
   ): Promise<AccessiAuthenticatedUserSnapshot | null> {
@@ -93,6 +108,9 @@ export class UserService {
           U.STAREG AS stato_registrazione,
           C.FLGSUPER AS flag_super,
           C.FLGADMINCONFIG AS flag_admin_configurator
+          , C.FLG2FATT AS flag_due_fattori
+          , C.FLGPWDLESS AS passwordless_login_enabled
+          , COALESCE(C.FLGPASSWORD, 1) AS password_login_enabled
         FROM UTENTI U
         LEFT JOIN UTENTI_CONFIG C ON C.CODUTE = U.CODUTE
         WHERE U.CODUTE = ?
@@ -107,6 +125,9 @@ export class UserService {
           statoRegistrazione?: StatoRegistrazione | number;
           flagSuper?: unknown;
           flagAdminConfigurator?: unknown;
+          flagDueFattori?: unknown;
+          passwordlessLoginEnabled?: unknown;
+          passwordLoginEnabled?: unknown;
         }
       | undefined;
 
@@ -120,9 +141,16 @@ export class UserService {
       statoRegistrazione: Number(user.statoRegistrazione) as StatoRegistrazione,
       flagSuper: this.normalizeDatabaseBoolean(user.flagSuper),
       flagAdminConfigurator: this.normalizeDatabaseBoolean(user.flagAdminConfigurator),
+      flagDueFattori: this.normalizeDatabaseBoolean(user.flagDueFattori),
+      passwordlessLoginEnabled: this.normalizeDatabaseBoolean(user.passwordlessLoginEnabled),
+      passwordLoginEnabled: this.normalizeDatabaseBoolean(user.passwordLoginEnabled),
     };
   }
 
+  /**
+   * Elenca gli utenti con filtri opzionali. Grant e campi estesi sono costosi e vengono caricati soltanto
+   * quando richiesti esplicitamente nelle opzioni; usare filtri puntuali nei flussi di autenticazione.
+   */
   async getUsers(
     filters?: { email?: string; codiceUtente?: number },
     options?: { includeExtensionFields: boolean; includeGrants: boolean },
@@ -141,11 +169,13 @@ export class UserService {
                 G.COGNOME as cognome, 
                 G.NOME as nome, 
                 G.AVATAR as avatar, 
-                G.FLG2FATT as flag_due_fattori, 
+                G.FLG2FATT as flag_due_fattori,
+                G.FLGPWDLESS as passwordless_login_enabled,
                 G.CODLINGUA as codice_lingua,
                 G.CELLULARE as cellulare,
                 G.FLGSUPER as flag_super, 
                 G.FLGADMINCONFIG as flag_admin_configurator,
+                COALESCE(G.FLGPASSWORD, 1) as password_login_enabled,
                 G.PAGDEF as pagina_default,
                 G.JSON_METADATA as json_metadata,
                 G.RAGSOCCLI as rag_soc_cli,
@@ -183,7 +213,7 @@ export class UserService {
         query,
         queryParams,
       )) as UserDto[];
-      users = users.map(RestUtilities.convertKeysToCamelCase);
+      users = users.map(RestUtilities.convertKeysToCamelCase).map(user => this.normalizeUserFlags(user));
 
       const usersResponse: GetUsersResult[] = [];
 
@@ -229,6 +259,7 @@ export class UserService {
     }
   }
 
+  /** Cerca il codice interno per email normalizzata. Il chiamante deve gestire il caso senza righe. */
   async getCodiceUtenteByEmail(email: string): Promise<{ codiceUtente: number }> {
     try {
       const query = `SELECT CODUTE as codice_utente FROM UTENTI WHERE LOWER(USRNAME) = ?`;
@@ -241,6 +272,7 @@ export class UserService {
     }
   }
 
+  /** Recupera il profilo locale usato dal login, compresi filtri Accessi eventualmente presenti. */
   async getUserByEmail(email: string): Promise<UserDto | null> {
     const query = `
             SELECT 
@@ -253,10 +285,12 @@ export class UserService {
                 C.NOME AS nome, 
                 C.AVATAR AS avatar, 
                 C.FLG2FATT AS flag_due_fattori,
+                C.FLGPWDLESS AS passwordless_login_enabled,
                 C.CODLINGUA AS codice_lingua, 
                 C.CELLULARE AS cellulare, 
                 C.FLGSUPER AS flag_super,
                 C.FLGADMINCONFIG AS flag_admin_configurator,
+                COALESCE(C.FLGPASSWORD, 1) AS password_login_enabled,
                 C.PAGDEF AS pagina_default,
                 C.NUMMAC AS nummac,
                 C.RAGSOCCLI AS rag_soc_cli
@@ -289,7 +323,7 @@ export class UserService {
       Object.assign(user, filterValues);
     }
 
-    return utenti.length > 0 ? utenti[0] : null;
+    return utenti.length > 0 ? this.normalizeUserFlags(utenti[0]) : null;
   }
 
   async insertUserFilters(codiceUtente: number, filterData: RegisterRequest): Promise<void> {
@@ -300,18 +334,30 @@ export class UserService {
     await operation();
   }
 
+  /**
+   * Crea utente, configurazione e filtri. La registrazione pubblica resta in stato `INVIO` e non puo
+   * impostare privilegi, ruoli o grant; soltanto flussi backend fidati possono usare `allowPrivilegedFields`.
+   */
   async register(
     registrationData: RegisterRequest,
-    options?: { allowPrivilegedFields?: boolean },
+    options?: { allowPrivilegedFields?: boolean; initialState?: StatoRegistrazione },
   ): Promise<number> {
     try {
       const allowPrivilegedFields = options?.allowPrivilegedFields === true;
       const normalizedEmail = this.normalizeEmail(registrationData.email);
 
+      if (registrationData.flagDueFattori !== undefined && typeof registrationData.flagDueFattori !== 'boolean') {
+        throw new BadRequestException('Il flag due fattori deve essere booleano.');
+      }
+      if (registrationData.flagDueFattori && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail)) {
+        throw new BadRequestException('Per attivare i codici di accesso serve un indirizzo email valido.');
+      }
+
       if (
         !allowPrivilegedFields &&
         (registrationData.flagSuper !== undefined ||
           registrationData.flagAdminConfigurator !== undefined ||
+          registrationData.flagDueFattori !== undefined ||
           registrationData.roles !== undefined ||
           registrationData.permissions !== undefined)
       ) {
@@ -321,7 +367,8 @@ export class UserService {
       await this.ensureEmailIsAvailable(normalizedEmail);
 
       const queryUtenti = `INSERT INTO UTENTI (USRNAME, STAREG) VALUES (?,?)`;
-      const paramsUtenti = [normalizedEmail, StatoRegistrazione.INVIO];
+      // Public/local registrations keep the historic INVIO state; trusted master or SSO flows may opt into CONF.
+      const paramsUtenti = [normalizedEmail, options?.initialState ?? StatoRegistrazione.INVIO];
 
       await Orm.execute(this.accessiOptions.databaseOptions, queryUtenti, paramsUtenti);
 
@@ -427,6 +474,10 @@ export class UserService {
     }
   }
 
+  /**
+   * Aggiorna il profilo utente e i filtri. Le modifiche a stato, ruoli, grant e flag amministrativi richiedono
+   * `allowPrivilegedChanges`; gli array ruolo/grant passati in un flusso fidato sostituiscono le assegnazioni.
+   */
   async updateUser(
     codiceUtente: number,
     user: UserDto,
@@ -436,15 +487,33 @@ export class UserService {
       if (!codiceUtente) throw new Error('Impossibile aggiornare senza codice utente.');
       const allowPrivilegedChanges = options?.allowPrivilegedChanges === true;
 
+      for (const value of [user.flagDueFattori, user.passwordlessLoginEnabled]) {
+        if (value !== undefined && typeof value !== 'boolean') throw new BadRequestException('Le policy di autenticazione devono essere booleane.');
+      }
+
       if (
         !allowPrivilegedChanges &&
         (user.statoRegistrazione !== undefined ||
           user.flagSuper !== undefined ||
           user.flagAdminConfigurator !== undefined ||
+          user.passwordLoginEnabled !== undefined ||
+          user.passwordlessLoginEnabled !== undefined ||
+          user.flagDueFattori !== undefined ||
           user.roles !== undefined ||
           user.permissions !== undefined)
       ) {
         throw new Error('Non e consentito modificare campi privilegiati.');
+      }
+
+      if (user.flagDueFattori !== undefined || user.passwordlessLoginEnabled !== undefined || user.email !== undefined) {
+        const current = await this.getAuthenticatedUserSnapshot(codiceUtente);
+        if (!current) throw new BadRequestException('Utente non trovato.');
+        const twoFactor = user.flagDueFattori ?? current.flagDueFattori;
+        const passwordless = user.passwordlessLoginEnabled ?? current.passwordlessLoginEnabled;
+        if (passwordless && !twoFactor) throw new BadRequestException('Il login senza password richiede il codice di accesso attivo.');
+        if (twoFactor && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test((user.email ?? current.email ?? '').trim())) {
+          throw new BadRequestException('Per attivare i codici di accesso serve un indirizzo email valido.');
+        }
       }
 
       const utentiUpdates = [];
@@ -488,7 +557,11 @@ export class UserService {
       }
       if (user.flagDueFattori !== undefined) {
         utentiConfigUpdates.push('flg2fatt = ?');
-        utentiConfigParams.push(user.flagDueFattori);
+        utentiConfigParams.push(user.flagDueFattori ? 1 : 0);
+      }
+      if (user.passwordlessLoginEnabled !== undefined) {
+        utentiConfigUpdates.push('flgpwdless = ?');
+        utentiConfigParams.push(user.passwordlessLoginEnabled ? 1 : 0);
       }
       if (user.codiceLingua !== undefined) {
         utentiConfigUpdates.push('codlingua = ?');
@@ -505,6 +578,10 @@ export class UserService {
       if (allowPrivilegedChanges && user.flagAdminConfigurator !== undefined) {
         utentiConfigUpdates.push('flgadminconfig = ?');
         utentiConfigParams.push(user.flagAdminConfigurator);
+      }
+      if (allowPrivilegedChanges && user.passwordLoginEnabled !== undefined) {
+        utentiConfigUpdates.push('flgpassword = ?');
+        utentiConfigParams.push(user.passwordLoginEnabled ? 1 : 0);
       }
       if (user.paginaDefault !== undefined) {
         utentiConfigUpdates.push('pagdef = ?');
@@ -531,11 +608,11 @@ export class UserService {
         );
       }
 
-      if (allowPrivilegedChanges && !!user.roles && user.roles.length > 0) {
+      if (allowPrivilegedChanges && Array.isArray(user.roles)) {
         await this.permissionService.assignRolesToUser(codiceUtente, user.roles);
       }
 
-      if (allowPrivilegedChanges && !!user.permissions && user.permissions.length > 0) {
+      if (allowPrivilegedChanges && Array.isArray(user.permissions)) {
         await this.permissionService.assignPermissionsToUser(codiceUtente, user.permissions);
       }
 
@@ -549,6 +626,7 @@ export class UserService {
     await this.filtriService.upsertFiltriUtente(codiceUtente, user);
   }
 
+  /** Eliminazione logica: imposta lo stato `DELETE` senza cancellare lo storico o i collegamenti SSO. */
   async deleteUser(codiceCliente: number): Promise<void> {
     try {
       const query = `UPDATE UTENTI SET STAREG = ? WHERE CODUTE = ?`;
@@ -561,6 +639,7 @@ export class UserService {
     }
   }
 
+  /** Cambia esplicitamente lo stato di registrazione; usare questa API per blocco, conferma o eliminazione logica. */
   async setStato(codiceCliente: number, statoRegistrazione: StatoRegistrazione) {
     try {
       const query = `UPDATE UTENTI SET STAREG = ? WHERE CODUTE = ?`;
@@ -575,9 +654,10 @@ export class UserService {
 
   public async setGdpr(codiceUtente: number) {
     try {
-      const query = ` UPDATE OR INSERT UTENTI_GDPR SET CODUTE = ?, GDPR = ? `;
-      const params = [codiceUtente, true];
-      return await Orm.execute(this.accessiOptions.databaseOptions, query, params);
+      return await Orm.executeMultiple(this.accessiOptions.databaseOptions, [
+        { query: 'INSERT INTO UTENTI_GDPR (CODUTE, GDPR) VALUES (?, ?)', params: [codiceUtente, 'true'] },
+        { query: 'UPDATE UTENTI SET FLGGDPR = 1, DATGDPR = CURRENT_DATE WHERE CODUTE = ?', params: [codiceUtente] },
+      ]);
     } catch (error) {
       throw error;
     }

@@ -6,7 +6,7 @@ async function copyHtmlFiles() {
     const srcDir = path.join(__dirname, "src");
     const distDir = path.join(__dirname, "dist");
 
-    glob("**/*.html", { cwd: srcDir }, async (err, files) => {
+    glob("**/*.{html,css}", { cwd: srcDir }, async (err, files) => {
         if (err) {
             console.error("Errore nella ricerca dei file HTML:", err);
             process.exit(1);

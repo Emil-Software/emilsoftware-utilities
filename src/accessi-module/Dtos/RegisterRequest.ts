@@ -1,5 +1,5 @@
 import { ApiProperty, ApiPropertyOptional, OmitType } from "@nestjs/swagger";
-import { Type } from "class-transformer";
+import { Transform, Type } from "class-transformer";
 import {
   ArrayUnique,
   IsArray,
@@ -103,6 +103,7 @@ export class RegisterRequest extends OmitType(FiltriUtente, ['codUte'] as const)
   })
   @IsOptional()
   @IsBoolean({ message: "Il flag due fattori deve essere booleano." })
+  @Transform(({ obj, key }) => obj[key])
   flagDueFattori?: boolean;
 
   @ApiPropertyOptional({

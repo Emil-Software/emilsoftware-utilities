@@ -2,10 +2,11 @@ import { AccessiOptions } from "../AccessiModule";
 import { AccessiDatabaseUpdater } from "./AccessiDatabaseUpdater";
 import { DatabaseUtilities } from "../../Utilities";
 
-function getEnv(name: string, fallback?: string): string {
-  const value = process.env[name] ?? fallback;
+function getEnv(names: string | string[], fallback?: string): string {
+  const candidates = Array.isArray(names) ? names : [names];
+  const value = candidates.map((name) => process.env[name]).find((candidate) => candidate !== undefined && candidate !== "") ?? fallback;
   if (!value) {
-    throw new Error(`Variabile ambiente mancante: ${name}`);
+    throw new Error(`Variabile ambiente mancante: ${candidates.join(" oppure ")}`);
   }
   return value;
 }
@@ -22,11 +23,11 @@ function getOptionalBoolean(name: string, fallback: boolean): boolean {
 function createAccessiOptionsFromEnv(): AccessiOptions {
   return {
     databaseOptions: DatabaseUtilities.createOption(
-      getEnv("ACCESSI_DB_HOST"),
-      Number(getEnv("ACCESSI_DB_PORT", "3050")),
-      getEnv("ACCESSI_DB_DATABASE"),
-      getEnv("ACCESSI_DB_USER", "SYSDBA"),
-      getEnv("ACCESSI_DB_PASSWORD", "masterkey")
+      getEnv(["ACCESSI_DB_HOST", "ACCESSI_FIREBIRD_HOST"]),
+      Number(getEnv(["ACCESSI_DB_PORT", "ACCESSI_FIREBIRD_PORT"], "3050")),
+      getEnv(["ACCESSI_DB_DATABASE", "ACCESSI_FIREBIRD_DATABASE"]),
+      getEnv(["ACCESSI_DB_USER", "ACCESSI_FIREBIRD_USER"], "SYSDBA"),
+      getEnv(["ACCESSI_DB_PASSWORD", "ACCESSI_FIREBIRD_PASSWORD"], "masterkey")
     ),
     confirmationEmailUrl: getEnv("ACCESSI_CONFIRMATION_EMAIL_URL", "http://localhost"),
     confirmationEmailReturnUrl: getEnv("ACCESSI_CONFIRMATION_RETURN_EMAIL_URL", "http://localhost"),

@@ -1,5 +1,5 @@
-import { ApiProperty } from "@nestjs/swagger";
-import { IsString, Length } from "class-validator";
+import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
+import { IsOptional, IsString, Length } from "class-validator";
 
 export class LoginRequest {
     
@@ -11,11 +11,12 @@ export class LoginRequest {
     @Length(3, 50, { message: "L'email deve essere tra 3 e 50 caratteri." })
     email: string;
 
-    @ApiProperty({
-        description: 'Password dell\'utente',
+    @ApiPropertyOptional({
+        description: 'Password: omettere soltanto per utenti con accesso tramite solo codice abilitato.',
         example: 'Str0ngP@ssw0rd!'
     })
     @IsString({ message: "La password deve essere una stringa." })
+    @IsOptional()
     @Length(8, 100, { message: "La password deve essere tra 8 e 100 caratteri." })
-    password: string;
+    password?: string;
 }

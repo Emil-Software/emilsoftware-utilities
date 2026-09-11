@@ -11,7 +11,9 @@ import { AccessiOptions } from '../AccessiModule';
 import { UserService } from '../Services/UserService/UserService';
 import {
   buildAuthenticatedTokenPayload,
+  extractAccessiBearerToken,
   isAuthenticatedUserEnabledForJwt,
+  isAccessiTokenAllowedForUser,
   resolveCodiceUtenteFromTokenPayload,
 } from '../security/authenticatedToken';
 
@@ -28,7 +30,7 @@ export class JwtSimpleGuard implements CanActivate {
     const authHeader = request.headers['authorization'];
     if (!authHeader) throw new UnauthorizedException('Token mancante.');
 
-    const token = authHeader.split(' ')[1];
+    const token = extractAccessiBearerToken(authHeader);
     if (!token) throw new UnauthorizedException('Formato token non valido.');
 
     try {
@@ -36,14 +38,19 @@ export class JwtSimpleGuard implements CanActivate {
       if (!secret) {
         throw new InternalServerErrorException('JWT secret non configurato.');
       }
-      const payload = jwt.verify(token, secret);
+      let payload: jwt.JwtPayload | string;
+      try {
+        payload = jwt.verify(token, secret);
+      } catch {
+        throw new UnauthorizedException('Token non valido o scaduto.');
+      }
       const codiceUtente = resolveCodiceUtenteFromTokenPayload(payload);
       if (!codiceUtente) {
         throw new UnauthorizedException('Token privo di un utente valido.');
       }
 
       const currentUser = await this.userService.getAuthenticatedUserSnapshot(codiceUtente);
-      if (!isAuthenticatedUserEnabledForJwt(currentUser)) {
+      if (!isAuthenticatedUserEnabledForJwt(currentUser) || !isAccessiTokenAllowedForUser(payload, currentUser)) {
         throw new UnauthorizedException('Utente non piu autorizzato.');
       }
 
@@ -53,7 +60,7 @@ export class JwtSimpleGuard implements CanActivate {
       if (error instanceof InternalServerErrorException || error instanceof UnauthorizedException) {
         throw error;
       }
-      throw new UnauthorizedException('Token non valido o scaduto.');
+      throw new InternalServerErrorException('Errore durante la verifica dell utente.');
     }
   }
 }

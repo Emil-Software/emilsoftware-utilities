@@ -1,0 +1,17 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "module": "ES2020",
+    "moduleResolution": "node",
+    "declaration": false,
+    "sourceMap": false,
+    "inlineSources": false,
+    "skipLibCheck": true
+  },
+  "include": [
+    "src/accessi-module/Console/**/*.ts"
+  ],
+  "exclude": [
+    "src/accessi-module/Console/**/*.test.ts"
+  ]
+}

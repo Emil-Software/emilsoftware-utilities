@@ -8,6 +8,7 @@ export * from "./ConfirmResetPasswordRequest";
 export * from "./UpdateEnabledStatusRequest"
 
 export * from "./FiltriUtente";
+export * from "./FederatedIdentityDtos";
 export * from "./GetUserByTokenRequest";
 export * from "./GetUserByTokenResponse";
 export * from "./LoginRequest";
@@ -24,3 +25,4 @@ export * from "./UserGrantsResponse";
 
 export * from "./RuoliMenu"
 
+export * from './TwoFactorDtos';

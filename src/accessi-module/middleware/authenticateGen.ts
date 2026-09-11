@@ -15,7 +15,9 @@ import {
 } from "./accessiRequirements";
 import {
   buildAuthenticatedTokenPayload,
+  extractAccessiBearerToken,
   isAuthenticatedUserEnabledForJwt,
+  isAccessiTokenAllowedForUser,
   resolveCodiceUtenteFromTokenPayload,
 } from "../security/authenticatedToken";
 
@@ -80,6 +82,26 @@ function logAuthFailure(req: Request, authErr: AuthMiddlewareError) {
   else logger.warning(message);
 }
 
+/** Sends the documented Accessi error contract from Express middleware. */
+function sendAuthenticationError(res: Response, authErr: AuthMiddlewareError): Response {
+  const message =
+    authErr.status === 403
+      ? 'Operazione non autorizzata.'
+      : authErr.status >= 500
+        ? 'Errore interno del modulo Accessi.'
+        : 'Autenticazione non valida o scaduta.';
+
+  return res.status(authErr.status).json({
+    severity: 'error',
+    status: authErr.status,
+    statusCode: 2,
+    code: authErr.code,
+    // Kept for callers of older versions which already inspected `error`.
+    error: authErr.code,
+    message,
+  });
+}
+
 async function authorizeWithDependencies(
   req: Request,
   res: Response,
@@ -95,7 +117,7 @@ async function authorizeWithDependencies(
       throw authError(401, "AUTH_HEADER_MISSING", "Authorization header not found");
     }
 
-    const token = authHeader.split(" ")[1];
+    const token = extractAccessiBearerToken(authHeader);
     if (!token) {
       throw authError(
         401,
@@ -104,7 +126,7 @@ async function authorizeWithDependencies(
       );
     }
 
-    const secret = accessiOptions?.jwtOptions?.secret ?? process.env.ACC_JWT_SECRET;
+    const secret = accessiOptions?.jwtOptions?.secret || process.env.ACC_JWT_SECRET;
     if (!secret) {
       throw authError(500, "AUTH_JWT_SECRET_MISSING", "JWT secret not configured");
     }
@@ -126,7 +148,7 @@ async function authorizeWithDependencies(
     }
 
     const currentUser = await userService.getAuthenticatedUserSnapshot(codiceUtente);
-    if (!isAuthenticatedUserEnabledForJwt(currentUser)) {
+    if (!isAuthenticatedUserEnabledForJwt(currentUser) || !isAccessiTokenAllowedForUser(decoded, currentUser)) {
       throw authError(
         401,
         "AUTH_USER_DISABLED",
@@ -186,19 +208,12 @@ async function authorizeWithDependencies(
   } catch (error: unknown) {
     const authErr = normalizeAuthError(error);
     logAuthFailure(req, authErr);
-    const publicMessage =
-      authErr.status === 403
-        ? "Forbidden"
-        : authErr.status >= 500
-          ? "Internal server error"
-          : "Unauthorized";
-    return res
-      .status(authErr.status)
-      .json({ message: publicMessage, error: authErr.message, code: authErr.code });
+    return sendAuthenticationError(res, authErr);
   }
 }
 
 @Injectable()
+/** Nest service behind the Express-compatible `authorizeAccessi` middleware. */
 export class AuthenticateGenService {
   constructor(
     @Inject("ACCESSI_OPTIONS")
@@ -207,6 +222,10 @@ export class AuthenticateGenService {
     private readonly userService: UserService
   ) { }
 
+  /**
+   * Verifica JWT, stato corrente dell'utente e policy opzionale, poi popola `req.user` e `req.data`.
+   * Se una policy richiede grant, popola anche `req.userGrants`; non chiamarlo direttamente fuori da test o adapter.
+   */
   async authorize(
     req: Request,
     res: Response,
@@ -245,12 +264,14 @@ function isAuthenticateGenService(value: unknown): value is AuthenticateGenServi
   );
 }
 
+/** Segnala al middleware che il bootstrap e in corso, consentendo una risposta 503 temporanea invece di un 500. */
 export function beginAccessiAuthInitialization() {
   if (!authServiceBootstrapDeferred) {
     authServiceBootstrapDeferred = createDeferred<AuthenticateGenService>();
   }
 }
 
+/** Registra il servizio costruito da Nest nel bridge usato dalle rotte Express dell'app ospitante. */
 export function setAccessiAuthService(service: AuthenticateGenService) {
   authenticateGenServiceRef = service;
   (globalThis as Record<symbol, unknown>)[ACCESSI_AUTH_SERVICE_GLOBAL_KEY] = service;
@@ -260,6 +281,7 @@ export function setAccessiAuthService(service: AuthenticateGenService) {
   }
 }
 
+/** Propaga il fallimento del bootstrap alle richieste che stavano attendendo il bridge di autorizzazione. */
 export function failAccessiAuthInitialization(error: unknown) {
   if (authServiceBootstrapDeferred) {
     authServiceBootstrapDeferred.reject(error);
@@ -318,6 +340,13 @@ async function resolveAccessiAuthService(req: Request): Promise<AuthenticateGenS
   return getAccessiAuthServiceFromRequest(req);
 }
 
+/**
+ * Middleware Express pubblico di Accessi.
+ *
+ * Applicarlo dopo `initializeAccessiModule`: legge `Authorization: Bearer <jwt>`, verifica l'utente corrente
+ * e applica eventuali requisiti. Su successo valorizza `req.user` e continua; su errore risponde direttamente
+ * con il contratto Accessi, quindi il chiamante non deve aggiungere un proprio `next(error)`.
+ */
 export async function authorizeAccessi(
   req: Request,
   res: Response,
@@ -328,9 +357,9 @@ export async function authorizeAccessi(
 
   if (!authService) {
     const status = authServiceBootstrapDeferred ? 503 : 500;
-    const message = authServiceBootstrapDeferred
-      ? "Accessi authentication service is still initializing"
-      : "Accessi authentication service not initialized";
+    const code = authServiceBootstrapDeferred
+      ? 'ACCESSI_AUTH_INITIALIZING'
+      : 'ACCESSI_AUTH_NOT_INITIALIZED';
     logger.error(
       `Authentication service not initialized ${JSON.stringify({
         method: req.method,
@@ -338,12 +367,20 @@ export async function authorizeAccessi(
         status,
       })}`
     );
-    return res
-      .status(status)
-      .json({ message });
+    return res.status(status).json({
+      severity: 'error',
+      status,
+      statusCode: 2,
+      code,
+      error: code,
+      message: status === 503
+        ? 'Il modulo Accessi e in inizializzazione. Riprova tra poco.'
+        : 'Il modulo Accessi non e disponibile.',
+    });
   }
 
   return authService.authorize(req, res, next, options);
 }
 
+/** Alias storico di `authorizeAccessi`, mantenuto per retrocompatibilita. Preferire il nome esplicito nelle nuove integrazioni. */
 export const authenticateGen = authorizeAccessi;

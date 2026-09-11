@@ -5,6 +5,8 @@ import { AccessiOptions, PublicAuthRateLimitRuleOptions } from '../AccessiModule
 
 export type PublicAuthRateLimitScope =
   | 'login'
+  | 'twoFactorVerify'
+  | 'twoFactorResend'
   | 'register'
   | 'passwordResetEmail'
   | 'passwordResetConfirm'
@@ -26,6 +28,8 @@ const DEFAULT_PUBLIC_AUTH_RATE_LIMITS: Record<
   PublicAuthRateLimitRuleOptions
 > = {
   login: { windowMs: 15 * 60 * 1000, maxAttempts: 10 },
+  twoFactorVerify: { windowMs: 15 * 60 * 1000, maxAttempts: 20 },
+  twoFactorResend: { windowMs: 15 * 60 * 1000, maxAttempts: 5 },
   register: { windowMs: 60 * 60 * 1000, maxAttempts: 5 },
   passwordResetEmail: { windowMs: 60 * 60 * 1000, maxAttempts: 5 },
   passwordResetConfirm: { windowMs: 15 * 60 * 1000, maxAttempts: 10 },

@@ -1,7 +1,7 @@
-import { Body, Controller, HttpStatus, Inject, Param, Post, Req, Res } from '@nestjs/common';
+import { Body, Controller, HttpException, HttpStatus, Inject, Param, Post, Req, Res } from '@nestjs/common';
+import { ResendTwoFactorRequest, VerifyTwoFactorRequest } from '../Dtos/TwoFactorDtos';
 import { ApiBody, ApiOperation, ApiParam, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { Request, Response } from 'express';
-import * as jwt from 'jsonwebtoken';
 import { Logger } from '../../Logger';
 import { RestUtilities } from '../../Utilities';
 import { AccessiOptions } from '../AccessiModule';
@@ -15,7 +15,7 @@ import {
   LoginResponse,
   PasswordExpiredResponse,
 } from '../Dtos';
-import { AuthService } from '../Services/AuthService/AuthService';
+import { AuthService, PASSWORD_LOGIN_DISABLED } from '../Services/AuthService/AuthService';
 import {
   checkPublicAuthRateLimit,
   sendPublicAuthRateLimitExceeded,
@@ -23,6 +23,10 @@ import {
 
 @ApiTags('Auth')
 @Controller('accessi/auth')
+/**
+ * Endpoint pubblici di autenticazione locale e verifica sessione.
+ * Il login SSO non riceve token esterni qui: il backend validante usa `FederatedAuthService.authenticate`.
+ */
 export class AuthController {
   logger: Logger = new Logger(AuthController.name);
 
@@ -109,7 +113,14 @@ export class AuthController {
       }
 
       const authenticatedPayload = await this.authService.getAuthenticatedTokenPayload(body.token);
-      return RestUtilities.sendBaseResponse(res, { userData: authenticatedPayload });
+      const userData = (authenticatedPayload as { utente?: unknown })?.utente;
+      if (!userData) {
+        throw new Error('Il token non contiene un utente Accessi valido.');
+      }
+
+      // Keep the runtime response aligned with GetUserByTokenResponse and Orval:
+      // Result.userData contains the authenticated user directly, not a nested JWT payload.
+      return RestUtilities.sendBaseResponse(res, { userData });
     } catch (error) {
       return RestUtilities.sendErrorMessage(res, error, AuthController.name, HttpStatus.UNAUTHORIZED);
     }
@@ -118,7 +129,7 @@ export class AuthController {
   @ApiOperation({
     summary: 'Effettua il login utente',
     description:
-      "Autentica l'utente con email e password. Restituisce un token JWT e i dati dell'utente se le credenziali sono corrette.",
+      "Con sola email restituisce passwordRequired oppure avvia il codice per utenti passwordless. Con password valida restituisce il login completo o challenge se la 2FA e attiva. Nessun JWT viene emesso prima della verifica del codice.",
     operationId: 'login',
   })
   @ApiBody({ type: LoginRequest })
@@ -137,6 +148,7 @@ export class AuthController {
     description: 'Password scaduta, e necessario aggiornarla.',
     type: PasswordExpiredResponse,
   })
+  @ApiResponse({ status: 403, description: 'Utente abilitato solo a SSO.', type: ErrorResponse })
   @Post('login')
   async login(@Req() request: Request, @Body() loginRequest: LoginRequest, @Res() res: Response) {
     try {
@@ -155,17 +167,7 @@ export class AuthController {
         return RestUtilities.sendInvalidCredentials(res);
       }
 
-      const tokenData = {
-        utente: userData?.utente,
-      };
-
-      userData.token = {
-        expiresIn: this.options.jwtOptions.expiresIn,
-        value: jwt.sign(tokenData, this.options.jwtOptions.secret, {
-          expiresIn: this.options.jwtOptions.expiresIn as any,
-        }),
-        type: 'Bearer',
-      };
+      if (!userData.challenge && !userData.passwordRequired) userData.token = this.authService.createAccessiToken(userData.utente, ['password']);
 
       return RestUtilities.sendBaseResponse(res, userData);
     } catch (error) {
@@ -174,8 +176,61 @@ export class AuthController {
         return RestUtilities.sendPasswordExpired(res);
       }
 
+      if (error instanceof HttpException) {
+        return RestUtilities.sendErrorMessage(res, error, AuthController.name, error.getStatus());
+      }
+
+      if ((error as Error)?.message === PASSWORD_LOGIN_DISABLED) {
+        return res.status(HttpStatus.FORBIDDEN).json({
+          severity: 'error', status: HttpStatus.FORBIDDEN, statusCode: 2,
+          code: PASSWORD_LOGIN_DISABLED,
+          error: PASSWORD_LOGIN_DISABLED,
+          message: 'Questo utente e abilitato solo tramite SSO. Accedi con un provider collegato.',
+        });
+      }
+
       this.logger.error('Errore durante il login', error);
+      if (RestUtilities.isDatabaseSchemaError(error)) {
+        return RestUtilities.sendErrorMessage(
+          res,
+          error,
+          AuthController.name,
+          HttpStatus.SERVICE_UNAVAILABLE,
+        );
+      }
       return RestUtilities.sendInvalidCredentials(res);
+    }
+  }
+
+  @Post('two-factor/verify')
+  @ApiOperation({ summary: 'Verifica il codice e completa il login', operationId: 'verifyTwoFactor' })
+  @ApiBody({ type: VerifyTwoFactorRequest })
+  @ApiResponse({ status: 200, type: LoginResponse })
+  @ApiResponse({ status: 401, type: ErrorResponse })
+  @ApiResponse({ status: 429, type: ErrorResponse })
+  async verifyTwoFactor(@Req() request: Request, @Body() body: VerifyTwoFactorRequest, @Res() res: Response) {
+    try {
+      const limit = checkPublicAuthRateLimit(this.options, 'twoFactorVerify', request, [body.challengeId]);
+      if (!limit.allowed) return sendPublicAuthRateLimitExceeded(res, limit.retryAfterSeconds);
+      return RestUtilities.sendBaseResponse(res, await this.authService.verifyTwoFactor(body.challengeId, body.code));
+    } catch (error) {
+      return RestUtilities.sendErrorMessage(res, error, AuthController.name, error instanceof HttpException ? error.getStatus() : 500);
+    }
+  }
+
+  @Post('two-factor/resend')
+  @ApiOperation({ summary: 'Reinvia il codice, invalidando il precedente', operationId: 'resendTwoFactor' })
+  @ApiBody({ type: ResendTwoFactorRequest })
+  @ApiResponse({ status: 200, type: LoginResponse })
+  @ApiResponse({ status: 401, type: ErrorResponse })
+  @ApiResponse({ status: 429, type: ErrorResponse })
+  async resendTwoFactor(@Req() request: Request, @Body() body: ResendTwoFactorRequest, @Res() res: Response) {
+    try {
+      const limit = checkPublicAuthRateLimit(this.options, 'twoFactorResend', request, [body.challengeId]);
+      if (!limit.allowed) return sendPublicAuthRateLimitExceeded(res, limit.retryAfterSeconds);
+      return RestUtilities.sendBaseResponse(res, await this.authService.resendTwoFactor(body.challengeId));
+    } catch (error) {
+      return RestUtilities.sendErrorMessage(res, error, AuthController.name, error instanceof HttpException ? error.getStatus() : 500);
     }
   }
 }

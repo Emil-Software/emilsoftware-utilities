@@ -1,0 +1,4022 @@
+{
+  "openapi": "3.0.0",
+  "paths": {
+    "/api/accessi/email/reset-password-page/{token}": {
+      "get": {
+        "operationId": "serveResetPasswordPage",
+        "parameters": [
+          {
+            "name": "token",
+            "required": true,
+            "in": "path",
+            "description": "Token per il reset della password",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "returnUrl",
+            "required": false,
+            "in": "query",
+            "description": "Url di ritorno della pagina",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Pagina di reset password servita con successo"
+          }
+        },
+        "summary": "Serve una pagina per il reset della password",
+        "tags": [
+          "Email"
+        ]
+      }
+    },
+    "/api/accessi/email/send-reset-password-email": {
+      "post": {
+        "operationId": "sendPasswordResetEmail",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SendResetPasswordEmailRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "L'email di reset e stata gestita con successo",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ActionResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Errore interno durante l'invio dell'email",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Invia una e-mail per il reset della password",
+        "tags": [
+          "Email"
+        ]
+      }
+    },
+    "/api/accessi/auth/confirm-reset-password/{token}": {
+      "post": {
+        "operationId": "resetPassword",
+        "parameters": [
+          {
+            "name": "token",
+            "required": true,
+            "in": "path",
+            "description": "Token per il reset della password",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ConfirmResetPasswordRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Password aggiornata con successo",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ActionResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Errore nella richiesta o token non valido",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Conferma il reset della password",
+        "tags": [
+          "Auth"
+        ]
+      }
+    },
+    "/api/accessi/auth/get-user-by-token": {
+      "post": {
+        "operationId": "getUserByToken",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GetUserByTokenRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Informazioni utente recuperate con successo",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GetUserByTokenResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Token non valido o scaduto",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Recupera le informazioni utente dal token JWT",
+        "tags": [
+          "Auth"
+        ]
+      }
+    },
+    "/api/accessi/auth/login": {
+      "post": {
+        "description": "Con sola email restituisce passwordRequired oppure avvia il codice per utenti passwordless. Con password valida restituisce il login completo o challenge se la 2FA e attiva. Nessun JWT viene emesso prima della verifica del codice.",
+        "operationId": "login",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LoginRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Login effettuato con successo",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LoginResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Credenziali non valide",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Password scaduta, e necessario aggiornarla.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PasswordExpiredResponse"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Effettua il login utente",
+        "tags": [
+          "Auth"
+        ]
+      }
+    },
+    "/api/accessi/auth/two-factor/verify": {
+      "post": {
+        "operationId": "verifyTwoFactor",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/VerifyTwoFactorRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LoginResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Verifica il codice e completa il login",
+        "tags": [
+          "Auth"
+        ]
+      }
+    },
+    "/api/accessi/auth/two-factor/resend": {
+      "post": {
+        "operationId": "resendTwoFactor",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ResendTwoFactorRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LoginResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Reinvia il codice, invalidando il precedente",
+        "tags": [
+          "Auth"
+        ]
+      }
+    },
+    "/api/accessi/permission/roles": {
+      "get": {
+        "description": "Recupera tutti i ruoli presenti nel sistema con le relative voci di menu.",
+        "operationId": "getRoles",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Elenco dei ruoli con i rispettivi menu",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GetRolesResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Errore interno del server",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Ritorna i ruoli disponibili con i relativi menu",
+        "tags": [
+          "Permission"
+        ]
+      }
+    },
+    "/api/accessi/permission/update-role/{codiceRuolo}": {
+      "put": {
+        "operationId": "updateRole",
+        "parameters": [
+          {
+            "name": "codiceRuolo",
+            "required": true,
+            "in": "path",
+            "description": "Codice identificativo del ruolo da aggiornare",
+            "schema": {
+              "example": 101,
+              "type": "number"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "description": "Dati aggiornati del ruolo",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Role"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Il ruolo e stato aggiornato con successo",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ActionResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Errore di validazione nei dati inviati",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Errore interno del server",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Aggiorna un ruolo esistente",
+        "tags": [
+          "Permission"
+        ]
+      }
+    },
+    "/api/accessi/permission/create-role": {
+      "post": {
+        "operationId": "createRole",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "description": "Dati del nuovo ruolo",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Role"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Il ruolo e stato creato con successo",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ActionResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Errore di validazione nei dati inviati",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Errore interno del server",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Crea un nuovo ruolo",
+        "tags": [
+          "Permission"
+        ]
+      }
+    },
+    "/api/accessi/permission/assign-roles/{codiceUtente}": {
+      "post": {
+        "operationId": "assignRolesToUser",
+        "parameters": [
+          {
+            "name": "codiceUtente",
+            "required": true,
+            "in": "path",
+            "description": "Codice identificativo dell'utente a cui assegnare i ruoli",
+            "schema": {
+              "example": 22,
+              "type": "number"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "description": "Lista dei ruoli da assegnare all'utente",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AssignRolesToUserRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Ruoli assegnati con successo all'utente",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ActionResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Errore di validazione nei dati inviati",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Errore interno del server",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Assegna piu ruoli a un utente",
+        "tags": [
+          "Permission"
+        ]
+      }
+    },
+    "/api/accessi/permission/assign-permissions/{codiceUtente}": {
+      "post": {
+        "operationId": "assignPermissionsToUser",
+        "parameters": [
+          {
+            "name": "codiceUtente",
+            "required": true,
+            "in": "path",
+            "description": "Codice identificativo dell'utente a cui assegnare le abilitazioni",
+            "schema": {
+              "example": 22,
+              "type": "number"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "description": "Lista delle abilitazioni da assegnare all'utente",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AssignPermissionsToUserRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Abilitazioni assegnate con successo all'utente",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ActionResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Errore di validazione nei dati inviati",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Errore interno del server",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Assegna abilitazioni dirette a un utente",
+        "tags": [
+          "Permission"
+        ]
+      }
+    },
+    "/api/accessi/permission/delete-role/{codiceRuolo}": {
+      "delete": {
+        "operationId": "deleteRole",
+        "parameters": [
+          {
+            "name": "codiceRuolo",
+            "required": true,
+            "in": "path",
+            "description": "Codice identificativo del ruolo da eliminare",
+            "schema": {
+              "example": 382,
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Ruolo eliminato con successo",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ActionResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Errore nei parametri della richiesta",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Errore interno del server",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Elimina un ruolo esistente",
+        "tags": [
+          "Permission"
+        ]
+      }
+    },
+    "/api/accessi/permission/menus": {
+      "get": {
+        "operationId": "getMenus",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Elenco menu",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GetMenusResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Errore interno del server",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Recupera tutti i menu disponibili",
+        "tags": [
+          "Permission"
+        ]
+      }
+    },
+    "/api/accessi/permission/groups-with-menus": {
+      "get": {
+        "operationId": "getGroupsWithMenus",
+        "parameters": [
+          {
+            "name": "includeDisabled",
+            "required": false,
+            "in": "query",
+            "description": "Quando true ritorna anche i menu e gruppi disabilitati.",
+            "schema": {
+              "type": "boolean"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Elenco gruppi con relativi menu",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GetGroupsWithMenusResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Errore interno del server",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Recupera tutti i gruppi disponibili con i relativi menu",
+        "tags": [
+          "Permission"
+        ]
+      }
+    },
+    "/api/accessi/permission/grants/{codiceUtente}": {
+      "get": {
+        "operationId": "getUserRolesAndGrants",
+        "parameters": [
+          {
+            "name": "codiceUtente",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Elenco grant utente",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserGrantsResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Errore interno del server",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Recupera i ruoli e i menu di un utente",
+        "tags": [
+          "Permission"
+        ]
+      }
+    },
+    "/api/accessi/user/reset-password/{token}": {
+      "get": {
+        "operationId": "serveResetPasswordPageUser",
+        "parameters": [
+          {
+            "name": "token",
+            "required": true,
+            "in": "path",
+            "description": "Token per il reset della password",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Serve la pagina di reset password",
+        "tags": [
+          "User"
+        ]
+      }
+    },
+    "/api/accessi/user/get-users": {
+      "get": {
+        "operationId": "getUsers",
+        "parameters": [
+          {
+            "name": "email",
+            "required": false,
+            "in": "query",
+            "description": "Email dell'utente da cercare",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "codiceUtente",
+            "required": false,
+            "in": "query",
+            "description": "Codice dell'utente da cercare",
+            "schema": {
+              "type": "number"
+            }
+          },
+          {
+            "name": "includeExtensionFields",
+            "required": false,
+            "in": "query",
+            "description": "Includi extension fields",
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "includeGrants",
+            "required": false,
+            "in": "query",
+            "description": "Includi permessi",
+            "schema": {
+              "type": "boolean"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Lista utenti recuperata con successo",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GetUsersResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Credenziali non valide",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Operazione non autorizzata",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Errore interno del server",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Recupera la lista degli utenti",
+        "tags": [
+          "User"
+        ]
+      }
+    },
+    "/api/accessi/user/delete-user/{codiceUtente}": {
+      "delete": {
+        "description": "Imposta lo stato di un utente a eliminato senza rimuovere i record.",
+        "operationId": "deleteUser",
+        "parameters": [
+          {
+            "name": "codiceUtente",
+            "required": true,
+            "in": "path",
+            "description": "Codice identificativo dell'utente da eliminare",
+            "schema": {
+              "example": 123,
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Utente eliminato con successo",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ActionResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Errore nei parametri della richiesta",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Errore interno del server",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Elimina un utente",
+        "tags": [
+          "User"
+        ]
+      }
+    },
+    "/api/accessi/user/set-stato": {
+      "post": {
+        "operationId": "setStatoRegistrazione",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SetStatoRegistrazioneDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Stato registrazione aggiornato con successo",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ActionResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Errore nei parametri della richiesta",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Errore interno del server",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Imposta lo stato di registrazione di un utente",
+        "tags": [
+          "User"
+        ]
+      }
+    },
+    "/api/accessi/user/register": {
+      "post": {
+        "description": "Disponibile soltanto quando publicRegistration.enabled e true. Per utenti SSO usare il provisioning master nel tag Federated authentication.",
+        "operationId": "register",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "description": "Dati necessari per la registrazione dell'utente",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PublicRegisterRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Utente registrato con successo. Restituisce il codice utente e invia una mail di reset password.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RegisterResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Errore nella registrazione.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Errore interno del server durante la registrazione o l'invio email.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Registra un nuovo utente",
+        "tags": [
+          "User"
+        ]
+      }
+    },
+    "/api/accessi/user/create-managed-user": {
+      "post": {
+        "description": "Riservato a superutente. Crea un utente in attesa di impostazione password e invia la mail di reset.",
+        "operationId": "createManagedUser",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RegisterRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RegisterResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Crea un utente locale da amministrazione",
+        "tags": [
+          "User"
+        ]
+      }
+    },
+    "/api/accessi/user/update-user/{codiceUtente}": {
+      "put": {
+        "operationId": "updateUtente",
+        "parameters": [
+          {
+            "name": "codiceUtente",
+            "required": true,
+            "in": "path",
+            "description": "Codice identificativo dell'utente da aggiornare",
+            "schema": {
+              "example": 123,
+              "type": "number"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "description": "Dati aggiornati dell'utente",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UserDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Utente aggiornato con successo",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ActionResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Errore nell'aggiornamento",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Operazione non autorizzata",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Errore interno del server",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Aggiorna un utente esistente",
+        "tags": [
+          "User"
+        ]
+      }
+    },
+    "/api/accessi/user/set-gdpr/{codiceUtente}": {
+      "patch": {
+        "operationId": "setGdpr",
+        "parameters": [
+          {
+            "name": "codiceUtente",
+            "required": true,
+            "in": "path",
+            "description": "Codice identificativo dell'utente che accetta il GDPR",
+            "schema": {
+              "example": 123,
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Consenso GDPR impostato con successo",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ActionResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Errore nella richiesta",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Operazione non autorizzata",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Imposta il consenso GDPR per un utente",
+        "tags": [
+          "User"
+        ]
+      }
+    },
+    "/api/accessi/filtri/tipi": {
+      "get": {
+        "description": "Ritorna tutti i tipi di filtri disponibili nel sistema",
+        "operationId": "getTipiFiltro",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Lista dei tipi di filtri recuperata con successo",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GetFiltriResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Errore interno durante il recupero dei tipi di filtri",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Recupera la lista dei tipi di filtri",
+        "tags": [
+          "Filtri"
+        ]
+      }
+    },
+    "/api/accessi/filtri/utente": {
+      "get": {
+        "description": "Ritorna tutti i filtri associati ad un utente specifico",
+        "operationId": "getFiltriUtente",
+        "parameters": [
+          {
+            "name": "codUte",
+            "required": false,
+            "in": "query",
+            "description": "Codice utente",
+            "schema": {
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Lista dei filtri dell'utente recuperata con successo",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GetFiltriUtenteResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Errore nella richiesta.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Operazione non autorizzata.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Errore interno del server.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Recupera i filtri di un utente",
+        "tags": [
+          "Filtri"
+        ]
+      },
+      "post": {
+        "description": "Permette di salvare i filtri associati ad un utente specifico",
+        "operationId": "saveFiltriUtente",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FiltriUtente"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Filtri utente salvati con successo",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ActionResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Errore di validazione nei dati inviati.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Operazione non autorizzata.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Errore interno durante il salvataggio dei filtri utente",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Inserisce o aggiorna i filtri di un utente",
+        "tags": [
+          "Filtri"
+        ]
+      }
+    },
+    "/api/accessi/configurator/menus/{codiceMenu}/enabled": {
+      "patch": {
+        "operationId": "setMenuEnabled",
+        "parameters": [
+          {
+            "name": "codiceMenu",
+            "required": true,
+            "in": "path",
+            "description": "Codice identificativo del menu da aggiornare",
+            "schema": {
+              "example": "MNU001",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateEnabledStatusRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Stato del menu aggiornato con successo",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ActionResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Errore di validazione nei dati inviati",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Utente non autenticato o token non valido",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Utente non autorizzato ad eseguire l'operazione",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Errore interno del server",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Aggiorna lo stato di abilitazione di un menu",
+        "tags": [
+          "Configurator"
+        ]
+      }
+    },
+    "/api/accessi/configurator/groups/{codiceGruppo}/enabled": {
+      "patch": {
+        "operationId": "setGroupEnabled",
+        "parameters": [
+          {
+            "name": "codiceGruppo",
+            "required": true,
+            "in": "path",
+            "description": "Codice identificativo del gruppo da aggiornare",
+            "schema": {
+              "example": "GRP01",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateEnabledStatusRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Stato del gruppo aggiornato con successo",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ActionResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Errore di validazione nei dati inviati",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Utente non autenticato o token non valido",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Utente non autorizzato ad eseguire l'operazione",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Errore interno del server",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Aggiorna lo stato di abilitazione di un gruppo menu",
+        "tags": [
+          "Configurator"
+        ]
+      }
+    },
+    "/api/accessi/federated-auth/providers": {
+      "get": {
+        "description": "Riservato a superutente. Restituisce solo catalogo e stato Accessi; issuer, secret e configurazioni SSO restano nel backend.",
+        "operationId": "getFederatedProviders",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FederatedProviderListResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Elenca i provider SSO censiti",
+        "tags": [
+          "Federated authentication"
+        ]
+      },
+      "post": {
+        "description": "Riservato a superutente. La chiave provider deve corrispondere alla configurazione stabile del backend; non salvare segreti, issuer o token.",
+        "operationId": "createFederatedProvider",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateFederatedProviderRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FederatedProviderResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Censisce un provider SSO",
+        "tags": [
+          "Federated authentication"
+        ]
+      }
+    },
+    "/api/accessi/federated-auth/providers/{provider}": {
+      "patch": {
+        "description": "Riservato a superutente. La chiave provider è immutabile: disabilitarla blocca nuovi login SSO ma conserva i collegamenti storici.",
+        "operationId": "updateFederatedProvider",
+        "parameters": [
+          {
+            "name": "provider",
+            "required": true,
+            "in": "path",
+            "description": "Chiave stabile del provider censito.",
+            "schema": {
+              "example": "azure-ad-acme-produzione",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateFederatedProviderRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FederatedProviderResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Aggiorna o disabilita un provider SSO",
+        "tags": [
+          "Federated authentication"
+        ]
+      }
+    },
+    "/api/accessi/federated-auth/users/{codiceUtente}/identities": {
+      "get": {
+        "description": "Riservato a superutente. Non restituisce token esterni o claim del provider.",
+        "operationId": "getFederatedIdentities",
+        "parameters": [
+          {
+            "name": "codiceUtente",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "example": 123,
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FederatedIdentityListResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Elenca le identita SSO di un utente",
+        "tags": [
+          "Federated authentication"
+        ]
+      },
+      "post": {
+        "description": "Il master deve fornire un provider e subject ottenuti da una verifica SSO lato backend; questo endpoint non verifica token esterni.",
+        "operationId": "linkFederatedIdentity",
+        "parameters": [
+          {
+            "name": "codiceUtente",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "example": 123,
+              "type": "number"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateFederatedIdentityRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FederatedIdentityResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Associa un SSO gia verificato a un utente esistente",
+        "tags": [
+          "Federated authentication"
+        ]
+      }
+    },
+    "/api/accessi/federated-auth/users": {
+      "post": {
+        "description": "Riservato a superutente. L utente nasce confermato, con identita collegata e senza password salvo opt-in esplicito.",
+        "operationId": "createFederatedUser",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateFederatedUserRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FederatedIdentityResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Provider o subject non validi.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Provider SSO non censito.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Email o identità SSO già associate a un utente.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Errore inatteso durante il provisioning; la risposta contiene FEDERATED_USER_PROVISIONING_FAILED.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Schema Accessi non aggiornato.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Crea un utente gestito e SSO-only",
+        "tags": [
+          "Federated authentication"
+        ]
+      }
+    },
+    "/api/accessi/federated-auth/users/{codiceUtente}/password-login": {
+      "patch": {
+        "description": "Con false il login locale restituisce PASSWORD_LOGIN_DISABLED; le identita SSO attive restano utilizzabili.",
+        "operationId": "setPasswordLoginPolicy",
+        "parameters": [
+          {
+            "name": "codiceUtente",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "example": 123,
+              "type": "number"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SetPasswordLoginPolicyRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ActionResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Abilita o disabilita il login con password",
+        "tags": [
+          "Federated authentication"
+        ]
+      }
+    },
+    "/api/accessi/federated-auth/identities/{identityKey}": {
+      "delete": {
+        "description": "Soft delete: l associazione resta tracciata ma non puo piu autenticare.",
+        "operationId": "disableFederatedIdentity",
+        "parameters": [
+          {
+            "name": "identityKey",
+            "required": true,
+            "in": "path",
+            "description": "SHA-256 restituito dagli endpoint di elenco o creazione.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ActionResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Disabilita un identita SSO",
+        "tags": [
+          "Federated authentication"
+        ]
+      },
+      "patch": {
+        "description": "Consente di modificare nota e stato attivo del collegamento. identityKey e una chiave tecnica, non un token SSO.",
+        "operationId": "updateFederatedIdentity",
+        "parameters": [
+          {
+            "name": "identityKey",
+            "required": true,
+            "in": "path",
+            "description": "SHA-256 restituito dagli endpoint di elenco o creazione.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateFederatedIdentityRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ActionResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Aggiorna un collegamento SSO",
+        "tags": [
+          "Federated authentication"
+        ]
+      }
+    },
+    "/api/accessi/federated-auth/users/{codiceUtente}/identities/{identityKey}": {
+      "delete": {
+        "description": "Riservato a superutente. Rimuove il collegamento provider e subject dall’utente, senza eliminare l’utente Accessi.",
+        "operationId": "deleteFederatedIdentityPermanently",
+        "parameters": [
+          {
+            "name": "codiceUtente",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "example": 123,
+              "type": "number"
+            }
+          },
+          {
+            "name": "identityKey",
+            "required": true,
+            "in": "path",
+            "description": "SHA-256 del collegamento da eliminare.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ActionResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Collegamento assente o non appartenente all’utente.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Elimina definitivamente un collegamento SSO",
+        "tags": [
+          "Federated authentication"
+        ]
+      }
+    }
+  },
+  "info": {
+    "title": "Accessi API",
+    "description": "",
+    "version": "1.0",
+    "contact": {}
+  },
+  "tags": [],
+  "servers": [],
+  "components": {
+    "securitySchemes": {
+      "bearer": {
+        "scheme": "bearer",
+        "bearerFormat": "JWT",
+        "type": "http"
+      }
+    },
+    "schemas": {
+      "SendResetPasswordEmailRequest": {
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": "string",
+            "description": "L'email dell'utente che richiede il reset.",
+            "example": "mario.rossi@dev.it"
+          },
+          "htmlMail": {
+            "type": "string",
+            "description": "HTML personalizzato della mail di reset, se gestito dal chiamante.",
+            "example": "<html><body>Reset password</body></html>"
+          }
+        },
+        "required": [
+          "email"
+        ]
+      },
+      "ActionResponse": {
+        "type": "object",
+        "properties": {
+          "severity": {
+            "type": "string",
+            "example": "success"
+          },
+          "status": {
+            "type": "number",
+            "example": 200
+          },
+          "statusCode": {
+            "type": "number",
+            "example": 0
+          },
+          "message": {
+            "type": "string",
+            "example": "Operazione completata con successo."
+          }
+        },
+        "required": [
+          "severity",
+          "status",
+          "statusCode",
+          "message"
+        ]
+      },
+      "ErrorResponse": {
+        "type": "object",
+        "properties": {
+          "severity": {
+            "type": "string",
+            "example": "error"
+          },
+          "status": {
+            "type": "number",
+            "example": 400
+          },
+          "statusCode": {
+            "type": "number",
+            "example": 2
+          },
+          "message": {
+            "type": "string",
+            "example": "An error occurred"
+          },
+          "code": {
+            "type": "string",
+            "example": "ACCESSI_DATABASE_SCHEMA_OUTDATED",
+            "description": "Codice stabile leggibile dal client. Non contiene dettagli tecnici o dati sensibili."
+          },
+          "error": {
+            "type": "string",
+            "example": "ACCESSI_REQUEST_ERROR",
+            "description": "Campo legacy che riporta il codice stabile dell errore, senza SQL o stack trace."
+          },
+          "details": {
+            "example": [
+              "email: deve essere una stringa."
+            ],
+            "description": "Dettagli di validazione sicuri, presenti solo per ACCESSI_VALIDATION_ERROR.",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "severity",
+          "status",
+          "statusCode",
+          "message",
+          "error"
+        ]
+      },
+      "ConfirmResetPasswordRequest": {
+        "type": "object",
+        "properties": {
+          "newPassword": {
+            "type": "string",
+            "description": "Nuova password da impostare.",
+            "minLength": 8,
+            "maxLength": 100,
+            "example": "PasswordSicura123!"
+          }
+        },
+        "required": [
+          "newPassword"
+        ]
+      },
+      "GetUserByTokenRequest": {
+        "type": "object",
+        "properties": {
+          "token": {
+            "type": "string",
+            "description": "JWT dell'utente.",
+            "example": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+          }
+        },
+        "required": [
+          "token"
+        ]
+      },
+      "Status": {
+        "type": "object",
+        "properties": {
+          "errorCode": {
+            "type": "string",
+            "example": "0",
+            "description": "Codice di errore, \"0\" se tutto ok"
+          },
+          "errorDescription": {
+            "type": "string",
+            "example": "Success",
+            "description": "Descrizione dell'errore o successo"
+          }
+        },
+        "required": [
+          "errorCode",
+          "errorDescription"
+        ]
+      },
+      "AuthenticatedUserPayloadDto": {
+        "type": "object",
+        "properties": {
+          "codiceUtente": {
+            "type": "number",
+            "example": 123
+          },
+          "email": {
+            "type": "string",
+            "example": "mario.rossi@dev.it"
+          },
+          "flagSuper": {
+            "type": "boolean",
+            "example": false
+          },
+          "flagAdminConfigurator": {
+            "type": "boolean",
+            "example": false
+          },
+          "flagDueFattori": {
+            "type": "boolean",
+            "description": "Verifica email richiesta per questo utente.",
+            "default": false
+          },
+          "passwordlessLoginEnabled": {
+            "type": "boolean",
+            "description": "Accesso consentito con il solo codice email.",
+            "default": false
+          },
+          "passwordLoginEnabled": {
+            "type": "boolean",
+            "description": "Policy di login locale preesistente.",
+            "default": true
+          },
+          "statoRegistrazione": {
+            "type": "number",
+            "example": 1
+          }
+        },
+        "required": [
+          "codiceUtente",
+          "flagSuper",
+          "flagAdminConfigurator",
+          "statoRegistrazione"
+        ]
+      },
+      "AuthenticatedTokenPayloadDto": {
+        "type": "object",
+        "properties": {
+          "userData": {
+            "$ref": "#/components/schemas/AuthenticatedUserPayloadDto"
+          }
+        },
+        "required": [
+          "userData"
+        ]
+      },
+      "GetUserByTokenResponse": {
+        "type": "object",
+        "properties": {
+          "Status": {
+            "$ref": "#/components/schemas/Status"
+          },
+          "Message": {
+            "type": "string",
+            "example": "Dati recuperati con successo.",
+            "description": "Messaggio informativo restituito dalla libreria quando presente."
+          },
+          "Result": {
+            "$ref": "#/components/schemas/AuthenticatedTokenPayloadDto"
+          }
+        },
+        "required": [
+          "Status",
+          "Result"
+        ]
+      },
+      "LoginRequest": {
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": "string",
+            "description": "Email dell'utente",
+            "example": "mario.rossi"
+          },
+          "password": {
+            "type": "string",
+            "description": "Password: omettere soltanto per utenti con accesso tramite solo codice abilitato.",
+            "example": "Str0ngP@ssw0rd!"
+          }
+        },
+        "required": [
+          "email"
+        ]
+      },
+      "TwoFactorChallengeDto": {
+        "type": "object",
+        "properties": {
+          "twoFactorRequired": {
+            "type": "number",
+            "enum": [
+              true
+            ],
+            "description": "Il login non e completo: nessun JWT e stato emesso."
+          },
+          "challengeId": {
+            "type": "string",
+            "description": "Identificativo opaco della verifica, non utilizzabile come Bearer token."
+          },
+          "expiresAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "resendAfterSeconds": {
+            "type": "number",
+            "example": 60,
+            "description": "Secondi minimi prima del prossimo reinvio."
+          },
+          "method": {
+            "type": "string",
+            "enum": [
+              "email"
+            ]
+          }
+        },
+        "required": [
+          "twoFactorRequired",
+          "challengeId",
+          "expiresAt",
+          "resendAfterSeconds",
+          "method"
+        ]
+      },
+      "Permission": {
+        "type": "object",
+        "properties": {
+          "codiceMenu": {
+            "type": "string",
+            "description": "Codice identificativo del menu a cui assegnare l'abilitazione.",
+            "example": "MNU001"
+          },
+          "tipoAbilitazione": {
+            "type": "number",
+            "description": "Tipo di abilitazione assegnata all'utente per il menu specificato.",
+            "example": 30
+          }
+        },
+        "required": [
+          "codiceMenu",
+          "tipoAbilitazione"
+        ]
+      },
+      "UserDto": {
+        "type": "object",
+        "properties": {
+          "progressivo": {
+            "type": "number",
+            "description": "Progressivo identificativo del filtro",
+            "example": 1
+          },
+          "numRep": {
+            "type": "number",
+            "description": "Numero del reparto associato",
+            "example": 1002
+          },
+          "idxPers": {
+            "type": "number",
+            "description": "Idx personale",
+            "example": 15
+          },
+          "codCliSuper": {
+            "type": "number",
+            "description": "Codice Cliente padre (codcli di esgest)",
+            "example": 1
+          },
+          "codAge": {
+            "type": "number",
+            "description": "Codice dell'agente associato",
+            "example": 1
+          },
+          "codCliCol": {
+            "type": "number",
+            "description": "Codice del cliente collegato",
+            "example": 1
+          },
+          "codClienti": {
+            "type": "string",
+            "description": "Lista di codici clienti separati da virgola",
+            "example": "123,456,789"
+          },
+          "tipFil": {
+            "type": "number",
+            "description": "Tipo di filtro applicato",
+            "example": 99
+          },
+          "idxPos": {
+            "type": "number",
+            "description": "idx della postazione nella tabella ANTENNE_POS di PROLAV",
+            "example": 12
+          },
+          "codDip": {
+            "type": "number",
+            "description": "Codice dipendente di esgest",
+            "example": 12
+          },
+          "codVet": {
+            "type": "number",
+            "description": "Codice del vettore",
+            "example": 12
+          },
+          "codiceUtente": {
+            "type": "number",
+            "description": "Codice identificativo univoco dell'utente.",
+            "example": 123
+          },
+          "email": {
+            "type": "string",
+            "description": "Email dell'utente.",
+            "example": "mario.rossi@dev.it"
+          },
+          "flagGdpr": {
+            "type": "boolean",
+            "description": "Flag per l'accettazione del GDPR.",
+            "example": true
+          },
+          "dataGdpr": {
+            "type": "string",
+            "description": "Data di accettazione del GDPR.",
+            "format": "date-time",
+            "example": "2024-03-18T12:34:56Z"
+          },
+          "dataInserimento": {
+            "type": "string",
+            "description": "Data di inserimento dell'utente nel sistema.",
+            "format": "date-time",
+            "example": "2023-01-01T08:30:00Z"
+          },
+          "dataScadenzaPassword": {
+            "type": "string",
+            "description": "Data scadenza password.",
+            "format": "date-time",
+            "example": "2025-06-01"
+          },
+          "dataLastLogin": {
+            "type": "string",
+            "description": "Ultima data di accesso dell'utente.",
+            "format": "date-time",
+            "example": "2024-03-15T14:45:00Z"
+          },
+          "statoRegistrazione": {
+            "type": "number",
+            "description": "Stato della registrazione dell'utente.",
+            "enum": [
+              0,
+              5,
+              10,
+              20,
+              50,
+              99
+            ],
+            "example": 20
+          },
+          "keyRegistrazione": {
+            "type": "string",
+            "description": "Chiave di registrazione dell'utente.",
+            "example": "abc123xyz"
+          },
+          "cognome": {
+            "type": "string",
+            "description": "Cognome dell'utente.",
+            "example": "Rossi"
+          },
+          "nome": {
+            "type": "string",
+            "description": "Nome dell'utente.",
+            "example": "Mario"
+          },
+          "avatar": {
+            "type": "string",
+            "description": "Avatar (URL o base64).",
+            "example": "https://example.com/avatar.jpg",
+            "nullable": true
+          },
+          "flagDueFattori": {
+            "type": "boolean",
+            "description": "Flag che indica se l'autenticazione a due fattori è attivata.",
+            "example": true
+          },
+          "passwordlessLoginEnabled": {
+            "type": "boolean",
+            "description": "Consente accesso con il solo codice email. Richiede flagDueFattori e viene gestito dagli amministratori.",
+            "default": false
+          },
+          "codiceLingua": {
+            "type": "string",
+            "description": "Codice lingua preferito.",
+            "example": "it"
+          },
+          "cellulare": {
+            "type": "string",
+            "description": "Numero di cellulare.",
+            "example": "+393401234567",
+            "nullable": true
+          },
+          "flagSuper": {
+            "type": "boolean",
+            "description": "Flag superutente.",
+            "example": false
+          },
+          "flagAdminConfigurator": {
+            "type": "boolean",
+            "description": "Flag che indica se l'utente è configuratore",
+            "example": false
+          },
+          "passwordLoginEnabled": {
+            "type": "boolean",
+            "description": "Abilita il login locale con password. Se false, l utente puo autenticarsi solo tramite identita SSO attive.",
+            "example": false
+          },
+          "paginaDefault": {
+            "type": "string",
+            "description": "Pagina di default dell'utente all'accesso.",
+            "example": "/dashboard"
+          },
+          "nummac": {
+            "type": "number",
+            "description": "Numero MAC associato all'utente.",
+            "example": 12
+          },
+          "jsonMetadata": {
+            "type": "string",
+            "description": "Metadata JSON personalizzato.",
+            "example": "{\"theme\": \"dark\"}"
+          },
+          "ragSocCli": {
+            "type": "string",
+            "description": "Ragione sociale cliente.",
+            "example": "ACME Corp SpA"
+          },
+          "roles": {
+            "description": "Ruoli assegnati all'utente.",
+            "example": [
+              1,
+              2
+            ],
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "permissions": {
+            "description": "Permessi assegnati all'utente.",
+            "example": [
+              {
+                "codiceMenu": "MNUOFFICINA",
+                "tipoAbilitazione": 20
+              }
+            ],
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Permission"
+            }
+          }
+        },
+        "required": [
+          "codiceUtente",
+          "email"
+        ]
+      },
+      "FiltriUtente": {
+        "type": "object",
+        "properties": {
+          "codUte": {
+            "type": "number",
+            "description": "Codice dell'utente",
+            "example": 1
+          },
+          "progressivo": {
+            "type": "number",
+            "description": "Progressivo identificativo del filtro",
+            "example": 1
+          },
+          "numRep": {
+            "type": "number",
+            "description": "Numero del reparto associato",
+            "example": 1002
+          },
+          "idxPers": {
+            "type": "number",
+            "description": "Idx personale",
+            "example": 15
+          },
+          "codCliSuper": {
+            "type": "number",
+            "description": "Codice Cliente padre (codcli di esgest)",
+            "example": 1
+          },
+          "codAge": {
+            "type": "number",
+            "description": "Codice dell'agente associato",
+            "example": 1
+          },
+          "codCliCol": {
+            "type": "number",
+            "description": "Codice del cliente collegato",
+            "example": 1
+          },
+          "codClienti": {
+            "type": "string",
+            "description": "Lista di codici clienti separati da virgola",
+            "example": "123,456,789"
+          },
+          "tipFil": {
+            "type": "number",
+            "description": "Tipo di filtro applicato",
+            "example": 99
+          },
+          "idxPos": {
+            "type": "number",
+            "description": "idx della postazione nella tabella ANTENNE_POS di PROLAV",
+            "example": 12
+          },
+          "codDip": {
+            "type": "number",
+            "description": "Codice dipendente di esgest",
+            "example": 12
+          },
+          "codVet": {
+            "type": "number",
+            "description": "Codice del vettore",
+            "example": 12
+          }
+        },
+        "required": [
+          "codUte"
+        ]
+      },
+      "AbilitazioneMenu": {
+        "type": "object",
+        "properties": {
+          "codiceMenu": {
+            "type": "string",
+            "description": "Codice univoco del menu",
+            "example": "MNUELENCOCLIENTI"
+          },
+          "tipoAbilitazione": {
+            "type": "number",
+            "description": "Tipo di abilitazione",
+            "enum": [
+              0,
+              10,
+              20,
+              30
+            ],
+            "example": 20
+          },
+          "descrizioneMenu": {
+            "type": "string",
+            "description": "Descrizione del menu",
+            "example": "Lista Clienti"
+          },
+          "descrizioneGruppo": {
+            "type": "string",
+            "description": "Descrizione del gruppo a cui appartiene il menu",
+            "example": "Amministrazione"
+          },
+          "codiceGruppo": {
+            "type": "string",
+            "description": "Codice univoco del gruppo a cui appartiene il menu",
+            "example": "C"
+          },
+          "icona": {
+            "type": "string",
+            "description": "Nome dell'icona associata al menu",
+            "example": "people"
+          },
+          "tipo": {
+            "type": "string",
+            "description": "Tipo di menu",
+            "example": "M"
+          },
+          "pagina": {
+            "type": "string",
+            "description": "Percorso della pagina associata al menu",
+            "example": "/lista-clienti"
+          },
+          "note": {
+            "type": "string",
+            "description": "Nota informativa associata al menu",
+            "example": "Visibile solo dopo abilitazione"
+          }
+        },
+        "required": [
+          "codiceMenu"
+        ]
+      },
+      "RuoliMenu": {
+        "type": "object",
+        "properties": {
+          "codiceRuolo": {
+            "type": "number",
+            "description": "Codice Ruolo",
+            "example": 1
+          },
+          "codiceMenu": {
+            "type": "string",
+            "description": "Codice univoco del menu",
+            "example": "MNUELENCOCLIENTI"
+          },
+          "tipoAbilitazione": {
+            "type": "number",
+            "description": "Tipo di abilitazione",
+            "enum": [
+              0,
+              10,
+              20,
+              30
+            ],
+            "example": 10
+          }
+        },
+        "required": [
+          "codiceMenu",
+          "tipoAbilitazione"
+        ]
+      },
+      "Role": {
+        "type": "object",
+        "properties": {
+          "codiceRuolo": {
+            "type": "number",
+            "description": "Codice univoco del ruolo",
+            "example": 1
+          },
+          "descrizioneRuolo": {
+            "type": "string",
+            "description": "Descrizione del ruolo"
+          },
+          "menu": {
+            "description": "Lista di menu associati al ruolo",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/RuoliMenu"
+            }
+          }
+        },
+        "required": [
+          "descrizioneRuolo",
+          "menu"
+        ]
+      },
+      "UserGrantsDto": {
+        "type": "object",
+        "properties": {
+          "abilitazioni": {
+            "description": "Abilitazioni dell'utente",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AbilitazioneMenu"
+            }
+          },
+          "ruoli": {
+            "description": "Ruoli dell'utente",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Role"
+            }
+          },
+          "grants": {
+            "description": "Grants combinati",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AbilitazioneMenu"
+            }
+          }
+        },
+        "required": [
+          "abilitazioni",
+          "ruoli",
+          "grants"
+        ]
+      },
+      "TokenResult": {
+        "type": "object",
+        "properties": {
+          "expiresIn": {
+            "type": "string",
+            "description": "Tempo di scadenza del token in secondi",
+            "example": "3600"
+          },
+          "value": {
+            "type": "string",
+            "description": "Valore del token JWT o Basic",
+            "example": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+          },
+          "type": {
+            "type": "string",
+            "description": "Tipo di token di autenticazione",
+            "enum": [
+              "Bearer",
+              "Basic"
+            ],
+            "example": "Bearer"
+          }
+        },
+        "required": [
+          "expiresIn",
+          "value",
+          "type"
+        ]
+      },
+      "LoginResult": {
+        "type": "object",
+        "properties": {
+          "passwordRequired": {
+            "type": "number",
+            "enum": [
+              true
+            ],
+            "description": "Il primo passo email richiede ora la password. Nessun utente o token viene restituito."
+          },
+          "challenge": {
+            "description": "Presente solo quando serve il codice. Profilo, grant e token sono assenti fino alla verifica.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/TwoFactorChallengeDto"
+              }
+            ]
+          },
+          "utente": {
+            "description": "Dati utente, presenti solo al completamento del login.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/UserDto"
+              }
+            ]
+          },
+          "filtri": {
+            "description": "Filtri utente",
+            "nullable": true,
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/FiltriUtente"
+            }
+          },
+          "userGrants": {
+            "description": "Abilitazioni e ruoli utente",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/UserGrantsDto"
+              }
+            ]
+          },
+          "extensionFields": {
+            "type": "object",
+            "description": "Extension Fields"
+          },
+          "token": {
+            "description": "Token, assente durante la verifica del codice.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/TokenResult"
+              }
+            ]
+          }
+        }
+      },
+      "LoginResponse": {
+        "type": "object",
+        "properties": {
+          "Status": {
+            "$ref": "#/components/schemas/Status"
+          },
+          "Message": {
+            "type": "string",
+            "example": "Dati recuperati con successo.",
+            "description": "Messaggio informativo restituito dalla libreria quando presente."
+          },
+          "Result": {
+            "$ref": "#/components/schemas/LoginResult"
+          }
+        },
+        "required": [
+          "Status",
+          "Result"
+        ]
+      },
+      "PasswordExpiredResponse": {
+        "type": "object",
+        "properties": {
+          "severity": {
+            "type": "string",
+            "example": "warning"
+          },
+          "statusCode": {
+            "type": "number",
+            "example": 1
+          },
+          "code": {
+            "type": "string",
+            "example": "PASSWORD_EXPIRED"
+          },
+          "message": {
+            "type": "string",
+            "example": "Password scaduta. E' necessario aggiornarla"
+          }
+        },
+        "required": [
+          "severity",
+          "statusCode",
+          "code",
+          "message"
+        ]
+      },
+      "VerifyTwoFactorRequest": {
+        "type": "object",
+        "properties": {
+          "challengeId": {
+            "type": "string",
+            "minLength": 64,
+            "maxLength": 64
+          },
+          "code": {
+            "type": "string",
+            "description": "Codice monouso ricevuto via email.",
+            "example": "012345",
+            "pattern": "^\\d{6}$"
+          }
+        },
+        "required": [
+          "challengeId",
+          "code"
+        ]
+      },
+      "ResendTwoFactorRequest": {
+        "type": "object",
+        "properties": {
+          "challengeId": {
+            "type": "string",
+            "minLength": 64,
+            "maxLength": 64
+          }
+        },
+        "required": [
+          "challengeId"
+        ]
+      },
+      "GetRolesResponse": {
+        "type": "object",
+        "properties": {
+          "Status": {
+            "$ref": "#/components/schemas/Status"
+          },
+          "Message": {
+            "type": "string",
+            "example": "Dati recuperati con successo.",
+            "description": "Messaggio informativo restituito dalla libreria quando presente."
+          },
+          "Result": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Role"
+            }
+          }
+        },
+        "required": [
+          "Status",
+          "Result"
+        ]
+      },
+      "AssignRolesToUserRequest": {
+        "type": "object",
+        "properties": {
+          "roles": {
+            "description": "Lista dei codici dei ruoli da assegnare all'utente.",
+            "example": [
+              1,
+              2,
+              3
+            ],
+            "type": "array",
+            "items": {
+              "type": "number"
+            }
+          }
+        },
+        "required": [
+          "roles"
+        ]
+      },
+      "AssignPermissionsToUserRequest": {
+        "type": "object",
+        "properties": {
+          "permissions": {
+            "description": "Lista delle abilitazioni da assegnare all'utente.",
+            "example": [
+              {
+                "codiceMenu": "MNU001",
+                "tipoAbilitazione": 30
+              },
+              {
+                "codiceMenu": "MNU002",
+                "tipoAbilitazione": 10
+              }
+            ],
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Permission"
+            }
+          }
+        },
+        "required": [
+          "permissions"
+        ]
+      },
+      "MenuEntity": {
+        "type": "object",
+        "properties": {
+          "codiceMenu": {
+            "type": "string",
+            "description": "Codice univoco del menù.",
+            "example": "MNU001"
+          },
+          "descrizioneMenu": {
+            "type": "string",
+            "description": "Descrizione del menù.",
+            "example": "Gestione Utenti"
+          },
+          "codiceGruppo": {
+            "type": "string",
+            "description": "Codice del gruppo a cui appartiene il menù.",
+            "example": "GRP01"
+          },
+          "descrizioneGruppo": {
+            "type": "string",
+            "description": "Descrizione del gruppo a cui appartiene il menù.",
+            "example": "Gestione Accessi"
+          },
+          "icona": {
+            "type": "string",
+            "description": "Percorso dell'icona associata al menù.",
+            "example": "fa-users"
+          },
+          "tipo": {
+            "type": "string",
+            "description": "Tipo di menù.",
+            "example": "admin"
+          },
+          "pagina": {
+            "type": "string",
+            "description": "Percorso della pagina associata al menù.",
+            "example": "/accessi/gestione-utenti"
+          },
+          "ordineMenu": {
+            "type": "number",
+            "description": "Ordine del menu.",
+            "example": 1
+          },
+          "ordineGruppo": {
+            "type": "number",
+            "description": "Ordine del gruppo.",
+            "example": 1
+          },
+          "enabled": {
+            "type": "boolean",
+            "description": "Flag che indica se il menu e abilitato.",
+            "example": true
+          },
+          "tipoAbilitazione": {
+            "type": "number",
+            "description": "Tipo abilitazione opzionale",
+            "example": 1
+          },
+          "note": {
+            "type": "string",
+            "description": "Nota informativa associata al menu.",
+            "example": "Visibile solo agli amministratori"
+          }
+        },
+        "required": [
+          "codiceMenu",
+          "descrizioneMenu",
+          "ordineMenu",
+          "ordineGruppo"
+        ]
+      },
+      "GetMenusResponse": {
+        "type": "object",
+        "properties": {
+          "Status": {
+            "$ref": "#/components/schemas/Status"
+          },
+          "Message": {
+            "type": "string",
+            "example": "Dati recuperati con successo.",
+            "description": "Messaggio informativo restituito dalla libreria quando presente."
+          },
+          "Result": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MenuEntity"
+            }
+          }
+        },
+        "required": [
+          "Status",
+          "Result"
+        ]
+      },
+      "GroupWithMenusEntity": {
+        "type": "object",
+        "properties": {
+          "codiceGruppo": {
+            "type": "string",
+            "description": "Codice univoco del gruppo.",
+            "example": "GRP01"
+          },
+          "descrizioneGruppo": {
+            "type": "string",
+            "description": "Descrizione del gruppo.",
+            "example": "Gestione Accessi"
+          },
+          "ordineGruppo": {
+            "type": "number",
+            "description": "Ordine del gruppo.",
+            "example": 1
+          },
+          "enabled": {
+            "type": "boolean",
+            "description": "Flag che indica se il gruppo e abilitato.",
+            "example": true
+          },
+          "menus": {
+            "description": "Lista dei menù associati al gruppo.",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MenuEntity"
+            }
+          }
+        },
+        "required": [
+          "codiceGruppo",
+          "descrizioneGruppo",
+          "ordineGruppo",
+          "menus"
+        ]
+      },
+      "GetGroupsWithMenusResponse": {
+        "type": "object",
+        "properties": {
+          "Status": {
+            "$ref": "#/components/schemas/Status"
+          },
+          "Message": {
+            "type": "string",
+            "example": "Dati recuperati con successo.",
+            "description": "Messaggio informativo restituito dalla libreria quando presente."
+          },
+          "Result": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/GroupWithMenusEntity"
+            }
+          }
+        },
+        "required": [
+          "Status",
+          "Result"
+        ]
+      },
+      "UserGrantsResponse": {
+        "type": "object",
+        "properties": {
+          "Status": {
+            "$ref": "#/components/schemas/Status"
+          },
+          "Message": {
+            "type": "string",
+            "example": "Dati recuperati con successo.",
+            "description": "Messaggio informativo restituito dalla libreria quando presente."
+          },
+          "Result": {
+            "$ref": "#/components/schemas/UserGrantsDto"
+          }
+        },
+        "required": [
+          "Status",
+          "Result"
+        ]
+      },
+      "GetUsersResult": {
+        "type": "object",
+        "properties": {
+          "utente": {
+            "description": "Dati utente",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/UserDto"
+              }
+            ]
+          },
+          "userGrants": {
+            "description": "Abilitazioni e ruoli utente",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/UserGrantsDto"
+              }
+            ]
+          },
+          "extensionFields": {
+            "type": "object",
+            "description": "Extension Fields"
+          }
+        },
+        "required": [
+          "utente",
+          "userGrants",
+          "extensionFields"
+        ]
+      },
+      "GetUsersResponse": {
+        "type": "object",
+        "properties": {
+          "Status": {
+            "$ref": "#/components/schemas/Status"
+          },
+          "Message": {
+            "type": "string",
+            "example": "Dati recuperati con successo.",
+            "description": "Messaggio informativo restituito dalla libreria quando presente."
+          },
+          "Result": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/GetUsersResult"
+            }
+          }
+        },
+        "required": [
+          "Status",
+          "Result"
+        ]
+      },
+      "SetStatoRegistrazioneDto": {
+        "type": "object",
+        "properties": {
+          "codiceUtente": {
+            "type": "number",
+            "description": "Codice identificativo dell'utente",
+            "example": 123
+          },
+          "statoRegistrazione": {
+            "type": "number",
+            "description": "Nuovo stato di registrazione",
+            "enum": [
+              0,
+              5,
+              10,
+              20,
+              50,
+              99
+            ],
+            "example": 50
+          }
+        },
+        "required": [
+          "codiceUtente",
+          "statoRegistrazione"
+        ]
+      },
+      "PublicRegisterRequest": {
+        "type": "object",
+        "properties": {
+          "progressivo": {
+            "type": "number",
+            "description": "Progressivo identificativo del filtro",
+            "example": 1
+          },
+          "numRep": {
+            "type": "number",
+            "description": "Numero del reparto associato",
+            "example": 1002
+          },
+          "idxPers": {
+            "type": "number",
+            "description": "Idx personale",
+            "example": 15
+          },
+          "codCliSuper": {
+            "type": "number",
+            "description": "Codice Cliente padre (codcli di esgest)",
+            "example": 1
+          },
+          "codAge": {
+            "type": "number",
+            "description": "Codice dell'agente associato",
+            "example": 1
+          },
+          "codCliCol": {
+            "type": "number",
+            "description": "Codice del cliente collegato",
+            "example": 1
+          },
+          "codClienti": {
+            "type": "string",
+            "description": "Lista di codici clienti separati da virgola",
+            "example": "123,456,789"
+          },
+          "tipFil": {
+            "type": "number",
+            "description": "Tipo di filtro applicato",
+            "example": 99
+          },
+          "idxPos": {
+            "type": "number",
+            "description": "idx della postazione nella tabella ANTENNE_POS di PROLAV",
+            "example": 12
+          },
+          "codDip": {
+            "type": "number",
+            "description": "Codice dipendente di esgest",
+            "example": 12
+          },
+          "codVet": {
+            "type": "number",
+            "description": "Codice del vettore",
+            "example": 12
+          },
+          "email": {
+            "type": "string",
+            "description": "Email dell'utente.",
+            "example": "mario.rossi@dev.it"
+          },
+          "cognome": {
+            "type": "string",
+            "description": "Cognome dell'utente.",
+            "example": "Rossi"
+          },
+          "nome": {
+            "type": "string",
+            "description": "Nome dell'utente.",
+            "example": "Mario"
+          },
+          "cellulare": {
+            "type": "string",
+            "description": "Numero di cellulare.",
+            "example": "+393401234567",
+            "nullable": true
+          },
+          "avatar": {
+            "type": "string",
+            "description": "Avatar dell'utente.",
+            "example": "user.svg"
+          },
+          "paginaDefault": {
+            "type": "string",
+            "description": "Pagina di default dell'utente.",
+            "example": "/dashboard"
+          },
+          "nummac": {
+            "type": "number",
+            "description": "Numero MAC associato all'utente.",
+            "example": 12
+          },
+          "ragSocCli": {
+            "type": "string",
+            "description": "Ragione sociale cliente.",
+            "example": "ALIVAL STOCK"
+          },
+          "htmlMail": {
+            "type": "string",
+            "description": "HTML mail personalizzato",
+            "example": "<html></html>"
+          }
+        },
+        "required": [
+          "email"
+        ]
+      },
+      "RegisterResponse": {
+        "type": "object",
+        "properties": {
+          "Status": {
+            "$ref": "#/components/schemas/Status"
+          },
+          "Message": {
+            "type": "string",
+            "example": "Dati recuperati con successo.",
+            "description": "Messaggio informativo restituito dalla libreria quando presente."
+          },
+          "Result": {
+            "type": "number",
+            "description": "Codice identificativo univoco dell'utente registrato",
+            "example": 123
+          }
+        },
+        "required": [
+          "Status",
+          "Result"
+        ]
+      },
+      "RegisterRequest": {
+        "type": "object",
+        "properties": {
+          "progressivo": {
+            "type": "number",
+            "description": "Progressivo identificativo del filtro",
+            "example": 1
+          },
+          "numRep": {
+            "type": "number",
+            "description": "Numero del reparto associato",
+            "example": 1002
+          },
+          "idxPers": {
+            "type": "number",
+            "description": "Idx personale",
+            "example": 15
+          },
+          "codCliSuper": {
+            "type": "number",
+            "description": "Codice Cliente padre (codcli di esgest)",
+            "example": 1
+          },
+          "codAge": {
+            "type": "number",
+            "description": "Codice dell'agente associato",
+            "example": 1
+          },
+          "codCliCol": {
+            "type": "number",
+            "description": "Codice del cliente collegato",
+            "example": 1
+          },
+          "codClienti": {
+            "type": "string",
+            "description": "Lista di codici clienti separati da virgola",
+            "example": "123,456,789"
+          },
+          "tipFil": {
+            "type": "number",
+            "description": "Tipo di filtro applicato",
+            "example": 99
+          },
+          "idxPos": {
+            "type": "number",
+            "description": "idx della postazione nella tabella ANTENNE_POS di PROLAV",
+            "example": 12
+          },
+          "codDip": {
+            "type": "number",
+            "description": "Codice dipendente di esgest",
+            "example": 12
+          },
+          "codVet": {
+            "type": "number",
+            "description": "Codice del vettore",
+            "example": 12
+          },
+          "email": {
+            "type": "string",
+            "description": "Email dell'utente.",
+            "example": "mario.rossi@dev.it"
+          },
+          "cognome": {
+            "type": "string",
+            "description": "Cognome dell'utente.",
+            "example": "Rossi"
+          },
+          "nome": {
+            "type": "string",
+            "description": "Nome dell'utente.",
+            "example": "Mario"
+          },
+          "cellulare": {
+            "type": "string",
+            "description": "Numero di cellulare.",
+            "example": "+393401234567",
+            "nullable": true
+          },
+          "flagSuper": {
+            "type": "boolean",
+            "description": "Flag superutente.",
+            "example": false
+          },
+          "flagAdminConfigurator": {
+            "type": "boolean",
+            "description": "Flag che indica se l'utente è configuratore",
+            "example": false
+          },
+          "roles": {
+            "description": "Ruoli assegnati all'utente.",
+            "example": [
+              1,
+              2
+            ],
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "permissions": {
+            "description": "Permessi assegnati all'utente.",
+            "example": [
+              {
+                "codiceMenu": "MNUOFFICINA",
+                "tipoAbilitazione": 20
+              }
+            ],
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Permission"
+            }
+          },
+          "avatar": {
+            "type": "string",
+            "description": "Avatar dell'utente.",
+            "example": "user.svg"
+          },
+          "flagDueFattori": {
+            "type": "boolean",
+            "description": "Flag autenticazione a due fattori.",
+            "example": false
+          },
+          "paginaDefault": {
+            "type": "string",
+            "description": "Pagina di default dell'utente.",
+            "example": "/dashboard"
+          },
+          "nummac": {
+            "type": "number",
+            "description": "Numero MAC associato all'utente.",
+            "example": 12
+          },
+          "ragSocCli": {
+            "type": "string",
+            "description": "Ragione sociale cliente.",
+            "example": "ALIVAL STOCK"
+          },
+          "htmlMail": {
+            "type": "string",
+            "description": "HTML mail personalizzato",
+            "example": "<html></html>"
+          }
+        },
+        "required": [
+          "email"
+        ]
+      },
+      "TipoFiltro": {
+        "type": "object",
+        "properties": {
+          "tipFil": {
+            "type": "number",
+            "description": "Identificativo del tipo di filtro",
+            "example": 1
+          },
+          "desFil": {
+            "type": "string",
+            "description": "Descrizione del filtro",
+            "example": "Filtro standard",
+            "maxLength": 20
+          },
+          "fldFil": {
+            "type": "string",
+            "description": "Campo associato al filtro",
+            "example": "campoValore",
+            "maxLength": 20
+          },
+          "flgEnabled": {
+            "type": "number",
+            "description": "Filtro abilitato",
+            "example": 1,
+            "enum": [
+              0,
+              1
+            ],
+            "default": 1
+          }
+        },
+        "required": [
+          "tipFil"
+        ]
+      },
+      "GetFiltriResponse": {
+        "type": "object",
+        "properties": {
+          "Status": {
+            "$ref": "#/components/schemas/Status"
+          },
+          "Message": {
+            "type": "string",
+            "example": "Dati recuperati con successo.",
+            "description": "Messaggio informativo restituito dalla libreria quando presente."
+          },
+          "Result": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/TipoFiltro"
+            }
+          }
+        },
+        "required": [
+          "Status",
+          "Result"
+        ]
+      },
+      "GetFiltriUtenteResponse": {
+        "type": "object",
+        "properties": {
+          "Status": {
+            "$ref": "#/components/schemas/Status"
+          },
+          "Message": {
+            "type": "string",
+            "example": "Dati recuperati con successo.",
+            "description": "Messaggio informativo restituito dalla libreria quando presente."
+          },
+          "Result": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/FiltriUtente"
+            }
+          }
+        },
+        "required": [
+          "Status",
+          "Result"
+        ]
+      },
+      "UpdateEnabledStatusRequest": {
+        "type": "object",
+        "properties": {
+          "enabled": {
+            "type": "boolean",
+            "description": "Nuovo stato di abilitazione",
+            "example": true
+          }
+        },
+        "required": [
+          "enabled"
+        ]
+      },
+      "FederatedProviderResponseDto": {
+        "type": "object",
+        "properties": {
+          "provider": {
+            "type": "string",
+            "example": "azure-ad-acme-produzione"
+          },
+          "description": {
+            "type": "string",
+            "example": "Microsoft Entra ID Acme - Produzione"
+          },
+          "active": {
+            "type": "boolean",
+            "example": true
+          },
+          "createdAt": {
+            "type": "string",
+            "example": "2026-09-04T09:00:00.000Z"
+          },
+          "note": {
+            "type": "string",
+            "example": "Validazione OIDC gestita dal backend."
+          }
+        },
+        "required": [
+          "provider",
+          "description",
+          "active"
+        ]
+      },
+      "FederatedProviderListResponse": {
+        "type": "object",
+        "properties": {
+          "Status": {
+            "$ref": "#/components/schemas/Status"
+          },
+          "Message": {
+            "type": "string",
+            "example": "Dati recuperati con successo.",
+            "description": "Messaggio informativo restituito dalla libreria quando presente."
+          },
+          "Result": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/FederatedProviderResponseDto"
+            }
+          }
+        },
+        "required": [
+          "Status",
+          "Result"
+        ]
+      },
+      "CreateFederatedProviderRequest": {
+        "type": "object",
+        "properties": {
+          "provider": {
+            "type": "string",
+            "example": "azure-ad-acme-produzione",
+            "description": "Chiave stabile ASCII configurata anche nel backend. Deve distinguere tenant e ambiente quando necessario."
+          },
+          "description": {
+            "type": "string",
+            "example": "Microsoft Entra ID Acme - Produzione",
+            "description": "Descrizione amministrativa del provider mostrata nella console."
+          },
+          "note": {
+            "type": "string",
+            "example": "Validazione OIDC gestita dal backend impianti."
+          }
+        },
+        "required": [
+          "provider",
+          "description"
+        ]
+      },
+      "FederatedProviderResponse": {
+        "type": "object",
+        "properties": {
+          "Status": {
+            "$ref": "#/components/schemas/Status"
+          },
+          "Message": {
+            "type": "string",
+            "example": "Dati recuperati con successo.",
+            "description": "Messaggio informativo restituito dalla libreria quando presente."
+          },
+          "Result": {
+            "$ref": "#/components/schemas/FederatedProviderResponseDto"
+          }
+        },
+        "required": [
+          "Status",
+          "Result"
+        ]
+      },
+      "UpdateFederatedProviderRequest": {
+        "type": "object",
+        "properties": {
+          "description": {
+            "type": "string",
+            "example": "Microsoft Entra ID Acme - Produzione"
+          },
+          "active": {
+            "type": "boolean",
+            "example": true,
+            "description": "Con false il provider e tutte le sue identita non possono autenticare nuove sessioni SSO."
+          },
+          "note": {
+            "type": "string",
+            "example": "Manutenzione programmata."
+          }
+        }
+      },
+      "FederatedIdentityResponseDto": {
+        "type": "object",
+        "properties": {
+          "identityKey": {
+            "type": "string",
+            "example": "4f2b...",
+            "description": "Chiave tecnica SHA-256 del collegamento. Usarla solo per operazioni amministrative, mai per autenticare."
+          },
+          "codiceUtente": {
+            "type": "number",
+            "example": 123
+          },
+          "provider": {
+            "type": "string",
+            "example": "azure-ad-acme-produzione",
+            "description": "Chiave del provider censito nel catalogo Accessi."
+          },
+          "subject": {
+            "type": "string",
+            "example": "a1b2c3d4-...",
+            "description": "ID stabile dell account nel provider, usato insieme a provider per riconoscere la persona."
+          },
+          "active": {
+            "type": "boolean",
+            "example": true,
+            "description": "False means soft-disabled: the row remains auditable but cannot authenticate."
+          },
+          "passwordLoginEnabled": {
+            "type": "boolean",
+            "example": false,
+            "description": "Effective local-password policy for the associated Accessi user."
+          },
+          "createdAt": {
+            "type": "string",
+            "example": "2026-09-01T09:00:00.000Z"
+          },
+          "lastLoginAt": {
+            "type": "string",
+            "example": "2026-09-01T09:30:00.000Z"
+          },
+          "disabledAt": {
+            "type": "string",
+            "example": "2026-09-01T10:00:00.000Z"
+          },
+          "note": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "identityKey",
+          "codiceUtente",
+          "provider",
+          "subject",
+          "active",
+          "passwordLoginEnabled"
+        ]
+      },
+      "FederatedIdentityListResponse": {
+        "type": "object",
+        "properties": {
+          "Status": {
+            "$ref": "#/components/schemas/Status"
+          },
+          "Message": {
+            "type": "string",
+            "example": "Dati recuperati con successo.",
+            "description": "Messaggio informativo restituito dalla libreria quando presente."
+          },
+          "Result": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/FederatedIdentityResponseDto"
+            }
+          }
+        },
+        "required": [
+          "Status",
+          "Result"
+        ]
+      },
+      "CreateFederatedIdentityRequest": {
+        "type": "object",
+        "properties": {
+          "provider": {
+            "type": "string",
+            "example": "azure-ad-acme-produzione",
+            "description": "Chiave stabile di un provider già censito nel catalogo Accessi. Deve corrispondere alla configurazione del backend e distinguere tenant e ambiente quando necessario."
+          },
+          "subject": {
+            "type": "string",
+            "example": "a1b2c3d4-...",
+            "description": "ID stabile della persona restituito dal provider dopo validazione lato backend, ad esempio oid, sub o NameID persistente. Non usare l email o lo username."
+          },
+          "note": {
+            "type": "string",
+            "example": "Association approved by IT."
+          }
+        },
+        "required": [
+          "provider",
+          "subject"
+        ]
+      },
+      "FederatedIdentityResponse": {
+        "type": "object",
+        "properties": {
+          "Status": {
+            "$ref": "#/components/schemas/Status"
+          },
+          "Message": {
+            "type": "string",
+            "example": "Dati recuperati con successo.",
+            "description": "Messaggio informativo restituito dalla libreria quando presente."
+          },
+          "Result": {
+            "$ref": "#/components/schemas/FederatedIdentityResponseDto"
+          }
+        },
+        "required": [
+          "Status",
+          "Result"
+        ]
+      },
+      "CreateFederatedUserRequest": {
+        "type": "object",
+        "properties": {
+          "provider": {
+            "type": "string",
+            "example": "azure-ad-acme-produzione",
+            "description": "Chiave stabile di un provider già censito nel catalogo Accessi. Deve corrispondere alla configurazione del backend e distinguere tenant e ambiente quando necessario."
+          },
+          "subject": {
+            "type": "string",
+            "example": "a1b2c3d4-...",
+            "description": "ID stabile della persona restituito dal provider dopo validazione lato backend, ad esempio oid, sub o NameID persistente. Non usare l email o lo username."
+          },
+          "note": {
+            "type": "string",
+            "example": "Association approved by IT."
+          },
+          "user": {
+            "description": "Accessi profile, grants and roles assigned by the master user.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/RegisterRequest"
+              }
+            ]
+          },
+          "passwordLoginEnabled": {
+            "type": "boolean",
+            "default": false,
+            "description": "Enables local password login for the newly created user. Defaults to false (SSO-only)."
+          }
+        },
+        "required": [
+          "provider",
+          "subject",
+          "user"
+        ]
+      },
+      "SetPasswordLoginPolicyRequest": {
+        "type": "object",
+        "properties": {
+          "passwordLoginEnabled": {
+            "type": "boolean",
+            "example": false,
+            "description": "Se false, il login password restituisce PASSWORD_LOGIN_DISABLED; restano validi solo collegamenti SSO attivi."
+          }
+        },
+        "required": [
+          "passwordLoginEnabled"
+        ]
+      },
+      "UpdateFederatedIdentityRequest": {
+        "type": "object",
+        "properties": {
+          "active": {
+            "type": "boolean",
+            "example": true,
+            "description": "Abilita o disabilita il collegamento senza cancellare lo storico."
+          },
+          "note": {
+            "type": "string",
+            "example": "Collegamento verificato dal reparto IT."
+          }
+        }
+      }
+    }
+  }
+}

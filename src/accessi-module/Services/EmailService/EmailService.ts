@@ -10,6 +10,7 @@ import {
 } from '../../security/passwordResetToken';
 
 @Injectable()
+/** Sends password lifecycle email. It deliberately does not expose whether an email exists to public callers. */
 export class EmailService {
   constructor(@Inject('ACCESSI_OPTIONS') private readonly accessiOptions: AccessiOptions) {}
 
@@ -19,9 +20,24 @@ export class EmailService {
 
   private transporter = nodemailer.createTransport(this.accessiOptions.emailOptions);
 
+  /** Sends the one-time login code without including it in application logs. */
+  public async sendTwoFactorCode(email: string, code: string, validityMinutes: number): Promise<void> {
+    await this.transporter.sendMail({
+      from: this.accessiOptions.emailOptions.from,
+      to: email,
+      subject: 'Codice di accesso',
+      text: `Il tuo codice di accesso e: ${code}\n\nScade entro ${validityMinutes} minuti e puo essere usato una sola volta. Se non hai richiesto l accesso, ignora questa email.`,
+    });
+  }
+
+  /**
+   * Creates a short-lived, one-use reset token and sends it by email. Invalid, missing, blocked or deleted users
+   * return without error to prevent account enumeration. On delivery failure the stored reset nonce is cleared.
+   */
   public async sendPasswordResetEmail(email: string, htmlMail?: string): Promise<void> {
     let codiceUtente: number | null = null;
     let resetToken: string | null = null;
+    let nonce: string | null = null;
 
     try {
       if (typeof email !== 'string' || email.trim() === '') {
@@ -50,7 +66,7 @@ export class EmailService {
       }
 
       codiceUtente = user.codiceUtente;
-      const nonce = uuidv4();
+      nonce = uuidv4();
       const secret = getAccessiJwtSecret(this.accessiOptions);
       resetToken = createPasswordResetToken(codiceUtente, nonce, secret);
 
@@ -58,6 +74,7 @@ export class EmailService {
         this.accessiOptions.databaseOptions,
         'UPDATE UTENTI SET KEYREG = ? WHERE CODUTE = ? ',
         [nonce, codiceUtente],
+        false,
       );
 
       //costruizione dei queryparams
@@ -108,11 +125,12 @@ export class EmailService {
 
       await this.transporter.sendMail(mailOptions);
     } catch (error) {
-      if (codiceUtente) {
+      if (codiceUtente && nonce) {
         await Orm.execute(
           this.accessiOptions.databaseOptions,
-          'UPDATE UTENTI SET KEYREG = NULL WHERE CODUTE = ?',
-          [codiceUtente],
+          'UPDATE UTENTI SET KEYREG = NULL WHERE CODUTE = ? AND KEYREG = ?',
+          [codiceUtente, nonce],
+          false,
         ).catch(() => undefined);
       }
       console.error("Errore nell'invio dell'email di reset password:", error);

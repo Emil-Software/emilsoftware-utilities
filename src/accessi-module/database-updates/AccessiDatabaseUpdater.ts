@@ -142,6 +142,59 @@ END`
         );
       },
     },
+    {
+      fromVersion: "1.1.6",
+      toVersion: "1.2.0",
+      description: "Aggiunge policy password e identita esterne per Accessi/SSO",
+      apply: async (options) => {
+        await AccessiDatabaseUpdater.ensureColumn(
+          options,
+          "UTENTI_CONFIG",
+          "FLGPASSWORD SMALLINT DEFAULT 1 NOT NULL",
+          "FLGPASSWORD",
+          "1 consente login locale con password; 0 rende utente SSO-only. Default 1 preserva utenti esistenti.",
+        );
+        await AccessiDatabaseUpdater.ensureFederatedIdentitySchema(options);
+      },
+    },
+    {
+      fromVersion: "1.2.0",
+      toVersion: "1.3.0",
+      description: "Aggiunge il catalogo dei provider SSO e il vincolo sulle identita esterne",
+      apply: async (options) => {
+        await AccessiDatabaseUpdater.ensureFederatedProviderSchema(options);
+      },
+    },
+    {
+      fromVersion: '1.3.0',
+      toVersion: '1.4.0',
+      description: 'Aggiunge codici monouso per 2FA e policy di accesso senza password',
+      apply: async (options) => {
+        await AccessiDatabaseUpdater.ensureColumn(options, 'UTENTI_CONFIG', 'FLG2FATT SMALLINT DEFAULT 0', 'FLG2FATT');
+        await AccessiDatabaseUpdater.ensureColumn(options, 'UTENTI_CONFIG', 'FLGPWDLESS SMALLINT DEFAULT 0 NOT NULL', 'FLGPWDLESS', '1 consente accesso con solo codice email, richiede FLG2FATT=1. Non modifica FLGPASSWORD/SSO.');
+        if (!(await AccessiDatabaseUpdater.tableExists(options.databaseOptions, 'ACCESSI_2FA'))) {
+          await Orm.execute(options.databaseOptions, `CREATE TABLE ACCESSI_2FA (
+            CHALLENGE_ID VARCHAR(64) CHARACTER SET ASCII NOT NULL PRIMARY KEY,
+            CODUTE INTEGER NOT NULL REFERENCES UTENTI (CODUTE) ON DELETE CASCADE,
+            EMAIL VARCHAR(254) CHARACTER SET UTF8 NOT NULL,
+            AUTHMODE VARCHAR(12) CHARACTER SET ASCII NOT NULL,
+            IDNKEY VARCHAR(64) CHARACTER SET ASCII,
+            CODEHASH VARCHAR(64) CHARACTER SET ASCII NOT NULL,
+            CREATED_AT TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
+            EXPIRES_AT TIMESTAMP NOT NULL,
+            SENT_AT TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
+            ATTEMPTS SMALLINT DEFAULT 0 NOT NULL,
+            SENDS SMALLINT DEFAULT 1 NOT NULL
+          )`);
+        }
+        if (!(await AccessiDatabaseUpdater.indexExists(options, 'IDX_ACCESSI_2FA_USER'))) {
+          await Orm.execute(options.databaseOptions, 'CREATE INDEX IDX_ACCESSI_2FA_USER ON ACCESSI_2FA (CODUTE, CREATED_AT)');
+        }
+        if (!(await AccessiDatabaseUpdater.indexExists(options, 'IDX_ACCESSI_2FA_EXP'))) {
+          await Orm.execute(options.databaseOptions, 'CREATE INDEX IDX_ACCESSI_2FA_EXP ON ACCESSI_2FA (EXPIRES_AT)');
+        }
+      },
+    },
   ];
 
   constructor(
@@ -243,6 +296,114 @@ END`
     }
 
     return !exists;
+  }
+
+  /** Crea in modo idempotente la struttura necessaria al mapping SSO generico. */
+  private static async ensureFederatedIdentitySchema(options: AccessiOptions): Promise<void> {
+    if (!(await this.tableExists(options.databaseOptions, "UTENTI_IDENTITA_EXT"))) {
+      await Orm.execute(options.databaseOptions, `CREATE TABLE UTENTI_IDENTITA_EXT (
+        IDNKEY CHAR(64) CHARACTER SET ASCII NOT NULL,
+        CODUTE INTEGER NOT NULL,
+        PROVIDER VARCHAR(64) CHARACTER SET ASCII NOT NULL,
+        SUBJECT VARCHAR(512) CHARACTER SET UTF8 NOT NULL,
+        FLGATTIVO SMALLINT DEFAULT 1 NOT NULL,
+        DATINS TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
+        DATLASTLOGIN TIMESTAMP,
+        DATDISATT TIMESTAMP,
+        NOTA VARCHAR(500) CHARACTER SET UTF8
+      )`);
+    }
+
+    if (!(await this.constraintExists(options, "PK_UTEIDEXT"))) {
+      await Orm.execute(options.databaseOptions, "ALTER TABLE UTENTI_IDENTITA_EXT ADD CONSTRAINT PK_UTEIDEXT PRIMARY KEY (IDNKEY)");
+    }
+    if (!(await this.constraintExists(options, "FK_UTEIDEXT_UTENTE"))) {
+      await Orm.execute(options.databaseOptions, "ALTER TABLE UTENTI_IDENTITA_EXT ADD CONSTRAINT FK_UTEIDEXT_UTENTE FOREIGN KEY (CODUTE) REFERENCES UTENTI (CODUTE) ON DELETE CASCADE");
+    }
+    if (!(await this.constraintExists(options, "CK_UTEIDEXT_ATTIVO"))) {
+      await Orm.execute(options.databaseOptions, "ALTER TABLE UTENTI_IDENTITA_EXT ADD CONSTRAINT CK_UTEIDEXT_ATTIVO CHECK (FLGATTIVO IN (0, 1))");
+    }
+    if (!(await this.indexExists(options, "IDX_UTEIDEXT_CODUTE"))) {
+      await Orm.execute(options.databaseOptions, "CREATE INDEX IDX_UTEIDEXT_CODUTE ON UTENTI_IDENTITA_EXT (CODUTE)");
+    }
+
+    for (const statement of [
+      "COMMENT ON TABLE UTENTI_IDENTITA_EXT IS 'Associa identita esterne gia verificate dal backend agli utenti Accessi; non memorizza token, segreti o claim SSO.'",
+      "COMMENT ON COLUMN UTENTI_IDENTITA_EXT.IDNKEY IS 'SHA-256 calcolato dalla libreria su provider e subject; chiave tecnica di lookup.'",
+      "COMMENT ON COLUMN UTENTI_IDENTITA_EXT.CODUTE IS 'Codice dell utente Accessi proprietario dell identita esterna.'",
+      "COMMENT ON COLUMN UTENTI_IDENTITA_EXT.PROVIDER IS 'Namespace stabile dichiarato dal backend, non configurazione o segreto del provider SSO.'",
+      "COMMENT ON COLUMN UTENTI_IDENTITA_EXT.SUBJECT IS 'Identificativo opaco e stabile gia verificato dal backend presso il provider.'",
+      "COMMENT ON COLUMN UTENTI_IDENTITA_EXT.FLGATTIVO IS '1 identita utilizzabile per login; 0 collegamento disabilitato logicamente.'",
+      "COMMENT ON COLUMN UTENTI_IDENTITA_EXT.DATINS IS 'Istante di creazione del collegamento.'",
+      "COMMENT ON COLUMN UTENTI_IDENTITA_EXT.DATLASTLOGIN IS 'Ultimo login SSO riuscito con questa identita.'",
+      "COMMENT ON COLUMN UTENTI_IDENTITA_EXT.DATDISATT IS 'Istante di disabilitazione logica del collegamento.'",
+      "COMMENT ON COLUMN UTENTI_IDENTITA_EXT.NOTA IS 'Nota amministrativa opzionale; non memorizzare token o dati personali non necessari.'",
+    ]) {
+      await Orm.execute(options.databaseOptions, statement);
+    }
+  }
+
+  /** Crea il catalogo provider SSO, importa le chiavi storiche e vincola le identita al catalogo. */
+  private static async ensureFederatedProviderSchema(options: AccessiOptions): Promise<void> {
+    if (!(await this.tableExists(options.databaseOptions, "SSO_PROVIDER"))) {
+      await Orm.execute(options.databaseOptions, `CREATE TABLE SSO_PROVIDER (
+        PROVIDER VARCHAR(64) CHARACTER SET ASCII NOT NULL,
+        DESCRIZIONE VARCHAR(160) CHARACTER SET UTF8 NOT NULL,
+        FLGATTIVO SMALLINT DEFAULT 1 NOT NULL,
+        DATINS TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
+        NOTA VARCHAR(500) CHARACTER SET UTF8
+      )`);
+    }
+
+    if (!(await this.constraintExists(options, "PK_SSO_PROVIDER"))) {
+      await Orm.execute(options.databaseOptions, "ALTER TABLE SSO_PROVIDER ADD CONSTRAINT PK_SSO_PROVIDER PRIMARY KEY (PROVIDER)");
+    }
+    if (!(await this.constraintExists(options, "CK_SSO_PROVIDER_ATTIVO"))) {
+      await Orm.execute(options.databaseOptions, "ALTER TABLE SSO_PROVIDER ADD CONSTRAINT CK_SSO_PROVIDER_ATTIVO CHECK (FLGATTIVO IN (0, 1))");
+    }
+
+    // Preserve existing installations before applying the referential constraint.
+    await Orm.execute(options.databaseOptions, `INSERT INTO SSO_PROVIDER (PROVIDER, DESCRIZIONE, FLGATTIVO, NOTA)
+      SELECT DISTINCT I.PROVIDER, I.PROVIDER, 1, NULL
+      FROM UTENTI_IDENTITA_EXT I
+      WHERE NOT EXISTS (SELECT 1 FROM SSO_PROVIDER P WHERE P.PROVIDER = I.PROVIDER)`);
+
+    if (!(await this.constraintExists(options, "FK_UTEIDEXT_PROVIDER"))) {
+      await Orm.execute(options.databaseOptions, "ALTER TABLE UTENTI_IDENTITA_EXT ADD CONSTRAINT FK_UTEIDEXT_PROVIDER FOREIGN KEY (PROVIDER) REFERENCES SSO_PROVIDER (PROVIDER)");
+    }
+    if (!(await this.indexExists(options, "IDX_UTEIDEXT_PROVIDER"))) {
+      await Orm.execute(options.databaseOptions, "CREATE INDEX IDX_UTEIDEXT_PROVIDER ON UTENTI_IDENTITA_EXT (PROVIDER)");
+    }
+
+    for (const statement of [
+      "COMMENT ON TABLE SSO_PROVIDER IS 'Catalogo dei provider SSO ammessi da Accessi. Configurazioni, issuer, token e segreti restano nel backend ospitante.'",
+      "COMMENT ON COLUMN SSO_PROVIDER.PROVIDER IS 'Chiave ASCII stabile configurata anche nel backend. Deve distinguere tenant e ambiente quando necessario.'",
+      "COMMENT ON COLUMN SSO_PROVIDER.DESCRIZIONE IS 'Descrizione amministrativa leggibile del provider SSO.'",
+      "COMMENT ON COLUMN SSO_PROVIDER.FLGATTIVO IS '1 consente nuovi login e collegamenti SSO; 0 conserva lo storico ma blocca le nuove sessioni.'",
+      "COMMENT ON COLUMN SSO_PROVIDER.DATINS IS 'Istante di censimento del provider nel catalogo Accessi.'",
+      "COMMENT ON COLUMN SSO_PROVIDER.NOTA IS 'Nota amministrativa opzionale; non memorizzare token, segreti o dati personali non necessari.'",
+      "COMMENT ON COLUMN UTENTI_IDENTITA_EXT.PROVIDER IS 'Chiave del catalogo SSO_PROVIDER. Insieme a SUBJECT identifica l''identita esterna verificata dal backend.'",
+    ]) {
+      await Orm.execute(options.databaseOptions, statement);
+    }
+  }
+
+  private static async constraintExists(options: AccessiOptions, name: string): Promise<boolean> {
+    const rows = await Orm.query(
+      options.databaseOptions,
+      "SELECT 1 FROM RDB$RELATION_CONSTRAINTS WHERE RDB$CONSTRAINT_NAME = ?",
+      [name],
+    );
+    return rows.length > 0;
+  }
+
+  private static async indexExists(options: AccessiOptions, name: string): Promise<boolean> {
+    const rows = await Orm.query(
+      options.databaseOptions,
+      "SELECT 1 FROM RDB$INDICES WHERE RDB$INDEX_NAME = ?",
+      [name],
+    );
+    return rows.length > 0;
   }
 
   private static async upsertFiltroTipo(

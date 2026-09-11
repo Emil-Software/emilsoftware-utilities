@@ -18,6 +18,7 @@ import {
 @ApiBearerAuth()
 @Controller('accessi/filtri')
 @UseGuards(JwtSimpleGuard)
+/** API per lettura e persistenza dei filtri applicativi collegati a un utente Accessi. */
 export class FiltriController {
   constructor(
     private readonly filtriService: FiltriService,

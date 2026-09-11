@@ -7,10 +7,12 @@ import { Logger } from '../../../Logger';
 import { FiltriUtente, FILTRI_UTENTE_DB_MAPPING } from '../../Dtos';
 
 @Injectable()
+/** Persists application-specific filter dimensions associated with an Accessi user. */
 export class FiltriService {
   private readonly logger = new Logger(FiltriService.name);
   constructor(@Inject('ACCESSI_OPTIONS') private readonly accessiOptions: AccessiOptions) {}
 
+  /** Returns the enabled filter-type catalog used by legacy and configurator clients. */
   public async getTipoFiltri(): Promise<TipoFiltro[]> {
     try {
       let getQuery =
@@ -25,6 +27,7 @@ export class FiltriService {
     }
   }
 
+  /** Returns filters for one user; omit the code only for trusted administrative reporting. */
   public async getFiltriUser(codUte: number): Promise<FiltriUtente[]> {
     try {
       let params = [];
@@ -47,6 +50,10 @@ export class FiltriService {
     }
   }
 
+  /**
+   * Upserts only supplied mapped fields. `undefined` leaves a field unchanged; `null` or an empty string clears it.
+   * The mapping is centralized in `FILTRI_UTENTE_DB_MAPPING` to keep DTO and database names decoupled.
+   */
   public async upsertFiltriUtente(codUte: number, dto: Partial<FiltriUtente>): Promise<void> {
     try {
       if (!codUte || codUte <= 0) throw new Error('Codice utente non valido');

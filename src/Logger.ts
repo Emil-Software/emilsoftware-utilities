@@ -1,6 +1,5 @@
 import winston from "winston";
-import * as path from "path";
-import { promises as fs } from "fs";
+import { DailyFileTransport } from './DailyFileTransport';
 import { blue, red, magenta, green, cyan, yellow } from 'colorette';
 
 export enum LogLevels {
@@ -37,26 +36,24 @@ export class Logger {
                     timestamp: timestamp || new Date().toISOString(),
                     tag: this.tag,
                     file: this.replaceAll(file + "", "\\", "/"),
-                    level,
+                    level: level === 'general' ? 'log' : level,
                     message,
                     ...meta,
                 });
             });
 
-        this.initializeDirectory();
-
         // Configure logger
         this.winstonLogger = winston.createLogger({
+            level: 'database',
             format: winston.format.combine(winston.format.timestamp(), this.logFormat),
             transports: config?.transports || [
-                new winston.transports.File({
-                    filename: path.join(this.logDirectory, this.getFileName() + ".json"),
-                }),
+                new DailyFileTransport(this.logDirectory),
             ],
             levels: {
                 error: 1,
                 warning: 2,
                 info: 3,
+                general: 3,
                 http: 4,
                 verbose: 5,
                 debug: 6,
@@ -74,23 +71,6 @@ export class Logger {
             debug: "magenta",
             log: "cyan",
         });
-    }
-
-    private async initializeDirectory() {
-        try {
-            const exists = await fs.access(this.logDirectory).then(() => true).catch(() => false);
-            if (!exists) {
-                await fs.mkdir(this.logDirectory);
-            }
-        } catch (err) {
-            console.error("Error initializing log directory:", err);
-        }
-    }
-
-    private getFileName(): string {
-        const now = new Date();
-        const dateString = now.toISOString().split("T")[0]; // YYYY-MM-DD
-        return dateString;
     }
 
     private replaceAll(string: string, match: string, replacer: string) {
@@ -141,11 +121,10 @@ export class Logger {
         this.winstonLogger.defaultMeta = {
             file: fileName,
             time: now,
-            level,
         };
 
         const logEntry: winston.LogEntry = {
-            level: level.toLowerCase(),
+            level: level === LogLevels.LOG ? 'general' : level.toLowerCase(),
             message: [...data].join(","),
         };
 

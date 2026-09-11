@@ -2,6 +2,7 @@ import { ApiProperty } from "@nestjs/swagger";
 import { IsEnum, IsString, Length } from "class-validator";
 import { TipoAbilitazione } from "./TipoAbilitazione";
 
+/** Grant diretto assegnato a un utente per un singolo menu, indipendente dai ruoli. */
 export class Permission {
     @ApiProperty({
         description: "Codice identificativo del menu a cui assegnare l'abilitazione.",

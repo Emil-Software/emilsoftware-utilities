@@ -13,6 +13,7 @@ import {
 
 @ApiTags('Email')
 @Controller('accessi/email')
+/** Endpoint pubblici del ciclo reset password; le risposte non rivelano se l'email esiste. */
 export class EmailController {
   constructor(
     @Inject('ACCESSI_OPTIONS') private readonly accessiOptions: AccessiOptions,

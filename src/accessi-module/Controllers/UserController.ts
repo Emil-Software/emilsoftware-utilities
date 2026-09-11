@@ -36,6 +36,7 @@ import { ActionResponse, ErrorResponse } from '../Dtos/BaseResponse';
 import { GetUsersResponse } from '../Dtos/GetUsersResponse';
 import { PublicRegisterRequest } from '../Dtos/PublicRegisterRequest';
 import { RegisterResponse } from '../Dtos/RegisterResponse';
+import { RegisterRequest } from '../Dtos/RegisterRequest';
 import { SetStatoRegistrazioneDto } from '../Dtos/SetStatoRegistrazione';
 import { UserDto } from '../Dtos/UserDto';
 import { EmailService } from '../Services/EmailService/EmailService';
@@ -54,6 +55,10 @@ import {
 
 @ApiTags('User')
 @Controller('accessi/user')
+/**
+ * Gestione utenti: la registrazione pubblica e opt-in, mentre creazione, stato e profili privilegiati
+ * richiedono un superutente Accessi. Le API restituiscono sempre il wrapper `BaseResponse` storico.
+ */
 export class UserController {
   private readonly logger = new Logger(UserController.name);
 
@@ -243,6 +248,7 @@ export class UserController {
 
   @ApiOperation({
     summary: 'Registra un nuovo utente',
+    description: 'Disponibile soltanto quando publicRegistration.enabled e true. Per utenti SSO usare il provisioning master nel tag Federated authentication.',
     operationId: 'register',
   })
   @ApiBody({
@@ -271,6 +277,13 @@ export class UserController {
     @Res() res: Response,
   ) {
     try {
+      if (this.accessiOptions.publicRegistration?.enabled !== true) {
+        throw new HttpException(
+          'La registrazione pubblica e disabilitata. Un amministratore deve creare l utente.',
+          HttpStatus.FORBIDDEN,
+        );
+      }
+
       const rateLimitDecision = checkPublicAuthRateLimit(
         this.accessiOptions,
         'register',
@@ -286,11 +299,28 @@ export class UserController {
       });
 
       await this.emailService.sendPasswordResetEmail(registrationData.email);
-      return RestUtilities.sendBaseResponse(res, codiceUtente);
+      return RestUtilities.sendBaseResponse(res, codiceUtente, HttpStatus.CREATED);
     } catch (error) {
       const status =
         error instanceof HttpException ? error.getStatus() : HttpStatus.BAD_REQUEST;
       return RestUtilities.sendErrorMessage(res, error, UserController.name, status);
+    }
+  }
+
+  @ApiOperation({ summary: 'Crea un utente locale da amministrazione', operationId: 'createManagedUser', description: 'Riservato a superutente. Crea un utente in attesa di impostazione password e invia la mail di reset.' })
+  @ApiBody({ type: RegisterRequest })
+  @ApiCreatedResponse({ type: RegisterResponse })
+  @ApiBearerAuth()
+  @UseGuards(JwtSimpleGuard)
+  @Post('create-managed-user')
+  async createManagedUser(@Req() request: Request, @Body() registrationData: RegisterRequest, @Res() res: Response) {
+    try {
+      ensureSuperUser(getAuthenticatedAccessiUser(request), 'Solo gli amministratori possono creare utenti.');
+      const codiceUtente = await this.userService.register(registrationData, { allowPrivilegedFields: true });
+      await this.emailService.sendPasswordResetEmail(registrationData.email, registrationData.htmlMail);
+      return RestUtilities.sendBaseResponse(res, codiceUtente, HttpStatus.CREATED);
+    } catch (error) {
+      return this.sendControllerError(res, error);
     }
   }
 

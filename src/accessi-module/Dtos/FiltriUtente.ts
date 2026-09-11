@@ -9,6 +9,9 @@ export class FiltriUtente {
     description: 'Codice dell\'utente',
     example: 1
   })
+  @IsOptional()
+  @IsInt()
+  @Min(1)
   codUte!: number
 
   @ApiPropertyOptional({
@@ -98,7 +101,7 @@ export class FiltriUtente {
 }
 
 export class GetFiltriUtenteResponse extends BaseResponse {
-      @ApiProperty({ type: FiltriUtente })
+      @ApiProperty({ type: [FiltriUtente] })
       @ValidateNested({ each: true })
       @Type(() => FiltriUtente)
     Result!: FiltriUtente[]

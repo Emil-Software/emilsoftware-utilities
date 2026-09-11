@@ -11,6 +11,10 @@ import {
 } from 'class-validator';
 import { RuoliMenu } from './RuoliMenu';
 
+/**
+ * Modello di un ruolo Accessi. Un ruolo e un insieme riutilizzabile di menu con livello di abilitazione;
+ * non e un grant diretto e non contiene utenti assegnati. In aggiornamento l'array `menu` e sostitutivo.
+ */
 export class Role {
   @ApiPropertyOptional({ description: 'Codice univoco del ruolo', required: false, type: Number, example: 1 })
   @IsOptional()

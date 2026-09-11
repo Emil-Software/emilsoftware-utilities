@@ -15,9 +15,9 @@ export class ExecutionTimeLogger {
             throw new TypeError(`ExecutionTimeLogger can only be applied to methods, not: ${typeof originalMethod}`);
         }
 
+        const className = target.constructor.name;
+        const logger = new Logger(className);
         descriptor.value = async function (...args: any[]) {
-            const className = target.constructor.name; // Get the class name dynamically
-            const logger = new Logger(className); // Use the class name for logger
             const start = process.hrtime();
             logger.info(`[${className}] ${propertyKey} method execution started . . .`);
             

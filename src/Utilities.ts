@@ -101,12 +101,13 @@ export class RestUtilities {
      * Sends an OK message as a response.
      * @param res - Express Response object.
      * @param message - The success message.
+     * @param status - HTTP success status. Defaults to 200; pass 201 only after creating a resource.
      * @returns The Response object.
      */
-    static sendOKMessage(res: Response, message: string): Response {
-        return res.send({
+    static sendOKMessage(res: Response, message: string, status: number = 200): Response {
+        return res.status(status).send({
             severity: "success",
-            status: 200,
+            status,
             statusCode: StatusCode.Ok,
             message,
         });
@@ -121,37 +122,87 @@ export class RestUtilities {
      * @returns The Response object.
      */
     static sendErrorMessage(res: Response, error: any, tag: string = "[BASE ERROR]", status: number = 500): Response {
-        return res.status(status).send({
+        const rawMessage = error instanceof Error ? error.message : String(error ?? "");
+        const exceptionResponse = error && typeof error.getResponse === "function"
+            ? error.getResponse()
+            : undefined;
+        const exceptionPayload = exceptionResponse && typeof exceptionResponse === "object"
+            ? exceptionResponse as { code?: unknown; message?: unknown; details?: unknown }
+            : undefined;
+        const explicitCode = typeof exceptionPayload?.code === "string" ? exceptionPayload.code : undefined;
+        const explicitMessage = typeof exceptionPayload?.message === "string" ? exceptionPayload.message : undefined;
+        const explicitDetails = Array.isArray(exceptionPayload?.details)
+            ? exceptionPayload.details.filter((detail): detail is string => typeof detail === "string")
+            : undefined;
+        const schemaError = this.isDatabaseSchemaError(error);
+        const effectiveStatus = schemaError ? 503 : status;
+        const code = schemaError
+            ? "ACCESSI_DATABASE_SCHEMA_OUTDATED"
+            : explicitCode ?? (effectiveStatus >= 500
+                ? "ACCESSI_INTERNAL_ERROR"
+                : effectiveStatus === 401
+                    ? "ACCESSI_UNAUTHORIZED"
+                    : effectiveStatus === 403
+                        ? "ACCESSI_FORBIDDEN"
+                        : "ACCESSI_REQUEST_ERROR");
+        const message = schemaError
+            ? "Lo schema del database Accessi non e aggiornato. Eseguire la migrazione database e riprovare."
+            : explicitMessage ?? (effectiveStatus >= 500
+                ? "Errore interno del modulo Accessi."
+                : effectiveStatus === 401
+                    ? "Autenticazione non valida o scaduta."
+                    : effectiveStatus === 403
+                        ? "Operazione non autorizzata."
+                        : rawMessage || "Richiesta non valida.");
+
+        return res.status(effectiveStatus).send({
             severity: "error",
-            status,
+            status: effectiveStatus,
             statusCode: StatusCode.Error,
-            message: "An error occurred",
-            error: `${tag}: ${error}`,
+            code,
+            message,
+            // Compatibilita: il campo storico resta presente, ma non espone SQL, stack o dati sensibili.
+            error: code,
+            ...(explicitDetails?.length ? { details: explicitDetails } : {}),
         });
+    }
+
+    /** Riconosce errori di metadata Firebird che richiedono una migrazione. */
+    static isDatabaseSchemaError(error: unknown): boolean {
+        const message = error instanceof Error ? error.message : String(error ?? "");
+        return /column unknown|table unknown|dynamic sql error|unsuccessful metadata update|invalid request blr/i.test(message);
     }
 
 
     static sendUnauthorized(res: Response): Response {
         return res.status(401).send({
             severity: "error",
+            status: 401,
             statusCode: StatusCode.Error,
-            message: "Non sei autorizzato",
+            code: "ACCESSI_UNAUTHORIZED",
+            error: "ACCESSI_UNAUTHORIZED",
+            message: "Autenticazione non valida o scaduta.",
         });
     }
 
     static sendInvalidCredentials(res: Response): Response {
         return res.status(401).send({
             severity: "error",
+            status: 401,
             statusCode: StatusCode.Error,
-            message: "Credenziali non valide"
+            code: "ACCESSI_INVALID_CREDENTIALS",
+            error: "ACCESSI_INVALID_CREDENTIALS",
+            message: "Credenziali non valide",
         });
     }
 
     static sendPasswordExpired(res: Response): Response {
         return res.status(403).send({
             severity: "warning",
+            status: 403,
             statusCode: StatusCode.Warning,
             code: "PASSWORD_EXPIRED",
+            error: "PASSWORD_EXPIRED",
             message: "Password scaduta. E' necessario aggiornarla"
         })
     }
@@ -160,9 +211,10 @@ export class RestUtilities {
      * Sends a base response with a payload.
      * @param res - Express Response object.
      * @param payload - The payload to include in the response.
+     * @param status - HTTP success status. Defaults to 200; pass 201 only after creating a resource.
      * @returns The Response object.
      */
-    static sendBaseResponse(res: Response, payload: any): Response {
+    static sendBaseResponse(res: Response, payload: any, status: number = 200): Response {
         try {
             payload = JSON.parse(JSON.stringify(payload));
             const response = {
@@ -173,7 +225,7 @@ export class RestUtilities {
                 Result: payload,
                 Message: "Dati recuperati con successo.",
             };
-            return res.send(response);
+            return res.status(status).send(response);
         } catch (error) {
             return this.sendErrorMessage(res, `Error sending response: ${error}`, "[UTILITIES]", 500);
         }
@@ -184,9 +236,10 @@ export class RestUtilities {
      * @param res - Express Response object.
      * @param executionObject - The execution data.
      * @param title - The title of the response.
+     * @param status - HTTP success status. Defaults to 200.
      * @returns The Response object.
      */
-    static sendExecMessage(res: Response, executionObject: any, title: string): Response {
+    static sendExecMessage(res: Response, executionObject: any, title: string, status: number = 200): Response {
         try {
             const response = {
                 Status: {
@@ -198,7 +251,7 @@ export class RestUtilities {
                 data: executionObject,
                 Title: title,
             };
-            return res.send(response);
+            return res.status(status).send(response);
         } catch (error) {
             return this.sendErrorMessage(res, `Error sending execution message: ${error}`, title, 500);
         }

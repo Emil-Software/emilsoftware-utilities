@@ -1,42 +1,50 @@
 import { Request } from "express";
 
+/** Grant effettivo letto da Accessi. Il confronto usa `tipoAbilitazione >= minPermissionLevel`. */
 export type AccessiGrant = {
   codiceMenu: string;
   tipoAbilitazione?: number;
 };
 
+/** Risultato memoizzato durante una singola autorizzazione. Non modificarlo nel custom handler. */
 export type GrantsResult = {
   grants?: AccessiGrant[];
   [key: string]: unknown;
 };
 
+/** Richiede l'accesso a un menu con almeno il livello indicato. Valori convenzionali: 10 lettura, 20 scrittura. */
 export type AccessiPermissionRequirement = {
   type: "permission";
   menuCode: string;
   minPermissionLevel: number;
 };
 
+/** Tutti i requisiti figli devono essere soddisfatti. Una lista vuota e una configurazione non valida. */
 export type AccessiAllRequirement = {
   type: "and";
   requirements: AccessiRequirementNode[];
 };
 
+/** Almeno un requisito figlio deve essere soddisfatto. Una lista vuota e una configurazione non valida. */
 export type AccessiAnyRequirement = {
   type: "or";
   requirements: AccessiRequirementNode[];
 };
 
+/** Nega il risultato del requisito figlio. Usarlo con cautela per non creare policy difficili da verificare. */
 export type AccessiNotRequirement = {
   type: "not";
   requirement: AccessiRequirementNode;
 };
 
+/** Delega una condizione applicativa a un handler registrato dal backend. */
 export type AccessiCustomRequirement = {
   type: "custom";
   key: string;
   payload?: unknown;
 };
 
+/** Nodo composabile dell'albero di autorizzazione valutato da `authorizeAccessi`. */
 export type AccessiRequirementNode =
   | AccessiPermissionRequirement
   | AccessiAllRequirement
@@ -44,6 +52,7 @@ export type AccessiRequirementNode =
   | AccessiNotRequirement
   | AccessiCustomRequirement;
 
+/** Contesto in sola lettura consegnato a un requisito personalizzato. */
 export type AccessiCustomRequirementContext = {
   req: Request;
   decodedToken: any;
@@ -51,17 +60,24 @@ export type AccessiCustomRequirementContext = {
   getGrantsResult: () => Promise<GrantsResult>;
 };
 
+/** Handler applicativo per `accessiRequirement.custom`; `false` nega la richiesta, un errore produce 500. */
 export type AccessiCustomRequirementHandler = (
   context: AccessiCustomRequirementContext,
   payload?: unknown
 ) => boolean | Promise<boolean>;
 
+/**
+ * Policy passata a `authorizeAccessi`.
+ * `requirements` e la forma compatibile storica ed equivale a un AND; `requirementTree`
+ * permette policy annidate e ha precedenza quando entrambi sono presenti.
+ */
 export type AccessiAuthorizationOptions = {
   requirements?: { menuCode: string; minPermissionLevel: number }[];
   requirementTree?: AccessiRequirementNode;
   customRequirementHandlers?: Record<string, AccessiCustomRequirementHandler>;
 };
 
+/** Errore di configurazione di una policy, distinto dal normale diniego 403. */
 export class RequirementEvaluationError extends Error {
   constructor(public readonly code: string, message: string) {
     super(message);
@@ -73,6 +89,7 @@ function requirementError(code: string, message: string): RequirementEvaluationE
   return new RequirementEvaluationError(code, message);
 }
 
+/** Factory tipizzata per costruire policy leggibili senza dipendere dalla struttura interna dei nodi. */
 export const accessiRequirement = {
   permission: (
     menuCode: string,
@@ -101,6 +118,7 @@ export const accessiRequirement = {
   }),
 };
 
+/** Normalizza la forma compatibile `requirements` nell'albero interno. */
 export function buildRequirementTree(
   options?: AccessiAuthorizationOptions
 ): AccessiRequirementNode | undefined {
@@ -119,6 +137,10 @@ export function buildRequirementTree(
   return accessiRequirement.and(...nodes);
 }
 
+/**
+ * Valuta ricorsivamente una policy. I grant sono caricati solo se necessari tramite `getGrantsResult`.
+ * Questa funzione e pubblica per test e integrazioni avanzate; normalmente usare `authorizeAccessi`.
+ */
 export async function evaluateRequirement(
   requirement: AccessiRequirementNode,
   context: AccessiCustomRequirementContext,

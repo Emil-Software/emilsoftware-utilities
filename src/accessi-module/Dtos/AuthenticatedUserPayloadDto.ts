@@ -20,6 +20,21 @@ export class AuthenticatedUserPayloadDto {
   @IsBoolean()
   flagAdminConfigurator: boolean;
 
+  @ApiPropertyOptional({ description: 'Verifica email richiesta per questo utente.', default: false })
+  @IsOptional()
+  @IsBoolean()
+  flagDueFattori?: boolean;
+
+  @ApiPropertyOptional({ description: 'Accesso consentito con il solo codice email.', default: false })
+  @IsOptional()
+  @IsBoolean()
+  passwordlessLoginEnabled?: boolean;
+
+  @ApiPropertyOptional({ description: 'Policy di login locale preesistente.', default: true })
+  @IsOptional()
+  @IsBoolean()
+  passwordLoginEnabled?: boolean;
+
   @ApiProperty({ example: 1 })
   @IsInt()
   statoRegistrazione: number;

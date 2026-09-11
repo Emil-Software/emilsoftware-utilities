@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="it">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#0d5c63">
+  <meta name="referrer" content="no-referrer">
+  <title>Accessi Console</title>
+  <script>
+    // Never retain legacy credentials accidentally submitted through a GET form.
+    if (window.location.search) window.history.replaceState(null, '', window.location.pathname + window.location.hash);
+  </script>
+  <link rel="stylesheet" href="/api/accessi/console/assets/console.css">
+</head>
+<body>
+  <div id="loading-overlay" hidden aria-live="polite" aria-busy="true">
+    <div class="loading-panel" role="status">
+      <span class="loading-spinner" aria-hidden="true"></span>
+      <span><strong>Operazione in corso</strong><small>Attendere il completamento della richiesta.</small></span>
+    </div>
+  </div>
+  <main id="app">
+    <section id="login" class="card" aria-labelledby="login-title">
+      <h1 id="login-title">Accessi Console</h1>
+      <p>Gestione centralizzata di utenti, ruoli, grant e identità SSO.</p>
+      <form id="login-form" method="post" action="" novalidate>
+        <label>Email o utente<input name="email" required autocomplete="username"></label>
+        <label id="password-field" hidden>Password<input name="password" type="password" autocomplete="current-password" disabled></label>
+        <button id="login-submit" type="submit">Continua</button>
+      </form>
+      <form id="two-factor-form" hidden>
+        <p>Inserisci il codice ricevuto via email per completare l'accesso.</p>
+        <label>Codice di accesso<input name="code" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]{6}" minlength="6" maxlength="6" required></label>
+        <p id="two-factor-status" class="form-help" role="status"></p>
+        <button type="submit">Verifica e accedi</button>
+        <button id="resend-code" type="button" class="secondary">Invia un nuovo codice</button>
+      </form>
+      <button id="restart-login" type="button" class="secondary" hidden>Ricomincia l'accesso</button>
+      <p id="login-error" class="error" role="alert"></p>
+    </section>
+    <section id="console" hidden>
+      <header>
+        <div><strong>Accessi Console</strong><small id="who"></small></div>
+        <button id="logout" class="secondary" type="button">Esci</button>
+      </header>
+      <nav id="nav" aria-label="Sezioni console">
+        <a data-view="users" href="./utenti">Utenti</a>
+        <a data-view="roles" href="./ruoli-e-grant">Ruoli e grant</a>
+        <a data-view="menus" href="./menu-e-gruppi">Menu e gruppi</a>
+        <a data-view="filters" href="./filtri">Filtri</a>
+        <a id="sso-navigation" data-view="sso" href="./sso" hidden>SSO</a>
+      </nav>
+      <div id="notice" role="status" aria-live="polite"></div>
+      <section id="view" aria-live="polite"></section>
+    </section>
+  </main>
+  <script type="module" src="/api/accessi/console/assets/console.js"></script>
+</body>
+</html>

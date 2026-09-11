@@ -1,5 +1,4 @@
 import express, { Application, Request } from "express";
-import { ValidationPipe } from "@nestjs/common";
 import { NestFactory } from "@nestjs/core";
 import { ExpressAdapter } from "@nestjs/platform-express";
 import { AccessiModule, AccessiOptions } from "./AccessiModule";
@@ -12,6 +11,8 @@ import {
     AuthenticateGenService,
     setAccessiAuthService
 } from "./middleware/authenticateGen";
+import { createAccessiValidationPipe } from './security/accessiValidation';
+import { AccessiHttpExceptionFilter } from './security/AccessiHttpExceptionFilter';
 
 function describeDatabaseTarget(options: AccessiOptions): string {
     const dbOptions = options.databaseOptions as {
@@ -24,7 +25,18 @@ function describeDatabaseTarget(options: AccessiOptions): string {
     return `${dbOptions.host ?? "?"}:${dbOptions.port ?? "?"} -> ${dbOptions.database ?? "?"} as ${dbOptions.user ?? "?"}`;
 }
 
-export async function initializeAccessiModule(app: Application, options: AccessiOptions) {
+/**
+ * Monta il modulo Accessi in un'applicazione Express gia esistente.
+ *
+ * Il bootstrap crea un host Nest isolato per le rotte `/api/accessi`, inizializza Swagger,
+ * validazione ed error handler, quindi rende disponibile `authorizeAccessi` al resto dell'app.
+ * Attendere questa Promise prima di aprire la porta HTTP: durante il bootstrap il middleware
+ * restituisce `ACCESSI_AUTH_INITIALIZING` invece di autorizzare richieste parzialmente inizializzate.
+ *
+ * @param app Applicazione Express ospitante. Non viene sostituita ne vengono intercettate rotte estranee ad Accessi.
+ * @param options Configurazione riservata del modulo; proviene normalmente da variabili d'ambiente o secret manager.
+ */
+export async function initializeAccessiModule(app: Application, options: AccessiOptions): Promise<void> {
     const logger: Logger = new Logger("initializeAccessiModule");
     beginAccessiAuthInitialization();
     const startedAt = performance.now();
@@ -60,16 +72,8 @@ export async function initializeAccessiModule(app: Application, options: Accessi
         logger.info("Applicazione Nest accessi creata.");
 
         nestApp.enableCors();
-        nestApp.useGlobalPipes(
-            new ValidationPipe({
-                whitelist: true,
-                forbidNonWhitelisted: true,
-                transform: true,
-                transformOptions: {
-                    enableImplicitConversion: true,
-                },
-            }),
-        );
+        nestApp.useGlobalPipes(createAccessiValidationPipe());
+        nestApp.useGlobalFilters(new AccessiHttpExceptionFilter());
 
         nestApp.setGlobalPrefix('api', {
             exclude: ['/swagger', '/swagger/(.*)']
@@ -112,6 +116,9 @@ export async function initializeAccessiModule(app: Application, options: Accessi
 export { AccessiModule } from "./AccessiModule";
 export { AccessiDatabaseUpdater } from "./database-updates/AccessiDatabaseUpdater";
 export type { AccessiOptions, EmailOptions, JwtOptions, ExtensionFieldsOptions, PublicAuthRateLimitOptions, PublicAuthRateLimitRuleOptions } from "./AccessiModule";
+export type { PublicRegistrationOptions, FederatedAuthenticationOptions } from "./AccessiModule";
+export { FederatedAuthService } from './federated-auth/FederatedAuthService';
+export type { FederatedAuthenticationResult, FederatedIdentity, FederatedProvider, VerifiedFederatedIdentity } from './federated-auth/FederatedAuthTypes';
 export * from "./Dtos";
 export {
     authorizeAccessi,

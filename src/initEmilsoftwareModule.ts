@@ -10,6 +10,8 @@ import {
     AuthenticateGenService,
     setAccessiAuthService
 } from "./accessi-module/middleware/authenticateGen";
+import { createAccessiValidationPipe } from './accessi-module/security/accessiValidation';
+import { AccessiHttpExceptionFilter } from './accessi-module/security/AccessiHttpExceptionFilter';
 
 /**
  * Initializes the unified module that combines Accessi and Allegati functionality
@@ -46,6 +48,11 @@ export async function initEmilsoftwareModule(app: Application, options: Emilsoft
         });
 
         nestApp.enableCors();
+        if (options?.accessiOptions) {
+            // Keep the Accessi API contract identical for standalone and unified bootstraps.
+            nestApp.useGlobalPipes(createAccessiValidationPipe());
+            nestApp.useGlobalFilters(new AccessiHttpExceptionFilter());
+        }
 
         nestApp.setGlobalPrefix('api', {
             exclude: ['/swagger', '/swagger/(.*)']

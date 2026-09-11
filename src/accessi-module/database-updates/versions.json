@@ -41,7 +41,25 @@
       "toVersion": "1.1.6",
       "script": "V1.1.5_to_V1.1.6.sql",
       "description": "Aggiunta colonna NUMMAC su UTENTI_CONFIG"
+    },
+    {
+      "fromVersion": "1.1.6",
+      "toVersion": "1.2.0",
+      "script": "V1.2.0_federated_auth_optional.sql",
+      "description": "Policy password e identita SSO"
+    },
+    {
+      "fromVersion": "1.2.0",
+      "toVersion": "1.3.0",
+      "script": "V1.3.0_sso_provider_catalog.sql",
+      "description": "Catalogo provider SSO"
+    },
+    {
+      "fromVersion": "1.3.0",
+      "toVersion": "1.4.0",
+      "script": "V1.3.0_to_V1.4.0.sql",
+      "description": "Codici di accesso e policy senza password"
     }
   ],
-  "latestVersion": "1.1.6"
+  "latestVersion": "1.4.0"
 }

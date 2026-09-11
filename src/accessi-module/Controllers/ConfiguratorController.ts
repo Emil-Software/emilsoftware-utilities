@@ -29,6 +29,7 @@ import { getAuthenticatedAccessiUser } from '../security/accessControl';
 @ApiTags('Configurator')
 @Controller('accessi/configurator')
 @UseGuards(JwtSimpleGuard)
+/** Endpoint amministrativi per abilitare o disabilitare cataloghi menu senza cancellarne lo storico. */
 export class ConfiguratorController {
   constructor(
     @Inject('ACCESSI_OPTIONS') private readonly options: AccessiOptions,

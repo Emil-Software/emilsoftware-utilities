@@ -1,5 +1,5 @@
 import { ApiProperty, ApiPropertyOptional, OmitType } from '@nestjs/swagger';
-import { Type } from 'class-transformer';
+import { Transform, Type } from 'class-transformer';
 import {
   ArrayUnique,
   IsArray,
@@ -17,6 +17,11 @@ import { Permission } from './Permission';
 import { TipoAbilitazione } from './TipoAbilitazione';
 import { FiltriUtente } from './FiltriUtente';
 
+/**
+ * Profilo Accessi con dati anagrafici, policy di accesso e filtri legacy.
+ * I campi amministrativi (`flagSuper`, `flagAdminConfigurator`, ruoli, grant e policy password) devono essere
+ * accettati soltanto da endpoint e flussi backend esplicitamente privilegiati.
+ */
 export class UserDto extends OmitType(FiltriUtente, ['codUte'] as const) {
   @ApiProperty({ description: "Codice identificativo univoco dell'utente.", example: 123 })
   @IsOptional()
@@ -116,7 +121,14 @@ export class UserDto extends OmitType(FiltriUtente, ['codUte'] as const) {
   })
   @IsOptional()
   @IsBoolean({ message: 'Il flag due fattori deve essere booleano.' })
+  @Transform(({ obj, key }) => obj[key])
   flagDueFattori?: boolean;
+
+  @ApiPropertyOptional({ description: 'Consente accesso con il solo codice email. Richiede flagDueFattori e viene gestito dagli amministratori.', default: false })
+  @IsOptional()
+  @IsBoolean()
+  @Transform(({ obj, key }) => obj[key])
+  passwordlessLoginEnabled?: boolean;
 
   @ApiPropertyOptional({ description: 'Codice lingua preferito.', example: 'it' })
   @IsOptional()
@@ -146,6 +158,14 @@ export class UserDto extends OmitType(FiltriUtente, ['codUte'] as const) {
   @IsOptional()
   @IsBoolean({ message: 'Il flag configuratore deve essere booleano.' })
   flagAdminConfigurator?: boolean;
+
+  @ApiPropertyOptional({
+    description: 'Abilita il login locale con password. Se false, l utente puo autenticarsi solo tramite identita SSO attive.',
+    example: false,
+  })
+  @IsOptional()
+  @IsBoolean({ message: 'Il flag login password deve essere booleano.' })
+  passwordLoginEnabled?: boolean;
 
   @ApiPropertyOptional({
     description: "Pagina di default dell'utente all'accesso.",
