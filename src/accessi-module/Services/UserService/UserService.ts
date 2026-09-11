@@ -31,19 +31,23 @@ export class UserService {
     private readonly filtriService: FiltriService,
   ) {}
 
-  private async validateApplicationFields(value: { nummac?: number; ragSocCli?: string } & Partial<FiltriUtente>): Promise<void> {
-    const fields = [['nummac', 'NUMMAC'], ['ragSocCli', 'RAGSOCCLI']];
-    if (fields.some(([key]) => value[key] !== undefined && value[key] !== null)) {
-      const columns = await getTableColumns(this.accessiOptions, 'UTENTI_CONFIG');
-      for (const [key, column] of fields) {
-        if (value[key] !== undefined && value[key] !== null && !columns.has(column)) {
+  private async validateApplicationFields(value: { nummac?: number; ragSocCli?: string } & Partial<FiltriUtente>): Promise<{ configColumns?: Set<string> }> {
+    type ApplicationField = 'nummac' | 'ragSocCli';
+    const applicationFields: ReadonlyArray<readonly [ApplicationField, string]> = [['nummac', 'NUMMAC'], ['ragSocCli', 'RAGSOCCLI']];
+    let configColumns: Set<string> | undefined;
+    if (applicationFields.some(([key]) => value[key] !== undefined)) {
+      configColumns = await getTableColumns(this.accessiOptions, 'UTENTI_CONFIG');
+      for (const [key, column] of applicationFields) {
+        if (value[key] !== undefined && value[key] !== null && !configColumns.has(column)) {
           throw new BadRequestException(`Campo applicativo non configurato: UTENTI_CONFIG.${column}`);
         }
       }
     }
-    if (Object.keys(FILTRI_UTENTE_DB_MAPPING).some(key => value[key] !== undefined && value[key] !== null && value[key] !== '')) {
+    const filterKeys = Object.keys(FILTRI_UTENTE_DB_MAPPING) as Array<keyof FiltriUtente>;
+    if (filterKeys.some(key => value[key] !== undefined && value[key] !== null && value[key] !== '')) {
       await this.filtriService.validateSupportedFields(value);
     }
+    return { configColumns };
   }
 
   private normalizeDatabaseBoolean(value: unknown): boolean {
@@ -533,7 +537,7 @@ export class UserService {
         }
       }
 
-      await this.validateApplicationFields(user);
+      const { configColumns } = await this.validateApplicationFields(user);
       const utentiUpdates = [];
       const utentiParams = [];
 
@@ -609,7 +613,7 @@ export class UserService {
         utentiConfigUpdates.push('json_metadata = ?');
         utentiConfigParams.push(user.jsonMetadata);
       }
-      if (user.ragSocCli !== undefined && (user.ragSocCli !== null || (await getTableColumns(this.accessiOptions, 'UTENTI_CONFIG')).has('RAGSOCCLI'))) {
+      if (user.ragSocCli !== undefined && (user.ragSocCli !== null || configColumns?.has('RAGSOCCLI'))) {
         utentiConfigUpdates.push('ragsoccli = ?');
         utentiConfigParams.push(user.ragSocCli);
       }

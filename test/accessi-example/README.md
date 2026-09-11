@@ -18,6 +18,6 @@ Swagger e disponibile su `http://localhost:3001/accessi/swagger`; il JSON su `ht
 
 ## SSO
 
-L'esempio abilita lo schema SSO ma non ne crea automaticamente le tabelle: applicare prima lo script opzionale `src/accessi-module/database-updates/scripts/V1.2.0_federated_auth_optional.sql`, oppure impostare `ACCESSI_FEDERATED_AUTO_UPDATE_SCHEMA=true` solo su un database di prova.
+Lo schema delle strutture SSO e 2FA (`UTENTI_IDENTITA_EXT`, `SSO_PROVIDER`, `ACCESSI_2FA`) e gestito da `AccessiDatabaseUpdater`: con `ACCESSI_AUTO_UPDATE_DATABASE=true` (default dell'esempio) viene creato e verificato all'avvio. Con la riconciliazione disattivata il bootstrap esegue comunque la verifica in sola lettura e fallisce se lo schema non e compatibile. L'opzione `federatedAuthentication.autoUpdateSchema` e deprecata e non avvia piu migrazioni separate: non usare gli script storici in `database-updates/scripts` su un database esistente.
 
 Questo server non espone endpoint che accettano token Azure, Google o Apple. In produzione il backend deve validare il token del provider e invocare `FederatedAuthService.authenticate({ provider, subject })` con i soli identificativi gia verificati.

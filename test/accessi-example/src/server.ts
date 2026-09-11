@@ -47,7 +47,6 @@ async function main(): Promise<void> {
     publicRegistration: { enabled: false },
     federatedAuthentication: {
       enabled: booleanValue('ACCESSI_FEDERATED_ENABLED', false),
-      autoUpdateSchema: booleanValue('ACCESSI_FEDERATED_AUTO_UPDATE_SCHEMA', false),
       allowSelfRegistration: booleanValue('ACCESSI_FEDERATED_ALLOW_SELF_REGISTRATION', false),
     },
     emailOptions: {
