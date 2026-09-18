@@ -8,7 +8,7 @@ export class AllegatoDto {
         example: 1,
     })
     @IsNumber()
-    id: number;
+    id!: number;
 
     @ApiProperty({
         description: 'Nome originale del file caricato',
@@ -16,7 +16,7 @@ export class AllegatoDto {
     })
     @IsString()
     @IsNotEmpty({ message: "Il nome file è obbligatorio." })
-    filename: string;
+    filename!: string;
 
     @ApiProperty({
         description: 'Tipo MIME del file',
@@ -24,7 +24,7 @@ export class AllegatoDto {
     })
     @IsString()
     @IsNotEmpty({ message: "Il tipo MIME è obbligatorio." })
-    mimetype: string;
+    mimetype!: string;
 
     @ApiProperty({
         description: 'Data di caricamento del file in formato ISO',
@@ -32,7 +32,7 @@ export class AllegatoDto {
     })
     @IsString()
     @IsNotEmpty({ message: "La data di upload è obbligatoria." })
-    uploadDate: string;
+    uploadDate!: string;
 
     @ApiProperty({
         description: 'Codice incrementale',

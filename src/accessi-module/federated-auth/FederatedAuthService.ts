@@ -269,10 +269,12 @@ export class FederatedAuthService implements OnModuleInit {
   async setPasswordLoginEnabled(codiceUtente: number, enabled: boolean): Promise<void> {
     this.assertEnabled();
     await this.assertUserExists(codiceUtente);
+    // Upsert: per utenti legacy senza riga in UTENTI_CONFIG una UPDATE a vuoto
+    // lasciava la policy al default, rendendo la disattivazione un no-op silenzioso.
     await Orm.execute(
       this.options.databaseOptions,
-      'UPDATE UTENTI_CONFIG SET FLGPASSWORD = ? WHERE CODUTE = ?',
-      [enabled ? 1 : 0, codiceUtente],
+      'UPDATE OR INSERT INTO UTENTI_CONFIG (CODUTE, FLGPASSWORD) VALUES (?, ?) MATCHING (CODUTE)',
+      [codiceUtente, enabled ? 1 : 0],
     );
   }
 

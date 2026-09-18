@@ -1,5 +1,4 @@
 import { Response } from 'express';
-import { Options } from "node-firebird";
 import { FirebirdOptions } from "./firebird-compat";
 import crypto from "crypto";
 
@@ -121,10 +120,11 @@ export class RestUtilities {
      * @param status - HTTP status code (default: 500).
      * @returns The Response object.
      */
-    static sendErrorMessage(res: Response, error: any, tag: string = "[BASE ERROR]", status: number = 500): Response {
+    static sendErrorMessage(res: Response, error: unknown, _tag: string = "[BASE ERROR]", status: number = 500): Response {
         const rawMessage = error instanceof Error ? error.message : String(error ?? "");
-        const exceptionResponse = error && typeof error.getResponse === "function"
-            ? error.getResponse()
+        const errorWithResponse = error as { getResponse?: () => unknown } | null | undefined;
+        const exceptionResponse = typeof errorWithResponse?.getResponse === "function"
+            ? errorWithResponse.getResponse()
             : undefined;
         const exceptionPayload = exceptionResponse && typeof exceptionResponse === "object"
             ? exceptionResponse as { code?: unknown; message?: unknown; details?: unknown }
@@ -214,7 +214,7 @@ export class RestUtilities {
      * @param status - HTTP success status. Defaults to 200; pass 201 only after creating a resource.
      * @returns The Response object.
      */
-    static sendBaseResponse(res: Response, payload: any, status: number = 200): Response {
+    static sendBaseResponse(res: Response, payload: unknown, status: number = 200): Response {
         try {
             payload = JSON.parse(JSON.stringify(payload));
             const response = {
@@ -239,7 +239,7 @@ export class RestUtilities {
      * @param status - HTTP success status. Defaults to 200.
      * @returns The Response object.
      */
-    static sendExecMessage(res: Response, executionObject: any, title: string, status: number = 200): Response {
+    static sendExecMessage(res: Response, executionObject: unknown, title: string, status: number = 200): Response {
         try {
             const response = {
                 Status: {
@@ -247,7 +247,7 @@ export class RestUtilities {
                     errorDescription: "",
                 },
                 Sql: "",
-                ID: executionObject?.id,
+                ID: (executionObject as { id?: unknown } | null | undefined)?.id,
                 data: executionObject,
                 Title: title,
             };
@@ -258,32 +258,36 @@ export class RestUtilities {
     }
 
     /**
-     * Prints a SQL query with parameters replaced.
+     * Prints a SQL query with parameters replaced. Replacement is literal: values
+     * containing `?` or `$&` no longer corrupt the output as in the legacy
+     * `String.replace` implementation.
      * @param query - The SQL query.
      * @param params - The parameters to replace.
      * @returns The formatted query.
      */
-    static printQueryWithParams(query: string = "", params: any[]): string {
-        try {
-            params.forEach(param => {
-                query = query.replace("?", param);
-            });
-            return query;
-        } catch (error) {
-            throw error;
-        }
+    static printQueryWithParams(query: string = "", params: unknown[] = []): string {
+        let index = 0;
+        return query.replace(/\?/g, () => {
+            if (index >= params.length) {
+                return "?";
+            }
+            const param = params[index++];
+            return param === undefined || param === null ? "NULL" : String(param);
+        });
     }
 
 
-    public static convertKeysToCamelCase(obj: any): any {
-        if (obj !== null && obj.constructor === Object) {
-            return Object.keys(obj).reduce((acc: any, key: string) => {
+    public static convertKeysToCamelCase<T = Record<string, unknown>>(obj: unknown): T {
+        if (obj !== null && typeof obj === "object" && obj.constructor === Object) {
+            const source = obj as Record<string, unknown>;
+            const converted = Object.keys(source).reduce((acc: Record<string, unknown>, key: string) => {
                 const camelCaseKey = key.toLowerCase().replace(/_([a-z])/g, g => g[1].toUpperCase());
-                acc[camelCaseKey] = obj[key];
+                acc[camelCaseKey] = source[key];
                 return acc;
             }, {});
+            return converted as T;
         }
-        return obj;
+        return obj as T;
     }
 }
 
@@ -312,9 +316,10 @@ export class CryptUtilities {
 
             // Restituisce il risultato cifrato codificato
             return encryptedBuffer.toString(outputEncoding);
-        } catch (error: any) {
+        } catch (error) {
             // Gestisce eventuali errori di cifratura
-            throw new Error(`Errore durante la cifratura: ${error.message}`);
+            const message = error instanceof Error ? error.message : String(error);
+            throw new Error(`Errore durante la cifratura: ${message}`);
         }
     }
 
@@ -464,6 +469,24 @@ export class PasswordUtilities {
         return this.hasPrefix(value, this.LEGACY_HASH_PREFIX);
     }
 
+    /** Confronto a tempo costante tra due stringhe (per dati legacy non hashati). */
+    public static timingSafeStringEquals(value: string, candidate: string): boolean {
+        if (typeof value !== "string" || typeof candidate !== "string") {
+            return false;
+        }
+
+        const valueBuffer = Buffer.from(value, "utf8");
+        const candidateBuffer = Buffer.from(candidate, "utf8");
+
+        if (valueBuffer.length !== candidateBuffer.length) {
+            // Confronta comunque per non rivelare la lunghezza tramite timing.
+            crypto.timingSafeEqual(valueBuffer, valueBuffer);
+            return false;
+        }
+
+        return crypto.timingSafeEqual(valueBuffer, candidateBuffer);
+    }
+
     public static verifyPassword(plainPassword: string, storedPassword: string): boolean {
         return this.verifySecret(plainPassword, storedPassword, this.HASH_PREFIX);
     }
@@ -531,7 +554,10 @@ export class DatabaseUtilities {
 }
 
 export function Deprecated(message: string) {
-    return function (target: any, key?: string, descriptor?: PropertyDescriptor) {
+    return function (target: object, key?: string, descriptor?: PropertyDescriptor) {
+      void target;
+      void key;
+      void descriptor;
       console.warn(`[DEPRECATED] ${message}`);
     };
   }

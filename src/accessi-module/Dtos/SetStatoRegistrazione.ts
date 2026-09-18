@@ -11,7 +11,7 @@ export class SetStatoRegistrazioneDto {
   @Type(() => Number)
   @IsInt({ message: 'Il codice utente deve essere un intero.' })
   @Min(1, { message: 'Il codice utente deve essere maggiore di zero.' })
-  codiceUtente: number;
+  codiceUtente!: number;
 
   @ApiProperty({
     description: 'Nuovo stato di registrazione',
@@ -19,5 +19,5 @@ export class SetStatoRegistrazioneDto {
     example: StatoRegistrazione.DELETE,
   })
   @IsEnum(StatoRegistrazione, { message: 'Lo stato di registrazione non e valido.' })
-  statoRegistrazione: StatoRegistrazione;
+  statoRegistrazione!: StatoRegistrazione;
 }

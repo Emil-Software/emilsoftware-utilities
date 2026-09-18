@@ -20,7 +20,7 @@ type RateLimitBucket = {
 
 type RateLimitDecision = {
   allowed: boolean;
-  retryAfterSeconds?: number;
+  retryAfterSeconds: number;
 };
 
 const DEFAULT_PUBLIC_AUTH_RATE_LIMITS: Record<
@@ -89,6 +89,27 @@ function pruneRateLimitBuckets(now: number): void {
   }
 }
 
+/** Mantiene il numero di bucket sotto la soglia, scartando i meno recenti. */
+function enforceBucketCap(): void {
+  while (RATE_LIMIT_BUCKETS.size >= MAX_TRACKED_BUCKETS) {
+    let oldestKey: string | undefined;
+    let oldestSeen = Number.POSITIVE_INFINITY;
+
+    for (const [key, bucket] of RATE_LIMIT_BUCKETS.entries()) {
+      if (bucket.lastSeenAt < oldestSeen) {
+        oldestSeen = bucket.lastSeenAt;
+        oldestKey = key;
+      }
+    }
+
+    if (oldestKey === undefined) {
+      return;
+    }
+
+    RATE_LIMIT_BUCKETS.delete(oldestKey);
+  }
+}
+
 function consumeBucket(
   bucketKey: string,
   rule: PublicAuthRateLimitRuleOptions,
@@ -96,6 +117,7 @@ function consumeBucket(
 ): number | null {
   const existingBucket = RATE_LIMIT_BUCKETS.get(bucketKey);
   if (!existingBucket || existingBucket.resetAt <= now) {
+    enforceBucketCap();
     RATE_LIMIT_BUCKETS.set(bucketKey, {
       count: 1,
       resetAt: now + rule.windowMs,
@@ -120,7 +142,7 @@ export function checkPublicAuthRateLimit(
   identifiers: string[] = [],
 ): RateLimitDecision {
   if (options.publicAuthRateLimit?.enabled === false) {
-    return { allowed: true };
+    return { allowed: true, retryAfterSeconds: 0 };
   }
 
   const rule = getRule(options, scope);
@@ -129,20 +151,26 @@ export function checkPublicAuthRateLimit(
 
   const ipAddress =
     normalizeIdentifier(req.ip ?? req.socket?.remoteAddress ?? 'unknown') ?? 'unknown';
-  const bucketKeys = new Set<string>([`${scope}|ip|${ipAddress}`]);
 
+  // Consuma prima il bucket per IP: se gia bloccato non crea bucket per soggetto,
+  // evitando crescita di memoria con identificatori sempre diversi.
+  const ipRetryAfterSeconds = consumeBucket(`${scope}|ip|${ipAddress}`, rule, now);
+  if (ipRetryAfterSeconds) {
+    return { allowed: false, retryAfterSeconds: ipRetryAfterSeconds };
+  }
+
+  let retryAfterSeconds = 0;
   for (const identifier of identifiers) {
     const normalizedIdentifier = normalizeIdentifier(identifier);
     if (!normalizedIdentifier) {
       continue;
     }
 
-    bucketKeys.add(`${scope}|ip-subject|${ipAddress}|${normalizedIdentifier}`);
-  }
-
-  let retryAfterSeconds = 0;
-  for (const bucketKey of bucketKeys) {
-    const bucketRetryAfterSeconds = consumeBucket(bucketKey, rule, now);
+    const bucketRetryAfterSeconds = consumeBucket(
+      `${scope}|ip-subject|${ipAddress}|${normalizedIdentifier}`,
+      rule,
+      now,
+    );
     if (bucketRetryAfterSeconds) {
       retryAfterSeconds = Math.max(retryAfterSeconds, bucketRetryAfterSeconds);
     }
@@ -155,7 +183,7 @@ export function checkPublicAuthRateLimit(
     };
   }
 
-  return { allowed: true };
+  return { allowed: true, retryAfterSeconds: 0 };
 }
 
 export function sendPublicAuthRateLimitExceeded(

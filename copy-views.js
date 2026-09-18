@@ -1,33 +1,42 @@
 const fs = require("fs-extra");
 const path = require("path");
-const glob = require("glob");
+
+const SOURCE_EXTENSIONS = new Set([".html", ".css"]);
+
+async function collectFiles(directory, baseDirectory = directory) {
+    const entries = await fs.readdir(directory, { withFileTypes: true });
+    const files = [];
+
+    for (const entry of entries) {
+        const fullPath = path.join(directory, entry.name);
+
+        if (entry.isDirectory()) {
+            files.push(...(await collectFiles(fullPath, baseDirectory)));
+            continue;
+        }
+
+        if (SOURCE_EXTENSIONS.has(path.extname(entry.name).toLowerCase())) {
+            files.push(path.relative(baseDirectory, fullPath));
+        }
+    }
+
+    return files;
+}
 
 async function copyHtmlFiles() {
     const srcDir = path.join(__dirname, "src");
     const distDir = path.join(__dirname, "dist");
 
-    glob("**/*.{html,css}", { cwd: srcDir }, async (err, files) => {
-        if (err) {
-            console.error("Errore nella ricerca dei file HTML:", err);
-            process.exit(1);
-        }
+    try {
+        const files = await collectFiles(srcDir);
 
-        if (files.length === 0) {
-            return;
+        for (const file of files) {
+            await fs.copy(path.join(srcDir, file), path.join(distDir, file));
         }
-
-        try {
-            // Copia ogni file HTML mantenendo la struttura delle cartelle
-            for (const file of files) {
-                const srcPath = path.join(srcDir, file);
-                const destPath = path.join(distDir, file);
-                await fs.copy(srcPath, destPath);
-            }
-        } catch (err) {
-            console.error("Errore nella copia dei file HTML:", err);
-            process.exit(1);
-        }
-    });
+    } catch (error) {
+        console.error("Errore nella copia dei file HTML/CSS:", error);
+        process.exit(1);
+    }
 }
 
 copyHtmlFiles();

@@ -5,11 +5,11 @@ import { IsObject, IsString, ValidateNested } from 'class-validator';
 export class Status {
   @ApiProperty({ example: '0', description: 'Codice di errore, "0" se tutto ok' })
   @IsString()
-  errorCode: string;
+  errorCode!: string;
 
   @ApiProperty({ example: 'Success', description: 'Descrizione dell\'errore o successo' })
   @IsString()
-  errorDescription: string;
+  errorDescription!: string;
 }
 
 export abstract class BaseResponse {
@@ -17,5 +17,5 @@ export abstract class BaseResponse {
   @ValidateNested()
   @Type(() => Status)
   @IsObject()
-  Status: Status;
+  Status!: Status;
 }

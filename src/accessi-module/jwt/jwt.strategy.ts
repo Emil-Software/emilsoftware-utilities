@@ -40,7 +40,7 @@ export class JwtSimpleGuard implements CanActivate {
       }
       let payload: jwt.JwtPayload | string;
       try {
-        payload = jwt.verify(token, secret);
+            payload = jwt.verify(token, secret, { algorithms: ['HS256'] });
       } catch {
         throw new UnauthorizedException('Token non valido o scaduto.');
       }

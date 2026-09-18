@@ -6,18 +6,18 @@ export class ExecutionTimeLogger {
      * @param target The target object.
      * @param propertyKey The name of the method.
      * @param descriptor The property descriptor of the method.
-     * @description use ExecutionTimeLogger.apply on any method
+     * @description use ExecutionTimeLogger.apply on a method
      */
-    static apply(target: any, propertyKey: string, descriptor: PropertyDescriptor) {
+    static apply(target: object, propertyKey: string, descriptor: PropertyDescriptor) {
         const originalMethod = descriptor.value;
 
         if (typeof originalMethod !== "function") {
             throw new TypeError(`ExecutionTimeLogger can only be applied to methods, not: ${typeof originalMethod}`);
         }
 
-        const className = target.constructor.name;
+        const className = (target as { constructor: { name: string } }).constructor.name;
         const logger = new Logger(className);
-        descriptor.value = async function (...args: any[]) {
+        descriptor.value = async function (...args: unknown[]) {
             const start = process.hrtime();
             logger.info(`[${className}] ${propertyKey} method execution started . . .`);
             
@@ -28,7 +28,8 @@ export class ExecutionTimeLogger {
                 logger.info(`[${className}] ${propertyKey} method took ${durationInMilliseconds.toFixed(2)} ms to execute`);
                 return result;
             } catch (error) {
-                logger.error(`[${className}] ${propertyKey} method threw an error: ${error.message}`);
+                const message = error instanceof Error ? error.message : String(error);
+                logger.error(`[${className}] ${propertyKey} method threw an error: ${message}`);
                 throw error;
             }
         };

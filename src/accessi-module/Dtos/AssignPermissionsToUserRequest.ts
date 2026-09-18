@@ -15,5 +15,5 @@ export class AssignPermissionsToUserRequest {
     @IsArray({ message: 'Le abilitazioni devono essere un array.' })
     @ValidateNested({ each: true })
     @Type(() => Permission)
-    permissions: Permission[];
+    permissions!: Permission[];
 }

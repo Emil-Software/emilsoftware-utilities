@@ -1,5 +1,5 @@
 import * as Firebird from "node-firebird";
-import { Database, Options, Transaction } from "node-firebird";
+import { ConnectionPool, Database, Options, QueryParams, Transaction } from "node-firebird";
 import { Logger } from "./Logger";
 import { RestUtilities } from "./Utilities";
 import {
@@ -11,14 +11,59 @@ import {
 
 export class Orm {
     private static logger: Logger = new Logger(Orm.name);
+    private static pools: Map<string, ConnectionPool> = new Map();
 
     public static quote(value: string): string {
         return "\"" + value + "\"";
     }
 
+    private static getPoolSize(options: Options): number {
+        const size = Number((options as FirebirdOptions).poolSize);
+        return Number.isFinite(size) && size > 0 ? Math.trunc(size) : 0;
+    }
+
+    private static shouldLogQueryParameters(options: Options): boolean {
+        return (options as FirebirdOptions).logQueryParameters === true;
+    }
+
+    private static formatQueryForLog(query: string, parameters: QueryParams, includeValues: boolean): string {
+        const parameterList = Array.isArray(parameters) ? parameters : Object.values(parameters ?? {});
+        if (includeValues) {
+            return RestUtilities.printQueryWithParams(query, parameterList);
+        }
+        return `${query.replace(/\s+/g, " ").trim()} [params=${parameterList.length}]`;
+    }
+
+    private static buildPoolKey(options: Options, size: number): string {
+        const normalized = normalizeFirebirdOptions(options);
+        return [
+            size,
+            normalized.host ?? "",
+            normalized.port ?? "",
+            normalized.database ?? "",
+            normalized.user ?? "",
+            normalized.pluginName ?? "",
+            String(normalized.wireCrypt ?? ""),
+        ].join("|");
+    }
+
+    private static getPool(options: Options, size: number): ConnectionPool {
+        const normalized = normalizeFirebirdOptions(options);
+        const key = this.buildPoolKey(normalized, size);
+        let pool = this.pools.get(key);
+        if (!pool) {
+            this.logger.info(`Firebird pool created (max=${size}) using ${describeFirebirdCompatibilityOptions(normalized)}`);
+            pool = Firebird.pool(size, normalized);
+            pool.on("error", (error: Error) => {
+                this.logger.error(`Firebird pool error: ${error.message}`);
+            });
+            this.pools.set(key, pool);
+        }
+        return pool;
+    }
+
     private static getTimeoutMs(options: Options): number {
-        const normalizedOptions = normalizeFirebirdOptions(options);
-        const candidate = normalizedOptions.connectTimeout ?? 15000;
+        const candidate = (options as FirebirdOptions).connectTimeout ?? 15000;
         return Number.isFinite(candidate) && candidate > 0 ? Math.trunc(candidate) : 15000;
     }
 
@@ -42,12 +87,11 @@ export class Orm {
         });
     }
 
-    private static shouldTrimStringResults(options: Options): boolean {
-        const normalizedOptions = normalizeFirebirdOptions(options);
-        return normalizedOptions.trimStringResults !== false;
+    private static shouldTrimStringResults(options: FirebirdOptions): boolean {
+        return options.trimStringResults !== false;
     }
 
-    private static normalizeResultValue(value: any, trimStringResults: boolean): any {
+    private static normalizeResultValue(value: unknown, trimStringResults: boolean): unknown {
         if (!trimStringResults || value === undefined || value === null) {
             return value;
         }
@@ -65,8 +109,9 @@ export class Orm {
         }
 
         if (typeof value === "object") {
-            return Object.keys(value).reduce((normalized: Record<string, any>, key: string) => {
-                normalized[key] = this.normalizeResultValue(value[key], trimStringResults);
+            const source = value as Record<string, unknown>;
+            return Object.keys(source).reduce((normalized: Record<string, unknown>, key: string) => {
+                normalized[key] = this.normalizeResultValue(source[key], trimStringResults);
                 return normalized;
             }, {});
         }
@@ -78,6 +123,7 @@ export class Orm {
         return new Promise((resolve, reject): void => {
             const normalizedOptions = normalizeFirebirdOptions(options);
             const timeoutMs = this.getTimeoutMs(normalizedOptions);
+            const poolSize = this.getPoolSize(options);
             let settled = false;
             const timeoutId = setTimeout(() => {
                 if (settled) {
@@ -94,9 +140,7 @@ export class Orm {
                 );
             }, timeoutMs);
 
-            this.logger.info(`Firebird attach using ${describeFirebirdCompatibilityOptions(normalizedOptions)}`);
-
-            Firebird.attach(normalizedOptions, async (err: any, db: Database): Promise<void> => {
+            const handle = async (err: unknown, db: Database): Promise<void> => {
                 if (settled) {
                     await this.detachQuietly(db);
                     return;
@@ -110,7 +154,25 @@ export class Orm {
                 }
 
                 return resolve(db);
-            });
+            };
+
+            try {
+                if (poolSize > 0) {
+                    this.getPool(options, poolSize).get(handle);
+                    return;
+                }
+
+                this.logger.info(`Firebird attach using ${describeFirebirdCompatibilityOptions(normalizedOptions)}`);
+
+                Firebird.attach(normalizedOptions, handle);
+            } catch (error) {
+                // Attach/get sincrono fallito: evita di lasciare il timer di timeout pendente.
+                if (!settled) {
+                    settled = true;
+                    clearTimeout(timeoutId);
+                    reject(enhanceFirebirdError(error, normalizedOptions, { stage: "attach" }));
+                }
+            }
         });
     }
 
@@ -130,12 +192,17 @@ export class Orm {
         });
     }
 
-    public static async query(options: Options, query: string, parameters: any[] = [], logQuery = true): Promise<any> {
+    public static async query<T = Record<string, unknown>>(
+        options: Options,
+        query: string,
+        parameters: QueryParams = [],
+        logQuery = true,
+    ): Promise<T[]> {
         try {
             const normalizedOptions = normalizeFirebirdOptions(options);
-            const db = await this.attachWithTimeout(normalizedOptions);
+            const db = await this.attachWithTimeout(options);
 
-            return await new Promise((resolve, reject): void => {
+            return await new Promise<T[]>((resolve, reject): void => {
                 const timeoutMs = this.getTimeoutMs(normalizedOptions);
                 let settled = false;
                 const timeoutId = setTimeout(async () => {
@@ -155,10 +222,10 @@ export class Orm {
                 }, timeoutMs);
 
                 if (logQuery) {
-                    this.logger.info(RestUtilities.printQueryWithParams(query, parameters));
+                    this.logger.info(this.formatQueryForLog(query, parameters, this.shouldLogQueryParameters(options)));
                 }
 
-                db.query(query, parameters, async (error: any, result: any) => {
+                db.query<unknown>(query, parameters, async (error: unknown, result: unknown[]) => {
                     if (settled) {
                         await this.detachQuietly(db);
                         return;
@@ -172,7 +239,7 @@ export class Orm {
                         return reject(enhanceFirebirdError(error, normalizedOptions, { stage: "query", sql: query }));
                     }
 
-                    return resolve(this.normalizeResultValue(result, this.shouldTrimStringResults(normalizedOptions)));
+                    return resolve(this.normalizeResultValue(result, this.shouldTrimStringResults(normalizedOptions)) as T[]);
                 });
             });
         } catch (error) {
@@ -182,12 +249,17 @@ export class Orm {
         }
     }
 
-    public static async execute(options: Options, query: string, parameters: any = [], logQuery = true): Promise<any> {
+    public static async execute<T = Record<string, unknown>>(
+        options: Options,
+        query: string,
+        parameters: QueryParams = [],
+        logQuery = true,
+    ): Promise<T[]> {
         try {
             const normalizedOptions = normalizeFirebirdOptions(options);
-            const db = await this.attachWithTimeout(normalizedOptions);
+            const db = await this.attachWithTimeout(options);
 
-            return await new Promise((resolve, reject): void => {
+            return await new Promise<T[]>((resolve, reject): void => {
                 const timeoutMs = this.getTimeoutMs(normalizedOptions);
                 let settled = false;
                 const timeoutId = setTimeout(async () => {
@@ -207,10 +279,10 @@ export class Orm {
                 }, timeoutMs);
 
                 if (logQuery) {
-                    this.logger.info(RestUtilities.printQueryWithParams(query, parameters));
+                    this.logger.info(this.formatQueryForLog(query, parameters, this.shouldLogQueryParameters(options)));
                 }
 
-                db.execute(query, parameters, async (error: any, result: any) => {
+                db.execute<unknown>(query, parameters, async (error: unknown, result: unknown[]) => {
                     if (settled) {
                         await this.detachQuietly(db);
                         return;
@@ -224,7 +296,7 @@ export class Orm {
                         return reject(enhanceFirebirdError(error, normalizedOptions, { stage: "execute", sql: query }));
                     }
 
-                    return resolve(this.normalizeResultValue(result, this.shouldTrimStringResults(normalizedOptions)));
+                    return resolve(this.normalizeResultValue(result, this.shouldTrimStringResults(normalizedOptions)) as T[]);
                 });
             });
         } catch (error) {
@@ -234,9 +306,9 @@ export class Orm {
         }
     }
 
-    public static trimParam(param: any): string {
+    public static trimParam<T>(param: T): string | T {
         if (typeof param === "string" || param instanceof String) {
-            return param.trim();
+            return String(param).trim();
         }
         return param;
     }
@@ -245,9 +317,58 @@ export class Orm {
         return this.attachWithTimeout(options);
     }
 
+    /**
+     * Runs `operation` inside a single Firebird transaction: commit on success,
+     * rollback on failure, detach in every case. Use it to make multi-statement
+     * writes atomic instead of relying on auto-commit per statement.
+     */
+    public static async withTransaction<T>(
+        options: Options,
+        operation: (transaction: Transaction) => Promise<T>,
+    ): Promise<T> {
+        const db = await this.connect(options);
+        let transaction: Transaction | undefined;
+
+        try {
+            transaction = await this.startTransaction(db);
+            const result = await operation(transaction);
+            await this.commitTransaction(transaction);
+            return result;
+        } catch (error) {
+            if (transaction) {
+                try {
+                    await this.rollbackTransaction(transaction);
+                } catch {
+                    // Se la rollback fallisce (connessione persa) l'errore originale resta quello rilevante.
+                }
+            }
+            throw error;
+        } finally {
+            await this.detachQuietly(db);
+        }
+    }
+
+    /** Esegue una query su una transazione esistente e ne restituisce il risultato. */
+    public static transactionQuery<T = unknown>(
+        transaction: Transaction,
+        query: string,
+        parameters: QueryParams = [],
+    ): Promise<T> {
+        return new Promise<T>((resolve, reject): void => {
+            transaction.query(query, parameters, (error: unknown, result: unknown[]): void => {
+                if (error) {
+                    reject(error);
+                    return;
+                }
+
+                resolve(result as T);
+            });
+        });
+    }
+
     public static async startTransaction(db: Database): Promise<Transaction> {
         return new Promise((resolve, reject): void => {
-            db.transaction(Firebird.ISOLATION_READ_COMMITTED, function (err: any, transaction: Transaction): void {
+            db.transaction(Firebird.ISOLATION_READ_COMMITTED, function (err: unknown, transaction: Transaction): void {
                 if (err) {
                     return reject(err);
                 }
@@ -259,7 +380,7 @@ export class Orm {
 
     public static async commitTransaction(transaction: Transaction): Promise<string> {
         return new Promise((resolve, reject): void => {
-            transaction.commit((err: any): void => {
+            transaction.commit((err: unknown): void => {
                 if (err) {
                     return reject(err);
                 }
@@ -271,7 +392,7 @@ export class Orm {
 
     public static async rollbackTransaction(transaction: Transaction): Promise<string> {
         return new Promise((resolve, reject): void => {
-            transaction.rollback((err: any): void => {
+            transaction.rollback((err: unknown): void => {
                 if (err) {
                     return reject(err);
                 }
@@ -281,44 +402,21 @@ export class Orm {
         });
     }
 
-    public static async executeMultiple(options: Options, queriesWithParams: { query: string, params: any[] }[]): Promise<string> {
-        let db: Database | undefined;
-        let transaction: Transaction | undefined;
-
-        try {
-            db = await Orm.connect(options);
-            transaction = await Orm.startTransaction(db);
-
+    public static async executeMultiple(options: Options, queriesWithParams: { query: string, params: QueryParams }[]): Promise<string> {
+        await Orm.withTransaction(options, async (transaction) => {
             for (const qwp of queriesWithParams) {
-                await new Promise((resolve, reject) => {
-                    transaction!.query(qwp.query, qwp.params, (err: any, result: any): void => {
-                        if (err) {
-                            return reject(err);
-                        }
-
-                        return resolve(result);
-                    });
-                });
+                await Orm.transactionQuery(transaction, qwp.query, qwp.params);
             }
+        });
 
-            await Orm.commitTransaction(transaction);
-            await Orm.detachQuietly(db);
-            return "OK";
-        } catch (error) {
-            if (transaction) {
-                await Orm.rollbackTransaction(transaction);
-            }
-
-            await Orm.detachQuietly(db);
-            throw error;
-        }
+        return "OK";
     }
 
-    public static async executeQueries(transaction: Transaction, queries: string[], params: any[]): Promise<any> {
+    public static async executeQueries(transaction: Transaction, queries: string[], params: QueryParams[]): Promise<unknown> {
         try {
-            return await queries.reduce((promiseChain: Promise<any>, currentQuery: string, index: number) => {
+            return await queries.reduce((promiseChain: Promise<unknown>, currentQuery: string, index: number) => {
                 return promiseChain.then(() => new Promise((resolve, reject) => {
-                    transaction.query(currentQuery, params[index], (err: any, result: any): void => {
+                    transaction.query(currentQuery, params[index], (err: unknown, result: unknown[]): void => {
                         if (err) {
                             return reject(err);
                         }
@@ -328,8 +426,8 @@ export class Orm {
                 }));
             }, Promise.resolve());
         } catch (error) {
-            return await new Promise((resolve, reject) => {
-                transaction.rollback((rollbackErr: any): void => {
+            return await new Promise((_resolve, reject) => {
+                transaction.rollback((rollbackErr: unknown): void => {
                     if (rollbackErr) {
                         return reject(rollbackErr);
                     }

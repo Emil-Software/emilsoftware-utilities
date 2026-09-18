@@ -84,7 +84,7 @@ export class UserController {
     required: true,
   })
   @Get('reset-password/:token')
-  async serveResetPasswordPage(@Res() res: Response, @Param('token') token: string) {
+  async serveResetPasswordPage(@Res() res: Response, @Param('token') _token: string) {
     return res.sendFile(join(__dirname, '..', 'Views', 'reset-password.html'));
   }
 

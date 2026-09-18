@@ -18,8 +18,13 @@ function normalizeBooleanFlag(value: unknown): boolean {
  * Non usare questa funzione come autenticazione: se il middleware non e stato applicato genera 401.
  */
 export function getAuthenticatedAccessiUser(req: Request): AuthenticatedAccessiUser {
-  const payload = (req as any)?.user;
-  const utente = payload?.utente ?? payload?.userData?.utente ?? payload;
+  const payload = (req as Request & { user?: unknown }).user;
+  const payloadRecord = payload && typeof payload === 'object' ? payload as Record<string, unknown> : undefined;
+  const userData = payloadRecord?.userData && typeof payloadRecord.userData === 'object'
+    ? payloadRecord.userData as Record<string, unknown>
+    : undefined;
+  const rawUser = payloadRecord?.utente ?? userData?.utente ?? payloadRecord;
+  const utente = rawUser && typeof rawUser === 'object' ? rawUser as Record<string, unknown> : undefined;
   const codiceUtente = Number(utente?.codiceUtente);
 
   if (!Number.isSafeInteger(codiceUtente) || codiceUtente <= 0) {

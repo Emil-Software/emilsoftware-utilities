@@ -16,12 +16,12 @@ export class FiltriService {
   /** Returns the enabled filter-type catalog used by legacy and configurator clients. */
   public async getTipoFiltri(): Promise<TipoFiltro[]> {
     try {
-      let getQuery =
+      const getQuery =
         'SELECT TIPFIL AS TIP_FIL, DESFIL AS DES_FIL, FLDFIL AS FLD_FIL, FLGENABLED AS FLG_ENABLED FROM FILTRI_TIPO';
-      const params = [];
+      const params: unknown[] = [];
 
-      let result = await Orm.query(this.accessiOptions.databaseOptions, getQuery, params);
-      return result.map(RestUtilities.convertKeysToCamelCase);
+      const result = await Orm.query(this.accessiOptions.databaseOptions, getQuery, params);
+      return result.map(RestUtilities.convertKeysToCamelCase) as unknown as TipoFiltro[];
     } catch (error) {
       this.logger.error('Errore durante il recupero dei tipi di filtri', error);
       throw error;
@@ -29,9 +29,9 @@ export class FiltriService {
   }
 
   /** Returns filters for one user; omit the code only for trusted administrative reporting. */
-  public async getFiltriUser(codUte: number): Promise<FiltriUtente[]> {
+  public async getFiltriUser(codUte: number | undefined): Promise<FiltriUtente[]> {
     try {
-      let params = [];
+      const params: unknown[] = [];
 
       const columns = await getTableColumns(this.accessiOptions, 'FILTRI');
       const aliases = { PROG: 'PROGRESSIVO', NUMREP: 'NUM_REP', IDXPERS: 'IDX_PERS', CODCLISUPER: 'COD_CLI_SUPER', CODAGE: 'COD_AGE', CODCLICOL: 'COD_CLI_COL', CODCLIENTI: 'COD_CLIENTI', TIPFIL: 'TIP_FIL', CODDIP: 'COD_DIP', IDXPOS: 'IDX_POS', CODVET: 'COD_VET' };
@@ -46,18 +46,18 @@ export class FiltriService {
         params.push(codUte);
       }
 
-      let result = await Orm.query(this.accessiOptions.databaseOptions, getQuery, params);
-      return result.map(RestUtilities.convertKeysToCamelCase);
+      const result = await Orm.query(this.accessiOptions.databaseOptions, getQuery, params);
+      return result.map(RestUtilities.convertKeysToCamelCase) as unknown as FiltriUtente[];
     } catch (error) {
       throw error;
     }
   }
 
-  /** Validate before a caller creates or updates any user data. */
+  /** Validate before a caller creates or updates user data. */
   public async validateSupportedFields(dto: Partial<FiltriUtente>, columns?: Set<string>): Promise<Set<string>> {
     columns ??= await getTableColumns(this.accessiOptions, 'FILTRI');
     for (const [key, cfg] of Object.entries(FILTRI_UTENTE_DB_MAPPING)) {
-      const value = dto[key];
+      const value = (dto as Record<string, unknown>)[key];
       if (value !== undefined && value !== null && value !== '' && !columns.has(cfg.dbField)) {
         throw new BadRequestException(`Filtro applicativo non configurato: FILTRI.${cfg.dbField}`);
       }
@@ -75,11 +75,11 @@ export class FiltriService {
 
       const columns = await this.validateSupportedFields(dto);
       const dbFields: string[] = ['CODUTE'];
-      const values: any[] = [codUte];
+      const values: unknown[] = [codUte];
 
       //aggiungo solo campi valorizzati
       for (const [key, cfg] of Object.entries(FILTRI_UTENTE_DB_MAPPING)) {
-        const value = (dto as any)[key];
+        const value = (dto as Record<string, unknown>)[key];
 
         //gestione campi vuoti, null o undefined
         if (value === undefined || !columns.has(cfg.dbField)) {
@@ -112,8 +112,8 @@ export class FiltriService {
       this.logger.log('Update or Insert filtri OK per CODUTE = ' + codUte)
 
     } catch (error) {
-      throw new Error(`Errore durante update or insert filtri per utente ${codUte}: ${error.message}`);
-
+      const message = error instanceof Error ? error.message : String(error);
+      throw new Error(`Errore durante update or insert filtri per utente ${codUte}: ${message}`);
     }
   }
 }

@@ -89,31 +89,31 @@ export class Logger {
         this.print(error ? LogLevels.ERROR : LogLevels.INFO, message);
     }
 
-    public info(...data: Object[]): void {
+    public info(...data: unknown[]): void {
         this.print(LogLevels.INFO, ...data);
     }
 
-    public dbLog(...data: Object[]): void {
+    public dbLog(...data: unknown[]): void {
         this.print(LogLevels.DATABASE, ...data);
     }
 
-    public debug(...data: Object[]): void {
+    public debug(...data: unknown[]): void {
         this.print(LogLevels.DEBUG, ...data);
     }
 
-    public warning(...data: Object[]): void {
+    public warning(...data: unknown[]): void {
         this.print(LogLevels.WARNING, ...data);
     }
 
-    public log(...data: Object[]): void {
+    public log(...data: unknown[]): void {
         this.print(LogLevels.LOG, ...data);
     }
 
-    public error(...data: Object[]): void {
+    public error(...data: unknown[]): void {
         this.print(LogLevels.ERROR, ...data);
     }
 
-    private print(level: LogLevels, ...data: Object[]): void {
+    private print(level: LogLevels, ...data: unknown[]): void {
         const now: Date = new Date();
         const fileName = this.tag.split("\\").pop() || this.tag;
 

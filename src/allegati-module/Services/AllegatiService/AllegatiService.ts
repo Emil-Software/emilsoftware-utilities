@@ -37,6 +37,26 @@ export class AllegatiService {
         });
     }
 
+    private toAllegatoDto(row: Record<string, unknown>): AllegatoDto {
+        const optionalString = (value: unknown): string | undefined => value === undefined || value === null ? undefined : String(value);
+        const optionalNumber = (value: unknown): number | undefined => value === undefined || value === null ? undefined : Number(value);
+
+        return {
+            id: Number(row.ID ?? row.id),
+            filename: String(row.FILENAME ?? row.filename ?? ''),
+            mimetype: String(row.MIMETYPE ?? row.mimetype ?? ''),
+            uploadDate: String(row.UPLOADDATE ?? row.uploadDate ?? ''),
+            codice: optionalString(row.CODICE ?? row.codice),
+            tipoCodice: optionalString(row.TIPOCODICE ?? row.tipoCodice),
+            ordine: optionalString(row.ORDINE ?? row.ordine),
+            descrizioneAllegato: optionalString(row.DESCRIZIONEALLEGATO ?? row.descrizioneAllegato),
+            dataInizioValidita: optionalString(row.DATAINIZIOVALIDITA ?? row.dataInizioValidita),
+            dataFineValidita: optionalString(row.DATAFINEVALIDITA ?? row.dataFineValidita),
+            idTipoAllegato: optionalNumber(row.IDTIPOALLEGATO ?? row.idTipoAllegato),
+            riferimentoDocumento: optionalString(row.RIFERIMENTODOCUMENTO ?? row.riferimentoDocumento),
+        };
+    }
+
     private validateFile(file: Express.Multer.File): void {
         if (!file) {
             throw new BadRequestException('Nessun file fornito');
@@ -49,10 +69,51 @@ export class AllegatiService {
         if (!this.ALLOWED_MIME_TYPES.includes(file.mimetype)) {
             throw new BadRequestException(`Tipo di file non consentito. Tipi consentiti: ${this.ALLOWED_MIME_TYPES.join(', ')}`);
         }
+
+        // Il mimetype dichiarato dal client e falsificabile: verifica i magic byte reali.
+        if (!this.hasValidSignature(file)) {
+            throw new BadRequestException('Il contenuto del file non corrisponde al tipo dichiarato.');
+        }
+    }
+
+    private hasValidSignature(file: Express.Multer.File): boolean {
+        const buffer = file?.buffer;
+        if (!buffer || buffer.length < 4) {
+            return false;
+        }
+
+        const startsWith = (...bytes: number[]): boolean => bytes.every((byte, index) => buffer[index] === byte);
+
+        switch (file.mimetype) {
+            case 'application/pdf':
+                return startsWith(0x25, 0x50, 0x44, 0x46);
+            case 'image/jpeg':
+                return startsWith(0xff, 0xd8, 0xff);
+            case 'image/png':
+                return startsWith(0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a);
+            case 'application/msword':
+            case 'application/vnd.ms-excel':
+                return startsWith(0xd0, 0xcf, 0x11, 0xe0);
+            case 'application/vnd.openxmlformats-officedocument.wordprocessingml.document':
+            case 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet':
+                // DOCX/XLSX sono archivi ZIP.
+                return startsWith(0x50, 0x4b, 0x03, 0x04)
+                    || startsWith(0x50, 0x4b, 0x05, 0x06)
+                    || startsWith(0x50, 0x4b, 0x07, 0x08);
+            default:
+                return false;
+        }
+    }
+
+    private sanitizeFilename(name: unknown): string {
+        const raw = typeof name === 'string' ? name : '';
+        const base = raw.replace(/\\/g, '/').split('/').pop() ?? '';
+        const cleaned = base.replace(/[\u0000-\u001f\u007f<>:"|?*]/g, '_').trim();
+        return cleaned.slice(0, 255) || 'allegato';
     }
 
 
-    async getAttachmentTypes(): Promise<any[]> {
+    async getAttachmentTypes(): Promise<Array<Record<string, unknown>>> {
         try {
             const query = `SELECT IDXTIPOALL as id, DESCRIZIONE as description FROM TIPOALL`;
             const results = await Orm.query(this.allegatiOptions.databaseOptions, query);
@@ -95,7 +156,7 @@ export class AllegatiService {
                 uploadSingleFileRequest.tipoCodice,
                 uploadSingleFileRequest.ordine,
                 uploadSingleFileRequest.descrizioneAllegato,
-                file.originalname,
+                this.sanitizeFilename(file.originalname),
                 uploadSingleFileRequest.dataInizioValidita,
                 uploadSingleFileRequest.dataFineValidita,
                 base64Content,
@@ -104,14 +165,18 @@ export class AllegatiService {
             ];
 
             const result = await Orm.query(this.allegatiOptions.databaseOptions, insertQuery, params);
-            
-            if (!result || !result.IDXALL) {
+            // node-firebird restituisce le righe di INSERT ... RETURNING come array; il fallback
+            // copre le versioni/driver che restituiscono un singolo oggetto.
+            const inserted = (Array.isArray(result) ? result[0] : result) as Record<string, unknown> | undefined;
+            const insertedId = inserted?.IDXALL ?? inserted?.idxall;
+
+            if (insertedId === undefined || insertedId === null) {
                 throw new InternalServerErrorException('Errore durante il salvataggio del file');
             }
 
             return {
-                id: result.IDXALL,
-                filename: file.originalname,
+                id: Number(insertedId),
+                filename: this.sanitizeFilename(file.originalname),
             };
         } catch (error) {
             console.error('[AllegatiService] uploadFile - Errore:', error);
@@ -162,19 +227,22 @@ export class AllegatiService {
             }
 
             const result = results[0];
-            if (!result.CONTENT) {
+            const content = result?.CONTENT ?? result?.content;
+            const filename = result?.FILENAME ?? result?.filename;
+
+            if (typeof content !== 'string' || content.length === 0) {
                 throw new InternalServerErrorException('Contenuto file non disponibile');
             }
 
-            if (!result.FILENAME) {
+            if (typeof filename !== 'string' || filename.length === 0) {
                 throw new InternalServerErrorException('Nome file non disponibile');
             }
 
-            const mimetype = this.detectMimeType(result.FILENAME);
+            const mimetype = this.detectMimeType(filename);
             
             return {
-                contentBase64: result.CONTENT,
-                filename: result.FILENAME,
+                contentBase64: content,
+                filename,
                 mimetype
             };
         } catch (error) {
@@ -239,7 +307,7 @@ export class AllegatiService {
     }): Promise<AllegatoDto[]> {
         try {
             const whereConditions: string[] = [];
-            const params: any[] = [];
+            const params: unknown[] = [];
 
             if (filters) {
                 if (filters.tipcod) {
@@ -284,20 +352,7 @@ export class AllegatiService {
                 throw new InternalServerErrorException('Errore durante il recupero della lista dei file');
             }
 
-            return results.map((r: any) => ({
-                id: r.ID,
-                filename: r.FILENAME,
-                mimetype: r.MIMETYPE,
-                uploadDate: r.UPLOADDATE,
-                codice: r.CODICE,
-                tipoCodice: r.TIPOCODICE,
-                ordine: r.ORDINE,
-                descrizioneAllegato: r.DESCRIZIONEALLEGATO,
-                dataInizioValidita: r.DATAINIZIOVALIDITA,
-                dataFineValidita: r.DATAFINEVALIDITA,
-                idTipoAllegato: r.IDTIPOALLEGATO,
-                riferimentoDocumento: r.RIFERIMENTODOCUMENTO
-            }));
+            return results.map((r: Record<string, unknown>) => this.toAllegatoDto(r));
         } catch (error) {
             console.error('[AllegatiService] listFiles - Errore:', error);
             if (error instanceof InternalServerErrorException) {
@@ -308,12 +363,12 @@ export class AllegatiService {
     }
 
     /**
-     * Find allegati by any combination of tipcod, codice, docrif, idxtipoall
+     * Find allegati by a combination of tipcod, codice, docrif, idxtipoall
      */
     async findByFields(fields: { tipcod?: string; codice?: number; docrif?: string; idxtipoall?: number }): Promise<AllegatoDto[]> {
         try {
             const whereConditions: string[] = [];
-            const params: any[] = [];
+            const params: unknown[] = [];
             if (fields.tipcod) {
                 whereConditions.push('TIPCOD = ?');
                 params.push(fields.tipcod);
@@ -351,20 +406,7 @@ export class AllegatiService {
             if (!results) {
                 throw new InternalServerErrorException('Errore durante la ricerca degli allegati');
             }
-            return results.map((r: any) => ({
-                id: r.ID,
-                filename: r.FILENAME,
-                mimetype: r.MIMETYPE,
-                uploadDate: r.UPLOADDATE,
-                codice: r.CODICE,
-                tipoCodice: r.TIPOCODICE,
-                ordine: r.ORDINE,
-                descrizioneAllegato: r.DESCRIZIONEALLEGATO,
-                dataInizioValidita: r.DATAINIZIOVALIDITA,
-                dataFineValidita: r.DATAFINEVALIDITA,
-                idTipoAllegato: r.IDTIPOALLEGATO,
-                riferimentoDocumento: r.RIFERIMENTODOCUMENTO
-            }));
+            return results.map((r: Record<string, unknown>) => this.toAllegatoDto(r));
         } catch (error) {
             console.error('[AllegatiService] findByFields - Errore:', error);
             throw new InternalServerErrorException('Errore durante la ricerca degli allegati');
@@ -380,7 +422,7 @@ export class AllegatiService {
                 throw new BadRequestException('ID allegato non valido');
             }
             const updates: string[] = [];
-            const params: any[] = [];
+            const params: unknown[] = [];
             if (fields.tipcod !== undefined) {
                 updates.push('TIPCOD = ?');
                 params.push(fields.tipcod);

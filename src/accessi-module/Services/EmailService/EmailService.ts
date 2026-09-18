@@ -3,6 +3,7 @@ import { v4 as uuidv4 } from 'uuid';
 import type { AccessiOptions } from '../../AccessiModule';
 import { Orm } from '../../../Orm';
 import { Inject, Injectable } from '@nestjs/common';
+import { Logger } from '../../../Logger';
 import { StatoRegistrazione } from '../../Dtos/StatoRegistrazione';
 import {
   createPasswordResetToken,
@@ -12,9 +13,11 @@ import {
 @Injectable()
 /** Sends password lifecycle email. It deliberately does not expose whether an email exists to public callers. */
 export class EmailService {
+  private readonly logger = new Logger(EmailService.name);
+
   constructor(@Inject('ACCESSI_OPTIONS') private readonly accessiOptions: AccessiOptions) {}
 
-  sendAccountUpdateEmail(email: string, message: string): Promise<void> {
+  sendAccountUpdateEmail(_email: string, _message: string): Promise<void> {
     throw new Error('Method not implemented.');
   }
 
@@ -50,7 +53,7 @@ export class EmailService {
         'SELECT FIRST 1 CODUTE as codice_utente, STAREG as stato_registrazione FROM UTENTI WHERE LOWER(USRNAME) = ?',
         [normalizedEmail],
       );
-      const user = userResult.map((row) => ({
+      const user = userResult.map((row: Record<string, unknown>) => ({
         codiceUtente: Number(row.CODICE_UTENTE ?? row.codice_utente ?? row.CODUTE ?? row.codute),
         statoRegistrazione: Number(
           row.STATO_REGISTRAZIONE ?? row.stato_registrazione ?? row.STAREG ?? row.stareg,
@@ -68,7 +71,7 @@ export class EmailService {
       codiceUtente = user.codiceUtente;
       nonce = uuidv4();
       const secret = getAccessiJwtSecret(this.accessiOptions);
-      resetToken = createPasswordResetToken(codiceUtente, nonce, secret);
+      resetToken = createPasswordResetToken(user.codiceUtente, nonce, secret);
 
       await Orm.execute(
         this.accessiOptions.databaseOptions,
@@ -133,7 +136,7 @@ export class EmailService {
           false,
         ).catch(() => undefined);
       }
-      console.error("Errore nell'invio dell'email di reset password:", error);
+      this.logger.error("Errore nell'invio dell'email di reset password:", error);
       throw new Error("Errore durante l'invio dell'email di reset password.");
     }
   }

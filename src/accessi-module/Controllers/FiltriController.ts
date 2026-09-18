@@ -1,8 +1,7 @@
-import { Body, Controller, Get, Inject, Post, Query, Req, Res, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Post, Query, Req, Res, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { Request, Response } from 'express';
 import { RestUtilities } from '../../Utilities';
-import type { AccessiOptions } from '../AccessiModule';
 import { ActionResponse, ErrorResponse } from '../Dtos/BaseResponse';
 import { FiltriUtente, GetFiltriUtenteRequest, GetFiltriUtenteResponse } from '../Dtos';
 import { GetFiltriResponse } from '../Dtos/TipoFiltro';
@@ -22,7 +21,6 @@ import {
 export class FiltriController {
   constructor(
     private readonly filtriService: FiltriService,
-    @Inject('ACCESSI_OPTIONS') private readonly options: AccessiOptions,
   ) {}
 
   @Get('tipi')

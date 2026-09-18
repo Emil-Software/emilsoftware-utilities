@@ -18,7 +18,7 @@ import { PermissionService } from '../PermissionService/PermissionService';
 interface OptionalField<T> {
   key: keyof RegisterRequest;
   dbField: string;
-  transform?: (value: any) => T;
+  transform?: (value: unknown) => T;
 }
 
 @autobind
@@ -26,7 +26,7 @@ interface OptionalField<T> {
 export class UserService {
   constructor(
     @Inject('ACCESSI_OPTIONS') private readonly accessiOptions: AccessiOptions,
-    private readonly emailService: EmailService,
+    _emailService: EmailService,
     private readonly permissionService: PermissionService,
     private readonly filtriService: FiltriService,
   ) {}
@@ -100,7 +100,7 @@ export class UserService {
     const query = `SELECT FLGADMINCONFIG AS flag_admin_configurator FROM UTENTI_CONFIG WHERE CODUTE = ?`;
     const result = await Orm.query(this.accessiOptions.databaseOptions, query, [codiceUtente]);
 
-    if (!result || result === 0) {
+    if (result.length === 0) {
       return false;
     }
 
@@ -216,7 +216,7 @@ export class UserService {
             WHERE 1=1
             `;
 
-      const queryParams: any[] = [];
+      const queryParams: unknown[] = [];
 
       if (filters?.email) {
         query += ` AND LOWER(U.USRNAME) = ? `;
@@ -235,36 +235,34 @@ export class UserService {
         query,
         queryParams,
       )) as UserDto[];
-      users = users.map(RestUtilities.convertKeysToCamelCase).map(user => this.normalizeUserFlags(user));
+      users = users.map(RestUtilities.convertKeysToCamelCase).map(user => this.normalizeUserFlags(user as unknown as UserDto));
 
       const usersResponse: GetUsersResult[] = [];
+
+      // I campi estensione sono caricati una volta per tabella (non una per utente) in query IN
+      // suddivise in blocchi per non superare i limiti di parametri del driver.
+      const extensionFieldsByUser = options?.includeExtensionFields
+        ? await this.loadExtensionFieldsForUsers(users.map((user) => user.codiceUtente))
+        : undefined;
+
+      // I grant sono caricati in batch (query IN) invece che utente per utente.
+      const grantsByUser = options?.includeGrants
+        ? await this.permissionService.getUsersRolesAndGrants(users.map((user) => user.codiceUtente))
+        : undefined;
 
       for (const user of users) {
         let userGrants: UserGrantsDto | undefined;
 
         if (options?.includeGrants) {
-          userGrants = await this.permissionService.getUserRolesAndGrants(user.codiceUtente);
+          userGrants = grantsByUser?.get(user.codiceUtente);
         }
 
         let extensionFields: Record<string, unknown[]> | undefined;
 
         if (options?.includeExtensionFields) {
           extensionFields = {};
-        }
-
-        if (extensionFields && this.accessiOptions.extensionFieldsOptions) {
-          for (const ext of this.accessiOptions.extensionFieldsOptions) {
-            const values = (
-              await Orm.query(
-                ext.databaseOptions,
-                `SELECT ${ext.tableFields.join(',')} FROM ${ext.tableName} WHERE ${
-                  ext.tableJoinFieldName
-                } = ?`,
-                [user.codiceUtente],
-              )
-            ).map(RestUtilities.convertKeysToCamelCase);
-
-            extensionFields[ext.objectKey] = values;
+          for (const ext of this.accessiOptions.extensionFieldsOptions ?? []) {
+            extensionFields[ext.objectKey] = extensionFieldsByUser?.get(ext.objectKey)?.get(user.codiceUtente) ?? [];
           }
         }
 
@@ -281,6 +279,58 @@ export class UserService {
     }
   }
 
+  private async loadExtensionFieldsForUsers(
+    codiceUtenti: number[],
+  ): Promise<Map<string, Map<number, Record<string, unknown>[]>>> {
+    const byObjectKey = new Map<string, Map<number, Record<string, unknown>[]>>();
+    const extensions = this.accessiOptions.extensionFieldsOptions ?? [];
+    const uniqueCodes = Array.from(new Set(codiceUtenti));
+
+    for (const ext of extensions) {
+      const grouped = new Map<number, Record<string, unknown>[]>();
+
+      for (const chunk of this.chunkArray(uniqueCodes, 500)) {
+        if (chunk.length === 0) {
+          continue;
+        }
+
+        const placeholders = chunk.map(() => '?').join(', ');
+        const rows = (await Orm.query(
+          ext.databaseOptions,
+          `SELECT ${ext.tableJoinFieldName} AS __joinkey, ${ext.tableFields.join(', ')} FROM ${ext.tableName} WHERE ${ext.tableJoinFieldName} IN (${placeholders})`,
+          chunk,
+        )).map(RestUtilities.convertKeysToCamelCase) as Array<Record<string, unknown>>;
+
+        for (const row of rows) {
+          const { __joinkey, ...rest } = row;
+          const key = Number(__joinkey);
+          if (!Number.isFinite(key)) {
+            continue;
+          }
+
+          const bucket = grouped.get(key);
+          if (bucket) {
+            bucket.push(rest);
+          } else {
+            grouped.set(key, [rest]);
+          }
+        }
+      }
+
+      byObjectKey.set(ext.objectKey, grouped);
+    }
+
+    return byObjectKey;
+  }
+
+  private chunkArray<T>(items: T[], size: number): T[][] {
+    const chunks: T[][] = [];
+    for (let index = 0; index < items.length; index += size) {
+      chunks.push(items.slice(index, index + size));
+    }
+    return chunks;
+  }
+
   /** Cerca il codice interno per email normalizzata. Il chiamante deve gestire il caso senza righe. */
   async getCodiceUtenteByEmail(email: string): Promise<{ codiceUtente: number }> {
     try {
@@ -288,7 +338,7 @@ export class UserService {
       const result = await Orm.query(this.accessiOptions.databaseOptions, query, [
         email.trim().toLowerCase(),
       ]);
-      return result.map(RestUtilities.convertKeysToCamelCase)[0];
+      return result.map(RestUtilities.convertKeysToCamelCase)[0] as { codiceUtente: number };
     } catch (error) {
       throw error;
     }
@@ -350,10 +400,6 @@ export class UserService {
     await this.filtriService.upsertFiltriUtente(codiceUtente, filterData);
   }
 
-  private async executeInTransaction(operation: () => Promise<void>): Promise<void> {
-    await operation();
-  }
-
   /**
    * Crea utente, configurazione e filtri. La registrazione pubblica resta in stato `INVIO` e non puo
    * impostare privilegi, ruoli o grant; soltanto flussi backend fidati possono usare `allowPrivilegedFields`.
@@ -387,30 +433,34 @@ export class UserService {
       await this.validateApplicationFields(registrationData);
       await this.ensureEmailIsAvailable(normalizedEmail);
 
-      const queryUtenti = `INSERT INTO UTENTI (USRNAME, STAREG) VALUES (?,?)`;
+      const queryUtenti = `INSERT INTO UTENTI (USRNAME, STAREG) VALUES (?,?) RETURNING CODUTE`;
       // Public/local registrations keep the historic INVIO state; trusted master or SSO flows may opt into CONF.
       const paramsUtenti = [normalizedEmail, options?.initialState ?? StatoRegistrazione.INVIO];
 
-      await Orm.execute(this.accessiOptions.databaseOptions, queryUtenti, paramsUtenti);
-
-      const codiceUtenteResult = await Orm.query(
+      // Utente e configurazione sono creati in un'unica transazione; filtri e assegnazioni restano
+      // fuori perché delegati a servizi dedicati.
+      const codiceUtente = await Orm.withTransaction(
         this.accessiOptions.databaseOptions,
-        'SELECT FIRST 1 CODUTE FROM UTENTI WHERE USRNAME = ? ORDER BY CODUTE DESC',
-        [normalizedEmail],
-      );
+        async (transaction) => {
+          const insertedUsers = await Orm.transactionQuery<unknown>(
+            transaction,
+            queryUtenti,
+            paramsUtenti,
+          );
 
-      const codiceUtente = Number(
-        codiceUtenteResult?.[0]?.CODUTE ?? codiceUtenteResult?.[0]?.codute,
-      );
-      if (!codiceUtente) {
-        throw new Error('Creazione utente non riuscita: impossibile recuperare CODUTE.');
-      }
+          const insertedUser = (Array.isArray(insertedUsers) ? insertedUsers[0] : insertedUsers) as Record<string, unknown> | undefined;
+          const newCodiceUtente = Number(
+            insertedUser?.CODUTE ?? insertedUser?.codute,
+          );
+          if (!newCodiceUtente) {
+            throw new Error('Creazione utente non riuscita: impossibile recuperare CODUTE.');
+          }
 
       const utentiConfigFields = ['CODUTE', 'COGNOME', 'NOME'];
       const utentiConfigPlaceholders = ['?', '?', '?'];
-      const utentiConfigParams = [codiceUtente, registrationData.cognome, registrationData.nome];
+      const utentiConfigParams: unknown[] = [newCodiceUtente, registrationData.cognome, registrationData.nome];
 
-      const optionalFields: OptionalField<any>[] = [
+      const optionalFields: OptionalField<unknown>[] = [
         {
           key: 'cellulare',
           dbField: 'CELLULARE',
@@ -470,7 +520,11 @@ export class UserService {
       const queryUtentiConfig = `INSERT INTO UTENTI_CONFIG (${utentiConfigFields.join(
         ', ',
       )}) VALUES (${utentiConfigPlaceholders.join(', ')})`;
-      await Orm.execute(this.accessiOptions.databaseOptions, queryUtentiConfig, utentiConfigParams);
+          await Orm.transactionQuery(transaction, queryUtentiConfig, utentiConfigParams);
+
+          return newCodiceUtente;
+        },
+      );
 
       await this.filtriService.upsertFiltriUtente(codiceUtente, registrationData);
 

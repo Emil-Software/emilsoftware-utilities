@@ -22,7 +22,6 @@ import {
   saveFiltriUtente,
   setGroupEnabled,
   setMenuEnabled,
-  setStatoRegistrazione,
   updateFederatedIdentity,
   updateFederatedProvider,
   updateRole,

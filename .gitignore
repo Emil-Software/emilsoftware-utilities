@@ -9,3 +9,10 @@
 .env
 .vscode/settings.json
 !/test/accessi-schema.cjs
+!/test/accessi-regressions.cjs
+!/test/password-reset-regressions.cjs
+!/test/two-factor.cjs
+!/test/console-two-factor.cjs
+!/test/utilities-regressions.cjs
+!/test/integration/
+!/test/integration/**

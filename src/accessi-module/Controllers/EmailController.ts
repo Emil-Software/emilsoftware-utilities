@@ -34,8 +34,8 @@ export class EmailController {
   @Get('reset-password-page/:token')
   async serveResetPasswordPage(
     @Res() res: Response,
-    @Param('token') token: string,
-    @Query('returnUrl') returnUrl?: string,
+    @Param('token') _token: string,
+    @Query('returnUrl') _returnUrl?: string,
   ) {
     return res.sendFile(join(__dirname, '..', 'Views', 'reset-password.html'));
   }

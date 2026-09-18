@@ -9,17 +9,32 @@ import { MenuEntity } from "../../Dtos/GetMenusResponse";
 import { Role } from "../../Dtos/Role";
 import { Inject, Injectable } from "@nestjs/common";
 
+/** Struttura storica menu/gruppi accettata dall'API legacy `addAbilitazioni`. */
+type LegacyMenuGroup = {
+    menu?: Array<{
+        flgChk?: unknown;
+        codiceMenu?: unknown;
+        tipoAbilitazione?: unknown;
+    }>;
+};
+
 @Injectable()
 export class PermissionService {
     constructor(
         @Inject('ACCESSI_OPTIONS') private readonly accessiOptions: AccessiOptions
     ) { }
 
-    private getCountFromResult(result: any[], fieldName = 'COUNT'): number {
+    private getCountFromResult(result: ReadonlyArray<Record<string, unknown>>, fieldName = 'COUNT'): number {
         const rawValue = result?.[0]?.[fieldName]
             ?? result?.[0]?.[fieldName.toLowerCase()]
             ?? result?.[0]?.count;
         return typeof rawValue === 'number' ? rawValue : Number.parseInt(`${rawValue ?? '0'}`, 10);
+    }
+
+    private extractIntegerColumn(result: ReadonlyArray<Record<string, unknown>>, fieldName: string): Set<number> {
+        return new Set(
+            result.map((row) => Number(row[fieldName] ?? row[fieldName.toLowerCase()])),
+        );
     }
 
     private async getAllActiveMenusAsGrants(): Promise<AbilitazioneMenu[]> {
@@ -84,25 +99,34 @@ export class PermissionService {
                     ON G.CODGRP = M.CODGRP
                 WHERE RU.CODUTE = ?
             `;
-        let ruoliResult = await Orm.query(this.accessiOptions.databaseOptions, queryRuoli, [codiceUtente]);
-        ruoliResult = ruoliResult.map(RestUtilities.convertKeysToCamelCase);
+        const ruoliResult = (await Orm.query(this.accessiOptions.databaseOptions, queryRuoli, [codiceUtente]))
+            .map(RestUtilities.convertKeysToCamelCase) as Array<Record<string, unknown>>;
 
+        return this.assembleRoles(ruoliResult);
+    }
+
+    /** Costruisce l'albero ruoli/menu a partire dalle righe (riusato da lettura singola e batch). */
+    private assembleRoles(ruoliResult: Array<Record<string, unknown>>): Role[] {
         const ruoliMap = new Map<number, Role>();
         for (const row of ruoliResult) {
-            const { codiceRuolo, descrizioneRuolo, codiceMenu, descrizioneMenu, tipoAbilitazione } = row;
+            const codiceRuolo = Number(row.codiceRuolo);
+            const descrizioneRuolo = typeof row.descrizioneRuolo === 'string' ? row.descrizioneRuolo.trim() : '';
+            const codiceMenu = typeof row.codiceMenu === 'string' ? row.codiceMenu : undefined;
+            const descrizioneMenu = typeof row.descrizioneMenu === 'string' ? row.descrizioneMenu : undefined;
+            const tipoAbilitazione = Number(row.tipoAbilitazione) as TipoAbilitazione;
 
             if (!ruoliMap.has(codiceRuolo)) {
                 ruoliMap.set(codiceRuolo, {
                     codiceRuolo,
-                    descrizioneRuolo: descrizioneRuolo?.trim(),
+                    descrizioneRuolo,
                     menu: []
                 });
             }
 
             if (codiceMenu && descrizioneMenu) {
                 ruoliMap.get(codiceRuolo)!.menu.push({
-                    codiceRuolo: codiceRuolo,
-                    codiceMenu: codiceMenu.trim(),
+                    codiceRuolo,
+                    codiceMenu,
                     tipoAbilitazione,
                 });
             }
@@ -111,25 +135,51 @@ export class PermissionService {
         return Array.from(ruoliMap.values());
     }
 
+    /** Regola di composizione storica: grant diretti prevalgono, i ruoli si sommano per livello massimo. */
+    private composeGrants(
+        abilitazioni: AbilitazioneMenu[],
+        ruoli: Role[],
+        isSuperAdmin: boolean,
+        allActiveMenus: AbilitazioneMenu[],
+    ): AbilitazioneMenu[] {
+        const grantsMap = new Map<string, AbilitazioneMenu>();
+
+        for (const abilitazione of abilitazioni) {
+            grantsMap.set(abilitazione.codiceMenu, abilitazione);
+        }
+
+        const directMenuCodes = new Set(abilitazioni.map(grant => grant.codiceMenu));
+        for (const ruolo of ruoli) {
+            for (const menu of ruolo.menu) {
+                const existing = grantsMap.get(menu.codiceMenu);
+                if (!directMenuCodes.has(menu.codiceMenu) &&
+                    (!existing || Number(menu.tipoAbilitazione) > Number(existing.tipoAbilitazione))) {
+                    grantsMap.set(menu.codiceMenu, menu);
+                }
+            }
+        }
+
+        return isSuperAdmin ? allActiveMenus : Array.from(grantsMap.values());
+    }
+
 
     /**
      * API legacy per salvare grant dalla struttura storica menu/gruppi.
      * Sostituisce tutti i grant diretti dell'utente; per le nuove integrazioni preferire `assignPermissionsToUser`.
      */
-    public async addAbilitazioni(codiceUtente: number, menuAbilitazioni: any[]): Promise<void> {
-        const deleteQuery = `DELETE FROM ABILITAZIONI WHERE CODUTE = ?`;
-        await Orm.execute(this.accessiOptions.databaseOptions, deleteQuery, [codiceUtente]);
-
+    public async addAbilitazioni(codiceUtente: number, menuAbilitazioni: LegacyMenuGroup[]): Promise<void> {
         const abilitazioniToInsert = menuAbilitazioni
-            .flatMap(menuGrp => menuGrp.menu)
+            .flatMap(menuGrp => menuGrp.menu ?? [])
             .filter(menu => menu.flgChk)
             .map(menu => [codiceUtente, menu.codiceMenu, menu.tipoAbilitazione]);
 
         const insertQuery = `UPDATE OR INSERT INTO ABILITAZIONI (CODUTE, CODMNU, TIPABI) VALUES (?, ?, ?)`;
 
-        for (const params of abilitazioniToInsert) {
-            await Orm.execute(this.accessiOptions.databaseOptions, insertQuery, params);
-        }
+        // Delete + insert atomici: un errore a metà non lascia l'utente senza abilitazioni.
+        await Orm.executeMultiple(this.accessiOptions.databaseOptions, [
+            { query: `DELETE FROM ABILITAZIONI WHERE CODUTE = ?`, params: [codiceUtente] },
+            ...abilitazioniToInsert.map(params => ({ query: insertQuery, params })),
+        ]);
     }
 
 
@@ -144,43 +194,51 @@ export class PermissionService {
      * Validare i codici menu nel chiamante quando si usano dati non provenienti dalla console o dalle API Accessi.
      */
     public async updateOrInsertRole(role: Role, codiceRuolo: number | null = null): Promise<void> {
+        // Ruolo, sostituzione menu e inserimenti in un'unica transazione: niente ruoli senza menu in caso di errore.
+        await Orm.withTransaction(this.accessiOptions.databaseOptions, async (transaction) => {
+            let resolvedCodiceRuolo = codiceRuolo;
 
-        // creazione nuovo ruolo
-        if (codiceRuolo == null) {
-            const createRoleQuery = `INSERT INTO RUOLI (DESRUO) VALUES (?)`;
-            await Orm.execute(this.accessiOptions.databaseOptions, createRoleQuery, [role.descrizioneRuolo]);
+            if (resolvedCodiceRuolo == null) {
+                const createdRoleResult = await Orm.transactionQuery<unknown>(
+                    transaction,
+                    `INSERT INTO RUOLI (DESRUO) VALUES (?) RETURNING CODRUO`,
+                    [role.descrizioneRuolo],
+                );
+                const createdRole = (Array.isArray(createdRoleResult) ? createdRoleResult[0] : createdRoleResult) as Record<string, unknown> | undefined;
+                const rawCodiceRuolo = createdRole?.CODRUO ?? createdRole?.codruo;
+                const parsedCodiceRuolo = typeof rawCodiceRuolo === 'number'
+                    ? rawCodiceRuolo
+                    : Number.parseInt(`${rawCodiceRuolo ?? ''}`, 10);
+                if (Number.isNaN(parsedCodiceRuolo)) {
+                    throw new Error('Creazione ruolo non riuscita: impossibile recuperare CODRUO.');
+                }
+                resolvedCodiceRuolo = parsedCodiceRuolo;
+            } else {
+                await Orm.transactionQuery(
+                    transaction,
+                    `UPDATE RUOLI SET DESRUO = ? WHERE CODRUO = ?`,
+                    [role.descrizioneRuolo, resolvedCodiceRuolo],
+                );
 
-            const createdRoleResult = await Orm.query(
-                this.accessiOptions.databaseOptions,
-                'SELECT FIRST 1 CODRUO FROM RUOLI WHERE DESRUO = ? ORDER BY CODRUO DESC',
-                [role.descrizioneRuolo]
-            );
-            const rawCodiceRuolo = createdRoleResult?.[0]?.CODRUO ?? createdRoleResult?.[0]?.codruo;
-            const parsedCodiceRuolo = typeof rawCodiceRuolo === 'number'
-                ? rawCodiceRuolo
-                : Number.parseInt(`${rawCodiceRuolo ?? ''}`, 10);
-            if (Number.isNaN(parsedCodiceRuolo)) {
-                throw new Error('Creazione ruolo non riuscita: impossibile recuperare CODRUO.');
+                await Orm.transactionQuery(
+                    transaction,
+                    `DELETE FROM RUOLI_MNU WHERE CODRUO = ?`,
+                    [resolvedCodiceRuolo],
+                );
             }
-            codiceRuolo = parsedCodiceRuolo;
-        } else {
-            // aggiornamento ruolo esistente
-            const updateRoleQuery = `UPDATE RUOLI SET DESRUO = ? WHERE CODRUO = ?`;
-            await Orm.execute(this.accessiOptions.databaseOptions, updateRoleQuery, [role.descrizioneRuolo, codiceRuolo]);
 
-            const deleteRoleMenuQuery = `DELETE FROM RUOLI_MNU WHERE CODRUO = ?`;
-            await Orm.execute(this.accessiOptions.databaseOptions, deleteRoleMenuQuery, [codiceRuolo]);
-        }
+            if (resolvedCodiceRuolo === null) {
+                throw new Error('Operazione ruolo non riuscita: codice ruolo non valorizzato.');
+            }
 
-        if (codiceRuolo === null) {
-            throw new Error('Operazione ruolo non riuscita: codice ruolo non valorizzato.');
-        }
-
-        const createRoleMenuQuery = `INSERT INTO RUOLI_MNU (CODRUO, CODMNU, TIPABI) VALUES (?, ?, ?)`;
-        for (const menu of role.menu) {
-            await Orm.execute(this.accessiOptions.databaseOptions, createRoleMenuQuery, [codiceRuolo, menu.codiceMenu, menu.tipoAbilitazione]);
-        }
-
+            for (const menu of role.menu) {
+                await Orm.transactionQuery(
+                    transaction,
+                    `INSERT INTO RUOLI_MNU (CODRUO, CODMNU, TIPABI) VALUES (?, ?, ?)`,
+                    [resolvedCodiceRuolo, menu.codiceMenu, menu.tipoAbilitazione],
+                );
+            }
+        });
     }
 
 
@@ -200,33 +258,36 @@ export class PermissionService {
                 ORDER BY R.CODRUO, M.CODMNU
             `;
 
-        let result = await Orm.query(this.accessiOptions.databaseOptions, query, []);
-        result = result.map(RestUtilities.convertKeysToCamelCase);
+        const result = (await Orm.query(this.accessiOptions.databaseOptions, query, []))
+            .map(RestUtilities.convertKeysToCamelCase) as Array<Record<string, unknown>>;
 
         const ruoliMap = new Map<number, Role>();
 
         for (const row of result) {
-            const { codiceRuolo, descrizioneRuolo, codiceMenu, descrizioneMenu, tipoAbilitazione } = row;
+            const codiceRuolo = Number(row.codiceRuolo);
+            const descrizioneRuolo = typeof row.descrizioneRuolo === 'string' ? row.descrizioneRuolo.trim() : '';
+            const codiceMenu = typeof row.codiceMenu === 'string' ? row.codiceMenu : undefined;
+            const rawTipoAbilitazione = row.tipoAbilitazione;
 
             if (!ruoliMap.has(codiceRuolo)) {
                 ruoliMap.set(codiceRuolo, {
                     codiceRuolo,
-                    descrizioneRuolo: descrizioneRuolo?.trim(),
+                    descrizioneRuolo,
                     menu: []
                 });
             }
 
-            const abilitationValue = typeof tipoAbilitazione === 'number'
-                ? tipoAbilitazione
-                : Number.parseInt(`${tipoAbilitazione ?? ''}`, 10);
+            const abilitationValue = typeof rawTipoAbilitazione === 'number'
+                ? rawTipoAbilitazione
+                : Number.parseInt(`${rawTipoAbilitazione ?? ''}`, 10);
 
             if (!codiceMenu || Number.isNaN(abilitationValue) || abilitationValue <= TipoAbilitazione.NESSUNA) {
                 continue;
             }
 
             ruoliMap.get(codiceRuolo)!.menu.push({
-                codiceRuolo: codiceRuolo,
-                codiceMenu: codiceMenu.trim(),
+                codiceRuolo,
+                codiceMenu,
                 tipoAbilitazione: abilitationValue as TipoAbilitazione,
             });
         }
@@ -265,12 +326,17 @@ export class PermissionService {
         ];
 
         if (normalizedRoles.length > 0) {
-            const roleExistsQuery = `SELECT COUNT(*) FROM RUOLI WHERE CODRUO = ?`;
-            for (const codiceRuolo of normalizedRoles) {
-                const roleResult = await Orm.query(this.accessiOptions.databaseOptions, roleExistsQuery, [codiceRuolo]);
-                if (this.getCountFromResult(roleResult) === 0) {
-                    throw new Error(`Il ruolo con codice ${codiceRuolo} non esiste.`);
-                }
+            // Un'unica query IN invece di N count: stessa validazione, meno round-trip.
+            const placeholders = normalizedRoles.map(() => '?').join(', ');
+            const existingRolesResult = await Orm.query(
+                this.accessiOptions.databaseOptions,
+                `SELECT CODRUO FROM RUOLI WHERE CODRUO IN (${placeholders})`,
+                normalizedRoles,
+            );
+            const existingRoles = this.extractIntegerColumn(existingRolesResult, 'CODRUO');
+            const missingRole = normalizedRoles.find((codiceRuolo) => !existingRoles.has(codiceRuolo));
+            if (missingRole !== undefined) {
+                throw new Error(`Il ruolo con codice ${missingRole} non esiste.`);
             }
         }
 
@@ -327,12 +393,20 @@ export class PermissionService {
         ];
 
         if (normalizedPermissions.length > 0) {
-            const menuExistsQuery = `SELECT COUNT(*) FROM MENU WHERE CODMNU = ?`;
-            for (const permission of normalizedPermissions) {
-                const menuResult = await Orm.query(this.accessiOptions.databaseOptions, menuExistsQuery, [permission.codiceMenu]);
-                if (this.getCountFromResult(menuResult) === 0) {
-                    throw new Error(`Il menu con codice ${permission.codiceMenu} non esiste.`);
-                }
+            // Un'unica query IN invece di N count: stessa validazione, meno round-trip.
+            const menuCodes = normalizedPermissions.map((permission) => permission.codiceMenu);
+            const placeholders = menuCodes.map(() => '?').join(', ');
+            const existingMenusResult = await Orm.query(
+                this.accessiOptions.databaseOptions,
+                `SELECT CODMNU FROM MENU WHERE CODMNU IN (${placeholders})`,
+                menuCodes,
+            );
+            const existingMenus = new Set(
+                existingMenusResult.map((row) => String((row as Record<string, unknown>).CODMNU ?? (row as Record<string, unknown>).codmnu ?? '')),
+            );
+            const missingMenu = menuCodes.find((codiceMenu) => !existingMenus.has(codiceMenu));
+            if (missingMenu !== undefined) {
+                throw new Error(`Il menu con codice ${missingMenu} non esiste.`);
             }
         }
 
@@ -356,20 +430,18 @@ export class PermissionService {
     public async deleteRole(codiceRuolo: number): Promise<void> {
 
         const existsQuery = `SELECT COUNT(*) FROM RUOLI WHERE CODRUO = ?`;
-        let result = await Orm.query(this.accessiOptions.databaseOptions, existsQuery, [codiceRuolo]);
+        const result = await Orm.query(this.accessiOptions.databaseOptions, existsQuery, [codiceRuolo]);
 
-        if (result[0].COUNT === 0) {
+        if (this.getCountFromResult(result) === 0) {
             throw new Error(`Il ruolo con codice ${codiceRuolo} non esiste.`);
         }
 
-        const deleteRoleMenusQuery = `DELETE FROM RUOLI_MNU WHERE CODRUO = ?`;
-        await Orm.execute(this.accessiOptions.databaseOptions, deleteRoleMenusQuery, [codiceRuolo]);
-
-        const deleteRoleUsersQuery = `DELETE FROM UTENTI_RUOLI WHERE CODRUO = ?`;
-        await Orm.execute(this.accessiOptions.databaseOptions, deleteRoleUsersQuery, [codiceRuolo]);
-
-        const deleteRoleQuery = `DELETE FROM RUOLI WHERE CODRUO = ?`;
-        await Orm.execute(this.accessiOptions.databaseOptions, deleteRoleQuery, [codiceRuolo]);
+        // Le tre delete sono atomiche: nessun ruolo orfano se una fallisce.
+        await Orm.executeMultiple(this.accessiOptions.databaseOptions, [
+            { query: `DELETE FROM RUOLI_MNU WHERE CODRUO = ?`, params: [codiceRuolo] },
+            { query: `DELETE FROM UTENTI_RUOLI WHERE CODRUO = ?`, params: [codiceRuolo] },
+            { query: `DELETE FROM RUOLI WHERE CODRUO = ?`, params: [codiceRuolo] },
+        ]);
 
     }
 
@@ -393,7 +465,7 @@ export class PermissionService {
             `;
 
         const result = await Orm.query(this.accessiOptions.databaseOptions, query, []);
-        return result.map(RestUtilities.convertKeysToCamelCase);
+        return result.map(RestUtilities.convertKeysToCamelCase) as unknown as MenuEntity[];
     }
 
 
@@ -433,13 +505,13 @@ export class PermissionService {
             GroupWithMenusEntity & { menus: (MenuEntity & { enabled?: boolean })[] }
         >();
 
-        result.forEach(row => {
+        result.forEach((row: unknown) => {
             const converted = RestUtilities.convertKeysToCamelCase(row) as MenuEntity & {
                 menuEnabled?: number | boolean;
                 groupEnabled?: number | boolean;
             };
 
-            const { menuEnabled, groupEnabled, ...menuBase } = converted as any;
+            const { menuEnabled, groupEnabled, ...menuBase } = converted;
             const normalizedGroupKey = menuBase.codiceGruppo ?? '__UNGROUPED__';
             const groupEnabledFlag =
                 groupEnabled == null ? true : Number(groupEnabled) === 1 || groupEnabled === true;
@@ -449,7 +521,7 @@ export class PermissionService {
             if (!groupMap.has(normalizedGroupKey)) {
                 groupMap.set(normalizedGroupKey, {
                     codiceGruppo: menuBase.codiceGruppo ?? normalizedGroupKey,
-                    descrizioneGruppo: menuBase.descrizioneGruppo,
+                    descrizioneGruppo: menuBase.descrizioneGruppo ?? '',
                     ordineGruppo: menuBase.ordineGruppo,
                     enabled: groupEnabledFlag,
                     menus: [],
@@ -492,41 +564,136 @@ export class PermissionService {
         grants: AbilitazioneMenu[]
     }> {
         const codiceUtenteQuery = "SELECT FLGSUPER as flag_super FROM UTENTI_CONFIG WHERE CODUTE = ?";
-        let result = await Orm.query(this.accessiOptions.databaseOptions, codiceUtenteQuery, [codiceUtente]);
+        const result = await Orm.query(this.accessiOptions.databaseOptions, codiceUtenteQuery, [codiceUtente]);
         if (!result || result.length == 0) throw new Error("Nessun utente trovato con il codice utente " + codiceUtente);
 
-        result = result.map(RestUtilities.convertKeysToCamelCase) as { flagSuper: boolean }[];
-        const rawSuperFlag: unknown = result[0].flagSuper;
-        const isSuperAdmin = rawSuperFlag === true || rawSuperFlag === 1 || rawSuperFlag === '1';
+        const isSuperAdmin = this.isSuperFlag(
+            (result.map(RestUtilities.convertKeysToCamelCase)[0] as { flagSuper?: unknown } | undefined)?.flagSuper,
+        );
 
         const abilitazioni = await this.getUserDirectPermissions(codiceUtente);
         const ruoli = await this.getUserRoles(codiceUtente);
+        const grants = this.composeGrants(
+            abilitazioni,
+            ruoli,
+            isSuperAdmin,
+            isSuperAdmin ? await this.getAllActiveMenusAsGrants() : [],
+        );
 
-        // Merge user-specific and role-based permissions
-        const grantsMap = new Map<string, AbilitazioneMenu>();
+        return { abilitazioni, ruoli, grants };
+    }
 
-        // Add user-specific permissions
-        for (const abilitazione of abilitazioni) {
-            grantsMap.set(abilitazione.codiceMenu, abilitazione);
+    private isSuperFlag(value: unknown): boolean {
+        return value === true || value === 1 || value === '1';
+    }
+
+    /**
+     * Versione batch di `getUserRolesAndGrants`: esegue un numero costante di query per N utenti
+     * (invece di N set di query) e restituisce mappa per codice utente. Stessa composizione della
+     * lettura singola.
+     */
+    public async getUsersRolesAndGrants(codiciUtente: number[]): Promise<Map<number, {
+        abilitazioni: AbilitazioneMenu[],
+        ruoli: Role[],
+        grants: AbilitazioneMenu[]
+    }>> {
+        const result = new Map<number, { abilitazioni: AbilitazioneMenu[], ruoli: Role[], grants: AbilitazioneMenu[] }>();
+        const ids = Array.from(new Set(codiciUtente.filter((id) => Number.isInteger(id) && id > 0)));
+        if (ids.length === 0) {
+            return result;
         }
 
-        // Direct grants (including explicit denial) override roles; roles combine by maximum level.
-        const directMenuCodes = new Set(abilitazioni.map(grant => grant.codiceMenu));
-        for (const ruolo of ruoli) {
-            for (const menu of ruolo.menu) {
-                const existing = grantsMap.get(menu.codiceMenu);
-                if (!directMenuCodes.has(menu.codiceMenu) &&
-                    (!existing || Number(menu.tipoAbilitazione) > Number(existing.tipoAbilitazione))) {
-                    grantsMap.set(menu.codiceMenu, menu);
-                }
+        const placeholders = ids.map(() => '?').join(', ');
+
+        const superRows = (await Orm.query(
+            this.accessiOptions.databaseOptions,
+            `SELECT CODUTE AS codice_utente, FLGSUPER AS flag_super FROM UTENTI_CONFIG WHERE CODUTE IN (${placeholders})`,
+            ids,
+        )).map(RestUtilities.convertKeysToCamelCase) as Array<Record<string, unknown>>;
+        const superUsers = new Set<number>();
+        for (const row of superRows) {
+            if (this.isSuperFlag(row.flagSuper)) {
+                superUsers.add(Number(row.codiceUtente));
             }
         }
 
-        const grants = isSuperAdmin
-            ? await this.getAllActiveMenusAsGrants()
-            : Array.from(grantsMap.values());
+        const permissionRows = (await Orm.query(
+            this.accessiOptions.databaseOptions,
+            `SELECT
+                A.CODUTE AS codice_utente,
+                A.CODMNU AS codice_menu,
+                A.TIPABI AS tipo_abilitazione,
+                M.DESMNU AS descrizione_menu,
+                G.DESGRP AS descrizione_gruppo,
+                G.CODGRP AS codice_gruppo,
+                M.ICON AS icona,
+                M.CODTIP AS tipo,
+                M.PAGINA AS pagina,
+                M.NOTE AS note
+            FROM ABILITAZIONI A
+            INNER JOIN MENU M ON A.CODMNU = M.CODMNU
+            LEFT JOIN MENU_GRP G ON G.CODGRP = M.CODGRP
+            WHERE A.CODUTE IN (${placeholders}) AND M.FLGENABLED = 1 AND COALESCE(G.FLGENABLED, 1) = 1`,
+            ids,
+        )).map(RestUtilities.convertKeysToCamelCase) as Array<Record<string, unknown>>;
 
-        return { abilitazioni, ruoli, grants };
+        const roleRows = (await Orm.query(
+            this.accessiOptions.databaseOptions,
+            `SELECT
+                RU.CODUTE AS codice_utente,
+                R.CODRUO AS codice_ruolo,
+                R.DESRUO AS descrizione_ruolo,
+                CASE WHEN COALESCE(G.FLGENABLED, 1) = 1 THEN M.CODMNU END AS codice_menu,
+                RM.TIPABI AS tipo_abilitazione,
+                M.DESMNU AS descrizione_menu,
+                M.NOTE AS note
+            FROM UTENTI_RUOLI RU
+            INNER JOIN RUOLI R ON RU.CODRUO = R.CODRUO
+            LEFT JOIN RUOLI_MNU RM ON R.CODRUO = RM.CODRUO
+            LEFT JOIN MENU M ON RM.CODMNU = M.CODMNU AND M.FLGENABLED = 1
+            LEFT JOIN MENU_GRP G ON G.CODGRP = M.CODGRP
+            WHERE RU.CODUTE IN (${placeholders})`,
+            ids,
+        )).map(RestUtilities.convertKeysToCamelCase) as Array<Record<string, unknown>>;
+
+        const allActiveMenus = superUsers.size > 0 ? await this.getAllActiveMenusAsGrants() : [];
+
+        const permissionsByUser = new Map<number, AbilitazioneMenu[]>();
+        for (const row of permissionRows) {
+            const { codiceUtente, ...grant } = row;
+            const key = Number(codiceUtente);
+            const bucket = permissionsByUser.get(key);
+            if (bucket) {
+                bucket.push(grant as unknown as AbilitazioneMenu);
+            } else {
+                permissionsByUser.set(key, [grant as unknown as AbilitazioneMenu]);
+            }
+        }
+
+        const rolesByUser = new Map<number, Array<Record<string, unknown>>>();
+        for (const row of roleRows) {
+            const { codiceUtente, ...roleRow } = row;
+            const key = Number(codiceUtente);
+            const bucket = rolesByUser.get(key);
+            if (bucket) {
+                bucket.push(roleRow);
+            } else {
+                rolesByUser.set(key, [roleRow]);
+            }
+        }
+
+        for (const id of ids) {
+            const abilitazioni = permissionsByUser.get(id) ?? [];
+            const ruoli = this.assembleRoles(rolesByUser.get(id) ?? []);
+            const isSuperAdmin = superUsers.has(id);
+            result.set(id, {
+                abilitazioni,
+                ruoli,
+                grants: this.composeGrants(abilitazioni, ruoli, isSuperAdmin, isSuperAdmin ? allActiveMenus : []),
+            });
+        }
+
+        return result;
     }
 
 

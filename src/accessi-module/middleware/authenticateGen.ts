@@ -111,6 +111,13 @@ async function authorizeWithDependencies(
   permissionService: PermissionService,
   userService: UserService
 ) {
+  type AuthenticatedRequest = Request & {
+    userGrants?: unknown;
+    user?: unknown;
+    data?: unknown;
+  };
+  const authenticatedRequest = req as AuthenticatedRequest;
+
   try {
     const authHeader = req.headers.authorization;
     if (!authHeader) {
@@ -131,9 +138,9 @@ async function authorizeWithDependencies(
       throw authError(500, "AUTH_JWT_SECRET_MISSING", "JWT secret not configured");
     }
 
-    let decoded: any;
+    let decoded: unknown;
     try {
-      decoded = jwt.verify(token, secret);
+      decoded = jwt.verify(token, secret, { algorithms: ['HS256'] });
     } catch {
       throw authError(401, "AUTH_TOKEN_INVALID", "Invalid JWT token");
     }
@@ -199,11 +206,11 @@ async function authorizeWithDependencies(
         );
       }
 
-      (req as any).userGrants = await getGrantsResult();
+      authenticatedRequest.userGrants = await getGrantsResult();
     }
 
-    (req as any).user = authenticatedPayload;
-    (req as any).data = authenticatedPayload;
+    authenticatedRequest.user = authenticatedPayload;
+    authenticatedRequest.data = authenticatedPayload;
     return next();
   } catch (error: unknown) {
     const authErr = normalizeAuthError(error);

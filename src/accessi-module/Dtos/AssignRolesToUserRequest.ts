@@ -11,5 +11,5 @@ export class AssignRolesToUserRequest {
     @IsArray({ message: 'I ruoli devono essere un array.' })
     @Type(() => Number)
     @IsInt({ each: true, message: 'Ogni ruolo deve essere un intero.' })
-    roles: number[];
+    roles!: number[];
 }

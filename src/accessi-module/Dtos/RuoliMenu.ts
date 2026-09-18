@@ -17,7 +17,7 @@ export class RuoliMenu {
   })
   @IsString()
   @IsNotEmpty({ message: 'Il codice menu è obbligatorio.' })
-  codiceMenu: string;
+  codiceMenu!: string;
 
   @ApiProperty({
     description: 'Tipo di abilitazione',
@@ -25,5 +25,5 @@ export class RuoliMenu {
     example: TipoAbilitazione.LETTURA,
   })
   @IsEnum(TipoAbilitazione, { message: 'Il tipo di abilitazione non è valido.' })
-  tipoAbilitazione: TipoAbilitazione;
+  tipoAbilitazione!: TipoAbilitazione;
 }

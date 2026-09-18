@@ -97,6 +97,6 @@ export function isAccessiTokenAllowedForUser(decoded: unknown, user: AccessiAuth
 /** Un JWT puo essere usato soltanto da utenti nello stato confermato, indipendentemente dalla sua scadenza. */
 export function isAuthenticatedUserEnabledForJwt(
   utente: AccessiAuthenticatedUserSnapshot | null | undefined,
-): boolean {
+): utente is AccessiAuthenticatedUserSnapshot {
   return utente?.statoRegistrazione === StatoRegistrazione.CONF;
 }

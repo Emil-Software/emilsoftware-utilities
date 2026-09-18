@@ -24,7 +24,7 @@ export function createPasswordResetToken(
   codiceUtente: number,
   nonce: string,
   secret: string,
-  expiresIn: string = DEFAULT_PASSWORD_RESET_EXPIRES_IN,
+  expiresIn: jwt.SignOptions['expiresIn'] = DEFAULT_PASSWORD_RESET_EXPIRES_IN,
 ): string {
   if (!codiceUtente || !nonce) {
     throw new Error('Dati insufficienti per generare il reset token.');
@@ -38,7 +38,7 @@ export function createPasswordResetToken(
     secret,
     {
       subject: `${codiceUtente}`,
-      expiresIn: expiresIn as any,
+      expiresIn,
     },
   );
 }
@@ -48,7 +48,7 @@ export function verifyPasswordResetToken(
   token: string,
   secret: string,
 ): { codiceUtente: number; nonce: string } {
-  const decoded = jwt.verify(token, secret) as PasswordResetTokenPayload;
+  const decoded = jwt.verify(token, secret, { algorithms: ['HS256'] }) as PasswordResetTokenPayload;
   const codiceUtente = Number(decoded?.sub);
 
   if (decoded?.typ !== 'password-reset' || !Number.isSafeInteger(codiceUtente) || codiceUtente <= 0 || typeof decoded?.nonce !== 'string' || !decoded.nonce) {

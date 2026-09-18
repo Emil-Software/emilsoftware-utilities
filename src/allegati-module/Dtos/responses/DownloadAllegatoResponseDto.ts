@@ -8,7 +8,7 @@ export class DownloadAllegatoResponseDto {
     })
     @IsString()
     @IsNotEmpty({ message: "Il contenuto è obbligatorio." })
-    contentBase64: string;
+    contentBase64!: string;
 
     @ApiProperty({
         description: 'Nome originale del file',
@@ -16,7 +16,7 @@ export class DownloadAllegatoResponseDto {
     })
     @IsString()
     @IsNotEmpty({ message: "Il nome file è obbligatorio." })
-    filename: string;
+    filename!: string;
 
     @ApiProperty({
         description: 'Tipo MIME del file',

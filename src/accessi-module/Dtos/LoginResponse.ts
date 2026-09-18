@@ -2,7 +2,6 @@ import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
 import { TwoFactorChallengeDto } from './TwoFactorDtos';
 import { BaseResponse } from "./BaseResponse";
 import { FiltriUtente } from "./FiltriUtente";
-import { AbilitazioneMenu } from "./AbilitazioneMenu";
 import { TokenResult } from "./TokenResult";
 import { UserDto } from "./UserDto";
 import { Type } from "class-transformer";
@@ -33,7 +32,7 @@ export class LoginResult {
   userGrants?: UserGrantsDto;
 
   @ApiPropertyOptional({ description: 'Extension Fields', type: Object})
-  extensionFields?: any;
+  extensionFields?: Record<string, unknown[]>;
 
   @ApiPropertyOptional({ description: 'Token, assente durante la verifica del codice.', type: TokenResult })
   @ValidateNested()
@@ -45,5 +44,5 @@ export class LoginResponse extends BaseResponse {
   @ApiProperty({ type: LoginResult })
   @ValidateNested()
   @Type(() => LoginResult)
-  Result: LoginResult;
+  Result!: LoginResult;
 }

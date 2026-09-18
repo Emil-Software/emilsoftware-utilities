@@ -12,5 +12,5 @@ export class ConfirmResetPasswordRequest {
   @Length(8, 100, {
     message: 'La nuova password deve essere compresa tra 8 e 100 caratteri.',
   })
-  newPassword: string;
+  newPassword!: string;
 }

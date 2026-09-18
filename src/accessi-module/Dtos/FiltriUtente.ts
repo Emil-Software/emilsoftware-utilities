@@ -1,6 +1,6 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
-import { IsInt, IsNumber, IsOptional, IsPort, IsString, Min, ValidateNested } from 'class-validator';
+import { IsInt, IsNumber, IsOptional, IsString, Min, ValidateNested } from 'class-validator';
 import { BaseResponse } from './BaseResponse';
 
 export class FiltriUtente {

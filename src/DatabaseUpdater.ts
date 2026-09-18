@@ -29,7 +29,7 @@ export abstract class DatabaseUpdater {
         AND COALESCE(RDB$SYSTEM_FLAG, 0) = 0`;
       const result = await Orm.query(options, query, [table.toUpperCase()]);
       return result.length > 0;
-    } catch (error: any) {
+    } catch (error) {
       this.logger.error(`Error checking table ${table}:`, error);
       throw error;
     }
@@ -59,7 +59,7 @@ export abstract class DatabaseUpdater {
         column.toUpperCase(),
       ]);
       return result.length > 0;
-    } catch (error: any) {
+    } catch (error) {
       this.logger.error(`Error checking column ${column} on table ${table}:`, error);
       throw error;
     }
@@ -83,7 +83,7 @@ export abstract class DatabaseUpdater {
       WHERE RDB$GENERATOR_NAME = ?`;
       const result = await Orm.query(options, query, [generator.toUpperCase()]);
       return result.length > 0;
-    } catch (error: any) {
+    } catch (error) {
       this.logger.error(`Error checking generator ${generator}:`, error);
       throw error;
     }
@@ -108,7 +108,7 @@ export abstract class DatabaseUpdater {
         AND COALESCE(RDB$SYSTEM_FLAG, 0) = 0`;
       const result = await Orm.query(options, query, [trigger.toUpperCase()]);
       return result.length > 0;
-    } catch (error: any) {
+    } catch (error) {
       this.logger.error(`Error checking trigger ${trigger}:`, error);
       throw error;
     }
@@ -137,10 +137,15 @@ export abstract class DatabaseUpdater {
           this.versionParameterKeys[1],
           this.versionParameterKeys[0],
         ]
-      )) as any[];
+      ));
 
-      return parameters.length > 0 ? parameters[0].DESPAR : null;
-    } catch (error: any) {
+      if (parameters.length === 0) {
+        return null;
+      }
+
+      const rawVersion = parameters[0].DESPAR;
+      return typeof rawVersion === "string" ? rawVersion : rawVersion == null ? null : String(rawVersion);
+    } catch (error) {
       this.logger.error(`Error getting database version:`, error);
       throw error;
     }
@@ -165,7 +170,7 @@ export abstract class DatabaseUpdater {
         options,
         "SELECT CODPAR FROM PARAMETRI WHERE CODPAR IN (?, ?)",
         [this.versionParameterKeys[0], this.versionParameterKeys[1]]
-      )) as any[];
+      ));
 
       if (existingRows.length === 0) {
         await Orm.execute(
@@ -179,10 +184,10 @@ export abstract class DatabaseUpdater {
       for (const row of existingRows) {
         await Orm.execute(options, "UPDATE PARAMETRI SET DESPAR = ? WHERE CODPAR = ?", [
           version,
-          row.CODPAR?.trim?.() ?? row.CODPAR,
+          String(row.CODPAR ?? "").trim(),
         ]);
       }
-    } catch (error: any) {
+    } catch (error) {
       this.logger.error(`Error setting database version:`, error);
       throw error;
     }
@@ -224,7 +229,7 @@ export abstract class DatabaseUpdater {
         "INSERT INTO PARAMETRI (CODPAR, DESPAR, NOTE, GRUPPO) VALUES (?,?,?,?)",
         [this.versionParameterKeys[0], "0.0a", "versione", null]
       );
-    } catch (error: any) {
+    } catch (error) {
       this.logger.error("Error creating table PARAMETRI:", error);
       throw error;
     }

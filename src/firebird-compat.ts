@@ -14,6 +14,19 @@ export type FirebirdOptions = Options & {
     compatibilityTotalTimeoutMs?: number;
     firebirdDriver?: FirebirdDriverStrategy;
     trimStringResults?: boolean;
+    /**
+     * When `true`, query parameters are interpolated into the logged SQL. Off by
+     * default so that secrets, credentials and personal data are not written to
+     * the console or to the daily log files.
+     */
+    logQueryParameters?: boolean;
+    /**
+     * When greater than zero, enables an opt-in connection pool of the given
+     * maximum size for this connection target instead of attaching/detaching a
+     * physical connection for every query. Default `0` keeps the historic
+     * one-connection-per-query behaviour.
+     */
+    poolSize?: number;
 };
 
 type FirebirdErrorContext = {
@@ -186,6 +199,8 @@ export function normalizeFirebirdOptions(options: Options): FirebirdOptions {
         compatibilityTotalTimeoutMs,
         connectTimeoutMs,
         firebirdDriver: _firebirdDriver,
+        logQueryParameters: _logQueryParameters,
+        poolSize: _poolSize,
         trimStringResults,
         ...baseOptions
     } = compatibilityOptions;

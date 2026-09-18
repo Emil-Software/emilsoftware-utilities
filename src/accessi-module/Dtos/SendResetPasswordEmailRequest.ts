@@ -8,7 +8,7 @@ export class SendResetPasswordEmailRequest {
   })
   @IsString()
   @Length(3, 254)
-  email: string;
+  email!: string;
 
   @ApiPropertyOptional({
     description: 'HTML personalizzato della mail di reset, se gestito dal chiamante.',

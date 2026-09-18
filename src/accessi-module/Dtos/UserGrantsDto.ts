@@ -8,15 +8,15 @@ export class UserGrantsDto {
     @ApiProperty({ description: 'Abilitazioni dell\'utente', type: [AbilitazioneMenu] })
     @ValidateNested({ each: true })
     @Type(() => AbilitazioneMenu)
-    abilitazioni: AbilitazioneMenu[];
+    abilitazioni!: AbilitazioneMenu[];
   
     @ApiProperty({ description: 'Ruoli dell\'utente', type: [Role] })
     @ValidateNested({ each: true })
     @Type(() => Role)
-    ruoli: Role[];
+    ruoli!: Role[];
   
     @ApiProperty({ description: 'Grants combinati', type: [AbilitazioneMenu] })
     @ValidateNested({ each: true })
     @Type(() => AbilitazioneMenu)
-    grants: AbilitazioneMenu[];
+    grants!: AbilitazioneMenu[];
   }

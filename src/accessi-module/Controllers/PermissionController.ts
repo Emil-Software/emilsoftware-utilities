@@ -34,7 +34,6 @@ import { GetGroupsWithMenusResponse } from '../Dtos/GetGroupsWithMenusResponse';
 import { GetMenusResponse } from '../Dtos/GetMenusResponse';
 import { GetRolesResponse } from '../Dtos/GetRolesResponse';
 import { Role } from '../Dtos/Role';
-import { UserGrantsDto } from '../Dtos/UserGrantsDto';
 import { UserGrantsResponse } from '../Dtos/UserGrantsResponse';
 import { PermissionService } from '../Services/PermissionService/PermissionService';
 import { JwtSimpleGuard } from '../jwt/jwt.strategy';

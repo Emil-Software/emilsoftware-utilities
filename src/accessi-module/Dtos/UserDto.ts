@@ -28,13 +28,13 @@ export class UserDto extends OmitType(FiltriUtente, ['codUte'] as const) {
   @Type(() => Number)
   @IsInt({ message: 'Il codice utente deve essere un intero.' })
   @Min(1, { message: 'Il codice utente deve essere maggiore di zero.' })
-  codiceUtente: number;
+  codiceUtente!: number;
 
   @ApiProperty({ description: "Email dell'utente.", example: 'mario.rossi@dev.it' })
   @IsOptional()
   @IsString({ message: "L'email deve essere una stringa." })
   @Length(3, 254, { message: "L'email deve essere compresa tra 3 e 254 caratteri." })
-  email: string;
+  email!: string;
 
   @ApiPropertyOptional({ description: "Flag per l'accettazione del GDPR.", example: true })
   @IsOptional()
@@ -108,6 +108,7 @@ export class UserDto extends OmitType(FiltriUtente, ['codUte'] as const) {
 
   @ApiPropertyOptional({
     description: 'Avatar (URL o base64).',
+    type: String,
     example: 'https://example.com/avatar.jpg',
     nullable: true,
   })
@@ -138,6 +139,7 @@ export class UserDto extends OmitType(FiltriUtente, ['codUte'] as const) {
 
   @ApiPropertyOptional({
     description: 'Numero di cellulare.',
+    type: String,
     example: '+393401234567',
     nullable: true,
   })

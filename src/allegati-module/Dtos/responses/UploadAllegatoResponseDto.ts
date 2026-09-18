@@ -7,7 +7,7 @@ export class UploadAllegatoResponseDto {
         example: 42,
     })
     @IsNumber()
-    id: number;
+    id!: number;
 
     @ApiProperty({
         description: 'Nome file salvato',
@@ -15,5 +15,5 @@ export class UploadAllegatoResponseDto {
     })
     @IsString()
     @IsNotEmpty({ message: "Il nome file è obbligatorio." })
-    filename: string;
+    filename!: string;
 }

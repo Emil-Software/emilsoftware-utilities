@@ -25,7 +25,7 @@ export class Role {
   @ApiProperty({ description: 'Descrizione del ruolo' })
   @IsString({ message: 'La descrizione del ruolo deve essere una stringa.' })
   @Length(1, 255, { message: 'La descrizione del ruolo deve essere compresa tra 1 e 255 caratteri.' })
-  descrizioneRuolo: string;
+  descrizioneRuolo!: string;
 
   @ApiProperty({
     description: 'Lista di menu associati al ruolo',
@@ -35,5 +35,5 @@ export class Role {
   @ArrayNotEmpty({ message: 'Il ruolo deve contenere almeno un menu.' })
   @ValidateNested({ each: true })
   @Type(() => RuoliMenu)
-  menu: RuoliMenu[];
+  menu!: RuoliMenu[];
 }

@@ -8,5 +8,5 @@ export class UpdateEnabledStatusRequest {
     type: Boolean,
   })
   @IsBoolean({ message: 'Il valore di enabled deve essere booleano.' })
-  enabled: boolean;
+  enabled!: boolean;
 }

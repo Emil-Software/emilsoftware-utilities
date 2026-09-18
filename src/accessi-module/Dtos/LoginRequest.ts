@@ -9,7 +9,7 @@ export class LoginRequest {
     })
     @IsString({ message: "L'email deve essere una stringa." })
     @Length(3, 50, { message: "L'email deve essere tra 3 e 50 caratteri." })
-    email: string;
+    email!: string;
 
     @ApiPropertyOptional({
         description: 'Password: omettere soltanto per utenti con accesso tramite solo codice abilitato.',

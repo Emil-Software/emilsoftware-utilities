@@ -8,5 +8,5 @@ export class UserGrantsResponse extends BaseResponse {
   @ApiProperty({ type: UserGrantsDto })
   @ValidateNested()
   @Type(() => UserGrantsDto)
-  Result: UserGrantsDto;
+  Result!: UserGrantsDto;
 }

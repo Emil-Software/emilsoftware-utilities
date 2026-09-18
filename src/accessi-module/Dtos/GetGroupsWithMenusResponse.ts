@@ -12,21 +12,21 @@ export class GroupWithMenusEntity {
         type: String,
         example: "GRP01"
     })
-    codiceGruppo: string;
+    codiceGruppo!: string;
 
     @ApiProperty({
         description: "Descrizione del gruppo.",
         type: String,
         example: "Gestione Accessi"
     })
-    descrizioneGruppo: string;
+    descrizioneGruppo!: string;
 
     @ApiProperty({
         description: "Ordine del gruppo.",
         type: Number,
         example: 1
     })
-    ordineGruppo: number;
+    ordineGruppo!: number;
 
     @ApiPropertyOptional({
         description: "Flag che indica se il gruppo e abilitato.",
@@ -42,12 +42,12 @@ export class GroupWithMenusEntity {
     @ValidateNested({ each: true })
     @Type(() => MenuEntity)
     @IsArray()
-    menus: MenuEntity[];
+    menus!: MenuEntity[];
 }
 
 export class GetGroupsWithMenusResponse extends BaseResponse {
     @ApiProperty({ type: [GroupWithMenusEntity] })
     @ValidateNested({ each: true })
     @Type(() => GroupWithMenusEntity)
-    Result: GroupWithMenusEntity[];
+    Result!: GroupWithMenusEntity[];
 }

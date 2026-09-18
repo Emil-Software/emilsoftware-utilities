@@ -1,7 +1,6 @@
 import {
   Body,
   Controller,
-  Inject,
   Param,
   Patch,
   Req,
@@ -18,7 +17,6 @@ import {
 } from '@nestjs/swagger';
 import { Request, Response } from 'express';
 import { RestUtilities } from '../../Utilities';
-import type { AccessiOptions } from '../AccessiModule';
 import { ActionResponse, ErrorResponse, UpdateEnabledStatusRequest } from '../Dtos';
 import { ConfiguratorService } from '../Services/ConfiguratorService/ConfiguratorService';
 import { UserService } from '../Services/UserService/UserService';
@@ -32,7 +30,6 @@ import { getAuthenticatedAccessiUser } from '../security/accessControl';
 /** Endpoint amministrativi per abilitare o disabilitare cataloghi menu senza cancellarne lo storico. */
 export class ConfiguratorController {
   constructor(
-    @Inject('ACCESSI_OPTIONS') private readonly options: AccessiOptions,
     private userService: UserService,
     private configuratorService: ConfiguratorService,
   ) {}

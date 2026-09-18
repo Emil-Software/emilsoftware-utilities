@@ -56,8 +56,10 @@ export class AuthService {
       return false;
     }
 
+    // La backdoor mock non e mai attiva in produzione, nemmeno con variabili d'ambiente,
+    // perche emette un superutente senza verifica password.
     const nodeEnv = (process.env.NODE_ENV ?? "production").toLowerCase();
-    return nodeEnv !== "production" || process.env.ACCESSI_ALLOW_MOCK_DEMO_USER === "true";
+    return nodeEnv !== "production";
   }
 
   /** Creates the normal internal JWT consumed by all existing Accessi guards. */
@@ -69,16 +71,29 @@ export class AuthService {
       throw new UnauthorizedException('Verifica del codice di accesso richiesta.');
     }
 
+    const expiresIn = this.accessiOptions.jwtOptions.expiresIn;
+    if (typeof expiresIn !== 'string' || expiresIn.trim() === '') {
+      throw new Error('jwtOptions.expiresIn non configurato: impossibile emettere token senza scadenza.');
+    }
+
+    const token = jwt.sign({ utente, typ: 'access', amr: methods }, getAccessiJwtSecret(this.accessiOptions), {
+      expiresIn: expiresIn as unknown as jwt.SignOptions['expiresIn'],
+    });
+
+    // Difesa in profondita: un `expiresIn` malformato farebbe emettere un token permanente.
+    const decoded = jwt.decode(token);
+    if (!decoded || typeof decoded !== 'object' || typeof (decoded as jwt.JwtPayload).exp !== 'number') {
+      throw new Error('Token emesso senza scadenza: configurazione JWT non valida.');
+    }
+
     return {
-      expiresIn: this.accessiOptions.jwtOptions.expiresIn,
-      value: jwt.sign({ utente, typ: 'access', amr: methods }, getAccessiJwtSecret(this.accessiOptions), {
-        expiresIn: this.accessiOptions.jwtOptions.expiresIn as any,
-      }),
+      expiresIn,
+      value: token,
       type: 'Bearer',
     };
   }
 
-  /** Builds the standard login response for a user authenticated by any supported method. */
+  /** Builds the standard login response for a user authenticated by a supported method. */
   public async getLoginResultForUser(codiceUtente: number): Promise<LoginResult> {
     const users = await this.userService.getUsers(
       { codiceUtente },
@@ -145,7 +160,7 @@ export class AuthService {
 
     const currentUser = await this.userService.getAuthenticatedUserSnapshot(utente.codiceUtente);
     if (isAuthenticatedUserEnabledForJwt(currentUser) && currentUser.flagDueFattori && currentUser.passwordlessLoginEnabled) {
-      return { challenge: await this.twoFactorService.issue({ codiceUtente: utente.codiceUtente, email: currentUser.email.trim(), mode: 'passwordless' }) };
+      return { challenge: await this.twoFactorService.issue({ codiceUtente: utente.codiceUtente, email: (currentUser.email ?? '').trim(), mode: 'passwordless' }) };
     }
     // The email-only step has the same response for unknown and ordinary local accounts.
     if (!request.password) return { passwordRequired: true };
@@ -199,7 +214,7 @@ export class AuthService {
     }
 
     if (currentUser.flagDueFattori) {
-      return { challenge: await this.twoFactorService.issue({ codiceUtente: utente.codiceUtente, email: currentUser.email, mode: 'password' }) };
+      return { challenge: await this.twoFactorService.issue({ codiceUtente: utente.codiceUtente, email: currentUser.email ?? '', mode: 'password' }) };
     }
 
     const updateLastAccessDateQuery =
@@ -223,7 +238,7 @@ export class AuthService {
     }
 
     const secret = getAccessiJwtSecret(this.accessiOptions);
-    const decoded = jwt.verify(token.trim(), secret);
+    const decoded = jwt.verify(token.trim(), secret, { algorithms: ['HS256'] });
     const codiceUtente = resolveCodiceUtenteFromTokenPayload(decoded);
 
     if (!codiceUtente) {
@@ -242,7 +257,7 @@ export class AuthService {
   public async beginFederatedTwoFactor(codiceUtente: number, identityKey: string): Promise<LoginResult> {
     const user = await this.userService.getAuthenticatedUserSnapshot(codiceUtente);
     if (!isAuthenticatedUserEnabledForJwt(user) || !user.flagDueFattori) throw new UnauthorizedException();
-    return { challenge: await this.twoFactorService.issue({ codiceUtente, email: user.email, mode: 'federated', identityKey }) };
+    return { challenge: await this.twoFactorService.issue({ codiceUtente, email: user.email ?? '', mode: 'federated', identityKey }) };
   }
 
   private async validateTwoFactorProof(proof: TwoFactorProof): Promise<void> {
@@ -388,7 +403,10 @@ export class AuthService {
       return isMigratedLegacyPasswordValid;
     }
 
-    const isLegacyPasswordValid = storedPassword === legacyEncryptedPassword;
+    const isLegacyPasswordValid = PasswordUtilities.timingSafeStringEquals(
+      storedPassword,
+      legacyEncryptedPassword,
+    );
 
     if (isLegacyPasswordValid) {
       await this.setPassword(codiceUtente, plainPassword);
@@ -478,36 +496,36 @@ export class AuthService {
       const { codiceUtente, nonce } = verifyPasswordResetToken(token.trim(), secret);
 
       const hashedPassword = PasswordUtilities.hashPassword(newPassword);
-      const db = await Orm.connect(this.accessiOptions.databaseOptions);
-      let transaction: Awaited<ReturnType<typeof Orm.startTransaction>> | undefined;
-      try {
-        transaction = await Orm.startTransaction(db);
-        const query = (sql: string, params: unknown[]) => new Promise<any>((resolve, reject) => {
-          transaction!.query(sql, params, (error, result) => error ? reject(error) : resolve(result));
-        });
+
+      await Orm.withTransaction(this.accessiOptions.databaseOptions, async (transaction) => {
         // A conditional write claims the nonce under the database row lock. A second
         // concurrent reset cannot also consume it; failures roll the whole reset back.
-        const claimed = await query(
+        const claimed = await Orm.transactionQuery<unknown>(
+          transaction,
           'UPDATE UTENTI SET KEYREG = NULL, STAREG = ? WHERE CODUTE = ? AND KEYREG = ? AND STAREG IN (?, ?) RETURNING CODUTE',
           [StatoRegistrazione.CONF, codiceUtente, nonce, StatoRegistrazione.CONF, StatoRegistrazione.INVIO],
         );
-        const row = Array.isArray(claimed) ? claimed[0] : claimed;
+        const row = (Array.isArray(claimed) ? claimed[0] : claimed) as Record<string, unknown> | undefined;
         if (Number(row?.CODUTE ?? row?.codute) !== codiceUtente) {
           throw new Error('Token non valido, gia usato o utente non autorizzato.');
         }
-        await query('UPDATE OR INSERT INTO UTENTI_PWD (CODUTE, PWD) VALUES (?, ?) MATCHING (CODUTE)', [codiceUtente, hashedPassword]);
+
+        await Orm.transactionQuery(
+          transaction,
+          'UPDATE OR INSERT INTO UTENTI_PWD (CODUTE, PWD) VALUES (?, ?) MATCHING (CODUTE)',
+          [codiceUtente, hashedPassword],
+        );
+
         if (this.accessiOptions.passwordExpiration) {
           const days = Number(this.accessiOptions.passwordExpirationDays);
           const expirationDays = Number.isFinite(days) && days > 0 ? Math.trunc(days) : 90;
-          await query(`UPDATE UTENTI SET DATSCAPWD = DATEADD(${expirationDays} DAY TO CURRENT_TIMESTAMP) WHERE CODUTE = ?`, [codiceUtente]);
+          await Orm.transactionQuery(
+            transaction,
+            `UPDATE UTENTI SET DATSCAPWD = DATEADD(${expirationDays} DAY TO CURRENT_TIMESTAMP) WHERE CODUTE = ?`,
+            [codiceUtente],
+          );
         }
-        await Orm.commitTransaction(transaction);
-      } catch (error) {
-        if (transaction) await Orm.rollbackTransaction(transaction).catch(() => undefined);
-        throw error;
-      } finally {
-        await new Promise<void>((resolve) => db.detach(() => resolve()));
-      }
+      });
     } catch (error) {
       throw error;
     }

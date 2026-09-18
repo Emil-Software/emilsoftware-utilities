@@ -22,7 +22,7 @@ export class RegisterRequest extends OmitType(FiltriUtente, ['codUte'] as const)
   })
   @IsString({ message: "L'email deve essere una stringa." })
   @Length(3, 254, { message: "L'email deve essere compresa tra 3 e 254 caratteri." })
-  email: string;
+  email!: string;
 
   @ApiPropertyOptional({
     description: "Cognome dell'utente.",
@@ -41,6 +41,7 @@ export class RegisterRequest extends OmitType(FiltriUtente, ['codUte'] as const)
 
   @ApiPropertyOptional({
     description: "Numero di cellulare.",
+    type: String,
     example: "+393401234567",
     nullable: true,
   })

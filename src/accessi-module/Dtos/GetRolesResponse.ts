@@ -8,5 +8,5 @@ export class GetRolesResponse extends BaseResponse {
   @ApiProperty({ type: [Role] })
   @ValidateNested({ each: true })
   @Type(() => Role)
-  Result: Role[];
+  Result!: Role[];
 }

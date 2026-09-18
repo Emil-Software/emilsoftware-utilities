@@ -55,7 +55,7 @@ export type AccessiRequirementNode =
 /** Contesto in sola lettura consegnato a un requisito personalizzato. */
 export type AccessiCustomRequirementContext = {
   req: Request;
-  decodedToken: any;
+  decodedToken: Record<string, unknown>;
   userCode: number;
   getGrantsResult: () => Promise<GrantsResult>;
 };

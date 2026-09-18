@@ -21,7 +21,7 @@ type ChallengeRow = TwoFactorProof & {
   sends: number;
   sentAt: Date;
 };
-type Query = (sql: string, params?: unknown[]) => Promise<any>;
+type Query = (sql: string, params?: unknown[]) => Promise<unknown>;
 
 const LIFETIME_SECONDS = 600;
 const MAX_ATTEMPTS = 5;
@@ -49,34 +49,34 @@ export class TwoFactorService {
     return createHmac('sha256', getAccessiJwtSecret(this.options)).update(`accessi-2fa:${id}:${code}`).digest('hex');
   }
 
-  private row(result: any): ChallengeRow | undefined {
-    const row = Array.isArray(result) ? result[0] : result;
+  private row(result: unknown): ChallengeRow | undefined {
+    const row = (Array.isArray(result) ? result[0] : result) as Record<string, unknown> | undefined;
     if (!row) return undefined;
+
     const raw = RestUtilities.convertKeysToCamelCase(row);
+    const asString = (value: unknown): string | undefined => typeof value === 'string' ? value : undefined;
+    const codiceUtente = Number(raw.codute);
+    if (!codiceUtente) return undefined;
+
     const converted: ChallengeRow = {
-      codiceUtente: Number(raw.codute), email: raw.email?.trim(), mode: raw.authmode?.trim(), identityKey: raw.idnkey?.trim(),
-      codeHash: raw.codehash, expiresAt: raw.expiresAt, attempts: Number(raw.attempts), sends: Number(raw.sends), sentAt: raw.sentAt,
+      codiceUtente,
+      email: asString(raw.email)?.trim() ?? '',
+      mode: (asString(raw.authmode)?.trim() as TwoFactorMode | undefined) ?? 'password',
+      identityKey: asString(raw.idnkey)?.trim(),
+      codeHash: asString(raw.codehash) ?? '',
+      expiresAt: raw.expiresAt as Date,
+      attempts: Number(raw.attempts),
+      sends: Number(raw.sends),
+      sentAt: raw.sentAt as Date,
     };
-    return converted.codiceUtente ? converted : undefined;
+    return converted;
   }
 
   private async transaction<T>(operation: (query: Query) => Promise<T>): Promise<T> {
-    const db = await Orm.connect(this.options.databaseOptions);
-    let transaction: Awaited<ReturnType<typeof Orm.startTransaction>> | undefined;
-    try {
-      transaction = await Orm.startTransaction(db);
-      const query: Query = (sql, params = []) => new Promise((resolve, reject) => {
-        transaction!.query(sql, params, (error, result) => error ? reject(error) : resolve(result));
-      });
-      const result = await operation(query);
-      await Orm.commitTransaction(transaction);
-      return result;
-    } catch (error) {
-      if (transaction) await Orm.rollbackTransaction(transaction).catch(() => undefined);
-      throw error;
-    } finally {
-      await new Promise<void>(resolve => db.detach(() => resolve()));
-    }
+    return Orm.withTransaction(this.options.databaseOptions, async (transaction) => {
+      const query: Query = (sql, params = []) => Orm.transactionQuery(transaction, sql, params);
+      return operation(query);
+    });
   }
 
   private response(id: string, expiresAt: Date): TwoFactorChallengeDto {
@@ -104,15 +104,15 @@ export class TwoFactorService {
     const expiresAt = await this.transaction(async query => {
       // Serialize issuance for this account across backend instances.
       await query('SELECT CODUTE FROM UTENTI WHERE CODUTE = ? WITH LOCK', [proof.codiceUtente]);
-      const recent = await query('SELECT COUNT(*) AS TOTAL FROM ACCESSI_2FA WHERE CODUTE = ? AND CREATED_AT > DATEADD(-15 MINUTE TO CURRENT_TIMESTAMP)', [proof.codiceUtente]);
+      const recent = await query('SELECT COUNT(*) AS TOTAL FROM ACCESSI_2FA WHERE CODUTE = ? AND CREATED_AT > DATEADD(-15 MINUTE TO CURRENT_TIMESTAMP)', [proof.codiceUtente]) as Array<Record<string, unknown>> | undefined;
       if (Number(recent?.[0]?.TOTAL ?? recent?.[0]?.total ?? 0) >= 5) throw this.limited();
       await query('DELETE FROM ACCESSI_2FA WHERE EXPIRES_AT < DATEADD(-1 DAY TO CURRENT_TIMESTAMP)');
       const created = await query(
         `INSERT INTO ACCESSI_2FA (CHALLENGE_ID, CODUTE, EMAIL, AUTHMODE, IDNKEY, CODEHASH, EXPIRES_AT) VALUES (?, ?, ?, ?, ?, ?, DATEADD(${LIFETIME_SECONDS} SECOND TO CURRENT_TIMESTAMP)) RETURNING EXPIRES_AT`,
         [id, proof.codiceUtente, proof.email, proof.mode, proof.identityKey ?? null, this.hash(id, code)],
       );
-      const row = Array.isArray(created) ? created[0] : created;
-      return row.EXPIRES_AT ?? row.expires_at;
+      const row = (Array.isArray(created) ? created[0] : created) as Record<string, unknown> | undefined;
+      return (row?.EXPIRES_AT ?? row?.expires_at) as Date;
     });
     await this.deliver(id, code, proof.email);
     return this.response(id, expiresAt);

@@ -15,14 +15,26 @@ export interface AbilitazioneMenu {
   descrizioneGruppo?: string;
   /** Descrizione del menu */
   descrizioneMenu?: string;
-  /** Nome dell'icona associata al menu */
-  icona?: string;
-  /** Nota informativa associata al menu */
-  note?: string;
-  /** Percorso della pagina associata al menu */
-  pagina?: string;
-  /** Tipo di menu */
-  tipo?: string;
+  /**
+   * Nome dell'icona associata al menu
+   * @nullable
+   */
+  icona?: string | null;
+  /**
+   * Nota informativa associata al menu
+   * @nullable
+   */
+  note?: string | null;
+  /**
+   * Percorso della pagina associata al menu
+   * @nullable
+   */
+  pagina?: string | null;
+  /**
+   * Tipo di menu
+   * @nullable
+   */
+  tipo?: string | null;
   /** Tipo di abilitazione */
   tipoAbilitazione?: AbilitazioneMenuTipoAbilitazione;
 }

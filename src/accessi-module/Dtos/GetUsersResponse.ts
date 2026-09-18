@@ -18,7 +18,7 @@ export class GetUsersResult {
   userGrants?: UserGrantsDto;
 
   @ApiProperty({ description: 'Extension Fields', type: Object })
-  extensionFields?: any;
+  extensionFields?: Record<string, unknown[]>;
 
 }
 
@@ -26,7 +26,7 @@ export class GetUsersResponse extends BaseResponse {
   @ApiProperty({ type: [GetUsersResult] })
   @ValidateNested({ each: true })
   @Type(() => GetUsersResult)
-  Result: GetUsersResult[];
+  Result!: GetUsersResult[];
 }
 
 

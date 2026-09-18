@@ -5,7 +5,7 @@ export class AuthenticatedUserPayloadDto {
   @ApiProperty({ example: 123 })
   @IsInt()
   @Min(1)
-  codiceUtente: number;
+  codiceUtente!: number;
 
   @ApiPropertyOptional({ example: 'mario.rossi@dev.it' })
   @IsOptional()
@@ -14,11 +14,11 @@ export class AuthenticatedUserPayloadDto {
 
   @ApiProperty({ example: false })
   @IsBoolean()
-  flagSuper: boolean;
+  flagSuper!: boolean;
 
   @ApiProperty({ example: false })
   @IsBoolean()
-  flagAdminConfigurator: boolean;
+  flagAdminConfigurator!: boolean;
 
   @ApiPropertyOptional({ description: 'Verifica email richiesta per questo utente.', default: false })
   @IsOptional()
@@ -37,10 +37,10 @@ export class AuthenticatedUserPayloadDto {
 
   @ApiProperty({ example: 1 })
   @IsInt()
-  statoRegistrazione: number;
+  statoRegistrazione!: number;
 }
 
 export class AuthenticatedTokenPayloadDto {
   @ApiProperty({ type: AuthenticatedUserPayloadDto })
-  userData: AuthenticatedUserPayloadDto;
+  userData!: AuthenticatedUserPayloadDto;
 }

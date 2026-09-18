@@ -11,7 +11,7 @@ export class TipoFiltro {
   })
   @IsInt()
   @IsNotEmpty()
-  tipFil: number;
+  tipFil!: number;
 
   @ApiProperty({
     description: 'Descrizione del filtro',
@@ -51,7 +51,7 @@ export class GetFiltriResponse extends BaseResponse {
       @ApiProperty({ type: TipoFiltro, isArray: true })
       @ValidateNested({ each: true })
       @Type(() => TipoFiltro)
-    Result : TipoFiltro[]
+    Result !: TipoFiltro[]
 }
 
 export class GetFiltriRequest {

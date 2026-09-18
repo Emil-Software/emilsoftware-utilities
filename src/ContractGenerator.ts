@@ -1,5 +1,5 @@
 import { jsPDF } from "jspdf";
-import autotable from "jspdf-autotable";
+import autotable, { Styles, UserOptions } from "jspdf-autotable";
 import { promises as fs } from 'fs';
 import path from 'path';
 
@@ -20,8 +20,8 @@ export type DynamicElement = {
     config: {
         head: string[];
         body: string[][];
-        options?: any;
-        styles?: any;
+        options?: UserOptions;
+        styles?: Partial<Styles>;
     };
 };
 
@@ -74,9 +74,11 @@ export class DocumentGenerator {
     }
 
     private applyPartiPlaceholders(text: string, parti: IPartiContratto): string {
-        return text.replace(/\$(fornitore|cliente):(\w+)\$/g, (match, party, field) =>
-            (parti[party] && (parti[party] as any)[field]) ? (parti[party] as any)[field] : match
-        );
+        return text.replace(/\$(fornitore|cliente):(\w+)\$/g, (match: string, party: string, field: string) => {
+            const partyData = (parti as unknown as Record<string, Record<string, string> | undefined>)[party];
+            const value = partyData?.[field];
+            return value ?? match;
+        });
     }
 
     private async loadConfig(): Promise<void> {
@@ -153,7 +155,7 @@ export class DocumentGenerator {
         normalFont: string,
         fontSize: number,
         color: string,
-        maxWidth: number,
+        _maxWidth: number,
         lineSpacingFactor: number = 1.15
     ): Promise<number> {
         let currentX = x;
@@ -322,7 +324,7 @@ export class DocumentGenerator {
                         ...tableConfig.options,
                         ...tableConfig.styles
                     });
-                    this.curY = (this.doc as any).lastAutoTable.finalY + this.config.staccoriga;
+                    this.curY = ((this.doc as unknown) as { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + this.config.staccoriga;
                 } else {
                     if (sub.titolo) {
                         let titleText = this.applyTemplate(sub.titolo, dynamicFields);
@@ -353,7 +355,7 @@ export class DocumentGenerator {
                         ...tableConfig.options,
                         ...tableConfig.styles
                     });
-                    this.curY = (this.doc as any).lastAutoTable.finalY + this.config.staccoriga;
+                    this.curY = ((this.doc as unknown) as { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + this.config.staccoriga;
                 } else if (sub.contenuto) {
                     let contenuto = this.applyTemplate(sub.contenuto, dynamicFields);
                     contenuto = this.applyPartiPlaceholders(contenuto, params.parti);
@@ -373,7 +375,12 @@ export class DocumentGenerator {
             this.curY += this.config.staccoriga;
         }
         const tipOutput = params.tipOutput || 'd';
-        const fileName = `Documento_${params.parti.cliente.denominazione}.pdf`;
+        // Sanitizza il nome: evita path traversal e caratteri non validi nel filesystem.
+        const safeDenominazione = params.parti.cliente.denominazione
+            .replace(/[\\/:*?"<>|\u0000-\u001f]/g, '_')
+            .replace(/\.+$/, '')
+            .trim() || 'cliente';
+        const fileName = `Documento_${safeDenominazione}.pdf`;
         if (tipOutput === 'd') {
             const pdfBuffer = this.doc.output('arraybuffer');
             await fs.writeFile(fileName, Buffer.from(pdfBuffer));

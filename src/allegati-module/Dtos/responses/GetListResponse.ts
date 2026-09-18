@@ -9,5 +9,5 @@ export class GetListResponse extends BaseResponse {
   @ApiProperty({ type: [AllegatoDto] })
   @ValidateNested({ each: true })
   @Type(() => AllegatoDto)
-  Result: AllegatoDto[];
+  Result!: AllegatoDto[];
 }

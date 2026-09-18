@@ -1,7 +1,8 @@
 import {ApiBody, ApiConsumes, ApiResponse, ApiQuery} from "@nestjs/swagger";
 
-import { Controller, Post, Get, Delete, Param, UploadedFiles, UseInterceptors, BadRequestException, Body, Response, Query, Res, Patch } from "@nestjs/common";
+import { Controller, Post, Get, Delete, Param, UploadedFiles, UseGuards, UseInterceptors, BadRequestException, Body, Response, Query, Res, Patch } from "@nestjs/common";
 import { FilesInterceptor } from "@nestjs/platform-express";
+import { AllegatiAuthorizationGuard } from "../security/allegatiAuthorizationGuard";
 import { AllegatiService } from "../Services/AllegatiService/AllegatiService";
 import {UploadAllegatoResponseDto} from "../Dtos/responses/UploadAllegatoResponseDto";
 import {AllegatoDto} from "../Dtos/AllegatoDto";
@@ -9,15 +10,15 @@ import {DownloadAllegatoResponseDto} from "../Dtos/responses/DownloadAllegatoRes
 import { UploadSingleFileRequest } from "../Dtos/UploadSingleFileRequest";
 import { RestUtilities } from "../../Utilities";
 import e from "express";
-import { GetListResponse } from "../Dtos/responses/GetListResponse";
 
+@UseGuards(AllegatiAuthorizationGuard)
 @Controller('allegati')
 export class AllegatiController {
 
     constructor(private readonly allegatiService: AllegatiService) {}
 
     @Post('upload')
-    @UseInterceptors(FilesInterceptor('file'))
+    @UseInterceptors(FilesInterceptor('file', 1, { limits: { fileSize: 90 * 1024 * 1024, files: 1 } }))
     @ApiConsumes('multipart/form-data')
     @ApiResponse({ status: 201, description: 'File caricato con successo.', type: UploadAllegatoResponseDto })
     @ApiBody({
@@ -69,23 +70,20 @@ export class AllegatiController {
         try {
             const file = await this.allegatiService.downloadFile(id);
             
-            // Convert base64 to buffer in chunks
+            // Convert base64 to buffer in chunks; Buffer.concat evita i NUL finali del prealloc.
             const chunkSize = 1024 * 1024; // 1MB chunks
             const base64Content = file.contentBase64;
-            const bufferSize = Math.ceil((base64Content.length * 3) / 4);
-            const buffer = Buffer.alloc(bufferSize);
-            
-            let bufferIndex = 0;
+            const chunks: Buffer[] = [];
             for (let i = 0; i < base64Content.length; i += chunkSize) {
                 const chunk = base64Content.slice(i, i + chunkSize);
-                const chunkBuffer = Buffer.from(chunk, 'base64');
-                chunkBuffer.copy(buffer, bufferIndex);
-                bufferIndex += chunkBuffer.length;
+                chunks.push(Buffer.from(chunk, 'base64'));
             }
+            const buffer = Buffer.concat(chunks);
 
-            // Set headers for file download
-            res.setHeader('Content-Type', file.mimetype);
-            res.setHeader('Content-Disposition', `attachment; filename="${file.filename}"`);
+            // Set headers for file download; filename* (RFC 5987) per i nomi non ASCII.
+            const asciiName = file.filename.replace(/[^\x20-\x7e]/g, '_').replace(/["\\]/g, '_');
+            res.setHeader('Content-Type', file.mimetype ?? 'application/octet-stream');
+            res.setHeader('Content-Disposition', `attachment; filename="${asciiName}"; filename*=UTF-8''${encodeURIComponent(file.filename)}`);
             res.setHeader('Content-Length', buffer.length);
             
             res.status(200).end(buffer);

@@ -5,7 +5,7 @@ import { Orm } from '../../Orm';
 import { Logger } from '../../Logger';
 import { ACCESSI_SCHEMA_VERSION, ACCESSI_VERSION_KEY, accessiTables, accessiForeignKeys, accessiIndexes, accessiTriggers, accessiGenerators, accessiChecks } from './accessiSchema';
 
-type Row = Record<string, any>;
+type Row = Record<string, unknown>;
 export interface AccessiSchemaReport { compatible: boolean; issues: string[]; }
 
 /** Reconciles the actual schema; version labels never bypass verification. */
@@ -37,7 +37,8 @@ export class AccessiDatabaseUpdater extends DatabaseUpdater implements OnModuleI
     if (!(await this.tableExists(options.databaseOptions, 'PARAMETRI'))) return null;
     const rows = await Orm.query(options.databaseOptions,
       'SELECT DESPAR FROM PARAMETRI WHERE CODPAR = ?', [ACCESSI_VERSION_KEY], false);
-    return rows[0]?.DESPAR?.trim() ?? null;
+    const version = rows[0]?.DESPAR;
+    return typeof version === 'string' ? version.trim() : version == null ? null : String(version).trim();
   }
 
   /** Serialize callers targeting the same database in this process. Cross-process DDL is a deployment concern. */
@@ -52,21 +53,22 @@ export class AccessiDatabaseUpdater extends DatabaseUpdater implements OnModuleI
     return pending;
   }
 
-  private static async query(options: AccessiOptions, sql: string, params: any[] = []): Promise<Row[]> {
+  private static async query(options: AccessiOptions, sql: string, params: unknown[] = []): Promise<Row[]> {
     return Orm.query(options.databaseOptions, sql, params, false);
   }
 
-  private static async execute(options: AccessiOptions, sql: string, params: any[] = []): Promise<void> {
+  private static async execute(options: AccessiOptions, sql: string, params: unknown[] = []): Promise<void> {
     try { await Orm.execute(options.databaseOptions, sql, params, false); }
     catch (error) {
-      throw new Error(`Migrazione Accessi interrotta: ${sql}. ${error.message}. Correggere lo schema/dati indicati e rilanciare; la versione non e stata avanzata.`);
+      const message = error instanceof Error ? error.message : String(error);
+      throw new Error(`Migrazione Accessi interrotta: ${sql}. ${message}. Correggere lo schema/dati indicati e rilanciare; la versione non e stata avanzata.`);
     }
   }
 
   private static async relationIssues(options: AccessiOptions): Promise<string[]> {
     const rows = await this.query(options, `SELECT TRIM(RDB$RELATION_NAME) AS NAME, COALESCE(RDB$RELATION_TYPE, 0) AS KIND
       FROM RDB$RELATIONS WHERE COALESCE(RDB$SYSTEM_FLAG, 0) = 0`);
-    return rows.filter(row => accessiTables[row.NAME] && Number(row.KIND) !== 0).map(row => `${row.NAME}: richiesta tabella persistente, trovato tipo relazione ${row.KIND}`);
+    return rows.filter(row => accessiTables[String(row.NAME)] && Number(row.KIND) !== 0).map(row => `${row.NAME}: richiesta tabella persistente, trovato tipo relazione ${row.KIND}`);
   }
 
   private static async engineIssue(options: AccessiOptions): Promise<string | undefined> {
@@ -98,7 +100,7 @@ export class AccessiDatabaseUpdater extends DatabaseUpdater implements OnModuleI
       if (![14, 37].includes(Number(row.FIELD_TYPE))) return `richiesto testo (${definition})`;
       if (Number(row.TEXT_LENGTH) < Number(stringLength[1])) return `lunghezza ${row.TEXT_LENGTH}, richiesta almeno ${stringLength[1]}`;
       const charset = /CHARACTER SET (\w+)/.exec(definition)?.[1];
-      if (charset && row.CHARSET_NAME?.trim() !== charset) return `character set ${row.CHARSET_NAME}, richiesto ${charset}`;
+      if (charset && typeof row.CHARSET_NAME === 'string' && row.CHARSET_NAME.trim() !== charset) return `character set ${row.CHARSET_NAME}, richiesto ${charset}`;
     } else if (/^(SMALLINT|INTEGER)/.test(definition)) {
       const acceptable = definition.startsWith('SMALLINT') ? [7, 8, 16] : [8, 16];
       if (!acceptable.includes(Number(row.FIELD_TYPE)) || Number(row.FIELD_SCALE) !== 0) return `richiesto intero (${definition})`;
@@ -127,7 +129,7 @@ export class AccessiDatabaseUpdater extends DatabaseUpdater implements OnModuleI
 
   private static groups(rows: Row[]): Row[][] {
     const groups = new Map<string, Row[]>();
-    for (const row of rows) groups.set(row.NAME, [...(groups.get(row.NAME) ?? []), row]);
+    for (const row of rows) groups.set(String(row.NAME), [...(groups.get(String(row.NAME)) ?? []), row]);
     return Array.from(groups.values());
   }
 
@@ -211,14 +213,14 @@ export class AccessiDatabaseUpdater extends DatabaseUpdater implements OnModuleI
     }
     const checks = await this.checks(options);
     for (const check of accessiChecks) {
-      if (!checks.some(row => row.TABLE_NAME === check.table && this.sameCheck(row.CHECK_SOURCE, check.expression))) issues.push(`${check.table}: manca CHECK (${check.expression})`);
+      if (!checks.some(row => row.TABLE_NAME === check.table && this.sameCheck(String(row.CHECK_SOURCE), check.expression))) issues.push(`${check.table}: manca CHECK (${check.expression})`);
     }
     const constraints = this.groups(await this.constraints(options));
     for (const [table, schema] of Object.entries(accessiTables)) {
       if (!constraints.some(rows => rows[0].TABLE_NAME === table && rows[0].KIND === 'PRIMARY KEY' && this.sameColumns(rows, schema.primaryKey))) issues.push(`${table}: chiave primaria richiesta (${schema.primaryKey.join(', ')})`);
     }
     for (const fk of accessiForeignKeys) {
-      if (!constraints.some(rows => rows.length === 1 && rows[0].KIND === 'FOREIGN KEY' && rows[0].TABLE_NAME === fk.table && rows[0].COLUMN_NAME === fk.column && rows[0].TARGET_TABLE === fk.target && rows[0].TARGET_COLUMN === fk.targetColumn && (fk.cascade ? rows[0].DELETE_RULE === 'CASCADE' : ['NO ACTION', 'RESTRICT'].includes(rows[0].DELETE_RULE)))) issues.push(`${fk.name}: manca FK compatibile ${fk.table}.${fk.column} -> ${fk.target}.${fk.targetColumn}`);
+      if (!constraints.some(rows => rows.length === 1 && rows[0].KIND === 'FOREIGN KEY' && rows[0].TABLE_NAME === fk.table && rows[0].COLUMN_NAME === fk.column && rows[0].TARGET_TABLE === fk.target && rows[0].TARGET_COLUMN === fk.targetColumn && (fk.cascade ? rows[0].DELETE_RULE === 'CASCADE' : ['NO ACTION', 'RESTRICT'].includes(String(rows[0].DELETE_RULE))))) issues.push(`${fk.name}: manca FK compatibile ${fk.table}.${fk.column} -> ${fk.target}.${fk.targetColumn}`);
     }
     const indexes = await this.indexes(options);
     for (const index of accessiIndexes) {
@@ -306,7 +308,7 @@ export class AccessiDatabaseUpdater extends DatabaseUpdater implements OnModuleI
     }
     const checks = await this.checks(options);
     for (const check of accessiChecks) {
-      if (!checks.some(row => row.TABLE_NAME === check.table && this.sameCheck(row.CHECK_SOURCE, check.expression))) {
+      if (!checks.some(row => row.TABLE_NAME === check.table && this.sameCheck(String(row.CHECK_SOURCE), check.expression))) {
         await this.execute(options, `ALTER TABLE ${check.table} ADD CONSTRAINT ${check.name} CHECK (${check.expression})`);
       }
     }

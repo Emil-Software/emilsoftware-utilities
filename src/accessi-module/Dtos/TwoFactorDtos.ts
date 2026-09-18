@@ -6,13 +6,13 @@ export class TwoFactorChallengeDto {
   twoFactorRequired: true = true;
 
   @ApiProperty({ description: 'Identificativo opaco della verifica, non utilizzabile come Bearer token.' })
-  challengeId: string;
+  challengeId!: string;
 
   @ApiProperty({ format: 'date-time' })
-  expiresAt: string;
+  expiresAt!: string;
 
   @ApiProperty({ example: 60, description: 'Secondi minimi prima del prossimo reinvio.' })
-  resendAfterSeconds: number;
+  resendAfterSeconds!: number;
 
   @ApiProperty({ enum: ['email'] })
   method: 'email' = 'email';
@@ -22,12 +22,12 @@ export class ResendTwoFactorRequest {
   @ApiProperty({ minLength: 64, maxLength: 64 })
   @IsString()
   @Matches(/^[a-f0-9]{64}$/)
-  challengeId: string;
+  challengeId!: string;
 }
 
 export class VerifyTwoFactorRequest extends ResendTwoFactorRequest {
   @ApiProperty({ description: 'Codice monouso ricevuto via email.', example: '012345', pattern: '^\\d{6}$' })
   @IsString()
   @Matches(/^\d{6}$/, { message: 'Il codice deve contenere 6 cifre.' })
-  code: string;
+  code!: string;
 }

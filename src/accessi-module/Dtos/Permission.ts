@@ -11,7 +11,7 @@ export class Permission {
     })
     @IsString({ message: "Il codice menu deve essere una stringa." })
     @Length(3, 50, { message: "Il codice menu deve essere compreso tra 3 e 50 caratteri." })
-    codiceMenu: string;
+    codiceMenu!: string;
 
     @ApiProperty({
         description: "Tipo di abilitazione assegnata all'utente per il menu specificato.",
@@ -19,5 +19,5 @@ export class Permission {
         example: 30
     })
     @IsEnum(TipoAbilitazione, { message: "Il tipo di abilitazione non e valido." })
-    tipoAbilitazione: number;
+    tipoAbilitazione!: number;
 }

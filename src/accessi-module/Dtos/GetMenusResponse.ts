@@ -14,14 +14,14 @@ export class MenuEntity {
         type: String,
         example: "MNU001"
     })
-    codiceMenu: string;
+    codiceMenu!: string;
 
     @ApiProperty({
         description: "Descrizione del menù.",
         type: String,
         example: "Gestione Utenti"
     })
-    descrizioneMenu: string;
+    descrizioneMenu!: string;
 
     @ApiProperty({
         description: "Codice del gruppo a cui appartiene il menù.",
@@ -69,7 +69,7 @@ export class MenuEntity {
         type: Number,
         example: 1
     })
-    ordineMenu: number;
+    ordineMenu!: number;
 
 
     @ApiProperty({
@@ -77,7 +77,7 @@ export class MenuEntity {
         type: Number,
         example: 1
     })
-    ordineGruppo: number;
+    ordineGruppo!: number;
 
     @ApiPropertyOptional({
         description: "Flag che indica se il menu e abilitato.",
@@ -105,5 +105,5 @@ export class GetMenusResponse extends BaseResponse {
     @ApiProperty({ type: [MenuEntity] })
     @ValidateNested({ each: true })
     @Type(() => MenuEntity)
-    Result: MenuEntity[];
+    Result!: MenuEntity[];
 }

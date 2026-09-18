@@ -6,5 +6,5 @@ export class RegisterResponse extends BaseResponse {
     description: "Codice identificativo univoco dell'utente registrato",
     example: 123,
   })
-  Result: number;
+  Result!: number;
 }

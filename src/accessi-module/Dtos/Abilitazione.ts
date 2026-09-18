@@ -11,7 +11,7 @@ export class Abilitazione {
   @IsString()
   @IsNotEmpty({ message: "Il codice utente è obbligatorio." })
   @Length(5, 20, { message: "Il codice utente deve essere tra 5 e 20 caratteri." })
-  codiceUtente: number;
+  codiceUtente!: number;
 
   @ApiProperty({
     description: 'Codice univoco del menu',
@@ -20,7 +20,7 @@ export class Abilitazione {
   @IsString()
   @IsNotEmpty({ message: "Il codice menu è obbligatorio." })
   @Length(3, 20, { message: "Il codice menu deve essere tra 3 e 20 caratteri." })
-  codiceMenu: string;
+  codiceMenu!: string;
 
   @ApiProperty({
     description: 'Tipo di abilitazione',
@@ -28,5 +28,5 @@ export class Abilitazione {
     example: TipoAbilitazione.LETTURA
   })
   @IsEnum(TipoAbilitazione, { message: "Il tipo di abilitazione non è valido." })
-  tipoAbilitazione: TipoAbilitazione;
+  tipoAbilitazione!: TipoAbilitazione;
 }

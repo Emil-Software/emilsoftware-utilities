@@ -1,0 +1,24 @@
+# Firebird per gli integration test: una versione moderna e una legacy.
+# Il database viene creato dal test (attachOrCreate) cosi i permessi del file
+# sono corretti, indipendentemente dall'entrypoint dell'immagine.
+#
+# Avvio:  docker compose -f docker-compose.test.yml up -d
+# Test:   npm run test:integration:fb5   (porta 3055)
+#         npm run test:integration:fb3   (porta 3056)
+# Stop:   docker compose -f docker-compose.test.yml down -v
+services:
+  firebird5:
+    image: firebirdsql/firebird:5
+    environment:
+      FIREBIRD_ROOT_PASSWORD: masterkey
+      FIREBIRD_DATABASE_DEFAULT_CHARSET: UTF8
+    ports:
+      - "3055:3050"
+
+  firebird3:
+    image: firebirdsql/firebird:3
+    environment:
+      FIREBIRD_ROOT_PASSWORD: masterkey
+      FIREBIRD_DATABASE_DEFAULT_CHARSET: UTF8
+    ports:
+      - "3056:3050"

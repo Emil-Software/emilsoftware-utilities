@@ -11,7 +11,7 @@ export class AbilitazioneMenu {
   @IsString()
   @IsNotEmpty({ message: "Il codice menu è obbligatorio." })
   @Length(3, 20, { message: "Il codice menu deve essere tra 3 e 20 caratteri." })
-  codiceMenu: string;
+  codiceMenu!: string;
 
   @ApiPropertyOptional({
     description: 'Tipo di abilitazione',
@@ -47,7 +47,9 @@ export class AbilitazioneMenu {
 
   @ApiPropertyOptional({
     description: 'Nome dell\'icona associata al menu',
-    example: 'people'
+    type: String,
+    example: 'people',
+    nullable: true
   })
   @IsString()
   @IsOptional()
@@ -55,7 +57,9 @@ export class AbilitazioneMenu {
 
   @ApiPropertyOptional({
     description: 'Tipo di menu',
-    example: 'M'
+    type: String,
+    example: 'M',
+    nullable: true
   })
   @IsString()
   @IsOptional()
@@ -63,7 +67,9 @@ export class AbilitazioneMenu {
 
   @ApiPropertyOptional({
     description: 'Percorso della pagina associata al menu',
-    example: '/lista-clienti'
+    type: String,
+    example: '/lista-clienti',
+    nullable: true
   })
   @IsString()
   @IsOptional()
@@ -71,7 +77,9 @@ export class AbilitazioneMenu {
 
   @ApiPropertyOptional({
     description: 'Nota informativa associata al menu',
-    example: 'Visibile solo dopo abilitazione'
+    type: String,
+    example: 'Visibile solo dopo abilitazione',
+    nullable: true
   })
   @IsString()
   @IsOptional()

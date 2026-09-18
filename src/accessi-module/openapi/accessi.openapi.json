@@ -2747,22 +2747,26 @@
           "icona": {
             "type": "string",
             "description": "Nome dell'icona associata al menu",
-            "example": "people"
+            "example": "people",
+            "nullable": true
           },
           "tipo": {
             "type": "string",
             "description": "Tipo di menu",
-            "example": "M"
+            "example": "M",
+            "nullable": true
           },
           "pagina": {
             "type": "string",
             "description": "Percorso della pagina associata al menu",
-            "example": "/lista-clienti"
+            "example": "/lista-clienti",
+            "nullable": true
           },
           "note": {
             "type": "string",
             "description": "Nota informativa associata al menu",
-            "example": "Visibile solo dopo abilitazione"
+            "example": "Visibile solo dopo abilitazione",
+            "nullable": true
           }
         },
         "required": [

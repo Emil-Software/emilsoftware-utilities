@@ -1,5 +1,7 @@
 import { INestApplication } from "@nestjs/common";
 import { DocumentBuilder, SwaggerModule } from "@nestjs/swagger";
+import { Request, Response } from "express";
+import { AddressInfo } from "net";
 import { Logger } from "../Logger";
 
 export type SwaggerSetupOptions = {
@@ -28,19 +30,22 @@ export function setupSwagger(app: INestApplication, options?: SwaggerSetupOption
     const document = SwaggerModule.createDocument(app, config);
     SwaggerModule.setup(swaggerPath, app, document);
 
-    app.use(`/${swaggerJsonPath}`, (_, res) => {
+    app.use(`/${swaggerJsonPath}`, (_req: Request, res: Response) => {
         res.setHeader("Content-Type", "application/json");
         res.send(document);
     });
 
     if (legacySwaggerJsonPath !== swaggerJsonPath) {
-        app.use(`/${legacySwaggerJsonPath}`, (_, res) => {
+        app.use(`/${legacySwaggerJsonPath}`, (_req: Request, res: Response) => {
             res.setHeader("Content-Type", "application/json");
             res.send(document);
         });
     }
 
-    let port = app.getHttpServer()?.address?.port || 3000;
+    const serverAddress = app.getHttpServer()?.address?.();
+    const port = serverAddress && typeof serverAddress === "object"
+        ? (serverAddress as AddressInfo).port
+        : 3000;
 
     logger.info(
         `Swagger documentation available at: http://localhost:${port}/${swaggerPath}`

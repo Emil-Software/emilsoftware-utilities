@@ -8,5 +8,5 @@ export class GetUserByTokenResponse extends BaseResponse {
   @ApiProperty({ type: AuthenticatedTokenPayloadDto })
   @ValidateNested()
   @Type(() => AuthenticatedTokenPayloadDto)
-  Result: AuthenticatedTokenPayloadDto;
+  Result!: AuthenticatedTokenPayloadDto;
 }

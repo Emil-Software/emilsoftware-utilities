@@ -1,0 +1,89 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+      - dev
+  pull_request:
+
+jobs:
+  quality:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Typecheck (strict)
+        run: npm run typecheck
+
+      - name: Unit tests (with coverage)
+        run: npm run test:coverage
+
+      - name: Build
+        run: npm run build
+
+  integration:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        firebird: ["5", "3"]
+    services:
+      firebird:
+        image: firebirdsql/firebird:${{ matrix.firebird }}
+        env:
+          FIREBIRD_ROOT_PASSWORD: masterkey
+          FIREBIRD_DATABASE_DEFAULT_CHARSET: UTF8
+        ports:
+          - 3050:3050
+        options: >-
+          --health-cmd "sh -c 'exit 0'"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 20
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Wait for Firebird
+        run: |
+          node -e "
+            const F = require('node-firebird');
+            const opts = { host: '127.0.0.1', port: 3050, database: '/var/lib/firebird/data/test_accessi.fdb', user: 'SYSDBA', password: 'masterkey' };
+            let tries = 0;
+            const attempt = () => F.attachOrCreate(opts, (err, db) => {
+              if (!err) { db.detach(() => process.exit(0)); return; }
+              if (++tries > 30) { console.error('Firebird non pronto:', err.message); process.exit(1); }
+              setTimeout(attempt, 3000);
+            });
+            attempt();
+          "
+
+      - name: Integration tests (Firebird ${{ matrix.firebird }})
+        run: node --test test/integration/accessi.integration.cjs test/integration/allegati.integration.cjs
+        env:
+          ACCESSI_TEST_REQUIRE_DB: "1"
+          ACCESSI_TEST_DB_HOST: 127.0.0.1
+          ACCESSI_TEST_DB_PORT: "3050"
+          ACCESSI_TEST_DB_DATABASE: /var/lib/firebird/data/test_accessi.fdb
+          ACCESSI_TEST_DB_USER: SYSDBA
+          ACCESSI_TEST_DB_PASSWORD: masterkey

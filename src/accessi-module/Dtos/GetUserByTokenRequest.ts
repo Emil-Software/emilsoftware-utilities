@@ -7,5 +7,5 @@ export class GetUserByTokenRequest {
     example: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...',
   })
   @IsString({ message: 'Il token deve essere una stringa.' })
-  token: string;
+  token!: string;
 }
