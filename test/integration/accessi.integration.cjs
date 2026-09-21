@@ -171,6 +171,20 @@ test('service token: issue, verify, list, revoke e rotate su DB reale', async (t
   await serviceTokens.revoke(rotated.tokenId);
 });
 
+test('migrazione ripartibile: una tabella mancante viene ricreata', async (t) => {
+  const ctx = await getContext();
+  if (!ctx.available) return unavailable(ctx, t);
+
+  await Orm.execute(ctx.options.databaseOptions, 'DROP TABLE ACCESSI_SERVICE_TOKEN');
+  await AccessiDatabaseUpdater.initialize(ctx.options);
+
+  const rows = await Orm.query(
+    ctx.options.databaseOptions,
+    `SELECT RDB$RELATION_NAME FROM RDB$RELATIONS WHERE RDB$RELATION_NAME = 'ACCESSI_SERVICE_TOKEN'`,
+  );
+  assert.equal(rows.length, 1, 'la tabella deve essere ricreata rieseguendo la migrazione');
+});
+
 test('2FA: challenge emessa e codice errato rifiutato su DB reale', async (t) => {
   const services = await buildServices(t);
   if (!services) return;

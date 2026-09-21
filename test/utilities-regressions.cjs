@@ -6,6 +6,8 @@ const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
 const { PasswordUtilities, RestUtilities, DateUtilities } = require('../src/Utilities');
+const { Orm } = require('../src/Orm');
+const { getTableColumns, clearTableColumnsCache } = require('../src/accessi-module/database-updates/optionalColumns');
 const { autobind } = require('../src/autobind');
 const { Logger } = require('../src/Logger');
 const { checkPublicAuthRateLimit } = require('../src/accessi-module/security/publicAuthRateLimit');
@@ -81,6 +83,27 @@ test('allegati guard: no-op senza authorize, nega/consente in base alla callback
 
   const allow = new AllegatiAuthorizationGuard({ databaseOptions: {}, authorize: () => true });
   assert.equal(await allow.canActivate(context), true);
+});
+
+test('getTableColumns usa una cache a breve TTL e si invalida', async (t) => {
+  clearTableColumnsCache();
+  let calls = 0;
+  t.mock.method(Orm, 'query', async () => {
+    calls += 1;
+    return [{ COLUMN_NAME: 'CODUTE' }];
+  });
+
+  const options = { databaseOptions: { host: 'cache-host', database: 'cache-db' } };
+  const first = await getTableColumns(options, 'UTENTI');
+  const second = await getTableColumns(options, 'UTENTI');
+
+  assert.ok(first.has('CODUTE'));
+  assert.equal(second, first);
+  assert.equal(calls, 1, 'la seconda lettura deve usare la cache');
+
+  clearTableColumnsCache();
+  await getTableColumns(options, 'UTENTI');
+  assert.equal(calls, 2, 'dopo l invalidazione si rilegge dal database');
 });
 
 test('Logger redige i campi sensibili e serializza gli Error', async (t) => {

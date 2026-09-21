@@ -65,6 +65,11 @@ export class AccessiDatabaseUpdater extends DatabaseUpdater implements OnModuleI
     }
   }
 
+  private static async sequenceExists(options: AccessiOptions, name: string): Promise<boolean> {
+    const rows = await this.query(options, 'SELECT 1 FROM RDB$GENERATORS WHERE RDB$GENERATOR_NAME = ?', [name.toUpperCase()]);
+    return rows.length > 0;
+  }
+
   private static async relationIssues(options: AccessiOptions): Promise<string[]> {
     const rows = await this.query(options, `SELECT TRIM(RDB$RELATION_NAME) AS NAME, COALESCE(RDB$RELATION_TYPE, 0) AS KIND
       FROM RDB$RELATIONS WHERE COALESCE(RDB$SYSTEM_FLAG, 0) = 0`);
@@ -231,7 +236,7 @@ export class AccessiDatabaseUpdater extends DatabaseUpdater implements OnModuleI
       if (!triggers.some(row => this.compatibleTrigger(row, trigger))) issues.push(`${trigger.name}: trigger richiesto attivo ${trigger.event} su ${trigger.table}, con le operazioni Accessi previste`);
     }
     for (const generator of accessiGenerators) {
-      if (!(await this.generatorExists(options.databaseOptions, generator.name))) issues.push(`${generator.name}: sequence mancante`);
+      if (!(await this.sequenceExists(options, generator.name))) issues.push(`${generator.name}: sequence mancante`);
       else if (columns.some(row => row.TABLE_NAME === generator.table && row.COLUMN_NAME === generator.column)) {
         const rows = await this.query(options, `SELECT GEN_ID(${generator.name}, 0) AS CURRENT_VALUE, (SELECT COALESCE(MAX(${generator.column}), 0) FROM ${generator.table}) AS MAX_VALUE FROM RDB$DATABASE`);
         if (Number(rows[0].CURRENT_VALUE) < Number(rows[0].MAX_VALUE)) issues.push(`${generator.name}: sequence inferiore agli identificativi esistenti`);
@@ -249,6 +254,12 @@ export class AccessiDatabaseUpdater extends DatabaseUpdater implements OnModuleI
     return String(value ?? '').replace(/^\s*DEFAULT\s+/i, '').replace(/[()\s]/g, '').toUpperCase();
   }
 
+  /**
+   * Riconciliazione idempotente e ripartibile. Firebird non rende utilizzabili gli oggetti
+   * creati nella stessa transazione (metadata cache), quindi il DDL resta auto-commit per
+   * statement: eventuali errori a meta vengono recuperati rieseguendo la migrazione e la
+   * versione viene avanzata solo dopo la verifica finale `assertCompatible`.
+   */
   private static async reconcile(options: AccessiOptions): Promise<void> {
     this.logger.info('Verifica dello schema effettivo Accessi.');
     const engine = await this.engineIssue(options);
@@ -304,7 +315,18 @@ export class AccessiDatabaseUpdater extends DatabaseUpdater implements OnModuleI
       WHERE NOT EXISTS (SELECT 1 FROM SSO_PROVIDER P WHERE P.PROVIDER = I.PROVIDER)`);
     for (const fk of accessiForeignKeys) {
       const existing = constraints.find(rows => rows[0].KIND === 'FOREIGN KEY' && rows[0].TABLE_NAME === fk.table && this.sameColumns(rows, [fk.column]));
-      if (!existing) await this.execute(options, `ALTER TABLE ${fk.table} ADD CONSTRAINT ${fk.name} FOREIGN KEY (${fk.column}) REFERENCES ${fk.target} (${fk.targetColumn})${fk.cascade ? ' ON DELETE CASCADE' : ''}`);
+      if (existing) {
+        // Una FK sulla stessa colonna ma verso un target/regola diverso non e compatibile:
+        // correggere il target cambiando semantica e va segnalato, non ignorato.
+        const deleteRuleOk = fk.cascade
+          ? existing[0].DELETE_RULE === 'CASCADE'
+          : ['NO ACTION', 'RESTRICT'].includes(String(existing[0].DELETE_RULE));
+        if (existing[0].TARGET_TABLE !== fk.target || existing[0].TARGET_COLUMN !== fk.targetColumn || !deleteRuleOk) {
+          throw new Error(`${fk.name}: FK esistente su ${fk.table}.${fk.column} incompatibile (target ${existing[0].TARGET_TABLE}.${existing[0].TARGET_COLUMN}, delete rule ${existing[0].DELETE_RULE}); correggerla esplicitamente.`);
+        }
+        continue;
+      }
+      await this.execute(options, `ALTER TABLE ${fk.table} ADD CONSTRAINT ${fk.name} FOREIGN KEY (${fk.column}) REFERENCES ${fk.target} (${fk.targetColumn})${fk.cascade ? ' ON DELETE CASCADE' : ''}`);
     }
     const checks = await this.checks(options);
     for (const check of accessiChecks) {
@@ -320,7 +342,7 @@ export class AccessiDatabaseUpdater extends DatabaseUpdater implements OnModuleI
       }
     }
     for (const generator of accessiGenerators) {
-      if (!(await this.generatorExists(options.databaseOptions, generator.name))) await this.execute(options, `CREATE SEQUENCE ${generator.name}`);
+      if (!(await this.sequenceExists(options, generator.name))) await this.execute(options, `CREATE SEQUENCE ${generator.name}`);
       // Advance by a positive delta only: do not reset an existing sequence or reuse an allocated value.
       await this.execute(options, `EXECUTE BLOCK AS DECLARE VARIABLE MAX_ID BIGINT; DECLARE VARIABLE CURRENT_ID BIGINT; DECLARE VARIABLE NEXT_ID BIGINT;
         BEGIN SELECT COALESCE(MAX(${generator.column}), 0) FROM ${generator.table} INTO :MAX_ID;
