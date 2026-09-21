@@ -14,5 +14,6 @@
 !/test/two-factor.cjs
 !/test/console-two-factor.cjs
 !/test/utilities-regressions.cjs
+!/test/service-token-regressions.cjs
 !/test/integration/
 !/test/integration/**

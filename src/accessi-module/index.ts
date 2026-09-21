@@ -116,7 +116,15 @@ export async function initializeAccessiModule(app: Application, options: Accessi
 export { AccessiModule } from "./AccessiModule";
 export { AccessiDatabaseUpdater } from "./database-updates/AccessiDatabaseUpdater";
 export type { AccessiOptions, EmailOptions, JwtOptions, ExtensionFieldsOptions, PublicAuthRateLimitOptions, PublicAuthRateLimitRuleOptions } from "./AccessiModule";
-export type { PublicRegistrationOptions, FederatedAuthenticationOptions } from "./AccessiModule";
+export type { PublicRegistrationOptions, FederatedAuthenticationOptions, ServiceTokenOptions } from "./AccessiModule";
+export { ServiceTokenService } from './Services/ServiceTokenService/ServiceTokenService';
+export type {
+    ServiceTokenMetadata,
+    IssuedServiceToken,
+    VerifiedServiceToken,
+    IssueServiceTokenInput
+} from './Services/ServiceTokenService/ServiceTokenService';
+export { ServiceTokenGuard, RequireServiceTokenScopes, getAccessiServiceToken } from './security/serviceTokenGuard';
 export { FederatedAuthService } from './federated-auth/FederatedAuthService';
 export type { FederatedAuthenticationResult, FederatedIdentity, FederatedProvider, VerifiedFederatedIdentity } from './federated-auth/FederatedAuthTypes';
 export * from "./Dtos";

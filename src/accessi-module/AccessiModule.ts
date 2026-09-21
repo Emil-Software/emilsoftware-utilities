@@ -25,6 +25,9 @@ import { AccessiDatabaseUpdater } from './database-updates/AccessiDatabaseUpdate
 import { FederatedAuthService } from './federated-auth/FederatedAuthService';
 import { FederatedAuthController } from './federated-auth/FederatedAuthController';
 import { AccessiConsoleController } from './Controllers/AccessiConsoleController';
+import { ServiceTokenController } from './Controllers/ServiceTokenController';
+import { ServiceTokenService } from './Services/ServiceTokenService/ServiceTokenService';
+import { ServiceTokenGuard } from './security/serviceTokenGuard';
 
 /** JWT emesso da Accessi dopo un login locale o SSO. Non riutilizzare il segreto del provider SSO. */
 export interface JwtOptions {
@@ -88,6 +91,14 @@ export interface PublicRegistrationOptions {
   enabled?: boolean;
 }
 
+/** Configurazione dei token di servizio (macchina-a-macchina, senza utente). */
+export interface ServiceTokenOptions {
+  /** Abilita gli endpoint amministrativi dei service token. Default `true`. */
+  enabled?: boolean;
+  /** Durata predefinita in giorni quando non e indicata una scadenza esplicita. Default: nessuna scadenza. */
+  defaultTtlDays?: number;
+}
+
 /**
  * Enables Accessi's provider-agnostic federated identity capability.
  *
@@ -146,6 +157,8 @@ export interface AccessiOptions {
   /** Optional provider-agnostic SSO support. Provider-specific configuration remains in the hosting backend. */
   federatedAuthentication?: FederatedAuthenticationOptions;
   extensionFieldsOptions?: ExtensionFieldsOptions[];
+  /** Token di servizio per chiamate tecniche macchina-a-macchina. Abilitati di default. */
+  serviceTokens?: ServiceTokenOptions;
 }
 
 @Global()
@@ -159,9 +172,10 @@ export interface AccessiOptions {
     ConfiguratorController,
     FederatedAuthController,
     AccessiConsoleController,
+    ServiceTokenController,
   ],
-  providers: [AuthService, TwoFactorService, UserService, EmailService, PermissionService, FiltriService, ConfiguratorService, JwtSimpleGuard, AuthenticateGenService, AccessiDatabaseUpdater, FederatedAuthService],
-  exports: [AuthService, UserService, EmailService, PermissionService, FiltriService, ConfiguratorService, JwtSimpleGuard, AuthenticateGenService, FederatedAuthService],
+  providers: [AuthService, TwoFactorService, UserService, EmailService, PermissionService, FiltriService, ConfiguratorService, JwtSimpleGuard, AuthenticateGenService, AccessiDatabaseUpdater, FederatedAuthService, ServiceTokenService, ServiceTokenGuard],
+  exports: [AuthService, UserService, EmailService, PermissionService, FiltriService, ConfiguratorService, JwtSimpleGuard, AuthenticateGenService, FederatedAuthService, ServiceTokenService, ServiceTokenGuard],
 })
 export class AccessiModule {
   /**
@@ -189,7 +203,9 @@ export class AccessiModule {
         JwtSimpleGuard,
         AuthenticateGenService,
         AccessiDatabaseUpdater,
-        FederatedAuthService
+        FederatedAuthService,
+        ServiceTokenService,
+        ServiceTokenGuard
       ],
       exports: [
         'ACCESSI_OPTIONS',
@@ -201,7 +217,9 @@ export class AccessiModule {
         ConfiguratorService,
         JwtSimpleGuard,
         AuthenticateGenService,
-        FederatedAuthService
+        FederatedAuthService,
+        ServiceTokenService,
+        ServiceTokenGuard
       ],
     };
   }

@@ -2114,6 +2114,244 @@
           "Federated authentication"
         ]
       }
+    },
+    "/api/accessi/service-token": {
+      "post": {
+        "operationId": "createServiceToken",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateServiceTokenRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Token creato; il segreto e mostrato solo in questa risposta.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CreateServiceTokenResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Dati non validi",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Token Accessi mancante o non valido",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Richiede un superutente",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Emetti un nuovo token di servizio",
+        "tags": [
+          "ServiceToken"
+        ]
+      },
+      "get": {
+        "operationId": "getServiceTokens",
+        "parameters": [
+          {
+            "name": "includeRevoked",
+            "required": false,
+            "in": "query",
+            "description": "Includi anche i token revocati.",
+            "schema": {
+              "type": "boolean"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Elenco dei token.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GetServiceTokensResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Token Accessi mancante o non valido",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Richiede un superutente",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Elenca i token di servizio (senza segreti)",
+        "tags": [
+          "ServiceToken"
+        ]
+      }
+    },
+    "/api/accessi/service-token/{tokenId}": {
+      "delete": {
+        "operationId": "revokeServiceToken",
+        "parameters": [
+          {
+            "name": "tokenId",
+            "required": true,
+            "in": "path",
+            "description": "Identificativo del token.",
+            "schema": {
+              "example": "st_3f1a2b3c4d5e6f708192a3b4c5d6e7f8",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Token revocato.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Richiede un superutente",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Token non trovato",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Revoca un token di servizio",
+        "tags": [
+          "ServiceToken"
+        ]
+      }
+    },
+    "/api/accessi/service-token/{tokenId}/rotate": {
+      "post": {
+        "operationId": "rotateServiceToken",
+        "parameters": [
+          {
+            "name": "tokenId",
+            "required": true,
+            "in": "path",
+            "description": "Identificativo del token da sostituire.",
+            "schema": {
+              "example": "st_3f1a2b3c4d5e6f708192a3b4c5d6e7f8",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Nuovo token emesso; il vecchio e revocato.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CreateServiceTokenResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Richiede un superutente",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Token non trovato",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Ruota un token di servizio",
+        "tags": [
+          "ServiceToken"
+        ]
+      }
     }
   },
   "info": {
@@ -4020,6 +4258,193 @@
             "example": "Collegamento verificato dal reparto IT."
           }
         }
+      },
+      "CreateServiceTokenRequest": {
+        "type": "object",
+        "properties": {
+          "label": {
+            "type": "string",
+            "description": "Descrizione del token, mostrata agli amministratori.",
+            "example": "Integrazione IA - produzione"
+          },
+          "scopes": {
+            "description": "Scope autorizzati dal token. Uno scope vuoto non autorizza nulla; usare valori come 'ia', 'chat', 'tools'.",
+            "example": [
+              "ia",
+              "chat"
+            ],
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "expiresAt": {
+            "type": "string",
+            "description": "Scadenza esplicita in formato ISO 8601. Alternativa a ttlDays.",
+            "example": "2027-01-01T00:00:00.000Z"
+          },
+          "ttlDays": {
+            "type": "number",
+            "description": "Durata in giorni, usata solo se expiresAt non e valorizzata.",
+            "example": 365
+          }
+        },
+        "required": [
+          "label"
+        ]
+      },
+      "IssuedServiceTokenDto": {
+        "type": "object",
+        "properties": {
+          "tokenId": {
+            "type": "string",
+            "description": "Identificativo pubblico del token.",
+            "example": "st_3f1a2b3c4d5e6f708192a3b4c5d6e7f8"
+          },
+          "label": {
+            "type": "string",
+            "description": "Descrizione del token.",
+            "example": "Integrazione IA - produzione"
+          },
+          "scopes": {
+            "description": "Scope autorizzati.",
+            "example": [
+              "ia",
+              "chat"
+            ],
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "createdAt": {
+            "type": "string",
+            "description": "Data di creazione (ISO 8601)."
+          },
+          "expiresAt": {
+            "type": "string",
+            "description": "Data di scadenza (ISO 8601); assente se il token non scade."
+          },
+          "lastUsedAt": {
+            "type": "string",
+            "description": "Ultimo utilizzo registrato (ISO 8601)."
+          },
+          "revoked": {
+            "type": "boolean",
+            "description": "Indica se il token e revocato."
+          },
+          "revokedAt": {
+            "type": "string",
+            "description": "Data di revoca (ISO 8601)."
+          },
+          "token": {
+            "type": "string",
+            "description": "Token completo da usare come `Authorization: Bearer <token>`. Mostrato una sola volta.",
+            "example": "st_3f1a2b3c4d5e6f708192a3b4c5d6e7f8.xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+          }
+        },
+        "required": [
+          "tokenId",
+          "label",
+          "scopes",
+          "revoked",
+          "token"
+        ]
+      },
+      "CreateServiceTokenResponse": {
+        "type": "object",
+        "properties": {
+          "Status": {
+            "$ref": "#/components/schemas/Status"
+          },
+          "Message": {
+            "type": "string",
+            "example": "Dati recuperati con successo.",
+            "description": "Messaggio informativo restituito dalla libreria quando presente."
+          },
+          "Result": {
+            "$ref": "#/components/schemas/IssuedServiceTokenDto"
+          }
+        },
+        "required": [
+          "Status",
+          "Result"
+        ]
+      },
+      "ServiceTokenDto": {
+        "type": "object",
+        "properties": {
+          "tokenId": {
+            "type": "string",
+            "description": "Identificativo pubblico del token.",
+            "example": "st_3f1a2b3c4d5e6f708192a3b4c5d6e7f8"
+          },
+          "label": {
+            "type": "string",
+            "description": "Descrizione del token.",
+            "example": "Integrazione IA - produzione"
+          },
+          "scopes": {
+            "description": "Scope autorizzati.",
+            "example": [
+              "ia",
+              "chat"
+            ],
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "createdAt": {
+            "type": "string",
+            "description": "Data di creazione (ISO 8601)."
+          },
+          "expiresAt": {
+            "type": "string",
+            "description": "Data di scadenza (ISO 8601); assente se il token non scade."
+          },
+          "lastUsedAt": {
+            "type": "string",
+            "description": "Ultimo utilizzo registrato (ISO 8601)."
+          },
+          "revoked": {
+            "type": "boolean",
+            "description": "Indica se il token e revocato."
+          },
+          "revokedAt": {
+            "type": "string",
+            "description": "Data di revoca (ISO 8601)."
+          }
+        },
+        "required": [
+          "tokenId",
+          "label",
+          "scopes",
+          "revoked"
+        ]
+      },
+      "GetServiceTokensResponse": {
+        "type": "object",
+        "properties": {
+          "Status": {
+            "$ref": "#/components/schemas/Status"
+          },
+          "Message": {
+            "type": "string",
+            "example": "Dati recuperati con successo.",
+            "description": "Messaggio informativo restituito dalla libreria quando presente."
+          },
+          "Result": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ServiceTokenDto"
+            }
+          }
+        },
+        "required": [
+          "Status",
+          "Result"
+        ]
       }
     }
   }

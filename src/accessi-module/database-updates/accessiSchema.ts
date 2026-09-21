@@ -4,7 +4,7 @@ export interface SchemaTable {
   primaryKey: string[];
 }
 
-export const ACCESSI_SCHEMA_VERSION = '1.5.0';
+export const ACCESSI_SCHEMA_VERSION = '1.6.0';
 export const ACCESSI_VERSION_KEY = 'AccessiVersion';
 
 export const accessiTables: Record<string, SchemaTable> = {
@@ -49,6 +49,13 @@ export const accessiTables: Record<string, SchemaTable> = {
     CREATED_AT: 'TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL', EXPIRES_AT: 'TIMESTAMP NOT NULL', SENT_AT: 'TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL',
     ATTEMPTS: 'SMALLINT DEFAULT 0 NOT NULL', SENDS: 'SMALLINT DEFAULT 1 NOT NULL',
   }, primaryKey: ['CHALLENGE_ID'] },
+  // Token di servizio (macchina-a-macchina). Il segreto non e mai salvato in chiaro: TOKEN_HASH
+  // contiene lo SHA-256 del segreto, confrontato a tempo costante in fase di verifica.
+  ACCESSI_SERVICE_TOKEN: { columns: {
+    TOKEN_ID: 'VARCHAR(40) CHARACTER SET ASCII NOT NULL', TOKEN_HASH: 'VARCHAR(64) CHARACTER SET ASCII NOT NULL',
+    LABEL: 'VARCHAR(100) CHARACTER SET UTF8', SCOPES: 'VARCHAR(500) CHARACTER SET ASCII', CREATED_BY: 'INTEGER',
+    CREATED_AT: 'TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL', EXPIRES_AT: 'TIMESTAMP', LAST_USED_AT: 'TIMESTAMP', REVOKED_AT: 'TIMESTAMP',
+  }, primaryKey: ['TOKEN_ID'] },
 };
 
 export const accessiForeignKeys = [

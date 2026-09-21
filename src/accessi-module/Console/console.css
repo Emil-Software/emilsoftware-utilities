@@ -368,3 +368,7 @@ article .check { margin-left: 10px; }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { scroll-behavior: auto !important; transition-duration: .01ms !important; animation-duration: .01ms !important; animation-iteration-count: 1 !important; }
 }
+
+.token-reveal { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin: 16px 0; padding: 12px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface, rgba(0, 0, 0, .03)); }
+.token-reveal code { flex: 1 1 100%; word-break: break-all; font-size: .85rem; }
+.token-reveal button { flex: 0 0 auto; }

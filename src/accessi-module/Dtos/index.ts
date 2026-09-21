@@ -25,4 +25,6 @@ export * from "./UserGrantsResponse";
 
 export * from "./RuoliMenu"
 
+export * from "./ServiceToken";
+
 export * from './TwoFactorDtos';

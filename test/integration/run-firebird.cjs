@@ -21,6 +21,9 @@ const result = spawnSync(
   process.execPath,
   [
     '--test',
+    // I file condividono lo stesso DB e la migrazione non e serializzata tra processi:
+    // eseguirli in sequenza evita conflitti di creazione dello schema.
+    '--test-concurrency=1',
     path.join(__dirname, 'accessi.integration.cjs'),
     path.join(__dirname, 'allegati.integration.cjs'),
   ],

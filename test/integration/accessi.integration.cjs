@@ -14,6 +14,7 @@ const { EmailService } = require('../../src/accessi-module/Services/EmailService
 const { TwoFactorService } = require('../../src/accessi-module/Services/TwoFactorService/TwoFactorService');
 const { AuthService } = require('../../src/accessi-module/Services/AuthService/AuthService');
 const { createPasswordResetToken, getAccessiJwtSecret } = require('../../src/accessi-module/security/passwordResetToken');
+const { ServiceTokenService } = require('../../src/accessi-module/Services/ServiceTokenService/ServiceTokenService');
 const { StatoRegistrazione } = require('../../src/accessi-module/Dtos/StatoRegistrazione');
 
 let uniqueCounter = 0;
@@ -138,6 +139,36 @@ test('reset password: nonce monouso verificato su DB reale', async (t) => {
 
   // Il secondo uso dello stesso token deve fallire (nonce consumato).
   await assert.rejects(() => services.authService.confirmResetPassword(token, 'AnotherPass-3'));
+});
+
+test('service token: issue, verify, list, revoke e rotate su DB reale', async (t) => {
+  const services = await buildServices(t);
+  if (!services) return;
+
+  const serviceTokens = new ServiceTokenService(services.options);
+  const issued = await serviceTokens.issue({ label: `IT-${Date.now()}`, scopes: ['ia', 'chat'], ttlDays: 1 });
+  assert.match(issued.token, /^st_[a-f0-9]{32}\./);
+  assert.deepEqual(issued.scopes, ['ia', 'chat']);
+
+  const verified = await serviceTokens.verify(issued.token);
+  assert.equal(verified.tokenId, issued.tokenId);
+  assert.deepEqual(verified.scopes, ['ia', 'chat']);
+
+  // Segreto errato con lo stesso identificativo: rifiutato.
+  assert.equal(await serviceTokens.verify(`${issued.tokenId}.${'x'.repeat(43)}`), undefined);
+
+  const listed = await serviceTokens.list();
+  assert.ok(listed.some((token) => token.tokenId === issued.tokenId && token.revoked === false));
+
+  await serviceTokens.revoke(issued.tokenId);
+  assert.equal(await serviceTokens.verify(issued.token), undefined);
+
+  const rotated = await serviceTokens.rotate(issued.tokenId);
+  assert.notEqual(rotated.tokenId, issued.tokenId);
+  assert.deepEqual(rotated.scopes, ['ia', 'chat']);
+  assert.equal((await serviceTokens.verify(rotated.token))?.tokenId, rotated.tokenId);
+
+  await serviceTokens.revoke(rotated.tokenId);
 });
 
 test('2FA: challenge emessa e codice errato rifiutato su DB reale', async (t) => {

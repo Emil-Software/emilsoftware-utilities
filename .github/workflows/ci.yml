@@ -79,7 +79,7 @@ jobs:
           "
 
       - name: Integration tests (Firebird ${{ matrix.firebird }})
-        run: node --test test/integration/accessi.integration.cjs test/integration/allegati.integration.cjs
+        run: node --test --test-concurrency=1 test/integration/accessi.integration.cjs test/integration/allegati.integration.cjs
         env:
           ACCESSI_TEST_REQUIRE_DB: "1"
           ACCESSI_TEST_DB_HOST: 127.0.0.1

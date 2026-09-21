@@ -5,6 +5,7 @@ import {
   createFederatedProvider,
   createManagedUser,
   createRole,
+  createServiceToken,
   deleteFederatedIdentityPermanently,
   deleteUser,
   getFederatedIdentities,
@@ -12,6 +13,7 @@ import {
   getFiltriUtente,
   getGroupsWithMenus,
   getRoles,
+  getServiceTokens,
   getUserByToken,
   getUserRolesAndGrants,
   getUsers,
@@ -19,6 +21,8 @@ import {
   login,
   verifyTwoFactor,
   resendTwoFactor,
+  revokeServiceToken,
+  rotateServiceToken,
   saveFiltriUtente,
   setGroupEnabled,
   setMenuEnabled,
@@ -40,6 +44,8 @@ import type {
   Permission,
   RegisterRequest,
   Role,
+  ServiceTokenDto,
+  IssuedServiceTokenDto,
   UserDto,
   UpdateFederatedProviderRequest,
 } from './generated/model';
@@ -49,7 +55,7 @@ type ConsoleUser = { codiceUtente: number; email?: string; flagSuper: boolean; f
 type FederatedProvider = FederatedProviderResponseDto;
 type ConsoleFederatedIdentity = { identityKey: string; provider: string; subject: string; active: boolean; note?: string };
 type UserDetailTab = 'sso' | 'profile' | 'roles' | 'grants';
-type ConsoleView = 'users' | 'roles' | 'menus' | 'filters' | 'sso';
+type ConsoleView = 'users' | 'roles' | 'menus' | 'filters' | 'sso' | 'tokens';
 
 const routeSegment: Record<ConsoleView, string> = {
   users: 'utenti',
@@ -57,6 +63,7 @@ const routeSegment: Record<ConsoleView, string> = {
   menus: 'menu-e-gruppi',
   filters: 'filtri',
   sso: 'sso',
+  tokens: 'token-di-servizio',
 };
 const routeView = Object.fromEntries(Object.entries(routeSegment).map(([view, segment]) => [segment, view])) as Record<string, ConsoleView>;
 const consoleMarker = '/accessi/console';
@@ -653,10 +660,66 @@ async function showFilters(): Promise<void> {
   if (filtersForm) filtersForm.onsubmit = async (event) => { event.preventDefault(); const form = eventForm(event); const action = (event.submitter as HTMLButtonElement | null)?.value; const code = Number(formValues(form).codUte); if (action === 'load') { const filters = result<FiltriUtente[]>(await getFiltriUtente({ codUte: code })); (form.elements.namedItem('json') as HTMLTextAreaElement).value = JSON.stringify(filters[0] ?? { codUte: code }, null, 2); } else { const parsed = JSON.parse(formValues(form).json) as Omit<FiltriUtente, 'codUte'>; await saveFiltriUtente({ ...parsed, codUte: code }); showNotice('Filtri salvati.'); } };
 }
 
+function scopeList(scopes: string[] | undefined): string {
+  return (scopes ?? []).join(', ') || 'nessuno';
+}
+
+function serviceTokenRows(tokens: ServiceTokenDto[], includeRevoked: boolean): string {
+  return tokens.map((token) => `<tr class="${token.revoked ? 'is-disabled' : ''}"><td><strong>${escapeHtml(token.label)}</strong><br><code>${escapeHtml(token.tokenId)}</code></td><td>${escapeHtml(scopeList(token.scopes))}</td><td>${escapeHtml(token.createdAt ? new Date(token.createdAt).toLocaleString() : '')}</td><td>${token.expiresAt ? escapeHtml(new Date(token.expiresAt).toLocaleString()) : 'nessuna'}</td><td>${token.lastUsedAt ? escapeHtml(new Date(token.lastUsedAt).toLocaleString()) : 'mai'}</td><td>${token.revoked ? 'Revocato' : 'Attivo'}</td><td>${token.revoked ? '' : `<button type="button" data-rotate="${escapeHtml(token.tokenId)}">Ruota</button> <button type="button" class="danger-button" data-revoke="${escapeHtml(token.tokenId)}">Revoca</button>`}</td></tr>`).join('') || `<tr><td colspan="7">Nessun token ${includeRevoked ? '' : 'attivo'}.</td></tr>`;
+}
+
+/** Gestione dei token di servizio: elenco, creazione, rotazione e revoca. */
+async function showServiceTokens(includeRevoked = false): Promise<void> {
+  const tokens = result<ServiceTokenDto[]>(await getServiceTokens({ includeRevoked }));
+  render(`<div class="toolbar"><button id="new-token">Nuovo token</button><button id="toggle-revoked" class="secondary">${includeRevoked ? 'Nascondi revocati' : 'Mostra revocati'}</button></div><h2>Token di servizio</h2><p class="form-help">Credenziali macchina-a-macchina per chiamate tecniche, non legate a un utente. Il segreto e mostrato <strong>una sola volta</strong> alla creazione: conservalo come variabile d'ambiente/secret. Autenticazione: <code>Authorization: Bearer &lt;token&gt;</code>.</p><table><thead><tr><th>Token</th><th>Scope</th><th>Creato</th><th>Scade</th><th>Ultimo uso</th><th>Stato</th><th></th></tr></thead><tbody>${serviceTokenRows(tokens, includeRevoked)}</tbody></table>`);
+  byId('new-token').onclick = () => showServiceTokenForm();
+  byId('toggle-revoked').onclick = () => handleAction(() => showServiceTokens(!includeRevoked));
+  document.querySelectorAll<HTMLButtonElement>('[data-revoke]').forEach((button) => {
+    button.onclick = () => handleAction(async () => {
+      if (!window.confirm('Revocare definitivamente questo token? Le integrazioni che lo usano smetteranno di funzionare.')) return;
+      await revokeServiceToken(button.dataset.revoke ?? '');
+      showNotice('Token di servizio revocato.');
+      await showServiceTokens(includeRevoked);
+    });
+  });
+  document.querySelectorAll<HTMLButtonElement>('[data-rotate]').forEach((button) => {
+    button.onclick = () => handleAction(async () => {
+      const issued = result<IssuedServiceTokenDto>(await rotateServiceToken(button.dataset.rotate ?? ''));
+      showIssuedServiceToken(issued);
+    });
+  });
+}
+
+function showServiceTokenForm(): void {
+  render(`<button id="back" type="button" class="secondary">Indietro</button><h2>Nuovo token di servizio</h2><form id="token-form"><label>Descrizione<input name="label" required maxlength="100"><span class="form-help">Identifica l'integrazione, ad esempio "IA - produzione".</span></label><label>Scope<input name="scopes" placeholder="ia, chat"><span class="form-help">Separati da virgola (lettere, numeri, ':', '_', '-'). Definiscono cosa puo fare il token.</span></label><label>Durata in giorni<input name="ttlDays" type="number" min="1" step="1"><span class="form-help">Opzionale. Lascia vuoto per un token senza scadenza.</span></label><button>Crea token</button></form>`);
+  byId('back').onclick = () => void show('tokens');
+  const form = document.getElementById('token-form') as HTMLFormElement | null;
+  if (form) form.onsubmit = (event) => {
+    event.preventDefault();
+    handleAction(async () => {
+      const values = formValues(eventForm(event));
+      const scopes = values.scopes.split(',').map((scope) => scope.trim()).filter(Boolean);
+      const ttlDays = values.ttlDays ? Number(values.ttlDays) : undefined;
+      const issued = result<IssuedServiceTokenDto>(await createServiceToken({
+        label: values.label,
+        scopes: scopes.length ? scopes : undefined,
+        ttlDays: Number.isFinite(ttlDays) ? ttlDays : undefined,
+      }));
+      showIssuedServiceToken(issued);
+    });
+  };
+}
+
+function showIssuedServiceToken(issued: IssuedServiceTokenDto): void {
+  render(`<h2>Token creato</h2><p class="form-help">Copia ora il token: <strong>non sara piu mostrato</strong>. Salvalo come variabile d'ambiente/secret del servizio chiamante e non inserirlo nel body delle richieste.</p><div class="token-reveal"><code id="issued-token">${escapeHtml(issued.token)}</code><button id="copy-token" type="button">Copia</button></div><dl class="entity-metadata"><div><dt>Descrizione</dt><dd>${escapeHtml(issued.label)}</dd></div><div><dt>Scope</dt><dd>${escapeHtml(scopeList(issued.scopes))}</dd></div><div><dt>Scade</dt><dd>${issued.expiresAt ? escapeHtml(new Date(issued.expiresAt).toLocaleString()) : 'nessuna'}</dd></div></dl><button id="done-token">Ho copiato, chiudi</button>`);
+  byId('copy-token').onclick = () => handleAction(async () => { await navigator.clipboard.writeText(issued.token); showNotice('Token copiato negli appunti.'); });
+  byId('done-token').onclick = () => void show('tokens');
+}
+
 async function show(view: ConsoleView): Promise<void> {
   try {
     showNotice('');
-    const views: Record<string, () => Promise<void>> = { users: showUsers, roles: showRoles, menus: showMenus, filters: showFilters, sso: showSso };
+    const views: Record<string, () => Promise<void>> = { users: showUsers, roles: showRoles, menus: showMenus, filters: showFilters, sso: showSso, tokens: showServiceTokens };
     setActiveNavigation(view);
     await views[view]();
   } catch (error) {

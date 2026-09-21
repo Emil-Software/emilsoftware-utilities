@@ -12,6 +12,9 @@ import type {
   CreateFederatedIdentityRequest,
   CreateFederatedProviderRequest,
   CreateFederatedUserRequest,
+  CreateServiceTokenRequest,
+  CreateServiceTokenResponse,
+  ErrorResponse,
   FederatedIdentityListResponse,
   FederatedIdentityResponse,
   FederatedProviderListResponse,
@@ -24,6 +27,8 @@ import type {
   GetGroupsWithMenusResponse,
   GetMenusResponse,
   GetRolesResponse,
+  GetServiceTokensParams,
+  GetServiceTokensResponse,
   GetUserByTokenRequest,
   GetUserByTokenResponse,
   GetUsersParams,
@@ -1072,6 +1077,112 @@ return accessiFetch<Promise<deleteFederatedIdentityPermanentlyResponse>>(getDele
   {      
     ...options,
     method: 'DELETE'
+    
+  }
+);}
+
+
+/**
+ * @summary Emetti un nuovo token di servizio
+ */
+export type createServiceTokenResponse = {
+  data: CreateServiceTokenResponse;
+  status: number;
+}
+
+export const getCreateServiceTokenUrl = () => {
+
+
+  return `/api/accessi/service-token`
+}
+
+export const createServiceToken = async (createServiceTokenRequest: CreateServiceTokenRequest, options?: RequestInit): Promise<createServiceTokenResponse> => {
+return accessiFetch<Promise<createServiceTokenResponse>>(getCreateServiceTokenUrl(),
+  {      
+    ...options,
+    method: 'POST',
+    body: JSON.stringify(
+      createServiceTokenRequest,)
+  }
+);}
+
+
+/**
+ * @summary Elenca i token di servizio (senza segreti)
+ */
+export type getServiceTokensResponse = {
+  data: GetServiceTokensResponse;
+  status: number;
+}
+
+export const getGetServiceTokensUrl = (params?: GetServiceTokensParams,) => {
+
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value === null) {
+      normalizedParams.append(key, 'null');
+    } else if (value !== undefined) {
+      normalizedParams.append(key, value.toString());
+    }
+  });
+
+  return `/api/accessi/service-token?${normalizedParams.toString()}`
+}
+
+export const getServiceTokens = async (params?: GetServiceTokensParams, options?: RequestInit): Promise<getServiceTokensResponse> => {
+return accessiFetch<Promise<getServiceTokensResponse>>(getGetServiceTokensUrl(params),
+  {      
+    ...options,
+    method: 'GET'
+    
+  }
+);}
+
+
+/**
+ * @summary Revoca un token di servizio
+ */
+export type revokeServiceTokenResponse = {
+  data: ErrorResponse;
+  status: number;
+}
+
+export const getRevokeServiceTokenUrl = (tokenId: string,) => {
+
+
+  return `/api/accessi/service-token/${tokenId}`
+}
+
+export const revokeServiceToken = async (tokenId: string, options?: RequestInit): Promise<revokeServiceTokenResponse> => {
+return accessiFetch<Promise<revokeServiceTokenResponse>>(getRevokeServiceTokenUrl(tokenId),
+  {      
+    ...options,
+    method: 'DELETE'
+    
+  }
+);}
+
+
+/**
+ * @summary Ruota un token di servizio
+ */
+export type rotateServiceTokenResponse = {
+  data: CreateServiceTokenResponse;
+  status: number;
+}
+
+export const getRotateServiceTokenUrl = (tokenId: string,) => {
+
+
+  return `/api/accessi/service-token/${tokenId}/rotate`
+}
+
+export const rotateServiceToken = async (tokenId: string, options?: RequestInit): Promise<rotateServiceTokenResponse> => {
+return accessiFetch<Promise<rotateServiceTokenResponse>>(getRotateServiceTokenUrl(tokenId),
+  {      
+    ...options,
+    method: 'POST'
     
   }
 );}

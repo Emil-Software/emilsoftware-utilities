@@ -77,6 +77,29 @@ La CI (`.github/workflows/ci.yml`) esegue typecheck, test con coverage e build, 
 integration test in matrice su Firebird 5 e 3. Il workflow di release (`publish.yml`) esegue
 typecheck e test prima di build e pubblicazione.
 
+## Service token (macchina-a-macchina)
+
+Credenziali di servizio per chiamate tecniche, **non legate a un utente** e senza login giornaliero.
+Sostituiscono l'uso di un `secret` nel body: si inviano con `Authorization: Bearer <token>`.
+
+- Formato: `st_<id>.<segreto>`. Il segreto e mostrato **una sola volta** alla creazione/rotazione.
+- Storage: tabella `ACCESSI_SERVICE_TOKEN` (schema Accessi, migrazione automatica `1.6.0`). Il segreto e salvato solo come hash SHA-256 e confrontato a tempo costante.
+- Metadati: descrizione, scope, data di creazione/scadenza, ultimo utilizzo, revoca.
+- API amministrative (solo superutente): `POST /api/accessi/service-token`, `GET /api/accessi/service-token` (`includeRevoked=true`), `DELETE /api/accessi/service-token/:tokenId`, `POST /api/accessi/service-token/:tokenId/rotate`.
+- Console: sezione **Token di servizio** (crea, ruota, revoca; copia il token una sola volta).
+- Utilizzo lato consumer: guard `ServiceTokenGuard` con `@RequireServiceTokenScopes('ia')`; il token verificato e disponibile con `getAccessiServiceToken(req)`.
+- Opzione: `serviceTokens: { enabled?: boolean; defaultTtlDays?: number }` in `AccessiOptions`.
+
+```ts
+import { Module } from '@nestjs/common';
+import { ServiceTokenGuard, RequireServiceTokenScopes } from 'emilsoftware-utilities';
+
+@UseGuards(ServiceTokenGuard)
+@RequireServiceTokenScopes('ia')
+@Controller('ia')
+export class IaController {}
+```
+
 ## Hardening e opzioni
 
 - I log delle query **non includono i valori dei parametri** (segreti, credenziali, PII). Per riattivare esplicitamente i valori: `logQueryParameters: true` nelle `databaseOptions`.
