@@ -1,5 +1,6 @@
 import { Response } from 'express';
 import { FirebirdOptions } from "./firebird-compat";
+import { Logger } from "./Logger";
 import crypto from "crypto";
 
 
@@ -293,6 +294,7 @@ export class RestUtilities {
 
 
 export class CryptUtilities {
+    private static readonly logger = new Logger(CryptUtilities.name);
 
     /**
  * Cifra un testo in chiaro usando l'algoritmo AES-128 in modalità ECB.
@@ -346,7 +348,7 @@ export class CryptUtilities {
 
             return decoded;
         } catch (error) {
-            console.error("Errore durante la decifratura:", error);
+            CryptUtilities.logger.error("Errore durante la decifratura:", error);
             return null;
         }
     }

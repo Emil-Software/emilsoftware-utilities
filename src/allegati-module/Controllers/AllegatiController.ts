@@ -9,11 +9,13 @@ import {AllegatoDto} from "../Dtos/AllegatoDto";
 import {DownloadAllegatoResponseDto} from "../Dtos/responses/DownloadAllegatoResponseDto";
 import { UploadSingleFileRequest } from "../Dtos/UploadSingleFileRequest";
 import { RestUtilities } from "../../Utilities";
+import { Logger } from "../../Logger";
 import e from "express";
 
 @UseGuards(AllegatiAuthorizationGuard)
 @Controller('allegati')
 export class AllegatiController {
+    private readonly logger = new Logger(AllegatiController.name);
 
     constructor(private readonly allegatiService: AllegatiService) {}
 
@@ -88,7 +90,7 @@ export class AllegatiController {
             
             res.status(200).end(buffer);
         } catch (error) {
-            console.error('[AllegatiController] downloadFile - Errore:', error);
+            this.logger.error('[AllegatiController] downloadFile - Errore:', error);
             throw error;
         }
     }

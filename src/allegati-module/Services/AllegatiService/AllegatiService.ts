@@ -1,5 +1,6 @@
 import { Inject, Injectable, NotFoundException, BadRequestException, InternalServerErrorException } from "@nestjs/common";
 import { autobind } from "../../../autobind";
+import { Logger } from "../../../Logger";
 import { Orm } from "../../../Orm";
 import { AllegatiOptions } from "../../AllegatiModule";
 import { UploadAllegatoResponseDto, DownloadAllegatoResponseDto, AllegatoDto} from "../../Dtos";
@@ -19,6 +20,7 @@ export class AllegatiError extends Error {
 @autobind
 @Injectable()
 export class AllegatiService {
+    private readonly logger = new Logger(AllegatiService.name);
     private readonly MAX_FILE_SIZE = 90 * 1024 * 1024; // 90MB
     private readonly ALLOWED_MIME_TYPES = [
         'application/pdf',
@@ -32,7 +34,7 @@ export class AllegatiService {
 
     constructor(@Inject('ALLEGATI_OPTIONS') private readonly allegatiOptions: AllegatiOptions) {
         this.ensureTableExists().catch(error => {
-            console.error('[AllegatiService] Errore creazione tabella ALLEGATI:', error);
+            this.logger.error('[AllegatiService] Errore creazione tabella ALLEGATI:', error);
            // throw new InternalServerErrorException('Errore durante l\'inizializzazione del servizio allegati');
         });
     }
@@ -124,7 +126,7 @@ export class AllegatiService {
 
             return results;
         } catch (error) {
-            console.error('[AllegatiService] getAttachmentTypes - Errore:', error);
+            this.logger.error('[AllegatiService] getAttachmentTypes - Errore:', error);
             if (error instanceof InternalServerErrorException) {
                 throw error;
             }
@@ -179,7 +181,7 @@ export class AllegatiService {
                 filename: this.sanitizeFilename(file.originalname),
             };
         } catch (error) {
-            console.error('[AllegatiService] uploadFile - Errore:', error);
+            this.logger.error('[AllegatiService] uploadFile - Errore:', error);
             if (error instanceof BadRequestException || error instanceof InternalServerErrorException) {
                 throw error;
             }
@@ -200,7 +202,7 @@ export class AllegatiService {
                 throw new Error('Tabella ALLEGATI non trovata nel database');
             }
         } catch (error) {
-            console.error('[AllegatiService] Errore verifica tabella ALLEGATI:', error);
+            this.logger.error('[AllegatiService] Errore verifica tabella ALLEGATI:', error);
             throw new InternalServerErrorException('Errore durante la verifica della tabella ALLEGATI');
         }
     }
@@ -246,7 +248,7 @@ export class AllegatiService {
                 mimetype
             };
         } catch (error) {
-            console.error('[AllegatiService] downloadFile - Errore:', error);
+            this.logger.error('[AllegatiService] downloadFile - Errore:', error);
             if (error instanceof BadRequestException || 
                 error instanceof NotFoundException || 
                 error instanceof InternalServerErrorException) {
@@ -289,7 +291,7 @@ export class AllegatiService {
             
            
         } catch (error) {
-            console.error('[AllegatiService] deleteFile - Errore:', error);
+            this.logger.error('[AllegatiService] deleteFile - Errore:', error);
             if (error instanceof BadRequestException || 
                 error instanceof NotFoundException || 
                 error instanceof InternalServerErrorException) {
@@ -354,7 +356,7 @@ export class AllegatiService {
 
             return results.map((r: Record<string, unknown>) => this.toAllegatoDto(r));
         } catch (error) {
-            console.error('[AllegatiService] listFiles - Errore:', error);
+            this.logger.error('[AllegatiService] listFiles - Errore:', error);
             if (error instanceof InternalServerErrorException) {
                 throw error;
             }
@@ -408,7 +410,7 @@ export class AllegatiService {
             }
             return results.map((r: Record<string, unknown>) => this.toAllegatoDto(r));
         } catch (error) {
-            console.error('[AllegatiService] findByFields - Errore:', error);
+            this.logger.error('[AllegatiService] findByFields - Errore:', error);
             throw new InternalServerErrorException('Errore durante la ricerca degli allegati');
         }
     }
@@ -449,7 +451,7 @@ export class AllegatiService {
                 throw new InternalServerErrorException('Errore durante l\'aggiornamento del file');
             }
         } catch (error) {
-            console.error('[AllegatiService] updateFieldsById - Errore:', error);
+            this.logger.error('[AllegatiService] updateFieldsById - Errore:', error);
             throw error;
         }
     }

@@ -2,8 +2,12 @@ require('ts-node/register/transpile-only');
 require('reflect-metadata');
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const os = require('node:os');
+const path = require('node:path');
 const { PasswordUtilities, RestUtilities, DateUtilities } = require('../src/Utilities');
 const { autobind } = require('../src/autobind');
+const { Logger } = require('../src/Logger');
 const { checkPublicAuthRateLimit } = require('../src/accessi-module/security/publicAuthRateLimit');
 const { AllegatiAuthorizationGuard } = require('../src/allegati-module/security/allegatiAuthorizationGuard');
 
@@ -77,6 +81,36 @@ test('allegati guard: no-op senza authorize, nega/consente in base alla callback
 
   const allow = new AllegatiAuthorizationGuard({ databaseOptions: {}, authorize: () => true });
   assert.equal(await allow.canActivate(context), true);
+});
+
+test('Logger redige i campi sensibili e serializza gli Error', async (t) => {
+  const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'accessi-log-'));
+  t.after(() => fs.rmSync(directory, { recursive: true, force: true }));
+
+  const logger = new Logger('redaction', { logDirectory: directory });
+  logger.info({ utente: 'mario', password: 'segretissima', nested: { token: 'abc' }, ok: 1 });
+  logger.error(new Error('boom'));
+
+  await new Promise((resolve, reject) => {
+    logger.winstonLogger.once('error', reject);
+    logger.winstonLogger.end(resolve);
+  });
+
+  const content = fs.readdirSync(directory)
+    .map((file) => fs.readFileSync(path.join(directory, file), 'utf8'))
+    .join('\n');
+
+  assert.ok(content.includes('[REDACTED]'));
+  assert.ok(!content.includes('segretissima'));
+  assert.ok(!content.includes('"abc"'));
+  assert.ok(content.includes('boom'));
+});
+
+test('Logger condivide un solo winston logger per la stessa directory', () => {
+  const directory = path.join(os.tmpdir(), `accessi-shared-${process.pid}`);
+  const first = new Logger('uno', { logDirectory: directory });
+  const second = new Logger('due', { logDirectory: directory });
+  assert.equal(first.winstonLogger, second.winstonLogger);
 });
 
 test('DateUtilities formatta in modo stabile', () => {
