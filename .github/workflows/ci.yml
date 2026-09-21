@@ -26,7 +26,10 @@ jobs:
       - name: Typecheck (strict)
         run: npm run typecheck
 
-      - name: Unit tests (with coverage)
+      - name: Lint
+        run: npm run lint
+
+      - name: Unit tests (with coverage thresholds)
         run: npm run test:coverage
 
       - name: Build

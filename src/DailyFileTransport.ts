@@ -47,7 +47,7 @@ export class DailyFileTransport extends Transport {
         this.timer.unref();
     }
 
-    log(info: LogInfo, callback: (error?: Error | null) => void): void {
+    override log(info: LogInfo, callback: (error?: Error | null) => void): void {
         // Capture the event's day even when the transport is draining a backlog.
         const date = info.time instanceof Date ? info.time : new Date();
         appendFile(this.filename(date), `${info[Symbol.for('message')]}\n`, { flag: 'a' }, (error) => {
@@ -56,11 +56,11 @@ export class DailyFileTransport extends Transport {
         });
     }
 
-    close(): void {
+    override close(): void {
         if (this.timer) clearTimeout(this.timer);
     }
 
-    logv(chunks: { chunk: LogInfo }[], callback: (error?: Error | null) => void): void {
+    override logv(chunks: { chunk: LogInfo }[], callback: (error?: Error | null) => void): void {
         let index = 0;
         const next = (error?: Error | null) => {
             if (error || index === chunks.length) return callback(error);

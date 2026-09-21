@@ -555,11 +555,13 @@ export class DatabaseUtilities {
     }
 }
 
+const deprecationLogger = new Logger('Deprecated');
+
 export function Deprecated(message: string) {
     return function (target: object, key?: string, descriptor?: PropertyDescriptor) {
       void target;
       void key;
       void descriptor;
-      console.warn(`[DEPRECATED] ${message}`);
+      deprecationLogger.warning(`[DEPRECATED] ${message}`);
     };
   }

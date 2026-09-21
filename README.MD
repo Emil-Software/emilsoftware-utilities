@@ -41,10 +41,11 @@ La documentazione operativa del modulo accessi si trova in [src/accessi-module/R
 
 | Comando | Descrizione |
 | --- | --- |
-| `npm run typecheck` | Typecheck TypeScript in modalita `strict` |
-| `npm test` | Typecheck + test unitari |
+| `npm run typecheck` | Typecheck TypeScript in modalita `strict` (piu flag di igiene) |
+| `npm run lint` | Lint dependency-free (no `any`, no `@ts-ignore`, no `console.*` fuori dal logger) |
+| `npm test` | Typecheck + lint + test unitari |
 | `npm run test:unit` | Solo test unitari (`node --test`) |
-| `npm run test:coverage` | Test unitari con report di copertura |
+| `npm run test:coverage` | Test unitari con report e **soglie minime** di copertura |
 | `npm run test:integration` | Integration test su Firebird reale (default: porta 3055) |
 | `npm run test:integration:fb5` / `:fb3` | Integration test su Firebird 5 / 3 |
 | `npm run test:accessi-console` | Test end-to-end della console (richiede un browser Chromium e la build) |
