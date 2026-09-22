@@ -47,6 +47,22 @@ export class Orm {
         ].join("|");
     }
 
+    /**
+     * Chiude tutti i pool creati (opt-in `poolSize`). Utile a fine processo o nei test,
+     * perché i pool mantengono connessioni e timer attivi.
+     */
+    public static async closePools(): Promise<void> {
+        const pools = Array.from(this.pools.values());
+        this.pools.clear();
+        await Promise.all(pools.map((pool) => new Promise<void>((resolve) => {
+            try {
+                pool.destroy(() => resolve());
+            } catch {
+                resolve();
+            }
+        })));
+    }
+
     private static getPool(options: Options, size: number): ConnectionPool {
         const normalized = normalizeFirebirdOptions(options);
         const key = this.buildPoolKey(normalized, size);

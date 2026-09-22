@@ -173,6 +173,34 @@ test('service token: issue, verify, list, revoke e rotate su DB reale', async (t
   await serviceTokens.revoke(rotated.tokenId);
 });
 
+test('pool di connessioni opzionale funziona su DB reale', async (t) => {
+  const ctx = await getContext();
+  if (!ctx.available) return unavailable(ctx, t);
+
+  const pooledOptions = {
+    ...ctx.options,
+    databaseOptions: { ...ctx.options.databaseOptions, poolSize: 2 },
+  };
+
+  try {
+    const rows = await Orm.query(pooledOptions.databaseOptions, 'SELECT 1 AS ONE FROM RDB$DATABASE');
+    assert.equal(Number(rows[0]?.ONE), 1);
+
+    // La transazione acquisisce/rilascia dal pool senza perdere atomicita.
+    await Orm.withTransaction(pooledOptions.databaseOptions, async (transaction) => {
+      const inner = await Orm.transactionQuery(transaction, 'SELECT 1 AS ONE FROM RDB$DATABASE');
+      assert.equal(Number(Array.isArray(inner) ? inner[0]?.ONE : undefined), 1);
+    });
+
+    // Il pool resta utilizzabile dopo la transazione.
+    const after = await Orm.query(pooledOptions.databaseOptions, 'SELECT 2 AS TWO FROM RDB$DATABASE');
+    assert.equal(Number(after[0]?.TWO), 2);
+  } finally {
+    // I pool mantengono connessioni/timer: vanno chiusi a fine test.
+    await Orm.closePools();
+  }
+});
+
 test('migrazione ripartibile: una tabella mancante viene ricreata', async (t) => {
   const ctx = await getContext();
   if (!ctx.available) return unavailable(ctx, t);
