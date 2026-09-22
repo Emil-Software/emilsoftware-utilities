@@ -72,12 +72,19 @@ jobs:
           node -e "
             const F = require('node-firebird');
             const opts = { host: '127.0.0.1', port: 3050, database: '/var/lib/firebird/data/test_accessi.fdb', user: 'SYSDBA', password: 'masterkey' };
-            let tries = 0;
-            const attempt = () => F.attachOrCreate(opts, (err, db) => {
-              if (!err) { db.detach(() => process.exit(0)); return; }
-              if (++tries > 30) { console.error('Firebird non pronto:', err.message); process.exit(1); }
-              setTimeout(attempt, 3000);
-            });
+            const deadline = Date.now() + 180000;
+            let lastError = 'nessun tentativo completato';
+            const attempt = () => {
+              let settled = false;
+              F.attachOrCreate(opts, (err, db) => {
+                if (settled) { try { db && db.detach(() => {}); } catch {} return; }
+                settled = true;
+                if (!err) { db.detach(() => process.exit(0)); return; }
+                lastError = err.message;
+                if (Date.now() > deadline) { console.error('Firebird non pronto:', lastError); process.exit(1); }
+                setTimeout(attempt, 2000);
+              });
+            };
             attempt();
           "
 
