@@ -172,14 +172,24 @@ export class UserService {
    * quando richiesti esplicitamente nelle opzioni; usare filtri puntuali nei flussi di autenticazione.
    */
   async getUsers(
-    filters?: { email?: string; codiceUtente?: number },
+    filters?: { email?: string; codiceUtente?: number; limit?: number; offset?: number },
     options?: { includeExtensionFields: boolean; includeGrants: boolean },
   ): Promise<GetUsersResult[]> {
     try {
       const configColumns = await getTableColumns(this.accessiOptions, 'UTENTI_CONFIG');
       const filterColumns = await getTableColumns(this.accessiOptions, 'FILTRI');
+
+      // Paginazione opzionale con limiti sani: il default resta "tutti gli utenti".
+      const limit = Number.isInteger(filters?.limit) && (filters?.limit ?? 0) > 0
+        ? Math.min(filters?.limit as number, 1000)
+        : undefined;
+      const offset = Number.isInteger(filters?.offset) && (filters?.offset ?? 0) > 0
+        ? Math.trunc(filters?.offset as number)
+        : 0;
+      const pagination = `${limit !== undefined ? ` FIRST ${limit}` : ''}${offset > 0 ? ` SKIP ${offset}` : ''}`;
+
       let query = ` 
-            SELECT  
+            SELECT${pagination}  
                 U.CODUTE as codice_utente, 
                 U.USRNAME as email, 
                 U.FLGGDPR as flag_gdpr, 

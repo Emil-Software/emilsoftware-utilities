@@ -124,6 +124,18 @@ export class UserController {
     description: 'Includi permessi',
     type: Boolean,
   })
+  @ApiQuery({
+    name: 'limit',
+    required: false,
+    description: 'Numero massimo di utenti restituiti (1-1000). Omesso = tutti.',
+    type: Number,
+  })
+  @ApiQuery({
+    name: 'offset',
+    required: false,
+    description: 'Numero di utenti da saltare (paginazione).',
+    type: Number,
+  })
   @ApiBearerAuth()
   @UseGuards(JwtSimpleGuard)
   @Get('get-users')
@@ -136,6 +148,8 @@ export class UserController {
     includeExtensionFields?: boolean,
     @Query('includeGrants', new ParseBoolPipe({ optional: true }))
     includeGrants?: boolean,
+    @Query('limit', new ParseIntPipe({ optional: true })) limit?: number,
+    @Query('offset', new ParseIntPipe({ optional: true })) offset?: number,
   ) {
     try {
       ensureSuperUser(
@@ -143,7 +157,7 @@ export class UserController {
         'Solo gli amministratori possono consultare gli utenti.',
       );
 
-      const filters = { email, codiceUtente };
+      const filters = { email, codiceUtente, limit, offset };
       const options = {
         includeExtensionFields: includeExtensionFields ?? true,
         includeGrants: includeGrants ?? true,

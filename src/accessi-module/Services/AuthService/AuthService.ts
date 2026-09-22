@@ -493,7 +493,7 @@ export class AuthService {
         throw new Error("La nuova password deve essere compresa tra 8 e 100 caratteri.");
       }
 
-      const secret = getAccessiJwtSecret(this.accessiOptions);
+      const secret = getAccessiJwtSecret(this.accessiOptions, 'reset');
       const { codiceUtente, nonce } = verifyPasswordResetToken(token.trim(), secret);
 
       const hashedPassword = PasswordUtilities.hashPassword(newPassword);

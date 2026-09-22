@@ -105,10 +105,11 @@ export class IaController {}
 ## Hardening e opzioni
 
 - I log delle query **non includono i valori dei parametri** (segreti, credenziali, PII). Per riattivare esplicitamente i valori: `logQueryParameters: true` nelle `databaseOptions`.
-- Pool di connessioni **opt-in**: `poolSize: n` nelle `databaseOptions`. Default `0`, che mantiene il comportamento storico (una connessione per query).
+- Pool di connessioni **attivo di default** (`poolSize` default `5`); `poolSize: 0` disabilita e torna a una connessione per query. Gli script di breve durata devono chiamare `await Orm.closePools()` prima di uscire.
 - I JWT sono verificati con algoritmo fissato a `HS256` ed e obbligatoria una scadenza (`expiresIn`) valida.
+- **Chiavi JWT separate per scopo** (`access`, `reset`, `2fa`), derivate dal segreto configurato; il claim `typ: 'access'` e **obbligatorio** per gli access token.
 - La backdoor mock `admin`/`demo` non e mai attiva quando `NODE_ENV=production`.
-- Gli allegati supportano un controllo di autorizzazione **opt-in** tramite `allegatiOptions.authorize`: se definito, ogni richiesta viene accettata solo se la callback restituisce `true` (altrimenti 403). Non definito = comportamento storico.
+- Gli allegati sono **protetti di default**: senza `allegatiOptions.authorize` le richieste rispondono 403. Per la migrazione da versioni precedenti impostare `requireAuthorization: false` (sconsigliato in produzione).
 - Upload allegati: limite di 1 file / 90 MB applicato da Multer e validazione dei magic byte oltre al mimetype dichiarato.
 
 ## Integrazione
@@ -146,7 +147,8 @@ Tutta la configurazione e riservata al backend: segreti JWT/SMTP/DB non devono m
 | Campo | Tipo | Note |
 | --- | --- | --- |
 | `databaseOptions` | `Options` | Connessione Firebird. |
-| `authorize` | `(req) => boolean \| Promise<boolean>?` | Controllo di autorizzazione opt-in applicato a ogni richiesta; `false` → 403. Non definito = comportamento storico. |
+| `authorize` | `(req) => boolean \| Promise<boolean>?` | Controllo di autorizzazione applicato a ogni richiesta; `false` → 403. |
+| `requireAuthorization` | `boolean?` | **Default `true`**: senza `authorize` le richieste sono rifiutate con 403 (secure by default). `false` ripristina il comportamento storico (endpoint aperti) durante la migrazione. |
 
 ## Contratto risposte ed errori
 

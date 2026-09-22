@@ -17,8 +17,13 @@ export class Orm {
         return "\"" + value + "\"";
     }
 
+    /** Dimensione pool: default 5 (pool attivo); `poolSize: 0` disabilita e torna all'attach per query. */
     private static getPoolSize(options: Options): number {
-        const size = Number((options as FirebirdOptions).poolSize);
+        const raw = (options as FirebirdOptions).poolSize;
+        if (raw === 0) {
+            return 0;
+        }
+        const size = raw === undefined ? 5 : Number(raw);
         return Number.isFinite(size) && size > 0 ? Math.trunc(size) : 0;
     }
 

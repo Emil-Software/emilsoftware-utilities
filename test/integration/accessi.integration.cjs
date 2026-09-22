@@ -1,6 +1,6 @@
 // Integration test su Firebird reale (vecchie e nuove versioni).
 // Se il database non e raggiungibile i test vengono marcati come skip.
-const { test } = require('node:test');
+const { test, after } = require('node:test');
 const assert = require('node:assert/strict');
 const { randomUUID } = require('node:crypto');
 
@@ -16,6 +16,9 @@ const { AuthService } = require('../../src/accessi-module/Services/AuthService/A
 const { createPasswordResetToken, getAccessiJwtSecret } = require('../../src/accessi-module/security/passwordResetToken');
 const { ServiceTokenService } = require('../../src/accessi-module/Services/ServiceTokenService/ServiceTokenService');
 const { StatoRegistrazione } = require('../../src/accessi-module/Dtos/StatoRegistrazione');
+
+// Il pool e attivo di default: chiudilo a fine suite per permettere l'uscita del processo.
+after(async () => { await Orm.closePools(); });
 
 let uniqueCounter = 0;
 function uniqueEmail(prefix = 'it') {
@@ -131,7 +134,7 @@ test('reset password: nonce monouso verificato su DB reale', async (t) => {
 
   const nonce = randomUUID();
   await Orm.execute(services.options.databaseOptions, 'UPDATE UTENTI SET KEYREG = ? WHERE CODUTE = ?', [nonce, codiceUtente]);
-  const token = createPasswordResetToken(codiceUtente, nonce, getAccessiJwtSecret(services.options));
+  const token = createPasswordResetToken(codiceUtente, nonce, getAccessiJwtSecret(services.options, 'reset'));
 
   await services.authService.confirmResetPassword(token, 'NewPassword-2');
   const login = await services.authService.login({ email, password: 'NewPassword-2' });

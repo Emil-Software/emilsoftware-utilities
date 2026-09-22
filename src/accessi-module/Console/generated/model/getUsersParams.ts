@@ -22,4 +22,12 @@ includeExtensionFields?: boolean;
  * Includi permessi
  */
 includeGrants?: boolean;
+/**
+ * Numero massimo di utenti restituiti (1-1000). Omesso = tutti.
+ */
+limit?: number;
+/**
+ * Numero di utenti da saltare (paginazione).
+ */
+offset?: number;
 };

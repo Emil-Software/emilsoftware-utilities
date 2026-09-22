@@ -1,11 +1,14 @@
 // Integration test del modulo Allegati su Firebird reale.
 // Il modulo presuppone una tabella ALLEGATI preesistente: qui la si crea se assente.
-const { test } = require('node:test');
+const { test, after } = require('node:test');
 const assert = require('node:assert/strict');
 
 const { getContext } = require('./helpers/accessiTestContext.cjs');
 const { Orm } = require('../../src/Orm');
 const { AllegatiService } = require('../../src/allegati-module/Services/AllegatiService/AllegatiService');
+
+// Il pool e attivo di default: chiudilo a fine suite per permettere l'uscita del processo.
+after(async () => { await Orm.closePools(); });
 
 function unavailable(ctx, t) {
   if (process.env.ACCESSI_TEST_REQUIRE_DB === '1') {

@@ -14,9 +14,18 @@ export class AllegatiAuthorizationGuard implements CanActivate {
     constructor(@Inject('ALLEGATI_OPTIONS') private readonly options: AllegatiOptions) {}
 
     async canActivate(context: ExecutionContext): Promise<boolean> {
+        // Opt-out esplicito: ripristina il comportamento storico (endpoint aperti).
+        if (this.options?.requireAuthorization === false) {
+            return true;
+        }
+
         const authorize = this.options?.authorize;
         if (!authorize) {
-            return true;
+            // Secure by default: senza un controllo configurato l'accesso e negato.
+            throw new ForbiddenException({
+                code: 'ALLEGATI_AUTHORIZATION_NOT_CONFIGURED',
+                message: 'Allegati: nessun controllo di autorizzazione configurato. Definire allegatiOptions.authorize oppure impostare requireAuthorization: false per il comportamento storico.',
+            });
         }
 
         const request = context.switchToHttp().getRequest<Request>();

@@ -883,6 +883,24 @@
             "schema": {
               "type": "boolean"
             }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "description": "Numero massimo di utenti restituiti (1-1000). Omesso = tutti.",
+            "schema": {
+              "type": "number"
+            }
+          },
+          {
+            "name": "offset",
+            "required": false,
+            "in": "query",
+            "description": "Numero di utenti da saltare (paginazione).",
+            "schema": {
+              "type": "number"
+            }
           }
         ],
         "responses": {

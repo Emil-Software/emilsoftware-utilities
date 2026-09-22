@@ -46,7 +46,7 @@ export class TwoFactorService {
   }
 
   private hash(id: string, code: string): string {
-    return createHmac('sha256', getAccessiJwtSecret(this.options)).update(`accessi-2fa:${id}:${code}`).digest('hex');
+    return createHmac('sha256', getAccessiJwtSecret(this.options, '2fa')).update(`accessi-2fa:${id}:${code}`).digest('hex');
   }
 
   private row(result: unknown): ChallengeRow | undefined {

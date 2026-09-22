@@ -1,4 +1,4 @@
-import { Inject, Injectable, NotFoundException, BadRequestException, InternalServerErrorException } from "@nestjs/common";
+import { Inject, Injectable, NotFoundException, BadRequestException, InternalServerErrorException, OnModuleInit } from "@nestjs/common";
 import { autobind } from "../../../autobind";
 import { Logger } from "../../../Logger";
 import { Orm } from "../../../Orm";
@@ -19,7 +19,7 @@ export class AllegatiError extends Error {
 
 @autobind
 @Injectable()
-export class AllegatiService {
+export class AllegatiService implements OnModuleInit {
     private readonly logger = new Logger(AllegatiService.name);
     private readonly MAX_FILE_SIZE = 90 * 1024 * 1024; // 90MB
     private readonly ALLOWED_MIME_TYPES = [
@@ -32,11 +32,15 @@ export class AllegatiService {
         'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
     ];
 
-    constructor(@Inject('ALLEGATI_OPTIONS') private readonly allegatiOptions: AllegatiOptions) {
-        this.ensureTableExists().catch(error => {
-            this.logger.error('[AllegatiService] Errore creazione tabella ALLEGATI:', error);
-           // throw new InternalServerErrorException('Errore durante l\'inizializzazione del servizio allegati');
-        });
+    constructor(@Inject('ALLEGATI_OPTIONS') private readonly allegatiOptions: AllegatiOptions) {}
+
+    /** Verifica la tabella ALLEGATI all'avvio (attesa da Nest, senza promise floating). */
+    async onModuleInit(): Promise<void> {
+        try {
+            await this.ensureTableExists();
+        } catch (error) {
+            this.logger.error('[AllegatiService] Errore verifica tabella ALLEGATI:', error);
+        }
     }
 
     private toAllegatoDto(row: Record<string, unknown>): AllegatoDto {

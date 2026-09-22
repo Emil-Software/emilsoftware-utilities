@@ -1,4 +1,5 @@
 import * as jwt from 'jsonwebtoken';
+import { createHmac } from 'crypto';
 import type { AccessiOptions } from '../AccessiModule';
 
 /** Durata predefinita del token di reset. La monouso e garantita anche dal nonce persistito in `UTENTI.KEYREG`. */
@@ -9,14 +10,20 @@ interface PasswordResetTokenPayload extends jwt.JwtPayload {
   typ: 'password-reset';
 }
 
-/** Restituisce il segreto JWT Accessi oppure fallisce in modo esplicito quando la configurazione e incompleta. */
-export function getAccessiJwtSecret(options: AccessiOptions): string {
+/** Scopo della chiave derivata: separa le chiavi di access token, reset password e 2FA. */
+export type AccessiJwtPurpose = 'access' | 'reset' | '2fa';
+
+/**
+ * Deriva una chiave JWT per scopo dal segreto configurato (key separation senza nuova configurazione).
+ * Un leak della chiave di reset non compromette gli access token e viceversa.
+ */
+export function getAccessiJwtSecret(options: AccessiOptions, purpose: AccessiJwtPurpose = 'access'): string {
   const secret = options?.jwtOptions?.secret || process.env.ACC_JWT_SECRET;
   if (!secret) {
     throw new Error('JWT secret non configurato.');
   }
 
-  return secret;
+  return createHmac('sha256', secret).update(`accessi:jwt:${purpose}:v1`).digest('hex');
 }
 
 /** Crea un token firmato contenente solo codice utente e nonce; non inserire email o dati personali nelle claim. */

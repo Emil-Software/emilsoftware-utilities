@@ -4,7 +4,7 @@ const { test } = require('node:test');
 const assert = require('node:assert/strict');
 const { Orm } = require('../src/Orm');
 const { AuthService } = require('../src/accessi-module/Services/AuthService/AuthService');
-const { createPasswordResetToken } = require('../src/accessi-module/security/passwordResetToken');
+const { createPasswordResetToken, getAccessiJwtSecret } = require('../src/accessi-module/security/passwordResetToken');
 const options = { databaseOptions: {}, jwtOptions: { secret: 'test-reset-secret' } };
 
 for (const scenario of ['success', 'used', 'write-fails']) {
@@ -20,7 +20,7 @@ for (const scenario of ['success', 'used', 'write-fails']) {
     t.mock.method(Orm, 'commitTransaction', async () => { calls.push('commit'); });
     t.mock.method(Orm, 'rollbackTransaction', async () => { calls.push('rollback'); });
     const service = new AuthService({}, {}, options);
-    const token = createPasswordResetToken(1, 'nonce', options.jwtOptions.secret);
+    const token = createPasswordResetToken(1, 'nonce', getAccessiJwtSecret(options, 'reset'));
     const operation = service.confirmResetPassword(token, 'Password-123');
     if (scenario === 'success') await operation;
     else await assert.rejects(operation);

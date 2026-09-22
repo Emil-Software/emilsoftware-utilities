@@ -16,6 +16,7 @@ import {
   isAccessiTokenAllowedForUser,
   resolveCodiceUtenteFromTokenPayload,
 } from '../security/authenticatedToken';
+import { getAccessiJwtSecret } from '../security/passwordResetToken';
 
 @Injectable()
 export class JwtSimpleGuard implements CanActivate {
@@ -34,8 +35,10 @@ export class JwtSimpleGuard implements CanActivate {
     if (!token) throw new UnauthorizedException('Formato token non valido.');
 
     try {
-      const secret = this.accessiOptions?.jwtOptions?.secret || process.env.ACC_JWT_SECRET;
-      if (!secret) {
+      let secret: string;
+      try {
+        secret = getAccessiJwtSecret(this.accessiOptions, 'access');
+      } catch {
         throw new InternalServerErrorException('JWT secret non configurato.');
       }
       let payload: jwt.JwtPayload | string;

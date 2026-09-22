@@ -70,7 +70,7 @@ export class EmailService {
 
       codiceUtente = user.codiceUtente;
       nonce = uuidv4();
-      const secret = getAccessiJwtSecret(this.accessiOptions);
+      const secret = getAccessiJwtSecret(this.accessiOptions, 'reset');
       resetToken = createPasswordResetToken(user.codiceUtente, nonce, secret);
 
       await Orm.execute(

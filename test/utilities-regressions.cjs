@@ -72,11 +72,16 @@ test('rate limit blocca dopo il numero massimo e non e aggirabile cambiando sogg
   assert.equal(blockedByIp.allowed, false);
 });
 
-test('allegati guard: no-op senza authorize, nega/consente in base alla callback', async () => {
+test('allegati guard: secure by default, opt-out esplicito, nega/consente dalla callback', async () => {
   const context = { switchToHttp: () => ({ getRequest: () => ({ headers: {} }) }) };
 
-  const noHook = new AllegatiAuthorizationGuard({ databaseOptions: {} });
-  assert.equal(await noHook.canActivate(context), true);
+  // Secure by default: senza authorize le richieste sono rifiutate.
+  const secureDefault = new AllegatiAuthorizationGuard({ databaseOptions: {} });
+  await assert.rejects(() => secureDefault.canActivate(context));
+
+  // Opt-out esplicito: comportamento storico (aperto).
+  const optedOut = new AllegatiAuthorizationGuard({ databaseOptions: {}, requireAuthorization: false });
+  assert.equal(await optedOut.canActivate(context), true);
 
   const deny = new AllegatiAuthorizationGuard({ databaseOptions: {}, authorize: async () => false });
   await assert.rejects(() => deny.canActivate(context));

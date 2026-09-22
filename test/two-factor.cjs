@@ -13,6 +13,7 @@ const { UserService } = require('../src/accessi-module/Services/UserService/User
 const { UserDto } = require('../src/accessi-module/Dtos/UserDto');
 const { StatoRegistrazione } = require('../src/accessi-module/Dtos/StatoRegistrazione');
 const { isAccessiTokenAllowedForUser } = require('../src/accessi-module/security/authenticatedToken');
+const { getAccessiJwtSecret } = require('../src/accessi-module/security/passwordResetToken');
 const options = { databaseOptions: {}, jwtOptions: { secret: 'test-two-factor-secret', expiresIn: '1h' }, federatedAuthentication: { enabled: true } };
 const baseUser = { codiceUtente: 1, email: 'user@example.com', statoRegistrazione: StatoRegistrazione.CONF, flagSuper: false, flagAdminConfigurator: false, flagDueFattori: false, passwordlessLoginEnabled: false, passwordLoginEnabled: true };
 
@@ -147,7 +148,7 @@ test('Nest guard, Express middleware and token lookup all reject sessions missin
   const { AuthenticateGenService } = require('../src/accessi-module/middleware/authenticateGen');
   const user = { ...baseUser, flagDueFattori: true };
   const users = { getAuthenticatedUserSnapshot: async () => user };
-  const token = jwt.sign({ utente: baseUser, typ: 'access', amr: ['federated'] }, options.jwtOptions.secret);
+  const token = jwt.sign({ utente: baseUser, typ: 'access', amr: ['federated'] }, getAccessiJwtSecret(options, 'access'));
   const request = { headers: { authorization: `Bearer ${token}` }, method: 'GET', url: '/protected' };
   const guard = new JwtSimpleGuard(options, users);
   await assert.rejects(guard.canActivate({ switchToHttp: () => ({ getRequest: () => request }) }), error => error.getStatus() === 401);
@@ -218,7 +219,7 @@ test('completion checks current state, email, local policy and active SSO provid
   await assert.rejects(service.verifyTwoFactor('challenge', '123456'));
   query.mock.mockImplementation(async () => [{ IDNKEY: 'identity' }]);
   const response = await service.verifyTwoFactor('challenge', '123456');
-  assert.deepEqual(jwt.verify(response.token.value, options.jwtOptions.secret).amr, ['federated', 'otp']);
+  assert.deepEqual(jwt.verify(response.token.value, getAccessiJwtSecret(options, 'access')).amr, ['federated', 'otp']);
   user.email = 'changed@example.com';
   await assert.rejects(service.verifyTwoFactor('challenge', '123456'));
   user.email = baseUser.email; user.statoRegistrazione = StatoRegistrazione.BLOCC;

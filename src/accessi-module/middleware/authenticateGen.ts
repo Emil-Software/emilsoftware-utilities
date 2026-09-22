@@ -20,6 +20,7 @@ import {
   isAccessiTokenAllowedForUser,
   resolveCodiceUtenteFromTokenPayload,
 } from "../security/authenticatedToken";
+import { getAccessiJwtSecret } from "../security/passwordResetToken";
 
 const logger = new Logger("AuthenticateGen");
 const ACCESSI_AUTH_SERVICE_LOCALS_KEY = "accessiAuthService";
@@ -133,8 +134,10 @@ async function authorizeWithDependencies(
       );
     }
 
-    const secret = accessiOptions?.jwtOptions?.secret || process.env.ACC_JWT_SECRET;
-    if (!secret) {
+    let secret: string;
+    try {
+      secret = getAccessiJwtSecret(accessiOptions, 'access');
+    } catch {
       throw authError(500, "AUTH_JWT_SECRET_MISSING", "JWT secret not configured");
     }
 

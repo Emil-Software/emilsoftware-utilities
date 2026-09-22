@@ -1,6 +1,7 @@
 import type { AccessiOptions } from "../AccessiModule";
 import { AccessiDatabaseUpdater } from "./AccessiDatabaseUpdater";
 import { DatabaseUtilities } from "../../Utilities";
+import { Orm } from "../../Orm";
 
 function getEnv(names: string | string[], fallback?: string): string {
   const candidates = Array.isArray(names) ? names : [names];
@@ -77,7 +78,11 @@ async function main(): Promise<void> {
   );
 }
 
-main().catch((error) => {
-  console.error("[Accessi DB Update] Errore durante l'aggiornamento:", error);
-  process.exit(1);
-});
+main()
+  .then(() => Orm.closePools())
+  .then(() => process.exit(0))
+  .catch(async (error) => {
+    console.error("[Accessi DB Update] Errore durante l'aggiornamento:", error);
+    await Orm.closePools().catch(() => undefined);
+    process.exit(1);
+  });

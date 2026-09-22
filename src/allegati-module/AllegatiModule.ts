@@ -9,11 +9,15 @@ import { AllegatiAuthorizationGuard } from "./security/allegatiAuthorizationGuar
 export interface AllegatiOptions {
     databaseOptions: Options;
     /**
-     * Guard opzionale applicato a ogni richiesta dei controller Allegati.
+     * Guard applicato a ogni richiesta dei controller Allegati.
      * Se definito e restituisce `false`, la richiesta viene rifiutata con 403.
-     * Se non definito, il comportamento storico resta invariato (nessun controllo).
      */
     authorize?: (request: Request) => boolean | Promise<boolean>;
+    /**
+     * Sicurezza by default: se `authorize` non e configurato, le richieste vengono rifiutate con 403.
+     * Impostare `false` per ripristinare il comportamento storico (endpoint aperti) durante la migrazione.
+     */
+    requireAuthorization?: boolean;
 }
 
 @Global()
@@ -25,10 +29,11 @@ export interface AllegatiOptions {
 export class AllegatiModule {
 
     static forRoot(options: AllegatiOptions): DynamicModule {
-        if (!options?.authorize) {
-            new Logger(AllegatiModule.name).warning(
-                'Allegati configurato senza authorize: gli endpoint restano accessibili senza controllo di autorizzazione. Configurare allegatiOptions.authorize in produzione.',
-            );
+        const logger = new Logger(AllegatiModule.name);
+        if (options?.requireAuthorization === false) {
+            logger.warning('Allegati con requireAuthorization: false: gli endpoint sono accessibili senza controllo di autorizzazione. Configurare authorize e rimuovere l opt-out.');
+        } else if (!options?.authorize) {
+            logger.error('Allegati senza authorize: tutte le richieste saranno rifiutate con 403. Configurare allegatiOptions.authorize (oppure requireAuthorization: false per il comportamento storico).');
         }
 
         return {
