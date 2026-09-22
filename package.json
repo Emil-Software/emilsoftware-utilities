@@ -26,6 +26,8 @@
     "test:integration:fb5": "node test/integration/run-firebird.cjs 5",
     "test:integration:fb3": "node test/integration/run-firebird.cjs 3",
     "test:accessi-console": "npm run build && node test/console-two-factor.cjs",
+    "accessi:seed-admin": "node scripts/seed-accessi-admin.cjs",
+    "accessi:console": "node scripts/run-accessi-console.cjs",
     "test:accessi-schema": "node --test test/accessi-schema.cjs",
     "db:check:accessi": "ts-node src/accessi-module/database-updates/runAccessiDbUpdate.ts --check"
   },
