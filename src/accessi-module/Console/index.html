@@ -16,43 +16,68 @@
   <div id="loading-overlay" hidden aria-live="polite" aria-busy="true">
     <div class="loading-panel" role="status">
       <span class="loading-spinner" aria-hidden="true"></span>
-      <span><strong>Operazione in corso</strong><small>Attendere il completamento della richiesta.</small></span>
+      <span><strong>Operazione in corso</strong><small>Attendi qualche istante.</small></span>
     </div>
   </div>
   <main id="app">
     <section id="login" class="card" aria-labelledby="login-title">
       <h1 id="login-title">Accessi Console</h1>
-      <p>Gestione centralizzata di utenti, ruoli, grant e identità SSO.</p>
+      <p>Gestione di utenti, ruoli, grant e accessi.</p>
       <form id="login-form" method="post" action="" novalidate>
         <label>Email o utente<input name="email" required autocomplete="username"></label>
         <label id="password-field" hidden>Password<input name="password" type="password" autocomplete="current-password" disabled></label>
         <button id="login-submit" type="submit">Continua</button>
       </form>
       <form id="two-factor-form" hidden>
-        <p>Inserisci il codice ricevuto via email per completare l'accesso.</p>
+        <p class="form-help">Inserisci il codice ricevuto via email.</p>
         <label>Codice di accesso<input name="code" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]{6}" minlength="6" maxlength="6" required></label>
         <p id="two-factor-status" class="form-help" role="status"></p>
         <button type="submit">Verifica e accedi</button>
         <button id="resend-code" type="button" class="secondary">Invia un nuovo codice</button>
       </form>
-      <button id="restart-login" type="button" class="secondary" hidden>Ricomincia l'accesso</button>
+      <button id="restart-login" type="button" class="secondary" hidden>Ricomincia</button>
       <p id="login-error" class="error" role="alert"></p>
     </section>
+
     <section id="console" hidden>
-      <header>
-        <div><strong>Accessi Console</strong><small id="who"></small></div>
-        <button id="logout" class="secondary" type="button">Esci</button>
-      </header>
-      <nav id="nav" aria-label="Sezioni console">
-        <a data-view="users" href="./utenti">Utenti</a>
-        <a data-view="roles" href="./ruoli-e-grant">Ruoli e grant</a>
-        <a data-view="menus" href="./menu-e-gruppi">Menu e gruppi</a>
- <a data-view="filters" href="./filtri">Filtri</a>
- <a data-view="tokens" href="./token-di-servizio">Token di servizio</a>
- <a id="sso-navigation" data-view="sso" href="./sso" hidden>SSO</a>
-      </nav>
-      <div id="notice" role="status" aria-live="polite"></div>
-      <section id="view" aria-live="polite"></section>
+      <aside class="sidebar">
+        <div class="brand">
+          <span class="brand-mark" aria-hidden="true">A</span>
+          <span class="brand-text"><strong>Accessi</strong><small id="who"></small></span>
+        </div>
+        <nav id="nav" aria-label="Sezioni console">
+          <a data-view="users" href="./utenti">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+            Utenti
+          </a>
+          <a data-view="roles" href="./ruoli-e-grant">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="M9 12l2 2 4-4"/></svg>
+            Ruoli e grant
+          </a>
+          <a data-view="menus" href="./menu-e-gruppi">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg>
+            Menu e gruppi
+          </a>
+          <a data-view="filters" href="./filtri">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
+            Filtri
+          </a>
+          <a data-view="tokens" href="./token-di-servizio">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"/></svg>
+            Token di servizio
+          </a>
+          <a id="sso-navigation" data-view="sso" href="./sso" hidden>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.07 0l3-3a5 5 0 0 0-7.07-7.07l-1.5 1.5"/><path d="M14 11a5 5 0 0 0-7.07 0l-3 3a5 5 0 0 0 7.07 7.07l1.5-1.5"/></svg>
+            SSO
+          </a>
+        </nav>
+        <button id="logout" class="secondary sidebar-logout" type="button">Esci</button>
+      </aside>
+
+      <div class="content">
+        <div id="notice" role="status" aria-live="polite"></div>
+        <section id="view" aria-live="polite"></section>
+      </div>
     </section>
   </main>
   <script type="module" src="/api/accessi/console/assets/console.js"></script>
