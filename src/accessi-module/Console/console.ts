@@ -72,9 +72,12 @@ const consoleBasePath = consoleMarkerIndex >= 0
   ? window.location.pathname.slice(0, consoleMarkerIndex + consoleMarker.length)
   : `${window.location.pathname.replace(/\/$/, '')}`;
 
+const USERS_PAGE_SIZE = 25;
+
 let token = sessionStorage.getItem('accessi-console-token');
 let currentUser: ConsoleUser | null = null;
 let federatedAuthenticationAvailable = false;
+let usersPage = 0;
 let pendingNetworkRequests = 0;
 let loadingRevealTimer: number | undefined;
 let loadingHideTimer: number | undefined;
@@ -244,6 +247,8 @@ async function navigate(view: ConsoleView, replace = false): Promise<void> {
   if (window.location.pathname !== destination) {
     window.history[replace ? 'replaceState' : 'pushState']({ view }, '', destination);
   }
+  // Tornando alla sezione utenti dal menu si riparte dalla prima pagina.
+  if (view === 'users') usersPage = 0;
   await show(view);
 }
 
@@ -302,8 +307,18 @@ function selectedNumbers(form: HTMLFormElement, name: string): number[] {
   return Array.from(new FormData(form).getAll(name), (value) => Number(value));
 }
 
+/** Carica tutti gli utenti (usato da SSO e filtri, che popolano selettori completi). */
 async function loadUsers(): Promise<UserRow[]> {
   return result(await getUsers({ includeGrants: true })) as UserRow[];
+}
+
+/** Carica la pagina corrente della lista utenti. */
+async function loadUsersPage(): Promise<UserRow[]> {
+  return result(await getUsers({
+    includeGrants: true,
+    limit: USERS_PAGE_SIZE,
+    offset: usersPage * USERS_PAGE_SIZE,
+  })) as UserRow[];
 }
 
 async function detectFederatedAuthentication(): Promise<void> {
@@ -419,14 +434,25 @@ async function bootstrap(): Promise<void> {
 }
 
 async function showUsers(): Promise<void> {
-  const users = await loadUsers();
+  const users = await loadUsersPage();
+  const hasNext = users.length === USERS_PAGE_SIZE;
   render(`<div class="toolbar"><button id="new-local">Nuovo utente locale</button>${federatedAuthenticationAvailable ? '<button id="new-sso">Nuovo utente SSO</button>' : ''}<button id="reload-users" class="secondary">Aggiorna</button></div>
-    <h2>Utenti</h2><table><thead><tr><th>Utente</th><th>Stato</th><th>Accesso</th><th>2FA</th><th>Ruoli</th><th></th></tr></thead><tbody>
+    <h2>Utenti</h2><p class="muted">Pagina ${usersPage + 1} &middot; ${users.length} utent${users.length === 1 ? 'e' : 'i'}${usersPage > 0 || hasNext ? ' (paginati a 25)' : ''}</p><table><thead><tr><th>Utente</th><th>Stato</th><th>Accesso</th><th>2FA</th><th>Ruoli</th><th></th></tr></thead><tbody>
     ${users.map(({ utente, userGrants }) => `<tr><td>${escapeHtml(utente.email)}<br><span class="muted">${escapeHtml(utente.nome)} ${escapeHtml(utente.cognome)}</span></td><td>${escapeHtml(utente.statoRegistrazione)}</td><td>${utente.passwordlessLoginEnabled ? 'codice email' : utente.passwordLoginEnabled === false ? 'solo SSO' : 'password'}</td><td>${utente.flagDueFattori ? 'Attiva' : 'Disattiva'}</td><td>${(userGrants?.ruoli ?? []).map((role) => role.codiceRuolo).join(', ')}</td><td><button data-user="${utente.codiceUtente}">Gestisci</button></td></tr>`).join('')}
-    </tbody></table>`);
+    </tbody></table><div class="toolbar"><button id="users-prev" class="secondary" ${usersPage === 0 ? 'disabled' : ''}>Precedente</button><button id="users-next" class="secondary" ${hasNext ? '' : 'disabled'}>Successiva</button></div>`);
   byId('new-local').onclick = () => showLocalUserForm();
   if (federatedAuthenticationAvailable) byId('new-sso').onclick = () => handleAction(showSsoUserForm);
   byId('reload-users').onclick = () => handleAction(() => show('users'));
+  byId<HTMLButtonElement>('users-prev').onclick = () => handleAction(async () => {
+    if (usersPage === 0) return;
+    usersPage -= 1;
+    await show('users');
+  });
+  byId<HTMLButtonElement>('users-next').onclick = () => handleAction(async () => {
+    if (!hasNext) return;
+    usersPage += 1;
+    await show('users');
+  });
   document.querySelectorAll<HTMLButtonElement>('[data-user]').forEach((button) => {
     button.onclick = () => handleAction(() => showUser(button.dataset.user ?? ''));
   });
@@ -668,11 +694,24 @@ function scopeList(scopes: string[] | undefined): string {
   return (scopes ?? []).join(', ') || 'nessuno';
 }
 
+function serviceTokenExpiry(token: ServiceTokenDto): string {
+  if (!token.expiresAt) return 'nessuna';
+  const date = new Date(token.expiresAt);
+  const days = Math.ceil((date.getTime() - Date.now()) / 86_400_000);
+  const label = escapeHtml(date.toLocaleString());
+  if (days < 0) return `${label}<br><span class="error">scaduto</span>`;
+  if (days <= 7) return `${label}<br><span class="error">scade tra ${days} g</span>`;
+  return label;
+}
+
 function serviceTokenRows(tokens: ServiceTokenDto[], includeRevoked: boolean): string {
   const lastUsed = (token: ServiceTokenDto) => token.lastUsedAt
     ? `<span title="${escapeHtml(token.lastUsedIp ?? '')}">${escapeHtml(new Date(token.lastUsedAt).toLocaleString())}</span>${token.lastUsedIp ? `<br><span class="muted">${escapeHtml(token.lastUsedIp)}</span>` : ''}`
     : 'mai';
-  return tokens.map((token) => `<tr class="${token.revoked ? 'is-disabled' : ''}"><td><strong>${escapeHtml(token.label)}</strong><br><code>${escapeHtml(token.tokenId)}</code></td><td>${escapeHtml(scopeList(token.scopes))}</td><td>${escapeHtml(token.createdAt ? new Date(token.createdAt).toLocaleString() : '')}</td><td>${token.expiresAt ? escapeHtml(new Date(token.expiresAt).toLocaleString()) : 'nessuna'}</td><td>${lastUsed(token)}</td><td>${token.revoked ? 'Revocato' : 'Attivo'}</td><td>${token.revoked ? '' : `<button type="button" data-rotate="${escapeHtml(token.tokenId)}">Ruota</button> <button type="button" class="danger-button" data-revoke="${escapeHtml(token.tokenId)}">Revoca</button>`}</td></tr>`).join('') || `<tr><td colspan="7">Nessun token ${includeRevoked ? '' : 'attivo'}.</td></tr>`;
+  const status = (token: ServiceTokenDto) => token.revoked
+    ? `Revocato${token.revokedBy ? ` da #${escapeHtml(token.revokedBy)}` : ''}${token.revokedAt ? `<br><span class="muted">${escapeHtml(new Date(token.revokedAt).toLocaleString())}</span>` : ''}`
+    : 'Attivo';
+  return tokens.map((token) => `<tr class="${token.revoked ? 'is-disabled' : ''}"><td><strong>${escapeHtml(token.label)}</strong><br><code>${escapeHtml(token.tokenId)}</code></td><td>${escapeHtml(scopeList(token.scopes))}</td><td>${escapeHtml(token.createdAt ? new Date(token.createdAt).toLocaleString() : '')}</td><td>${serviceTokenExpiry(token)}</td><td>${lastUsed(token)}</td><td>${status(token)}</td><td>${token.revoked ? '' : `<button type="button" data-rotate="${escapeHtml(token.tokenId)}">Ruota</button> <button type="button" class="danger-button" data-revoke="${escapeHtml(token.tokenId)}">Revoca</button>`}</td></tr>`).join('') || `<tr><td colspan="7">Nessun token ${includeRevoked ? '' : 'attivo'}.</td></tr>`;
 }
 
 /** Gestione dei token di servizio: elenco, creazione, rotazione e revoca. */

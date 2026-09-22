@@ -176,6 +176,26 @@ test('service token: issue, verify, list, revoke e rotate su DB reale', async (t
   await serviceTokens.revoke(rotated.tokenId);
 });
 
+test('getUsers supporta la paginazione (limit/offset) su DB reale', async (t) => {
+  const services = await buildServices(t);
+  if (!services) return;
+
+  for (let index = 0; index < 3; index += 1) {
+    await services.userService.register(
+      { email: uniqueEmail('page'), nome: 'Page', cognome: 'Test' },
+      { initialState: StatoRegistrazione.CONF },
+    );
+  }
+
+  const page1 = await services.userService.getUsers({ limit: 2, offset: 0 });
+  const page2 = await services.userService.getUsers({ limit: 2, offset: 2 });
+  assert.equal(page1.length, 2);
+  assert.ok(page2.length >= 1);
+
+  const firstPageIds = new Set(page1.map((row) => row.utente?.codiceUtente));
+  assert.ok(page2.every((row) => !firstPageIds.has(row.utente?.codiceUtente)), 'le pagine non devono sovrapporsi');
+});
+
 test('pool di connessioni opzionale funziona su DB reale', async (t) => {
   const ctx = await getContext();
   if (!ctx.available) return unavailable(ctx, t);
