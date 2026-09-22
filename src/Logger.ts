@@ -104,6 +104,7 @@ export class Logger {
     private readonly winstonLogger: winston.Logger;
     private readonly tag: string;
     private readonly logDirectory: string;
+    private readonly maxLevel: number;
 
     /** Logger winston condivisi per directory, così da non moltiplicare transport e timer. */
     private static readonly sharedLoggers = new Map<string, winston.Logger>();
@@ -115,10 +116,15 @@ export class Logger {
             logDirectory?: string;
             customFormat?: winston.Logform.Format;
             transports?: winston.transport[];
+            /** Livello minimo loggato: `error`..`database` (default `database`, ovvero tutto). Override con `LOG_LEVEL`. */
+            level?: string;
         }
     ) {
         this.tag = tag || "[UNTAGGED]";
         this.logDirectory = config?.logDirectory || "logs";
+
+        const configuredLevel = (config?.level ?? process.env.LOG_LEVEL ?? 'database').toLowerCase();
+        this.maxLevel = WIN_LEVELS[configuredLevel as keyof typeof WIN_LEVELS] ?? WIN_LEVELS.database;
 
         const format = winston.format.combine(
             winston.format.timestamp(),
@@ -195,6 +201,11 @@ export class Logger {
     }
 
     private print(level: LogLevels, ...data: unknown[]): void {
+        const rank = level === LogLevels.LOG ? WIN_LEVELS.general : (WIN_LEVELS[level.toLowerCase() as keyof typeof WIN_LEVELS] ?? WIN_LEVELS.database);
+        if (rank > this.maxLevel) {
+            return;
+        }
+
         const now: Date = new Date();
         const fileName = this.tag.split("\\").pop() || this.tag;
         const message = stringifyLogData(data);

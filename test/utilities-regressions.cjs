@@ -146,6 +146,27 @@ test('Logger redige i campi sensibili e serializza gli Error', async (t) => {
   assert.ok(content.includes('boom'));
 });
 
+test('Logger rispetta il livello minimo configurato', async (t) => {
+  const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'accessi-level-'));
+  t.after(() => fs.rmSync(directory, { recursive: true, force: true }));
+
+  const logger = new Logger('level', { logDirectory: directory, level: 'error' });
+  logger.info('messaggio-info-da-escludere');
+  logger.error('messaggio-errore-da-includere');
+
+  await new Promise((resolve, reject) => {
+    logger.winstonLogger.once('error', reject);
+    logger.winstonLogger.end(resolve);
+  });
+
+  const content = fs.readdirSync(directory)
+    .map((file) => fs.readFileSync(path.join(directory, file), 'utf8'))
+    .join('\n');
+
+  assert.ok(content.includes('messaggio-errore-da-includere'));
+  assert.ok(!content.includes('messaggio-info-da-escludere'));
+});
+
 test('Logger condivide un solo winston logger per la stessa directory', () => {
   const directory = path.join(os.tmpdir(), `accessi-shared-${process.pid}`);
   const first = new Logger('uno', { logDirectory: directory });

@@ -4,7 +4,6 @@ import {
   Controller,
   Delete,
   Get,
-  HttpException,
   HttpStatus,
   Param,
   ParseIntPipe,
@@ -56,9 +55,8 @@ export class PermissionController {
   constructor(private readonly permissionService: PermissionService) {}
 
   private sendControllerError(res: Response, error: unknown) {
-    const status =
-      error instanceof HttpException ? error.getStatus() : HttpStatus.INTERNAL_SERVER_ERROR;
-    return RestUtilities.sendErrorMessage(res, error, PermissionController.name, status);
+    // Lo status viene derivato centralmente da RestUtilities (HttpException o 500).
+    return RestUtilities.sendErrorMessage(res, error, PermissionController.name);
   }
 
   @ApiOperation({

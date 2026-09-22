@@ -70,9 +70,8 @@ export class UserController {
   ) {}
 
   private sendControllerError(res: Response, error: unknown) {
-    const status =
-      error instanceof HttpException ? error.getStatus() : HttpStatus.INTERNAL_SERVER_ERROR;
-    return RestUtilities.sendErrorMessage(res, error, UserController.name, status);
+    // Lo status viene derivato centralmente da RestUtilities (HttpException o 500).
+    return RestUtilities.sendErrorMessage(res, error, UserController.name);
   }
 
   @ApiOperation({

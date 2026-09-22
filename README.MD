@@ -164,5 +164,6 @@ Tutta la configurazione e riservata al backend: segreti JWT/SMTP/DB non devono m
 ## Osservabilita
 
 - `Logger` strutturato (console colorata + file JSON giornaliero), condiviso per directory.
+- Livello minimo configurabile per istanza (`new Logger(tag, { level: 'info' })`) o globalmente con la variabile `LOG_LEVEL` (default `database` = tutto).
 - Redazione automatica dei campi sensibili (`password`, `token`, `secret`, ...) e serializzazione degli `Error` con stack.
 - I log delle query non contengono i valori dei parametri (salvo `logQueryParameters: true`).

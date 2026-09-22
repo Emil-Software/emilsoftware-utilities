@@ -44,8 +44,8 @@ export class ServiceTokenController {
   }
 
   private sendError(res: Response, error: unknown): Response {
-    const status = error instanceof HttpException ? error.getStatus() : 500;
-    return RestUtilities.sendErrorMessage(res, error, ServiceTokenController.name, status);
+    // Lo status viene derivato centralmente da RestUtilities (HttpException o 500).
+    return RestUtilities.sendErrorMessage(res, error, ServiceTokenController.name);
   }
 
   @Post()
