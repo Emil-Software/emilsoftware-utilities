@@ -1,6 +1,7 @@
 import { DynamicModule, Global, Module } from "@nestjs/common";
 import { Request } from "express";
 import { Options } from "node-firebird";
+import { Logger } from "../Logger";
 import { AllegatiService } from "./Services/AllegatiService/AllegatiService";
 import { AllegatiController } from "./Controllers/AllegatiController";
 import { AllegatiAuthorizationGuard } from "./security/allegatiAuthorizationGuard";
@@ -24,6 +25,12 @@ export interface AllegatiOptions {
 export class AllegatiModule {
 
     static forRoot(options: AllegatiOptions): DynamicModule {
+        if (!options?.authorize) {
+            new Logger(AllegatiModule.name).warning(
+                'Allegati configurato senza authorize: gli endpoint restano accessibili senza controllo di autorizzazione. Configurare allegatiOptions.authorize in produzione.',
+            );
+        }
+
         return {
             module: AllegatiModule,
             providers: [

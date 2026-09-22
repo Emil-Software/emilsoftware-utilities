@@ -665,7 +665,10 @@ function scopeList(scopes: string[] | undefined): string {
 }
 
 function serviceTokenRows(tokens: ServiceTokenDto[], includeRevoked: boolean): string {
-  return tokens.map((token) => `<tr class="${token.revoked ? 'is-disabled' : ''}"><td><strong>${escapeHtml(token.label)}</strong><br><code>${escapeHtml(token.tokenId)}</code></td><td>${escapeHtml(scopeList(token.scopes))}</td><td>${escapeHtml(token.createdAt ? new Date(token.createdAt).toLocaleString() : '')}</td><td>${token.expiresAt ? escapeHtml(new Date(token.expiresAt).toLocaleString()) : 'nessuna'}</td><td>${token.lastUsedAt ? escapeHtml(new Date(token.lastUsedAt).toLocaleString()) : 'mai'}</td><td>${token.revoked ? 'Revocato' : 'Attivo'}</td><td>${token.revoked ? '' : `<button type="button" data-rotate="${escapeHtml(token.tokenId)}">Ruota</button> <button type="button" class="danger-button" data-revoke="${escapeHtml(token.tokenId)}">Revoca</button>`}</td></tr>`).join('') || `<tr><td colspan="7">Nessun token ${includeRevoked ? '' : 'attivo'}.</td></tr>`;
+  const lastUsed = (token: ServiceTokenDto) => token.lastUsedAt
+    ? `<span title="${escapeHtml(token.lastUsedIp ?? '')}">${escapeHtml(new Date(token.lastUsedAt).toLocaleString())}</span>${token.lastUsedIp ? `<br><span class="muted">${escapeHtml(token.lastUsedIp)}</span>` : ''}`
+    : 'mai';
+  return tokens.map((token) => `<tr class="${token.revoked ? 'is-disabled' : ''}"><td><strong>${escapeHtml(token.label)}</strong><br><code>${escapeHtml(token.tokenId)}</code></td><td>${escapeHtml(scopeList(token.scopes))}</td><td>${escapeHtml(token.createdAt ? new Date(token.createdAt).toLocaleString() : '')}</td><td>${token.expiresAt ? escapeHtml(new Date(token.expiresAt).toLocaleString()) : 'nessuna'}</td><td>${lastUsed(token)}</td><td>${token.revoked ? 'Revocato' : 'Attivo'}</td><td>${token.revoked ? '' : `<button type="button" data-rotate="${escapeHtml(token.tokenId)}">Ruota</button> <button type="button" class="danger-button" data-revoke="${escapeHtml(token.tokenId)}">Revoca</button>`}</td></tr>`).join('') || `<tr><td colspan="7">Nessun token ${includeRevoked ? '' : 'attivo'}.</td></tr>`;
 }
 
 /** Gestione dei token di servizio: elenco, creazione, rotazione e revoca. */

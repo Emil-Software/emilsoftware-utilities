@@ -49,6 +49,7 @@ test('serviceTokenHasScope distingue scope assente, presente e mancante', () => 
 
 test('issue + verify + revoke usano hash e controlli di stato', async (t) => {
   let inserted;
+  let lastUsedIp;
   const rows = new Map();
 
   t.mock.method(Orm, 'execute', async (_options, sql, params) => {
@@ -63,8 +64,11 @@ test('issue + verify + revoke usano hash e controlli di stato', async (t) => {
         REVOKED_AT: null,
       });
     }
+    if (sql.includes('SET LAST_USED_AT')) {
+      lastUsedIp = params[0];
+    }
     if (sql.includes('SET REVOKED_AT = CURRENT_TIMESTAMP')) {
-      const row = rows.get(params[0]);
+      const row = rows.get(params[params.length - 1]);
       if (row) row.REVOKED_AT = new Date();
     }
     return [];
@@ -83,14 +87,25 @@ test('issue + verify + revoke usano hash e controlli di stato', async (t) => {
   assert.deepEqual(issued.scopes, ['ia', 'chat']);
   assert.equal(inserted[1], hashServiceTokenSecret(parseServiceToken(issued.token).secret));
 
-  const verified = await service.verify(issued.token);
+  const verified = await service.verify(issued.token, { ip: '203.0.113.5' });
   assert.deepEqual(verified, { tokenId: issued.tokenId, label: 'Integrazione IA', scopes: ['ia', 'chat'] });
+  assert.equal(lastUsedIp, '203.0.113.5', 'l IP di utilizzo deve essere registrato per audit');
 
   // Segreto errato (stesso id, altro segreto) rifiutato.
   assert.equal(await service.verify(`${issued.tokenId}.${'x'.repeat(43)}`), undefined);
 
   await service.revoke(issued.tokenId);
   assert.equal(await service.verify(issued.token), undefined);
+});
+
+test('rate limit service token consente N tentativi e poi blocca', () => {
+  const { resetServiceTokenRateLimit, assertServiceTokenRateLimit } = require('../src/accessi-module/security/serviceTokenRateLimit');
+  resetServiceTokenRateLimit();
+  for (let attempt = 0; attempt < 120; attempt += 1) {
+    assertServiceTokenRateLimit('198.51.100.9');
+  }
+  assert.throws(() => assertServiceTokenRateLimit('198.51.100.9'));
+  resetServiceTokenRateLimit();
 });
 
 test('issue rifiuta scadenze passate e label vuote', async () => {

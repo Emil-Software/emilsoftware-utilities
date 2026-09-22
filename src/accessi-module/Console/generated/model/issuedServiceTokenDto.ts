@@ -14,10 +14,14 @@ export interface IssuedServiceTokenDto {
   label: string;
   /** Ultimo utilizzo registrato (ISO 8601). */
   lastUsedAt?: string;
+  /** IP dell ultimo utilizzo registrato (audit). */
+  lastUsedIp?: string;
   /** Indica se il token e revocato. */
   revoked: boolean;
   /** Data di revoca (ISO 8601). */
   revokedAt?: string;
+  /** Codice utente che ha revocato il token (audit). */
+  revokedBy?: number;
   /** Scope autorizzati. */
   scopes: string[];
   /** Token completo da usare come `Authorization: Bearer <token>`. Mostrato una sola volta. */

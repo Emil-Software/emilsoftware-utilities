@@ -19,8 +19,10 @@ export interface ServiceTokenMetadata {
   createdAt?: string;
   expiresAt?: string;
   lastUsedAt?: string;
+  lastUsedIp?: string;
   revoked: boolean;
   revokedAt?: string;
+  revokedBy?: number;
 }
 
 /** Risultato dell'emissione: contiene il segreto in chiaro, mostrato una sola volta. */
@@ -152,15 +154,17 @@ export class ServiceTokenService {
       createdAt: toIso(row.createdAt),
       expiresAt: toIso(row.expiresAt),
       lastUsedAt: toIso(row.lastUsedAt),
+      lastUsedIp: typeof row.lastUsedIp === 'string' && row.lastUsedIp !== '' ? row.lastUsedIp : undefined,
       revoked: row.revokedAt !== undefined && row.revokedAt !== null,
       revokedAt: toIso(row.revokedAt),
+      revokedBy: row.revokedBy == null ? undefined : Number(row.revokedBy),
     };
   }
 
   private async readRow(tokenId: string): Promise<Record<string, unknown> | undefined> {
     const rows = await Orm.query(
       this.databaseOptions,
-      `SELECT TOKEN_ID, TOKEN_HASH, LABEL, SCOPES, CREATED_BY, CREATED_AT, EXPIRES_AT, LAST_USED_AT, REVOKED_AT
+      `SELECT TOKEN_ID, TOKEN_HASH, LABEL, SCOPES, CREATED_BY, CREATED_AT, EXPIRES_AT, LAST_USED_AT, LAST_USED_IP, REVOKED_AT, REVOKED_BY
        FROM ACCESSI_SERVICE_TOKEN WHERE TOKEN_ID = ?`,
       [tokenId],
       false,
@@ -194,7 +198,7 @@ export class ServiceTokenService {
   async list(includeRevoked = false): Promise<ServiceTokenMetadata[]> {
     const rows = await Orm.query(
       this.databaseOptions,
-      `SELECT TOKEN_ID, LABEL, SCOPES, CREATED_BY, CREATED_AT, EXPIRES_AT, LAST_USED_AT, REVOKED_AT
+      `SELECT TOKEN_ID, LABEL, SCOPES, CREATED_BY, CREATED_AT, EXPIRES_AT, LAST_USED_AT, LAST_USED_IP, REVOKED_AT, REVOKED_BY
        FROM ACCESSI_SERVICE_TOKEN ${includeRevoked ? '' : 'WHERE REVOKED_AT IS NULL'}
        ORDER BY CREATED_AT DESC, TOKEN_ID DESC`,
       [],
@@ -204,7 +208,7 @@ export class ServiceTokenService {
   }
 
   /** Revoca un token rendendolo immediatamente inutilizzabile. Idempotente su token gia revocati. */
-  async revoke(tokenId: string): Promise<void> {
+  async revoke(tokenId: string, revokedBy?: number): Promise<void> {
     const parsed = parseServiceToken(tokenId);
     const normalizedId = parsed?.tokenId ?? tokenId;
     const row = await this.readRow(normalizedId);
@@ -216,8 +220,8 @@ export class ServiceTokenService {
     }
     await Orm.execute(
       this.databaseOptions,
-      'UPDATE ACCESSI_SERVICE_TOKEN SET REVOKED_AT = CURRENT_TIMESTAMP WHERE TOKEN_ID = ?',
-      [normalizedId],
+      'UPDATE ACCESSI_SERVICE_TOKEN SET REVOKED_AT = CURRENT_TIMESTAMP, REVOKED_BY = ? WHERE TOKEN_ID = ?',
+      [revokedBy ?? null, normalizedId],
     );
   }
 
@@ -231,7 +235,7 @@ export class ServiceTokenService {
     }
 
     const metadata = this.toMetadata(row);
-    await this.revoke(normalizedId);
+    await this.revoke(normalizedId, createdBy);
 
     return this.issue(
       {
@@ -247,7 +251,7 @@ export class ServiceTokenService {
    * Verifica un token presentato: formato, esistenza, revoca, scadenza e hash a tempo costante.
    * Aggiorna `LAST_USED_AT` (best-effort, al massimo una volta al minuto).
    */
-  async verify(token: string): Promise<VerifiedServiceToken | undefined> {
+  async verify(token: string, context?: { ip?: string }): Promise<VerifiedServiceToken | undefined> {
     const parsed = parseServiceToken(token);
     if (!parsed) {
       return undefined;
@@ -273,7 +277,7 @@ export class ServiceTokenService {
     }
 
     const metadata = this.toMetadata(row);
-    await this.touchLastUsed(parsed.tokenId, row.lastUsedAt).catch(() => undefined);
+    await this.touchLastUsed(parsed.tokenId, row.lastUsedAt, context?.ip).catch(() => undefined);
 
     return { tokenId: metadata.tokenId, label: metadata.label, scopes: metadata.scopes };
   }
@@ -287,15 +291,15 @@ export class ServiceTokenService {
     return timingSafeEqual(candidateBuffer, storedBuffer);
   }
 
-  private async touchLastUsed(tokenId: string, lastUsedAt: unknown): Promise<void> {
+  private async touchLastUsed(tokenId: string, lastUsedAt: unknown, ip?: string): Promise<void> {
     const lastUsed = toIso(lastUsedAt);
     if (lastUsed && Date.now() - new Date(lastUsed).getTime() < LAST_USED_REFRESH_MS) {
       return;
     }
     await Orm.execute(
       this.databaseOptions,
-      'UPDATE ACCESSI_SERVICE_TOKEN SET LAST_USED_AT = CURRENT_TIMESTAMP WHERE TOKEN_ID = ?',
-      [tokenId],
+      'UPDATE ACCESSI_SERVICE_TOKEN SET LAST_USED_AT = CURRENT_TIMESTAMP, LAST_USED_IP = ? WHERE TOKEN_ID = ?',
+      [ip ?? null, tokenId],
       false,
     );
   }

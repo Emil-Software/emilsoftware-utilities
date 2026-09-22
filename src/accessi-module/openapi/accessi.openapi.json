@@ -4329,6 +4329,10 @@
             "type": "string",
             "description": "Ultimo utilizzo registrato (ISO 8601)."
           },
+          "lastUsedIp": {
+            "type": "string",
+            "description": "IP dell ultimo utilizzo registrato (audit)."
+          },
           "revoked": {
             "type": "boolean",
             "description": "Indica se il token e revocato."
@@ -4336,6 +4340,10 @@
           "revokedAt": {
             "type": "string",
             "description": "Data di revoca (ISO 8601)."
+          },
+          "revokedBy": {
+            "type": "number",
+            "description": "Codice utente che ha revocato il token (audit)."
           },
           "token": {
             "type": "string",
@@ -4407,6 +4415,10 @@
             "type": "string",
             "description": "Ultimo utilizzo registrato (ISO 8601)."
           },
+          "lastUsedIp": {
+            "type": "string",
+            "description": "IP dell ultimo utilizzo registrato (audit)."
+          },
           "revoked": {
             "type": "boolean",
             "description": "Indica se il token e revocato."
@@ -4414,6 +4426,10 @@
           "revokedAt": {
             "type": "string",
             "description": "Data di revoca (ISO 8601)."
+          },
+          "revokedBy": {
+            "type": "number",
+            "description": "Codice utente che ha revocato il token (audit)."
           }
         },
         "required": [

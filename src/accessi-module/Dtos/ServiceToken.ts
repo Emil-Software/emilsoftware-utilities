@@ -56,11 +56,17 @@ export class ServiceTokenDto {
   @ApiPropertyOptional({ description: 'Ultimo utilizzo registrato (ISO 8601).' })
   lastUsedAt?: string;
 
+  @ApiPropertyOptional({ description: 'IP dell ultimo utilizzo registrato (audit).' })
+  lastUsedIp?: string;
+
   @ApiProperty({ description: 'Indica se il token e revocato.' })
   revoked!: boolean;
 
   @ApiPropertyOptional({ description: 'Data di revoca (ISO 8601).' })
   revokedAt?: string;
+
+  @ApiPropertyOptional({ description: 'Codice utente che ha revocato il token (audit).' })
+  revokedBy?: number;
 }
 
 /** Risultato dell'emissione: include il segreto in chiaro, visibile solo in questa risposta. */

@@ -150,7 +150,7 @@ test('service token: issue, verify, list, revoke e rotate su DB reale', async (t
   assert.match(issued.token, /^st_[a-f0-9]{32}\./);
   assert.deepEqual(issued.scopes, ['ia', 'chat']);
 
-  const verified = await serviceTokens.verify(issued.token);
+  const verified = await serviceTokens.verify(issued.token, { ip: '10.0.0.1' });
   assert.equal(verified.tokenId, issued.tokenId);
   assert.deepEqual(verified.scopes, ['ia', 'chat']);
 
@@ -158,7 +158,9 @@ test('service token: issue, verify, list, revoke e rotate su DB reale', async (t
   assert.equal(await serviceTokens.verify(`${issued.tokenId}.${'x'.repeat(43)}`), undefined);
 
   const listed = await serviceTokens.list();
-  assert.ok(listed.some((token) => token.tokenId === issued.tokenId && token.revoked === false));
+  const listedToken = listed.find((token) => token.tokenId === issued.tokenId);
+  assert.ok(listedToken && listedToken.revoked === false);
+  assert.equal(listedToken.lastUsedIp, '10.0.0.1', 'audit IP registrato su DB reale');
 
   await serviceTokens.revoke(issued.tokenId);
   assert.equal(await serviceTokens.verify(issued.token), undefined);

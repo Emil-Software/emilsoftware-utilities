@@ -10,6 +10,7 @@ import { Reflector } from '@nestjs/core';
 import type { Request } from 'express';
 import { ServiceTokenService, serviceTokenHasScope, VerifiedServiceToken } from '../Services/ServiceTokenService/ServiceTokenService';
 import { extractAccessiBearerToken } from './authenticatedToken';
+import { assertServiceTokenRateLimit } from './serviceTokenRateLimit';
 
 /** Chiave dei metadata usata da `@RequireServiceTokenScopes`. */
 export const SERVICE_TOKEN_SCOPES_METADATA = 'accessi:service-token-scopes';
@@ -43,12 +44,15 @@ export class ServiceTokenGuard implements CanActivate {
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const request = context.switchToHttp().getRequest<Request>();
+    const ip = request.ip ?? request.socket?.remoteAddress ?? 'unknown';
+    assertServiceTokenRateLimit(ip);
+
     const token = extractAccessiBearerToken(request.headers['authorization']);
     if (!token) {
       throw new UnauthorizedException('Token di servizio mancante.');
     }
 
-    const verified = await this.serviceTokenService.verify(token);
+    const verified = await this.serviceTokenService.verify(token, { ip });
     if (!verified) {
       throw new UnauthorizedException('Token di servizio non valido, scaduto o revocato.');
     }

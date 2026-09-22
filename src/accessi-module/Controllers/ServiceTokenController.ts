@@ -101,8 +101,8 @@ export class ServiceTokenController {
     @Res() res: Response,
   ): Promise<Response> {
     try {
-      this.requireSuperUser(req);
-      await this.serviceTokenService.revoke(tokenId);
+      const user = this.requireSuperUser(req);
+      await this.serviceTokenService.revoke(tokenId, user.codiceUtente);
       return RestUtilities.sendOKMessage(res, 'Token di servizio revocato con successo.');
     } catch (error) {
       return this.sendError(res, error);
