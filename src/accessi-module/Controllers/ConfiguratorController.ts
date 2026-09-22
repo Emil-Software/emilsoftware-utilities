@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   Body,
   Controller,
   Param,
@@ -58,8 +59,8 @@ export class ConfiguratorController {
     @Res() res: Response,
   ) {
     try {
-      if (!codiceMenu) throw new Error('Il codice del menu e obbligatorio.');
-      if (body?.enabled === undefined) throw new Error('Lo stato di abilitazione e obbligatorio.');
+      if (!codiceMenu) throw new BadRequestException('Il codice del menu e obbligatorio.');
+      if (body?.enabled === undefined) throw new BadRequestException('Lo stato di abilitazione e obbligatorio.');
 
       const authenticatedUser = getAuthenticatedAccessiUser(req);
 
@@ -112,8 +113,8 @@ export class ConfiguratorController {
     @Res() res: Response,
   ) {
     try {
-      if (!codiceGruppo) throw new Error('Il codice del gruppo e obbligatorio.');
-      if (body?.enabled === undefined) throw new Error('Lo stato di abilitazione e obbligatorio.');
+      if (!codiceGruppo) throw new BadRequestException('Il codice del gruppo e obbligatorio.');
+      if (body?.enabled === undefined) throw new BadRequestException('Lo stato di abilitazione e obbligatorio.');
 
       const authenticatedUser = getAuthenticatedAccessiUser(req);
 

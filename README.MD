@@ -84,8 +84,9 @@ Credenziali di servizio per chiamate tecniche, **non legate a un utente** e senz
 Sostituiscono l'uso di un `secret` nel body: si inviano con `Authorization: Bearer <token>`.
 
 - Formato: `st_<id>.<segreto>`. Il segreto e mostrato **una sola volta** alla creazione/rotazione.
-- Storage: tabella `ACCESSI_SERVICE_TOKEN` (schema Accessi, migrazione automatica `1.6.0`). Il segreto e salvato solo come hash SHA-256 e confrontato a tempo costante.
-- Metadati: descrizione, scope, data di creazione/scadenza, ultimo utilizzo, revoca.
+- Storage: tabella `ACCESSI_SERVICE_TOKEN` (schema Accessi, migrazione automatica `1.7.0`). Il segreto e salvato solo come hash SHA-256 e confrontato a tempo costante.
+- Metadati e audit: descrizione, scope, creazione/scadenza, ultimo utilizzo con **IP** (`lastUsedIp`), revoca con **autore** (`revokedBy`).
+- Rate limit anti-abuso per IP sulla verifica (HTTP 429).
 - API amministrative (solo superutente): `POST /api/accessi/service-token`, `GET /api/accessi/service-token` (`includeRevoked=true`), `DELETE /api/accessi/service-token/:tokenId`, `POST /api/accessi/service-token/:tokenId/rotate`.
 - Console: sezione **Token di servizio** (crea, ruota, revoca; copia il token una sola volta).
 - Utilizzo lato consumer: guard `ServiceTokenGuard` con `@RequireServiceTokenScopes('ia')`; il token verificato e disponibile con `getAccessiServiceToken(req)`.
@@ -109,3 +110,59 @@ export class IaController {}
 - La backdoor mock `admin`/`demo` non e mai attiva quando `NODE_ENV=production`.
 - Gli allegati supportano un controllo di autorizzazione **opt-in** tramite `allegatiOptions.authorize`: se definito, ogni richiesta viene accettata solo se la callback restituisce `true` (altrimenti 403). Non definito = comportamento storico.
 - Upload allegati: limite di 1 file / 90 MB applicato da Multer e validazione dei magic byte oltre al mimetype dichiarato.
+
+## Integrazione
+
+| Scenario | API |
+| --- | --- |
+| Backend Express esistente | `await initializeAccessiModule(app, accessiOptions)` monta le rotte `/api/accessi` su un host Nest isolato |
+| Applicazione NestJS | importa `AccessiModule.forRoot(accessiOptions)` (e/o `AllegatiModule.forRoot(allegatiOptions)`) |
+| Accessi + Allegati insieme | `EmilsoftwareModule.forRoot({ accessiOptions, allegatiOptions })` |
+
+Tutta la configurazione e riservata al backend: segreti JWT/SMTP/DB non devono mai raggiungere il browser.
+
+## Riferimento `AccessiOptions`
+
+| Campo | Tipo | Note |
+| --- | --- | --- |
+| `databaseOptions` | `Options` | Connessione Firebird (`DatabaseUtilities.createOption`). Supporta `logQueryParameters`, `poolSize`, `wireCrypt`, `pluginName`. |
+| `confirmationEmailUrl` / `confirmationEmailReturnUrl` | `string` | URL per le email di reset. |
+| `customResetPage` / `confirmationEmailPrefix` | `string?` | Pagina di reset personalizzata. |
+| `encryptionKey` | `string` | Solo compatibilita/migrazione password legacy cifrate. |
+| `mockDemoUser` | `boolean` | Utenti fittizi `admin`/`demo`; **mai** attivi in produzione. |
+| `passwordExpiration` / `passwordExpirationDays` | `boolean?` / `number?` | Scadenza password (default 90 giorni). |
+| `legacyPasswordMigrationOnStartup` | `boolean?` | Migrazione password legacy al bootstrap (default `true`). |
+| `autoUpdateDatabase` | `boolean?` | Riconcilia lo schema al bootstrap (default `true`); con `false` verifica in sola lettura. |
+| `jwtOptions` | `{ secret: string; expiresIn: string }` | HS256 con scadenza obbligatoria. |
+| `emailOptions` | `EmailOptions` | SMTP per reset e codici 2FA. |
+| `publicAuthRateLimit` | `PublicAuthRateLimitOptions?` | Limiti degli endpoint pubblici (default attivi). |
+| `publicRegistration` | `{ enabled?: boolean }?` | Registrazione pubblica opt-in. |
+| `federatedAuthentication` | `{ enabled?; allowSelfRegistration? }?` | SSO provider-agnostico. |
+| `extensionFieldsOptions` | `ExtensionFieldsOptions[]?` | Campi applicativi estesi. |
+| `serviceTokens` | `{ enabled?: boolean; defaultTtlDays?: number }?` | Token macchina-a-macchina (default abilitati). |
+
+## Riferimento `AllegatiOptions`
+
+| Campo | Tipo | Note |
+| --- | --- | --- |
+| `databaseOptions` | `Options` | Connessione Firebird. |
+| `authorize` | `(req) => boolean \| Promise<boolean>?` | Controllo di autorizzazione opt-in applicato a ogni richiesta; `false` → 403. Non definito = comportamento storico. |
+
+## Contratto risposte ed errori
+
+- Successo generico: `RestUtilities.sendOKMessage` → `{ severity, status, statusCode, message }`.
+- Payload: `RestUtilities.sendBaseResponse` → `{ Status: { errorCode, errorDescription }, Result, Message }`.
+- Errore: `{ severity: 'error', status, statusCode, code, message, error, details? }`, con `code` stabile (es. `ACCESSI_UNAUTHORIZED`, `ACCESSI_INVALID_CREDENTIALS`, `PASSWORD_EXPIRED`, `ACCESSI_DATABASE_SCHEMA_OUTDATED`, `ACCESSI_SERVICE_TOKEN_RATE_LIMITED`). Lo status deriva dalla `HttpException` (validazione → 400); errori di schema DB → 503. SQL, stack e dati sensibili non vengono mai esposti.
+
+## Migrazioni e schema
+
+- Lo schema Accessi e versionato in `accessiSchema.ts` (`ACCESSI_SCHEMA_VERSION`) e riconciliato in modo **idempotente e ripartibile** da `AccessiDatabaseUpdater` (nessun DDL distruttivo, FK/indici/trigger verificati, sequence avanzate solo in avanti).
+- La versione viene aggiornata **solo dopo** `assertCompatible`; su errore la migrazione si puo rieseguire.
+- Firebird non rende utilizzabili gli oggetti creati nella stessa transazione, quindi il DDL non e racchiuso in un'unica transazione: la robustezza e data da idempotenza + verifica finale.
+- Con `autoUpdateDatabase: false` la libreria verifica lo schema in sola lettura e blocca l'avvio se incompatibile (`AccessiDatabaseUpdater.inspectSchema`).
+
+## Osservabilita
+
+- `Logger` strutturato (console colorata + file JSON giornaliero), condiviso per directory.
+- Redazione automatica dei campi sensibili (`password`, `token`, `secret`, ...) e serializzazione degli `Error` con stack.
+- I log delle query non contengono i valori dei parametri (salvo `logQueryParameters: true`).

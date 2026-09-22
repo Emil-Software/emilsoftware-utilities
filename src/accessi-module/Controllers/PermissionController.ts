@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   Body,
   Controller,
   Delete,
@@ -111,10 +112,10 @@ export class PermissionController {
         'Solo gli amministratori possono modificare i ruoli.',
       );
 
-      if (Number.isNaN(codiceRuolo)) throw new Error('Il codice del ruolo e obbligatorio.');
-      if (!role.descrizioneRuolo) throw new Error('La descrizione del ruolo non puo essere vuota.');
+      if (Number.isNaN(codiceRuolo)) throw new BadRequestException('Il codice del ruolo e obbligatorio.');
+      if (!role.descrizioneRuolo) throw new BadRequestException('La descrizione del ruolo non puo essere vuota.');
       if (!role.menu || role.menu.length === 0) {
-        throw new Error('Il ruolo deve avere almeno un menu.');
+        throw new BadRequestException('Il ruolo deve avere almeno un menu.');
       }
 
       await this.permissionService.updateOrInsertRole(role, codiceRuolo);
@@ -144,10 +145,10 @@ export class PermissionController {
         'Solo gli amministratori possono creare ruoli.',
       );
 
-      if (!role) throw new Error('Il ruolo non puo essere vuoto.');
-      if (!role.descrizioneRuolo) throw new Error('La descrizione del ruolo non puo essere vuota.');
+      if (!role) throw new BadRequestException('Il ruolo non puo essere vuoto.');
+      if (!role.descrizioneRuolo) throw new BadRequestException('La descrizione del ruolo non puo essere vuota.');
       if (!role.menu || role.menu.length === 0) {
-        throw new Error('Il ruolo deve avere almeno un menu.');
+        throw new BadRequestException('Il ruolo deve avere almeno un menu.');
       }
 
       await this.permissionService.updateOrInsertRole(role);

@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   Body,
   Controller,
   Delete,
@@ -231,9 +232,9 @@ export class UserController {
       );
 
       const { codiceUtente, statoRegistrazione } = body;
-      if (!codiceUtente) throw new Error('Il codice utente e\' obbligatorio.');
+      if (!codiceUtente) throw new BadRequestException('Il codice utente e\' obbligatorio.');
       if (statoRegistrazione === undefined) {
-        throw new Error('Lo stato registrazione e\' obbligatorio.');
+        throw new BadRequestException('Lo stato registrazione e\' obbligatorio.');
       }
 
       await this.userService.setStato(codiceUtente, statoRegistrazione);
@@ -373,7 +374,7 @@ export class UserController {
       }
 
       if (user.codiceUtente !== undefined && user.codiceUtente !== codiceUtente) {
-        throw new Error('Il codice utente nel body non coincide con quello del path.');
+        throw new BadRequestException('Il codice utente nel body non coincide con quello del path.');
       }
 
       await this.userService.updateUser(codiceUtente, user, {

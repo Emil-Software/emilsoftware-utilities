@@ -85,6 +85,23 @@ test('allegati guard: no-op senza authorize, nega/consente in base alla callback
   assert.equal(await allow.canActivate(context), true);
 });
 
+test('sendErrorMessage deriva lo status dalla HttpException', () => {
+  const { BadRequestException } = require('@nestjs/common');
+  const capture = () => {
+    const state = {};
+    return { state, res: { status(code) { state.status = code; return this; }, send(payload) { state.payload = payload; return this; } } };
+  };
+
+  const bad = capture();
+  RestUtilities.sendErrorMessage(bad.res, new BadRequestException('campo non valido'), 'test');
+  assert.equal(bad.state.status, 400, 'una BadRequestException deve produrre 400');
+  assert.equal(bad.state.payload.statusCode, 2);
+
+  const generic = capture();
+  RestUtilities.sendErrorMessage(generic.res, new Error('boom'), 'test');
+  assert.equal(generic.state.status, 500, 'un errore generico resta 500');
+});
+
 test('getTableColumns usa una cache a breve TTL e si invalida', async (t) => {
   clearTableColumnsCache();
   let calls = 0;

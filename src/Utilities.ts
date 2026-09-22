@@ -136,7 +136,16 @@ export class RestUtilities {
             ? exceptionPayload.details.filter((detail): detail is string => typeof detail === "string")
             : undefined;
         const schemaError = this.isDatabaseSchemaError(error);
-        const effectiveStatus = schemaError ? 503 : status;
+        // Per le HttpException lo status corretto e quello dell'eccezione (es. 400 di validazione),
+        // anche quando il chiamante non lo passa esplicitamente. Lo status esplicito vale per gli altri errori.
+        const exceptionStatus = typeof errorWithResponse?.getResponse === "function"
+            ? Number((error as { getStatus?: () => number }).getStatus?.())
+            : undefined;
+        const effectiveStatus = schemaError
+            ? 503
+            : Number.isInteger(exceptionStatus) && (exceptionStatus as number) >= 400
+                ? (exceptionStatus as number)
+                : status;
         const code = schemaError
             ? "ACCESSI_DATABASE_SCHEMA_OUTDATED"
             : explicitCode ?? (effectiveStatus >= 500
