@@ -461,7 +461,7 @@ export class AllegatiService {
      */
     async getOneByFields(fields: { tipcod?: string; codice?: number; docrif?: string; idxtipoall?: number }): Promise<AllegatoDto | null> {
         const results = await this.findByFields(fields);
-        return results.length > 0 ? results[0] : null;
+        return results.length > 0 ? (results[0] ?? null) : null;
     }
 
 }

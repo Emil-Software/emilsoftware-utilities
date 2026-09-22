@@ -102,7 +102,7 @@ export class DocumentGenerator {
 
     private extractPlaceholder(text: string): string | null {
         const match = text.match(/^\$(\w+)\$$/);
-        return match ? match[1] : null;
+        return match ? (match[1] ?? null) : null;
     }
 
     private async installFont(fontPath: string, fontName: string): Promise<void> {

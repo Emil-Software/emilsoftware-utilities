@@ -64,7 +64,10 @@ export class DailyFileTransport extends Transport {
         let index = 0;
         const next = (error?: Error | null) => {
             if (error || index === chunks.length) return callback(error);
-            this.log(chunks[index++].chunk, next);
+            const chunk = chunks[index];
+            index += 1;
+            if (!chunk) return callback(error);
+            this.log(chunk.chunk, next);
         };
         next();
     }

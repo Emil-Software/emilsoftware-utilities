@@ -54,7 +54,11 @@ export class AllegatiController {
         if (files.length > 1) {
             throw new BadRequestException('Questo endpoint accetta un solo file alla volta');
         }
-        return await this.allegatiService.uploadFile(files[0], uploadRequest);
+        const file = files[0];
+        if (!file) {
+            throw new BadRequestException('Nessun file fornito');
+        }
+        return await this.allegatiService.uploadFile(file, uploadRequest);
     }
 
     @Get(':id')

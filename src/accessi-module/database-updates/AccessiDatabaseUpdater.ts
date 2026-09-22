@@ -132,9 +132,18 @@ export class AccessiDatabaseUpdater extends DatabaseUpdater implements OnModuleI
       ORDER BY C.RDB$CONSTRAINT_NAME, S.RDB$FIELD_POSITION`);
   }
 
-  private static groups(rows: Row[]): Row[][] {
-    const groups = new Map<string, Row[]>();
-    for (const row of rows) groups.set(String(row.NAME), [...(groups.get(String(row.NAME)) ?? []), row]);
+  /** Raggruppa per nome; ogni gruppo e non vuoto per costruzione (tupla non vuota). */
+  private static groups(rows: Row[]): Array<[Row, ...Row[]]> {
+    const groups = new Map<string, [Row, ...Row[]]>();
+    for (const row of rows) {
+      const key = String(row.NAME);
+      const existing = groups.get(key);
+      if (existing) {
+        existing.push(row);
+      } else {
+        groups.set(key, [row]);
+      }
+    }
     return Array.from(groups.values());
   }
 
@@ -151,7 +160,7 @@ export class AccessiDatabaseUpdater extends DatabaseUpdater implements OnModuleI
     return normalize(source ?? '') === normalize(expression);
   }
 
-  private static async indexes(options: AccessiOptions): Promise<Row[][]> {
+  private static async indexes(options: AccessiOptions): Promise<Array<[Row, ...Row[]]>> {
     return this.groups(await this.query(options, `SELECT TRIM(I.RDB$INDEX_NAME) AS NAME, TRIM(I.RDB$RELATION_NAME) AS TABLE_NAME,
       COALESCE(I.RDB$INDEX_INACTIVE, 0) AS INACTIVE, TRIM(S.RDB$FIELD_NAME) AS COLUMN_NAME
       FROM RDB$INDICES I LEFT JOIN RDB$INDEX_SEGMENTS S ON S.RDB$INDEX_NAME = I.RDB$INDEX_NAME
@@ -180,7 +189,7 @@ export class AccessiDatabaseUpdater extends DatabaseUpdater implements OnModuleI
       FILTRI_BI0: ['IFNEW.PROGISNULL', 'MAXPROG', 'FROMFILTRIWHERECODUTE=NEW.CODUTE', 'NEW.PROG=TOT+1'],
       UTENTI_GDPR_BI0: ['NEW.DATACC=CURRENT_TIMESTAMP', 'UPDATEUTENTISETFLGGDPR=1', 'DATGDPR=CURRENT_TIMESTAMP', 'WHERECODUTE=NEW.CODUTE'],
     };
-    return required[trigger.name].every(fragment => source.includes(fragment));
+    return (required[trigger.name] ?? []).every(fragment => source.includes(fragment));
   }
 
   private static async futureVersionIssue(options: AccessiOptions, columns: Row[]): Promise<string | undefined> {
@@ -190,8 +199,8 @@ export class AccessiDatabaseUpdater extends DatabaseUpdater implements OnModuleI
     if (!/^\d+\.\d+\.\d+$/.test(version)) return `Versione Accessi non riconosciuta: ${version}`;
     const actual = version.split('.').map(Number), latest = ACCESSI_SCHEMA_VERSION.split('.').map(Number);
     for (let i = 0; i < 3; i++) {
-      if (actual[i] > latest[i]) return `Schema Accessi ${version} piu recente della libreria (${ACCESSI_SCHEMA_VERSION}); downgrade automatico non consentito`;
-      if (actual[i] < latest[i]) return;
+      if ((actual[i] ?? 0) > (latest[i] ?? 0)) return `Schema Accessi ${version} piu recente della libreria (${ACCESSI_SCHEMA_VERSION}); downgrade automatico non consentito`;
+      if ((actual[i] ?? 0) < (latest[i] ?? 0)) return;
     }
   }
 
@@ -239,7 +248,7 @@ export class AccessiDatabaseUpdater extends DatabaseUpdater implements OnModuleI
       if (!(await this.sequenceExists(options, generator.name))) issues.push(`${generator.name}: sequence mancante`);
       else if (columns.some(row => row.TABLE_NAME === generator.table && row.COLUMN_NAME === generator.column)) {
         const rows = await this.query(options, `SELECT GEN_ID(${generator.name}, 0) AS CURRENT_VALUE, (SELECT COALESCE(MAX(${generator.column}), 0) FROM ${generator.table}) AS MAX_VALUE FROM RDB$DATABASE`);
-        if (Number(rows[0].CURRENT_VALUE) < Number(rows[0].MAX_VALUE)) issues.push(`${generator.name}: sequence inferiore agli identificativi esistenti`);
+        if (Number(rows[0]?.CURRENT_VALUE) < Number(rows[0]?.MAX_VALUE)) issues.push(`${generator.name}: sequence inferiore agli identificativi esistenti`);
       }
     }
     return { compatible: issues.length === 0, issues };

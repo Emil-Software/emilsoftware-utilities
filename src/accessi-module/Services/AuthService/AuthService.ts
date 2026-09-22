@@ -374,11 +374,12 @@ export class AuthService {
       password: string;
     }[];
 
-    if (result.length === 0 || typeof result[0].password !== "string") {
+    const stored = result[0];
+    if (!stored || typeof stored.password !== "string") {
       return false;
     }
 
-    const storedPassword = result[0].password;
+    const storedPassword = stored.password;
 
     if (PasswordUtilities.isPasswordHash(storedPassword)) {
       return PasswordUtilities.verifyPassword(plainPassword, storedPassword);

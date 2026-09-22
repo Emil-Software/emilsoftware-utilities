@@ -143,7 +143,7 @@ export abstract class DatabaseUpdater {
         return null;
       }
 
-      const rawVersion = parameters[0].DESPAR;
+      const rawVersion = parameters[0]?.DESPAR;
       return typeof rawVersion === "string" ? rawVersion : rawVersion == null ? null : String(rawVersion);
     } catch (error) {
       this.logger.error(`Error getting database version:`, error);

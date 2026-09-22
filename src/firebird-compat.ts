@@ -120,7 +120,7 @@ function buildDiagnostics(message: string, options: FirebirdOptions): string[] {
     const pluginMismatch = message.match(/Server don't accept plugin\s*:\s*([^,]+),\s*but support\s*:\s*(.+)$/i);
 
     if (pluginMismatch) {
-        const supportedPlugins = pluginMismatch[2]
+        const supportedPlugins = (pluginMismatch[2] ?? "")
             .split(",")
             .map((plugin) => plugin.trim())
             .filter((plugin) => plugin.length > 0);

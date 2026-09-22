@@ -291,7 +291,7 @@ export class RestUtilities {
         if (obj !== null && typeof obj === "object" && obj.constructor === Object) {
             const source = obj as Record<string, unknown>;
             const converted = Object.keys(source).reduce((acc: Record<string, unknown>, key: string) => {
-                const camelCaseKey = key.toLowerCase().replace(/_([a-z])/g, g => g[1].toUpperCase());
+                const camelCaseKey = key.toLowerCase().replace(/_([a-z])/g, g => (g[1] ?? '').toUpperCase());
                 acc[camelCaseKey] = source[key];
                 return acc;
             }, {});

@@ -321,7 +321,7 @@ async function loginView(event: SubmitEvent): Promise<void> {
   try {
     const values = formValues(event.currentTarget as HTMLFormElement);
     byId('login-error').textContent = '';
-    const response = result<LoginResult>(await login({ email: values.email, password: values.password || undefined }));
+    const response = result<LoginResult>(await login({ email: values.email ?? '', password: values.password || undefined }));
     await completeLoginStep(response);
   } catch (error) {
     byId('login-error').textContent = error instanceof Error ? error.message : 'Login non riuscito.';
@@ -471,11 +471,11 @@ async function showSsoUserForm(): Promise<void> {
       const form = eventForm(event);
       const values = formValues(form);
       const request: CreateFederatedUserRequest = {
-        provider: values.provider,
-        subject: values.subject,
+        provider: values.provider ?? '',
+        subject: values.subject ?? '',
         note: values.note || undefined,
         passwordLoginEnabled: new FormData(form).has('passwordLoginEnabled'),
-        user: { email: values.email, nome: values.nome || undefined, cognome: values.cognome || undefined },
+        user: { email: values.email ?? '', nome: values.nome || undefined, cognome: values.cognome || undefined },
       };
       await createFederatedUser(request);
       showNotice('Utente SSO creato e collegamento registrato.');
@@ -519,8 +519,8 @@ function showProviderForm(provider?: FederatedProvider): void {
         await updateFederatedProvider(provider.provider, request);
       } else {
         const request: CreateFederatedProviderRequest = {
-          provider: values.provider,
-          description: values.description,
+          provider: values.provider ?? '',
+          description: values.description ?? '',
           note: values.note || undefined,
         };
         await createFederatedProvider(request);
@@ -540,7 +540,9 @@ async function showUser(rawCode: string): Promise<void> {
     getGroupsWithMenus({ includeDisabled: true }),
     federatedAuthenticationAvailable ? getFederatedProviders() : Promise.resolve(null),
   ]);
-  const user = (result(users) as UserRow[])[0].utente;
+  const userRow = (result(users) as UserRow[])[0];
+  if (!userRow?.utente) throw new Error('Utente non trovato.');
+  const user = userRow.utente;
   const allRoles = result(roles) as Role[];
   const userGrants = result(grants) as { ruoli?: Array<{ codiceRuolo?: number }>; abilitazioni?: Permission[] };
   const menuGroups = result(groups) as GroupWithMenusEntity[];
@@ -566,8 +568,10 @@ async function showUser(rawCode: string): Promise<void> {
           : event.key === 'Home' ? 0 : event.key === 'End' ? userTabButtons.length - 1 : -1;
       if (targetIndex < 0) return;
       event.preventDefault();
-      userTabButtons[targetIndex].focus();
-      activateUserTab(userTabButtons[targetIndex].dataset.userTab as UserDetailTab);
+      const targetTab = userTabButtons[targetIndex];
+      if (!targetTab) return;
+      targetTab.focus();
+      activateUserTab(targetTab.dataset.userTab as UserDetailTab);
     };
   });
   activateUserTab(defaultUserTab);
@@ -585,7 +589,7 @@ async function showUser(rawCode: string): Promise<void> {
         const values = formValues(eventForm(event));
         const fields = new FormData(eventForm(event));
         await updateUtente(codiceUtente, {
-          codiceUtente, email: values.email, nome: values.nome || undefined, cognome: values.cognome || undefined,
+          codiceUtente, email: values.email ?? '', nome: values.nome || undefined, cognome: values.cognome || undefined,
           flagDueFattori: fields.has('flagDueFattori'),
           passwordlessLoginEnabled: fields.has('passwordlessLoginEnabled'),
           ...(federatedAuthenticationAvailable ? { passwordLoginEnabled: fields.has('passwordLoginEnabled') } : {}),
@@ -615,7 +619,7 @@ async function showUser(rawCode: string): Promise<void> {
   if (grantsForm) grantsForm.onsubmit = (event) => { event.preventDefault(); handleAction(async () => { const permissions: Permission[] = []; new FormData(eventForm(event)).forEach((value, key) => { if (key.startsWith('grant:') && value) permissions.push({ codiceMenu: key.slice(6), tipoAbilitazione: Number(value) }); }); await assignPermissionsToUser(codiceUtente, { permissions }); showNotice('Grant aggiornati.'); }); };
   if (federatedAuthenticationAvailable) {
     const linkForm = document.getElementById('link-sso') as HTMLFormElement | null;
-    if (linkForm) linkForm.onsubmit = (event) => { event.preventDefault(); handleAction(async () => { const values = formValues(eventForm(event)); await linkFederatedIdentity(codiceUtente, { provider: values.provider, subject: values.subject, note: values.note || undefined }); await showUser(String(codiceUtente)); }); };
+    if (linkForm) linkForm.onsubmit = (event) => { event.preventDefault(); handleAction(async () => { const values = formValues(eventForm(event)); await linkFederatedIdentity(codiceUtente, { provider: values.provider ?? '', subject: values.subject ?? '', note: values.note || undefined }); await showUser(String(codiceUtente)); }); };
     document.querySelectorAll<HTMLButtonElement>('[data-identity-toggle]').forEach((button) => { button.onclick = () => handleAction(async () => { await updateFederatedIdentity(button.dataset.identityToggle ?? '', { active: button.dataset.active === 'true' }); await showUser(String(codiceUtente)); }); });
     document.querySelectorAll<HTMLButtonElement>('[data-identity-delete]').forEach((button) => { button.onclick = () => handleAction(async () => { if (!window.confirm('Eliminare definitivamente questo collegamento SSO? L’utente Accessi non verrà eliminato.')) return; await deleteFederatedIdentityPermanently(codiceUtente, button.dataset.identityDelete ?? ''); showNotice('Collegamento SSO eliminato definitivamente.'); await showUser(String(codiceUtente)); }); });
   }
@@ -640,7 +644,7 @@ async function showRoles(): Promise<void> {
       };
     });
     const roleFormElement = document.getElementById('role-form') as HTMLFormElement | null;
-    if (roleFormElement) roleFormElement.onsubmit = async (event) => { event.preventDefault(); const form = eventForm(event); const data = new FormData(form); const request: Role = { descrizioneRuolo: formValues(form).descrizione, menu: Array.from(data.getAll('menu'), (codiceMenu) => ({ codiceMenu: String(codiceMenu), tipoAbilitazione: Number(data.get(`menu-level:${codiceMenu}`) ?? 10) as Role['menu'][number]['tipoAbilitazione'] })) }; if (role?.codiceRuolo) await updateRole(role.codiceRuolo, request); else await createRole(request); await show('roles'); };
+    if (roleFormElement) roleFormElement.onsubmit = async (event) => { event.preventDefault(); const form = eventForm(event); const data = new FormData(form); const request: Role = { descrizioneRuolo: formValues(form).descrizione ?? '', menu: Array.from(data.getAll('menu'), (codiceMenu) => ({ codiceMenu: String(codiceMenu), tipoAbilitazione: Number(data.get(`menu-level:${codiceMenu}`) ?? 10) as Role['menu'][number]['tipoAbilitazione'] })) }; if (role?.codiceRuolo) await updateRole(role.codiceRuolo, request); else await createRole(request); await show('roles'); };
   };
   byId('new-role').onclick = () => roleForm();
   document.querySelectorAll<HTMLButtonElement>('[data-role]').forEach((button) => button.onclick = () => roleForm(roles.find((role) => role.codiceRuolo === Number(button.dataset.role))));
@@ -657,7 +661,7 @@ async function showFilters(): Promise<void> {
   const users = await loadUsers();
   render(`<h2>Filtri utente</h2><form id="filters"><label>Utente<select name="codUte">${users.map(({ utente }) => `<option value="${utente.codiceUtente}">${escapeHtml(utente.email)}</option>`).join('')}</select><span class="form-help">I filtri vengono letti e salvati esclusivamente per l'utente selezionato.</span></label><label>Filtro JSON<textarea name="json" rows="12">{}</textarea><span class="form-help">Configurazione tecnica del filtro. Usa Carica per partire dalla struttura esistente e mantieni il JSON valido prima di salvare.</span></label><button name="action" value="load">Carica</button><button name="action" value="save">Salva</button></form>`);
   const filtersForm = document.getElementById('filters') as HTMLFormElement | null;
-  if (filtersForm) filtersForm.onsubmit = async (event) => { event.preventDefault(); const form = eventForm(event); const action = (event.submitter as HTMLButtonElement | null)?.value; const code = Number(formValues(form).codUte); if (action === 'load') { const filters = result<FiltriUtente[]>(await getFiltriUtente({ codUte: code })); (form.elements.namedItem('json') as HTMLTextAreaElement).value = JSON.stringify(filters[0] ?? { codUte: code }, null, 2); } else { const parsed = JSON.parse(formValues(form).json) as Omit<FiltriUtente, 'codUte'>; await saveFiltriUtente({ ...parsed, codUte: code }); showNotice('Filtri salvati.'); } };
+  if (filtersForm) filtersForm.onsubmit = async (event) => { event.preventDefault(); const form = eventForm(event); const action = (event.submitter as HTMLButtonElement | null)?.value; const code = Number(formValues(form).codUte); if (action === 'load') { const filters = result<FiltriUtente[]>(await getFiltriUtente({ codUte: code })); (form.elements.namedItem('json') as HTMLTextAreaElement).value = JSON.stringify(filters[0] ?? { codUte: code }, null, 2); } else { const parsed = JSON.parse(formValues(form).json ?? '{}') as Omit<FiltriUtente, 'codUte'>; await saveFiltriUtente({ ...parsed, codUte: code }); showNotice('Filtri salvati.'); } };
 }
 
 function scopeList(scopes: string[] | undefined): string {
@@ -701,10 +705,10 @@ function showServiceTokenForm(): void {
     event.preventDefault();
     handleAction(async () => {
       const values = formValues(eventForm(event));
-      const scopes = values.scopes.split(',').map((scope) => scope.trim()).filter(Boolean);
+      const scopes = (values.scopes ?? '').split(',').map((scope) => scope.trim()).filter(Boolean);
       const ttlDays = values.ttlDays ? Number(values.ttlDays) : undefined;
       const issued = result<IssuedServiceTokenDto>(await createServiceToken({
-        label: values.label,
+        label: values.label ?? '',
         scopes: scopes.length ? scopes : undefined,
         ttlDays: Number.isFinite(ttlDays) ? ttlDays : undefined,
       }));
@@ -724,7 +728,9 @@ async function show(view: ConsoleView): Promise<void> {
     showNotice('');
     const views: Record<string, () => Promise<void>> = { users: showUsers, roles: showRoles, menus: showMenus, filters: showFilters, sso: showSso, tokens: showServiceTokens };
     setActiveNavigation(view);
-    await views[view]();
+    const renderView = views[view];
+    if (!renderView) throw new Error('Sezione console non valida.');
+    await renderView();
   } catch (error) {
     render('');
     showNotice(error instanceof Error ? error.message : 'Operazione non riuscita.', true);
@@ -740,7 +746,7 @@ byId<HTMLFormElement>('two-factor-form').onsubmit = async event => {
   try {
     byId('login-error').textContent = '';
     const values = formValues(event.currentTarget as HTMLFormElement);
-    await completeLoginStep(result<LoginResult>(await verifyTwoFactor({ challengeId: pendingChallenge, code: values.code })));
+    await completeLoginStep(result<LoginResult>(await verifyTwoFactor({ challengeId: pendingChallenge, code: values.code ?? '' })));
   } catch (error) {
     byId('login-error').textContent = error instanceof Error ? error.message : 'Verifica non riuscita.';
   }
@@ -785,3 +791,4 @@ if (ssoChallenge) {
   window.history.replaceState(null, '', window.location.pathname);
   showTwoFactor({ challengeId: ssoChallenge, resendAfterSeconds: 60 });
 } else if (token) void bootstrap();
+

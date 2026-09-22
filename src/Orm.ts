@@ -416,7 +416,7 @@ export class Orm {
         try {
             return await queries.reduce((promiseChain: Promise<unknown>, currentQuery: string, index: number) => {
                 return promiseChain.then(() => new Promise((resolve, reject) => {
-                    transaction.query(currentQuery, params[index], (err: unknown, result: unknown[]): void => {
+                    transaction.query(currentQuery, params[index] ?? [], (err: unknown, result: unknown[]): void => {
                         if (err) {
                             return reject(err);
                         }

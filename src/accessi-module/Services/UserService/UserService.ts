@@ -376,12 +376,11 @@ export class UserService {
       (results) => results.map(RestUtilities.convertKeysToCamelCase),
     )) as UserDto[];
 
-    if (utenti.length <= 0) return null;
-    const filtriUtente = await this.filtriService.getFiltriUser(utenti[0].codiceUtente);
+    const user = utenti[0];
+    if (!user) return null;
 
-    if (utenti.length > 0 && filtriUtente.length > 0) {
-      const user = utenti[0];
-      const filtro = filtriUtente[0];
+    const filtro = (await this.filtriService.getFiltriUser(user.codiceUtente))[0];
+    if (filtro) {
       const filterValues: Record<string, unknown> = {};
 
       Object.entries(FILTRI_UTENTE_DB_MAPPING).forEach(([key]) => {
@@ -393,7 +392,7 @@ export class UserService {
       Object.assign(user, filterValues);
     }
 
-    return utenti.length > 0 ? this.normalizeUserFlags(utenti[0]) : null;
+    return this.normalizeUserFlags(user);
   }
 
   async insertUserFilters(codiceUtente: number, filterData: RegisterRequest): Promise<void> {
