@@ -5,7 +5,12 @@ import { TipoFiltro } from '../../Dtos/TipoFiltro';
 import { Orm } from '../../../Orm';
 import { RestUtilities } from '../../../Utilities';
 import { Logger } from '../../../Logger';
-import { FiltriUtente, FILTRI_UTENTE_DB_MAPPING } from '../../Dtos';
+import {
+  CreateFilterTypeRequest,
+  FiltriUtente,
+  FILTRI_UTENTE_DB_MAPPING,
+  UpdateFilterTypeRequest,
+} from '../../Dtos';
 
 @Injectable()
 /** Persists application-specific filter dimensions associated with an Accessi user. */
@@ -26,6 +31,77 @@ export class FiltriService {
       this.logger.error('Errore durante il recupero dei tipi di filtri', error);
       throw error;
     }
+  }
+
+  private async countWhere(table: string, column: string, value: unknown): Promise<number> {
+    const result = await Orm.query(
+      this.accessiOptions.databaseOptions,
+      `SELECT COUNT(*) FROM ${table} WHERE ${column} = ?`,
+      [value],
+    );
+    const raw = (result?.[0] as Record<string, unknown> | undefined)?.COUNT
+      ?? (result?.[0] as Record<string, unknown> | undefined)?.count;
+    return typeof raw === 'number' ? raw : Number.parseInt(`${raw ?? '0'}`, 10);
+  }
+
+  /** Creates a filter-type catalog entry. `TIPFIL` is the immutable primary key. */
+  public async createTipoFiltro(input: CreateFilterTypeRequest): Promise<void> {
+    if ((await this.countWhere('FILTRI_TIPO', 'TIPFIL', input.tipFil)) > 0) {
+      throw new BadRequestException(`Il tipo filtro ${input.tipFil} esiste gia.`);
+    }
+    await Orm.execute(
+      this.accessiOptions.databaseOptions,
+      `INSERT INTO FILTRI_TIPO (TIPFIL, DESFIL, FLDFIL, FLGENABLED) VALUES (?, ?, ?, ?)`,
+      [input.tipFil, input.desFil ?? null, input.fldFil ?? null, input.flgEnabled ?? 1],
+    );
+  }
+
+  /** Updates only the supplied fields of a filter-type entry. */
+  public async updateTipoFiltro(tipFil: number, input: UpdateFilterTypeRequest): Promise<void> {
+    if ((await this.countWhere('FILTRI_TIPO', 'TIPFIL', tipFil)) === 0) {
+      throw new BadRequestException(`Il tipo filtro ${tipFil} non esiste.`);
+    }
+
+    const sets: string[] = [];
+    const params: unknown[] = [];
+    if (input.desFil !== undefined) {
+      sets.push('DESFIL = ?');
+      params.push(input.desFil);
+    }
+    if (input.fldFil !== undefined) {
+      sets.push('FLDFIL = ?');
+      params.push(input.fldFil);
+    }
+    if (input.flgEnabled !== undefined) {
+      sets.push('FLGENABLED = ?');
+      params.push(input.flgEnabled);
+    }
+    if (sets.length === 0) return;
+
+    params.push(tipFil);
+    await Orm.execute(
+      this.accessiOptions.databaseOptions,
+      `UPDATE FILTRI_TIPO SET ${sets.join(', ')} WHERE TIPFIL = ?`,
+      params,
+    );
+  }
+
+  /** Deletes a filter type only when no saved user filter references it. */
+  public async deleteTipoFiltro(tipFil: number): Promise<void> {
+    if ((await this.countWhere('FILTRI_TIPO', 'TIPFIL', tipFil)) === 0) {
+      throw new BadRequestException(`Il tipo filtro ${tipFil} non esiste.`);
+    }
+    const used = await this.countWhere('FILTRI', 'TIPFIL', tipFil);
+    if (used > 0) {
+      throw new BadRequestException(
+        `Impossibile eliminare il tipo filtro ${tipFil}: ${used} filtri lo utilizzano.`,
+      );
+    }
+    await Orm.execute(
+      this.accessiOptions.databaseOptions,
+      `DELETE FROM FILTRI_TIPO WHERE TIPFIL = ?`,
+      [tipFil],
+    );
   }
 
   /** Returns filters for one user; omit the code only for trusted administrative reporting. */

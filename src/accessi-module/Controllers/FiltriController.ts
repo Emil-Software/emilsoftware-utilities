@@ -1,9 +1,29 @@
-import { Body, Controller, Get, Post, Query, Req, Res, UseGuards } from '@nestjs/common';
-import { ApiBearerAuth, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  HttpStatus,
+  Param,
+  ParseIntPipe,
+  Post,
+  Put,
+  Query,
+  Req,
+  Res,
+  UseGuards,
+} from '@nestjs/common';
+import { ApiBearerAuth, ApiOperation, ApiParam, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { Request, Response } from 'express';
 import { RestUtilities } from '../../Utilities';
 import { ActionResponse, ErrorResponse } from '../Dtos/BaseResponse';
-import { FiltriUtente, GetFiltriUtenteRequest, GetFiltriUtenteResponse } from '../Dtos';
+import {
+  CreateFilterTypeRequest,
+  FiltriUtente,
+  GetFiltriUtenteRequest,
+  GetFiltriUtenteResponse,
+  UpdateFilterTypeRequest,
+} from '../Dtos';
 import { GetFiltriResponse } from '../Dtos/TipoFiltro';
 import { FiltriService } from '../Services/FiltriService/FiltriService';
 import { JwtSimpleGuard } from '../jwt/jwt.strategy';
@@ -43,6 +63,82 @@ export class FiltriController {
     try {
       const response = await this.filtriService.getTipoFiltri();
       return RestUtilities.sendBaseResponse(res, response);
+    } catch (error) {
+      return RestUtilities.sendErrorMessage(res, error, FiltriController.name);
+    }
+  }
+
+  @Post('tipi')
+  @ApiOperation({
+    operationId: 'createTipoFiltro',
+    summary: 'Crea un tipo di filtro',
+    description: 'Inserisce una nuova voce nel catalogo dei tipi di filtro. Operazione riservata al superutente.',
+  })
+  @ApiResponse({ status: 201, description: 'Tipo filtro creato con successo', type: ActionResponse })
+  @ApiResponse({ status: 400, description: 'Dati non validi', type: ErrorResponse })
+  @ApiResponse({ status: 500, description: 'Errore interno del server', type: ErrorResponse })
+  async createTipoFiltro(
+    @Req() request: Request,
+    @Res() res: Response,
+    @Body() body: CreateFilterTypeRequest,
+  ) {
+    try {
+      ensureSuperUser(getAuthenticatedAccessiUser(request), 'Solo gli amministratori possono creare tipi filtro.');
+      await this.filtriService.createTipoFiltro(body);
+      return RestUtilities.sendOKMessage(
+        res,
+        `Il tipo filtro ${body.tipFil} e' stato creato con successo.`,
+        HttpStatus.CREATED,
+      );
+    } catch (error) {
+      return RestUtilities.sendErrorMessage(res, error, FiltriController.name);
+    }
+  }
+
+  @Put('tipi/:tipFil')
+  @ApiOperation({
+    operationId: 'updateTipoFiltro',
+    summary: 'Aggiorna un tipo di filtro',
+    description: 'Aggiorna descrizione, campo o stato di un tipo di filtro esistente.',
+  })
+  @ApiParam({ name: 'tipFil', description: 'Identificativo del tipo filtro', required: true, example: 1, type: Number })
+  @ApiResponse({ status: 200, description: 'Tipo filtro aggiornato con successo', type: ActionResponse })
+  @ApiResponse({ status: 400, description: 'Dati non validi', type: ErrorResponse })
+  @ApiResponse({ status: 500, description: 'Errore interno del server', type: ErrorResponse })
+  async updateTipoFiltro(
+    @Req() request: Request,
+    @Res() res: Response,
+    @Param('tipFil', ParseIntPipe) tipFil: number,
+    @Body() body: UpdateFilterTypeRequest,
+  ) {
+    try {
+      ensureSuperUser(getAuthenticatedAccessiUser(request), 'Solo gli amministratori possono modificare tipi filtro.');
+      await this.filtriService.updateTipoFiltro(tipFil, body);
+      return RestUtilities.sendOKMessage(res, `Il tipo filtro ${tipFil} e' stato aggiornato con successo.`);
+    } catch (error) {
+      return RestUtilities.sendErrorMessage(res, error, FiltriController.name);
+    }
+  }
+
+  @Delete('tipi/:tipFil')
+  @ApiOperation({
+    operationId: 'deleteTipoFiltro',
+    summary: 'Elimina un tipo di filtro',
+    description: 'Elimina un tipo di filtro solo se nessun filtro utente lo utilizza.',
+  })
+  @ApiParam({ name: 'tipFil', description: 'Identificativo del tipo filtro', required: true, example: 1, type: Number })
+  @ApiResponse({ status: 200, description: 'Tipo filtro eliminato con successo', type: ActionResponse })
+  @ApiResponse({ status: 400, description: 'Dati non validi', type: ErrorResponse })
+  @ApiResponse({ status: 500, description: 'Errore interno del server', type: ErrorResponse })
+  async deleteTipoFiltro(
+    @Req() request: Request,
+    @Res() res: Response,
+    @Param('tipFil', ParseIntPipe) tipFil: number,
+  ) {
+    try {
+      ensureSuperUser(getAuthenticatedAccessiUser(request), 'Solo gli amministratori possono eliminare tipi filtro.');
+      await this.filtriService.deleteTipoFiltro(tipFil);
+      return RestUtilities.sendOKMessage(res, `Il tipo filtro ${tipFil} e' stato eliminato con successo.`);
     } catch (error) {
       return RestUtilities.sendErrorMessage(res, error, FiltriController.name);
     }

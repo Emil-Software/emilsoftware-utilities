@@ -12,6 +12,10 @@ import type {
   CreateFederatedIdentityRequest,
   CreateFederatedProviderRequest,
   CreateFederatedUserRequest,
+  CreateFilterTypeRequest,
+  CreateMenuGroupRequest,
+  CreateMenuRequest,
+  CreateMenuTypeRequest,
   CreateServiceTokenRequest,
   CreateServiceTokenResponse,
   ErrorResponse,
@@ -25,6 +29,7 @@ import type {
   GetFiltriUtenteResponse,
   GetGroupsWithMenusParams,
   GetGroupsWithMenusResponse,
+  GetMenuTypesResponse,
   GetMenusResponse,
   GetRolesResponse,
   GetServiceTokensParams,
@@ -47,6 +52,10 @@ import type {
   UpdateEnabledStatusRequest,
   UpdateFederatedIdentityRequest,
   UpdateFederatedProviderRequest,
+  UpdateFilterTypeRequest,
+  UpdateMenuGroupRequest,
+  UpdateMenuRequest,
+  UpdateMenuTypeRequest,
   UserDto,
   UserGrantsResponse,
   VerifyTwoFactorRequest
@@ -418,6 +427,31 @@ return accessiFetch<Promise<getMenusResponse>>(getGetMenusUrl(),
 
 
 /**
+ * @summary Crea un nuovo menu
+ */
+export type createMenuResponse = {
+  data: ActionResponse;
+  status: number;
+}
+
+export const getCreateMenuUrl = () => {
+
+
+  return `/api/accessi/permission/menus`
+}
+
+export const createMenu = async (createMenuRequest: CreateMenuRequest, options?: RequestInit): Promise<createMenuResponse> => {
+return accessiFetch<Promise<createMenuResponse>>(getCreateMenuUrl(),
+  {      
+    ...options,
+    method: 'POST',
+    body: JSON.stringify(
+      createMenuRequest,)
+  }
+);}
+
+
+/**
  * @summary Recupera tutti i gruppi disponibili con i relativi menu
  */
 export type getGroupsWithMenusResponse = {
@@ -445,6 +479,230 @@ return accessiFetch<Promise<getGroupsWithMenusResponse>>(getGetGroupsWithMenusUr
   {      
     ...options,
     method: 'GET'
+    
+  }
+);}
+
+
+/**
+ * @summary Recupera il catalogo dei tipi menu
+ */
+export type getMenuTypesResponse = {
+  data: GetMenuTypesResponse;
+  status: number;
+}
+
+export const getGetMenuTypesUrl = () => {
+
+
+  return `/api/accessi/permission/menu-types`
+}
+
+export const getMenuTypes = async ( options?: RequestInit): Promise<getMenuTypesResponse> => {
+return accessiFetch<Promise<getMenuTypesResponse>>(getGetMenuTypesUrl(),
+  {      
+    ...options,
+    method: 'GET'
+    
+  }
+);}
+
+
+/**
+ * @summary Crea un nuovo tipo menu
+ */
+export type createMenuTypeResponse = {
+  data: ActionResponse;
+  status: number;
+}
+
+export const getCreateMenuTypeUrl = () => {
+
+
+  return `/api/accessi/permission/menu-types`
+}
+
+export const createMenuType = async (createMenuTypeRequest: CreateMenuTypeRequest, options?: RequestInit): Promise<createMenuTypeResponse> => {
+return accessiFetch<Promise<createMenuTypeResponse>>(getCreateMenuTypeUrl(),
+  {      
+    ...options,
+    method: 'POST',
+    body: JSON.stringify(
+      createMenuTypeRequest,)
+  }
+);}
+
+
+/**
+ * @summary Aggiorna un menu esistente
+ */
+export type updateMenuResponse = {
+  data: ActionResponse;
+  status: number;
+}
+
+export const getUpdateMenuUrl = (codiceMenu: string,) => {
+
+
+  return `/api/accessi/permission/menus/${codiceMenu}`
+}
+
+export const updateMenu = async (codiceMenu: string,
+    updateMenuRequest: UpdateMenuRequest, options?: RequestInit): Promise<updateMenuResponse> => {
+return accessiFetch<Promise<updateMenuResponse>>(getUpdateMenuUrl(codiceMenu),
+  {      
+    ...options,
+    method: 'PUT',
+    body: JSON.stringify(
+      updateMenuRequest,)
+  }
+);}
+
+
+/**
+ * @summary Elimina un menu
+ */
+export type deleteMenuResponse = {
+  data: ActionResponse;
+  status: number;
+}
+
+export const getDeleteMenuUrl = (codiceMenu: string,) => {
+
+
+  return `/api/accessi/permission/menus/${codiceMenu}`
+}
+
+export const deleteMenu = async (codiceMenu: string, options?: RequestInit): Promise<deleteMenuResponse> => {
+return accessiFetch<Promise<deleteMenuResponse>>(getDeleteMenuUrl(codiceMenu),
+  {      
+    ...options,
+    method: 'DELETE'
+    
+  }
+);}
+
+
+/**
+ * @summary Crea un nuovo gruppo menu
+ */
+export type createMenuGroupResponse = {
+  data: ActionResponse;
+  status: number;
+}
+
+export const getCreateMenuGroupUrl = () => {
+
+
+  return `/api/accessi/permission/menu-groups`
+}
+
+export const createMenuGroup = async (createMenuGroupRequest: CreateMenuGroupRequest, options?: RequestInit): Promise<createMenuGroupResponse> => {
+return accessiFetch<Promise<createMenuGroupResponse>>(getCreateMenuGroupUrl(),
+  {      
+    ...options,
+    method: 'POST',
+    body: JSON.stringify(
+      createMenuGroupRequest,)
+  }
+);}
+
+
+/**
+ * @summary Aggiorna un gruppo menu
+ */
+export type updateMenuGroupResponse = {
+  data: ActionResponse;
+  status: number;
+}
+
+export const getUpdateMenuGroupUrl = (codiceGruppo: string,) => {
+
+
+  return `/api/accessi/permission/menu-groups/${codiceGruppo}`
+}
+
+export const updateMenuGroup = async (codiceGruppo: string,
+    updateMenuGroupRequest: UpdateMenuGroupRequest, options?: RequestInit): Promise<updateMenuGroupResponse> => {
+return accessiFetch<Promise<updateMenuGroupResponse>>(getUpdateMenuGroupUrl(codiceGruppo),
+  {      
+    ...options,
+    method: 'PUT',
+    body: JSON.stringify(
+      updateMenuGroupRequest,)
+  }
+);}
+
+
+/**
+ * @summary Elimina un gruppo menu
+ */
+export type deleteMenuGroupResponse = {
+  data: ActionResponse;
+  status: number;
+}
+
+export const getDeleteMenuGroupUrl = (codiceGruppo: string,) => {
+
+
+  return `/api/accessi/permission/menu-groups/${codiceGruppo}`
+}
+
+export const deleteMenuGroup = async (codiceGruppo: string, options?: RequestInit): Promise<deleteMenuGroupResponse> => {
+return accessiFetch<Promise<deleteMenuGroupResponse>>(getDeleteMenuGroupUrl(codiceGruppo),
+  {      
+    ...options,
+    method: 'DELETE'
+    
+  }
+);}
+
+
+/**
+ * @summary Aggiorna un tipo menu
+ */
+export type updateMenuTypeResponse = {
+  data: ActionResponse;
+  status: number;
+}
+
+export const getUpdateMenuTypeUrl = (codiceTipo: string,) => {
+
+
+  return `/api/accessi/permission/menu-types/${codiceTipo}`
+}
+
+export const updateMenuType = async (codiceTipo: string,
+    updateMenuTypeRequest: UpdateMenuTypeRequest, options?: RequestInit): Promise<updateMenuTypeResponse> => {
+return accessiFetch<Promise<updateMenuTypeResponse>>(getUpdateMenuTypeUrl(codiceTipo),
+  {      
+    ...options,
+    method: 'PUT',
+    body: JSON.stringify(
+      updateMenuTypeRequest,)
+  }
+);}
+
+
+/**
+ * @summary Elimina un tipo menu
+ */
+export type deleteMenuTypeResponse = {
+  data: ActionResponse;
+  status: number;
+}
+
+export const getDeleteMenuTypeUrl = (codiceTipo: string,) => {
+
+
+  return `/api/accessi/permission/menu-types/${codiceTipo}`
+}
+
+export const deleteMenuType = async (codiceTipo: string, options?: RequestInit): Promise<deleteMenuTypeResponse> => {
+return accessiFetch<Promise<deleteMenuTypeResponse>>(getDeleteMenuTypeUrl(codiceTipo),
+  {      
+    ...options,
+    method: 'DELETE'
     
   }
 );}
@@ -709,6 +967,84 @@ return accessiFetch<Promise<getTipiFiltroResponse>>(getGetTipiFiltroUrl(),
 
 
 /**
+ * Inserisce una nuova voce nel catalogo dei tipi di filtro. Operazione riservata al superutente.
+ * @summary Crea un tipo di filtro
+ */
+export type createTipoFiltroResponse = {
+  data: ActionResponse;
+  status: number;
+}
+
+export const getCreateTipoFiltroUrl = () => {
+
+
+  return `/api/accessi/filtri/tipi`
+}
+
+export const createTipoFiltro = async (createFilterTypeRequest: CreateFilterTypeRequest, options?: RequestInit): Promise<createTipoFiltroResponse> => {
+return accessiFetch<Promise<createTipoFiltroResponse>>(getCreateTipoFiltroUrl(),
+  {      
+    ...options,
+    method: 'POST',
+    body: JSON.stringify(
+      createFilterTypeRequest,)
+  }
+);}
+
+
+/**
+ * Aggiorna descrizione, campo o stato di un tipo di filtro esistente.
+ * @summary Aggiorna un tipo di filtro
+ */
+export type updateTipoFiltroResponse = {
+  data: ActionResponse;
+  status: number;
+}
+
+export const getUpdateTipoFiltroUrl = (tipFil: number,) => {
+
+
+  return `/api/accessi/filtri/tipi/${tipFil}`
+}
+
+export const updateTipoFiltro = async (tipFil: number,
+    updateFilterTypeRequest: UpdateFilterTypeRequest, options?: RequestInit): Promise<updateTipoFiltroResponse> => {
+return accessiFetch<Promise<updateTipoFiltroResponse>>(getUpdateTipoFiltroUrl(tipFil),
+  {      
+    ...options,
+    method: 'PUT',
+    body: JSON.stringify(
+      updateFilterTypeRequest,)
+  }
+);}
+
+
+/**
+ * Elimina un tipo di filtro solo se nessun filtro utente lo utilizza.
+ * @summary Elimina un tipo di filtro
+ */
+export type deleteTipoFiltroResponse = {
+  data: ActionResponse;
+  status: number;
+}
+
+export const getDeleteTipoFiltroUrl = (tipFil: number,) => {
+
+
+  return `/api/accessi/filtri/tipi/${tipFil}`
+}
+
+export const deleteTipoFiltro = async (tipFil: number, options?: RequestInit): Promise<deleteTipoFiltroResponse> => {
+return accessiFetch<Promise<deleteTipoFiltroResponse>>(getDeleteTipoFiltroUrl(tipFil),
+  {      
+    ...options,
+    method: 'DELETE'
+    
+  }
+);}
+
+
+/**
  * Ritorna tutti i filtri associati ad un utente specifico
  * @summary Recupera i filtri di un utente
  */
@@ -894,6 +1230,31 @@ return accessiFetch<Promise<updateFederatedProviderResponse>>(getUpdateFederated
     method: 'PATCH',
     body: JSON.stringify(
       updateFederatedProviderRequest,)
+  }
+);}
+
+
+/**
+ * Riservato a superutente. Consentito solo se nessuna identita e collegata al provider; in alternativa disabilitalo.
+ * @summary Elimina un provider SSO
+ */
+export type deleteFederatedProviderResponse = {
+  data: ActionResponse;
+  status: number;
+}
+
+export const getDeleteFederatedProviderUrl = (provider: string,) => {
+
+
+  return `/api/accessi/federated-auth/providers/${provider}`
+}
+
+export const deleteFederatedProvider = async (provider: string, options?: RequestInit): Promise<deleteFederatedProviderResponse> => {
+return accessiFetch<Promise<deleteFederatedProviderResponse>>(getDeleteFederatedProviderUrl(provider),
+  {      
+    ...options,
+    method: 'DELETE'
+    
   }
 );}
 

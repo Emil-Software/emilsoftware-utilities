@@ -4,6 +4,7 @@ export * from "./AssignPermissionsToUserRequest";
 export * from "./AssignRolesToUserRequest";
 export * from "./AuthenticatedUserPayloadDto";
 export * from "./BaseResponse";
+export * from "./CatalogDtos";
 export * from "./ConfirmResetPasswordRequest";
 export * from "./UpdateEnabledStatusRequest"
 

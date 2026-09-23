@@ -59,6 +59,22 @@ export class FederatedAuthController {
     }
   }
 
+  @ApiOperation({ summary: 'Elimina un provider SSO', operationId: 'deleteFederatedProvider', description: 'Riservato a superutente. Consentito solo se nessuna identita e collegata al provider; in alternativa disabilitalo.' })
+  @ApiParam({ name: 'provider', example: 'azure-ad-acme-produzione', description: 'Chiave stabile del provider censito.' })
+  @ApiOkResponse({ type: ActionResponse })
+  @ApiResponse({ status: 404, type: ErrorResponse, description: 'Provider non registrato.' })
+  @ApiResponse({ status: 409, type: ErrorResponse, description: 'Provider ancora utilizzato da identita collegate.' })
+  @Delete('providers/:provider')
+  async deleteProvider(@Req() request: Request, @Param('provider') provider: string, @Res() res: Response) {
+    try {
+      ensureSuperUser(getAuthenticatedAccessiUser(request));
+      await this.federatedAuthService.deleteProvider(provider);
+      return RestUtilities.sendOKMessage(res, `Provider SSO ${provider} eliminato.`);
+    } catch (error) {
+      return this.sendError(res, error);
+    }
+  }
+
   @ApiOperation({ summary: 'Elenca le identita SSO di un utente', operationId: 'getFederatedIdentities', description: 'Riservato a superutente. Non restituisce token esterni o claim del provider.' })
   @ApiParam({ name: 'codiceUtente', example: 123 })
   @ApiOkResponse({ type: FederatedIdentityListResponse })

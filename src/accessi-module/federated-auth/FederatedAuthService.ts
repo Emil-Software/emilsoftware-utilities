@@ -261,6 +261,34 @@ export class FederatedAuthService implements OnModuleInit {
     return (await this.findProvider(provider))!;
   }
 
+  /**
+   * Elimina un provider dal catalogo. Consentito solo se nessuna identita lo referenzia: la FK
+   * `FK_UTEIDEXT_PROVIDER` impedirebbe comunque la delete, ma verifichiamo prima per restituire un
+   * messaggio amministrativo chiaro. I collegamenti storici vanno rimossi o il provider disabilitato.
+   */
+  async deleteProvider(providerValue: string): Promise<void> {
+    this.assertEnabled();
+    const provider = this.normalizeProvider(providerValue);
+    if (!(await this.findProvider(provider))) {
+      throw new NotFoundException({ code: 'FEDERATED_PROVIDER_NOT_FOUND', message: 'Provider SSO non registrato.' });
+    }
+    const usage = await Orm.query(
+      this.options.databaseOptions,
+      'SELECT COUNT(*) AS total FROM UTENTI_IDENTITA_EXT WHERE PROVIDER = ?',
+      [provider],
+    );
+    const rawTotal = (usage?.[0] as Record<string, unknown> | undefined)?.TOTAL
+      ?? (usage?.[0] as Record<string, unknown> | undefined)?.total;
+    const total = typeof rawTotal === 'number' ? rawTotal : Number.parseInt(`${rawTotal ?? '0'}`, 10);
+    if (total > 0) {
+      throw new ConflictException({
+        code: 'FEDERATED_PROVIDER_IN_USE',
+        message: `Impossibile eliminare il provider ${provider}: ${total} identita collegate. Disabilitalo oppure rimuovi prima i collegamenti.`,
+      });
+    }
+    await Orm.execute(this.options.databaseOptions, 'DELETE FROM SSO_PROVIDER WHERE PROVIDER = ?', [provider]);
+  }
+
   /** Enables or disables all local password authentication for one user. */
   /**
    * Imposta la policy di login locale. `false` non rimuove password ne identita SSO: blocca solo il percorso

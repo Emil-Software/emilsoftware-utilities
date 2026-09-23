@@ -7,7 +7,16 @@ import { AbilitazioneMenu } from "../../Dtos/AbilitazioneMenu";
 import { GroupWithMenusEntity } from "../../Dtos/GetGroupsWithMenusResponse";
 import { MenuEntity } from "../../Dtos/GetMenusResponse";
 import { Role } from "../../Dtos/Role";
-import { Inject, Injectable } from "@nestjs/common";
+import {
+    CreateMenuGroupRequest,
+    CreateMenuRequest,
+    CreateMenuTypeRequest,
+    MenuTypeEntity,
+    UpdateMenuGroupRequest,
+    UpdateMenuRequest,
+    UpdateMenuTypeRequest,
+} from "../../Dtos/CatalogDtos";
+import { BadRequestException, Inject, Injectable } from "@nestjs/common";
 
 /** Struttura storica menu/gruppi accettata dall'API legacy `addAbilitazioni`. */
 type LegacyMenuGroup = {
@@ -552,6 +561,233 @@ export class PermissionService {
         return groupsArray;
     }
 
+    // -----------------------------------------------------------------------
+    // Cataloghi di configurazione: CRUD di menu, gruppi, tipi menu.
+    // `table` e `column` sono sempre costanti interne, mai input utente: i
+    // valori sono parametrizzati, quindi non esiste superficie di SQL injection.
+    // -----------------------------------------------------------------------
+
+    private async countWhere(table: string, column: string, value: unknown): Promise<number> {
+        const result = await Orm.query(
+            this.accessiOptions.databaseOptions,
+            `SELECT COUNT(*) FROM ${table} WHERE ${column} = ?`,
+            [value],
+        );
+        return this.getCountFromResult(result);
+    }
+
+    private async assertMenuGroupExists(codiceGruppo: string): Promise<void> {
+        if ((await this.countWhere('MENU_GRP', 'CODGRP', codiceGruppo)) === 0) {
+            throw new BadRequestException(`Il gruppo menu ${codiceGruppo} non esiste.`);
+        }
+    }
+
+    private async assertMenuTypeExists(codiceTipo: string): Promise<void> {
+        if ((await this.countWhere('MENU_TIPI', 'CODTIP', codiceTipo)) === 0) {
+            throw new BadRequestException(`Il tipo menu ${codiceTipo} non esiste.`);
+        }
+    }
+
+    /** Catalogo completo dei tipi menu, usato dagli editor di configurazione. */
+    public async getMenuTypes(): Promise<MenuTypeEntity[]> {
+        const query = `SELECT CODTIP AS codice_tipo, DESTIP AS descrizione_tipo FROM MENU_TIPI ORDER BY CODTIP`;
+        const result = await Orm.query(this.accessiOptions.databaseOptions, query, []);
+        return result.map(RestUtilities.convertKeysToCamelCase) as unknown as MenuTypeEntity[];
+    }
+
+    public async createMenuType(input: CreateMenuTypeRequest): Promise<void> {
+        if ((await this.countWhere('MENU_TIPI', 'CODTIP', input.codiceTipo)) > 0) {
+            throw new BadRequestException(`Il tipo menu ${input.codiceTipo} esiste gia.`);
+        }
+        await Orm.execute(
+            this.accessiOptions.databaseOptions,
+            `INSERT INTO MENU_TIPI (CODTIP, DESTIP) VALUES (?, ?)`,
+            [input.codiceTipo, input.descrizioneTipo ?? null],
+        );
+    }
+
+    public async updateMenuType(codiceTipo: string, input: UpdateMenuTypeRequest): Promise<void> {
+        await this.assertMenuTypeExists(codiceTipo);
+        if (input.descrizioneTipo === undefined) return;
+        await Orm.execute(
+            this.accessiOptions.databaseOptions,
+            `UPDATE MENU_TIPI SET DESTIP = ? WHERE CODTIP = ?`,
+            [input.descrizioneTipo, codiceTipo],
+        );
+    }
+
+    /** Elimina un tipo menu solo se nessun menu lo utilizza (la FK lo impedirebbe comunque). */
+    public async deleteMenuType(codiceTipo: string): Promise<void> {
+        await this.assertMenuTypeExists(codiceTipo);
+        const used = await this.countWhere('MENU', 'CODTIP', codiceTipo);
+        if (used > 0) {
+            throw new BadRequestException(
+                `Impossibile eliminare il tipo ${codiceTipo}: ${used} menu lo utilizzano.`,
+            );
+        }
+        await Orm.execute(
+            this.accessiOptions.databaseOptions,
+            `DELETE FROM MENU_TIPI WHERE CODTIP = ?`,
+            [codiceTipo],
+        );
+    }
+
+    public async createMenuGroup(input: CreateMenuGroupRequest): Promise<void> {
+        if ((await this.countWhere('MENU_GRP', 'CODGRP', input.codiceGruppo)) > 0) {
+            throw new BadRequestException(`Il gruppo menu ${input.codiceGruppo} esiste gia.`);
+        }
+        await Orm.execute(
+            this.accessiOptions.databaseOptions,
+            `INSERT INTO MENU_GRP (CODGRP, DESGRP, FLGENABLED, ORDINE, NOMECAMPO) VALUES (?, ?, ?, ?, ?)`,
+            [
+                input.codiceGruppo,
+                input.descrizioneGruppo ?? null,
+                input.enabled === false ? 0 : 1,
+                input.ordineGruppo ?? 0,
+                input.nomeCampo ?? null,
+            ],
+        );
+    }
+
+    public async updateMenuGroup(codiceGruppo: string, input: UpdateMenuGroupRequest): Promise<void> {
+        await this.assertMenuGroupExists(codiceGruppo);
+
+        const sets: string[] = [];
+        const params: unknown[] = [];
+        if (input.descrizioneGruppo !== undefined) {
+            sets.push('DESGRP = ?');
+            params.push(input.descrizioneGruppo);
+        }
+        if (input.ordineGruppo !== undefined) {
+            sets.push('ORDINE = ?');
+            params.push(input.ordineGruppo);
+        }
+        if (input.enabled !== undefined) {
+            sets.push('FLGENABLED = ?');
+            params.push(input.enabled ? 1 : 0);
+        }
+        if (input.nomeCampo !== undefined) {
+            sets.push('NOMECAMPO = ?');
+            params.push(input.nomeCampo);
+        }
+        if (sets.length === 0) return;
+
+        params.push(codiceGruppo);
+        await Orm.execute(
+            this.accessiOptions.databaseOptions,
+            `UPDATE MENU_GRP SET ${sets.join(', ')} WHERE CODGRP = ?`,
+            params,
+        );
+    }
+
+    /** Elimina un gruppo solo se non contiene menu, per non lasciare menu orfani. */
+    public async deleteMenuGroup(codiceGruppo: string): Promise<void> {
+        await this.assertMenuGroupExists(codiceGruppo);
+        const used = await this.countWhere('MENU', 'CODGRP', codiceGruppo);
+        if (used > 0) {
+            throw new BadRequestException(
+                `Impossibile eliminare il gruppo ${codiceGruppo}: contiene ${used} menu.`,
+            );
+        }
+        await Orm.execute(
+            this.accessiOptions.databaseOptions,
+            `DELETE FROM MENU_GRP WHERE CODGRP = ?`,
+            [codiceGruppo],
+        );
+    }
+
+    public async createMenu(input: CreateMenuRequest): Promise<void> {
+        if ((await this.countWhere('MENU', 'CODMNU', input.codiceMenu)) > 0) {
+            throw new BadRequestException(`Il menu ${input.codiceMenu} esiste gia.`);
+        }
+        await this.assertMenuGroupExists(input.codiceGruppo);
+        if (input.tipo) await this.assertMenuTypeExists(input.tipo);
+
+        await Orm.execute(
+            this.accessiOptions.databaseOptions,
+            `INSERT INTO MENU (CODMNU, DESMNU, CODGRP, FLGENABLED, ICON, ORDINE, CODTIP, PAGINA, RIFMENU, NOTE)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            [
+                input.codiceMenu,
+                input.descrizioneMenu ?? null,
+                input.codiceGruppo,
+                input.enabled === false ? 0 : 1,
+                input.icona ?? null,
+                input.ordineMenu ?? null,
+                input.tipo ?? null,
+                input.pagina ?? null,
+                input.rifMenu ?? null,
+                input.note ?? null,
+            ],
+        );
+    }
+
+    public async updateMenu(codiceMenu: string, input: UpdateMenuRequest): Promise<void> {
+        if ((await this.countWhere('MENU', 'CODMNU', codiceMenu)) === 0) {
+            throw new BadRequestException(`Il menu ${codiceMenu} non esiste.`);
+        }
+        if (input.codiceGruppo !== undefined) await this.assertMenuGroupExists(input.codiceGruppo);
+        if (input.tipo) await this.assertMenuTypeExists(input.tipo);
+
+        const sets: string[] = [];
+        const params: unknown[] = [];
+        if (input.descrizioneMenu !== undefined) {
+            sets.push('DESMNU = ?');
+            params.push(input.descrizioneMenu);
+        }
+        if (input.codiceGruppo !== undefined) {
+            sets.push('CODGRP = ?');
+            params.push(input.codiceGruppo);
+        }
+        if (input.tipo !== undefined) {
+            sets.push('CODTIP = ?');
+            params.push(input.tipo || null);
+        }
+        if (input.icona !== undefined) {
+            sets.push('ICON = ?');
+            params.push(input.icona);
+        }
+        if (input.pagina !== undefined) {
+            sets.push('PAGINA = ?');
+            params.push(input.pagina);
+        }
+        if (input.ordineMenu !== undefined) {
+            sets.push('ORDINE = ?');
+            params.push(input.ordineMenu);
+        }
+        if (input.enabled !== undefined) {
+            sets.push('FLGENABLED = ?');
+            params.push(input.enabled ? 1 : 0);
+        }
+        if (input.rifMenu !== undefined) {
+            sets.push('RIFMENU = ?');
+            params.push(input.rifMenu);
+        }
+        if (input.note !== undefined) {
+            sets.push('NOTE = ?');
+            params.push(input.note);
+        }
+        if (sets.length === 0) return;
+
+        params.push(codiceMenu);
+        await Orm.execute(
+            this.accessiOptions.databaseOptions,
+            `UPDATE MENU SET ${sets.join(', ')} WHERE CODMNU = ?`,
+            params,
+        );
+    }
+
+    /** Elimina menu, grant utente e associazioni ruolo in un'unica transazione. */
+    public async deleteMenu(codiceMenu: string): Promise<void> {
+        if ((await this.countWhere('MENU', 'CODMNU', codiceMenu)) === 0) {
+            throw new BadRequestException(`Il menu ${codiceMenu} non esiste.`);
+        }
+        await Orm.executeMultiple(this.accessiOptions.databaseOptions, [
+            { query: `DELETE FROM ABILITAZIONI WHERE CODMNU = ?`, params: [codiceMenu] },
+            { query: `DELETE FROM RUOLI_MNU WHERE CODMNU = ?`, params: [codiceMenu] },
+            { query: `DELETE FROM MENU WHERE CODMNU = ?`, params: [codiceMenu] },
+        ]);
+    }
 
 
     /**

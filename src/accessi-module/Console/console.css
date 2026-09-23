@@ -101,8 +101,9 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
 }
 .card h1 { margin: 0 0 var(--s2); }
 .card > p { margin: 0 0 var(--s5); color: var(--muted); }
-.card form { gap: var(--s3); }
+.card form { gap: var(--s4); }
 .card form button, .card > button { width: 100%; }
+.card > button { margin-top: var(--s3); }
 
 #console { display: grid; grid-template-columns: var(--sidebar-w) minmax(0, 1fr); gap: var(--gutter); align-items: start; }
 
@@ -138,8 +139,10 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
 .brand strong { display: block; font-size: var(--fs-md); }
 .brand small { display: block; overflow: hidden; color: var(--muted); font-size: var(--fs-xs); text-overflow: ellipsis; white-space: nowrap; }
 
-nav { display: flex; flex-direction: column; gap: var(--s1); }
-nav a {
+/* Navigazione della sidebar (scoped: NON usare il selettore `nav` nudo,
+   altrimenti colpisce anche il paginatore, che è un <nav>). */
+.sidebar nav { display: flex; flex-direction: column; gap: var(--s1); }
+.sidebar nav a {
   display: flex;
   align-items: center;
   gap: var(--s3);
@@ -151,10 +154,35 @@ nav a {
   font-weight: 550;
   text-decoration: none;
 }
-nav a svg { flex: 0 0 18px; width: 18px; height: 18px; opacity: .78; }
-nav a:hover { color: var(--ink); background: var(--surface-hover); }
-nav a[aria-current="page"] { color: var(--brand-strong); background: var(--brand-soft); font-weight: 650; }
-nav a[aria-current="page"] svg { opacity: 1; }
+.sidebar nav a svg { flex: 0 0 18px; width: 18px; height: 18px; opacity: .78; }
+.sidebar nav a:hover { color: var(--ink); background: var(--surface-hover); }
+.sidebar nav a[aria-current="page"] { color: var(--brand-strong); background: var(--brand-soft); font-weight: 650; }
+.sidebar nav a[aria-current="page"] svg { opacity: 1; }
+
+/* Navigazione ad albero: voci unitarie e rami con sottomenu */
+.nav-tree { display: flex; flex-direction: column; gap: 2px; margin: 0; padding: 0; list-style: none; }
+.nav-tree summary {
+  display: flex;
+  align-items: center;
+  gap: var(--s3);
+  padding: var(--s2) var(--s3);
+  border-radius: var(--r-sm);
+  color: var(--ink-2);
+  font-size: var(--fs-sm);
+  font-weight: 550;
+  cursor: pointer;
+  list-style: none;
+}
+.nav-tree summary::-webkit-details-marker { display: none; }
+.nav-tree summary:hover { color: var(--ink); background: var(--surface-hover); }
+.nav-tree summary > svg:first-child { flex: 0 0 18px; width: 18px; height: 18px; opacity: .78; }
+.nav-tree summary > span { flex: 1 1 auto; }
+.nav-chevron { flex: 0 0 14px; width: 14px; height: 14px; opacity: .5; transition: transform .15s ease; }
+details[data-nav-group][open] > summary .nav-chevron { transform: rotate(90deg); }
+details[data-nav-group]:has([aria-current="page"]) > summary { color: var(--brand-strong); background: var(--brand-soft); }
+.nav-tree ul { display: flex; flex-direction: column; gap: 2px; margin: 2px 0 2px var(--s4); padding-left: var(--s3); border-left: 1px solid var(--line); list-style: none; }
+.nav-tree ul a { padding-left: var(--s3); }
+.nav-tree ul a svg { display: none; }
 
 .sidebar-logout { justify-content: center; margin-top: var(--s2); }
 .content { min-width: 0; display: grid; gap: var(--s4); }
@@ -310,19 +338,50 @@ table code, .entity-metadata dd, .brand small, .role-code { font-variant-numeric
 .role-assignment-card { margin: 0; overflow: hidden; border: 1px solid var(--line); border-radius: var(--r-md); background: var(--surface); }
 .role-assignment-heading { display: flex; align-items: center; justify-content: space-between; gap: var(--s4); padding: var(--s3) var(--s4); border-bottom: 1px solid var(--line); background: var(--surface-sunken); }
 .role-assignment-heading .check { padding: 0; }
-.role-overview-card { position: relative; }
-.role-overview-details { min-width: 0; }
-.role-overview-details > summary { position: relative; min-height: 68px; padding: var(--s3) 120px var(--s3) var(--s4); list-style: none; cursor: pointer; border-bottom: 1px solid var(--line); background: var(--surface-sunken); }
-.role-overview-details > summary::-webkit-details-marker { display: none; }
-.role-overview-details > summary:hover { background: var(--surface-hover); }
-.role-identity > strong, .role-code { display: block; }
-.role-identity > strong { color: var(--ink); font-size: var(--fs-md); }
-.role-code { margin-top: 2px; color: var(--muted); font-family: var(--font-mono); font-size: var(--fs-xs); font-weight: 500; }
-.role-overview-actions { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: var(--s2); }
 .role-menu-count { flex: 0 0 auto; padding: 2px var(--s2); border: 1px solid var(--line); border-radius: var(--r-pill); color: var(--ink-2); font-family: var(--font-mono); font-size: var(--fs-xs); font-weight: 650; background: var(--surface); }
-.role-expand-hint { color: var(--muted); font-size: var(--fs-xs); font-weight: 600; }
-.role-overview-details[open] .when-closed, .role-overview-details:not([open]) .when-open { display: none; }
-.role-edit-button { position: absolute; top: var(--s3); right: var(--s4); min-height: 34px; }
+
+/* Schede ruolo: intestazione con azioni in linea, menu assegnati su richiesta */
+.role-card { overflow: hidden; border: 1px solid var(--line); border-radius: var(--r-md); background: var(--surface); }
+.role-card-head { display: flex; align-items: center; justify-content: space-between; gap: var(--s4); padding: var(--s3) var(--s4); background: var(--surface-sunken); }
+.role-card-title { min-width: 0; }
+.role-card-title strong { display: block; color: var(--ink); font-size: var(--fs-md); }
+.role-card-meta { display: block; margin-top: 2px; color: var(--muted); font-size: var(--fs-xs); font-variant-numeric: tabular-nums; }
+.role-card-actions { display: flex; flex: 0 0 auto; gap: var(--s2); }
+.role-card-actions button { min-height: 34px; }
+.role-card-empty { margin: 0; padding: var(--s3) var(--s4); color: var(--muted); font-size: var(--fs-sm); }
+.role-card-menus { border-top: 1px solid var(--line); }
+.role-card-menus > summary { padding: var(--s2) var(--s4); color: var(--ink-2); font-size: var(--fs-sm); font-weight: 600; cursor: pointer; list-style: none; }
+.role-card-menus > summary::-webkit-details-marker { display: none; }
+.role-card-menus > summary:hover { background: var(--surface-hover); }
+.role-card-menus[open] > summary { border-bottom: 1px solid var(--line); }
+/* Albero delle abilitazioni: gruppo -> menu -> livello */
+.role-tree { margin: 0; padding: 0; list-style: none; }
+.role-tree-group { border-bottom: 1px solid var(--line); }
+.role-tree-group:last-child { border-bottom: 0; }
+.role-tree-group.is-disabled > .role-tree-group-head strong { color: var(--muted); }
+.role-tree-group.is-orphan > .role-tree-group-head strong { color: var(--warn-ink); }
+.role-tree-group-head { display: flex; align-items: center; gap: var(--s2); padding: var(--s2) var(--s4); background: var(--surface-sunken); }
+.role-tree-group-head::before { content: ""; flex: 0 0 auto; width: 0; height: 0; border-left: 5px solid var(--muted); border-top: 4px solid transparent; border-bottom: 4px solid transparent; }
+.role-tree-group-head strong { flex: 1 1 auto; min-width: 0; color: var(--ink-2); font-size: var(--fs-sm); }
+.role-tree-count { flex: 0 0 auto; color: var(--muted); font-size: var(--fs-xs); font-variant-numeric: tabular-nums; }
+.role-tree-menus { margin: 0 0 var(--s1) var(--s5); padding: 0 0 0 var(--s3); list-style: none; border-left: 1px solid var(--line); }
+.role-tree-menu { position: relative; display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: var(--s3); padding: var(--s1) var(--s4) var(--s1) var(--s2); font-size: var(--fs-sm); }
+.role-tree-menu::before { content: ""; position: absolute; top: 50%; left: calc(-1 * var(--s3)); width: var(--s3); height: 1px; background: var(--line); }
+.role-tree-menu-name { min-width: 0; color: var(--ink); }
+.role-tree-menu.is-disabled .role-tree-menu-name { color: var(--muted); }
+.role-tree-menu .permission-level { min-width: 76px; }
+
+/* Editor menu del ruolo: inclusione e livello, una riga per menu */
+.role-menu-group-head { display: flex; align-items: baseline; justify-content: space-between; gap: var(--s3); padding: var(--s2) var(--s3); border-bottom: 1px solid var(--line); background: var(--surface-sunken); }
+.role-menu-group-head strong { color: var(--ink); font-size: var(--fs-sm); }
+.role-menu-options { margin: 0; padding: 0; list-style: none; }
+.role-menu-option { display: flex; align-items: center; justify-content: space-between; gap: var(--s3); padding: var(--s1) var(--s3); border-bottom: 1px solid var(--line); }
+.role-menu-option:last-child { border-bottom: 0; }
+.role-menu-option.is-disabled { opacity: .55; }
+.role-menu-option .check { flex: 1 1 auto; }
+.role-menu-level { display: inline-flex; align-items: center; gap: var(--s2); flex: 0 0 auto; color: var(--muted); font-size: var(--fs-xs); }
+.role-menu-level select { min-height: 32px; padding: var(--s1) var(--s2); font-size: var(--fs-sm); }
+.role-menu-empty { padding: var(--s2) var(--s3); font-size: var(--fs-sm); }
 .role-permission-groups { display: grid; gap: var(--s3); padding: var(--s3); }
 .role-permission-group { overflow: hidden; border: 1px solid var(--line); border-radius: var(--r-sm); }
 .role-permission-group-heading { display: flex; align-items: start; justify-content: space-between; gap: var(--s3); padding: var(--s2) var(--s3); border-bottom: 1px solid var(--line); color: var(--ink-2); background: var(--surface-sunken); }
@@ -391,21 +450,58 @@ article h3 { margin-bottom: var(--s2); }
 .token-reveal code { flex: 1 1 100%; word-break: break-all; color: var(--brand-strong); font-family: var(--font-mono); font-size: var(--fs-sm); }
 .token-reveal button { flex: 0 0 auto; }
 
-/* Paginatore: riga orizzontale proporzionale al contenuto, allineata a destra */
-.pager { display: flex; flex: 0 0 auto; flex-wrap: nowrap; align-items: center; gap: var(--s1); margin-left: auto; white-space: nowrap; }
-.pager-row { display: flex; justify-content: flex-end; margin-top: var(--s4); }
-#notice:empty { display: none; }
-.pager-step { min-width: 34px; min-height: 34px; padding: 0 var(--s2); font-size: var(--fs-lg); line-height: 1; }
-.pager-page { min-width: 34px; min-height: 34px; padding: 0 var(--s2); border: 1px solid var(--line-strong); color: var(--ink-2); background: var(--surface); font-weight: 600; font-variant-numeric: tabular-nums; }
-.pager-page:hover { border-color: #b9c4cc; color: var(--ink); background: var(--surface-sunken); }
-.pager-page[aria-current="page"] { border-color: var(--brand); color: #fff; background: var(--brand); }
-.pager-gap { padding: 0 var(--s1); color: var(--muted); }
-.pager-total { margin-left: var(--s2); color: var(--muted); font-size: var(--fs-sm); font-variant-numeric: tabular-nums; }
+/* Paginatore — contenitore dedicato sopra/sotto la tabella, sempre orizzontale */
+.pager-row { display: flex; justify-content: flex-end; }
+.pager-row-top { margin: 0 0 var(--s3); }
+.pager-row-bottom { margin-top: var(--s4); }
 
-@media (max-width: 720px) {
-  .pager { margin-left: 0; }
-  .pager-total { flex-basis: 100%; margin-left: 0; }
+.pager { display: inline-flex; flex-direction: row; flex-wrap: nowrap; align-items: center; gap: var(--s3); white-space: nowrap; }
+.pager-controls { display: inline-flex; flex-direction: row; flex-wrap: nowrap; align-items: center; gap: var(--s1); }
+.pager-item {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 34px;
+  height: 34px;
+  padding: 0 var(--s2);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--r-sm);
+  color: var(--ink-2);
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  background: var(--surface);
 }
+.pager-item:hover:not(:disabled):not([aria-current="page"]) { border-color: #b9c4cc; color: var(--ink); background: var(--surface-sunken); }
+.pager-item[aria-current="page"] { border-color: var(--brand); color: #fff; background: var(--brand); cursor: default; }
+.pager-item:disabled { opacity: .45; }
+.pager-nav { font-size: var(--fs-lg); }
+.pager-gap { display: inline-flex; align-items: center; justify-content: center; min-width: 24px; color: var(--muted); }
+.pager-context { color: var(--muted); font-size: var(--fs-sm); font-variant-numeric: tabular-nums; }
+#notice:empty { display: none; }
+
+/* Ruoli in tabella: etichette con espansione "altre N" */
+.roles-col { max-width: 320px; white-space: normal; }
+.roles-cell { display: inline-flex; flex-wrap: wrap; align-items: center; gap: var(--s1) var(--s2); }
+.roles-list { min-width: 0; }
+.link-button {
+  min-height: 0;
+  padding: 0;
+  border: 0;
+  color: var(--brand);
+  font-weight: 600;
+  text-decoration: underline;
+  background: none;
+}
+.link-button:hover { color: var(--brand-strong); background: none; box-shadow: none; }
+
+/* Azioni di gestione: pulsanti compatti nelle tabelle catalogo e nelle card */
+.row-actions { display: flex; flex-wrap: wrap; gap: var(--s1); justify-content: flex-end; }
+.row-actions button { min-height: 30px; padding: 0 var(--s2); font-size: var(--fs-xs); }
+.menu-group-actions { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: var(--s2); justify-content: flex-end; }
+.inline-field { display: inline-flex; align-items: center; gap: var(--s2); color: var(--muted); font-size: var(--fs-sm); }
+.inline-field select { min-height: 34px; }
 
 /* Feedback di caricamento */
 #loading-overlay { position: fixed; z-index: 1000; inset: 0; display: grid; place-items: center; padding: var(--s5); background: rgb(12 28 39 / 28%); backdrop-filter: blur(2px); }
@@ -423,8 +519,7 @@ article h3 { margin-bottom: var(--s2); }
   #console { grid-template-columns: 1fr; }
   .sidebar { position: static; flex-direction: row; flex-wrap: wrap; align-items: center; }
   .brand { flex: 1 1 auto; }
-  nav { flex: 1 1 100%; flex-direction: row; flex-wrap: wrap; }
-  nav a { flex: 0 0 auto; }
+  .sidebar nav { flex: 1 1 100%; }
   .sidebar-logout { margin: 0; }
 }
 
@@ -444,8 +539,10 @@ article h3 { margin-bottom: var(--s2); }
   .section-heading { display: grid; }
   .sso-identity-actions { justify-content: flex-start; }
   .role-assignment-heading, .role-permission-group-heading, .role-permission-entry { display: grid; grid-template-columns: 1fr; }
-  .role-overview-actions { justify-content: flex-start; }
   .role-permission-group-heading > .entity-metadata { justify-content: flex-start; }
+  .role-card-head { flex-direction: column; align-items: stretch; }
+  .role-card-actions { justify-content: flex-start; }
+  .role-tree-menu { grid-template-columns: 1fr; }
   .permission-level { justify-self: start; }
   table { display: block; overflow-x: auto; white-space: nowrap; }
   .menu-table { display: table; }

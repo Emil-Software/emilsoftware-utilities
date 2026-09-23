@@ -724,6 +724,62 @@
         "tags": [
           "Permission"
         ]
+      },
+      "post": {
+        "operationId": "createMenu",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "description": "Dati del nuovo menu",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateMenuRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Menu creato con successo",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ActionResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Dati non validi",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Errore interno del server",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Crea un nuovo menu",
+        "tags": [
+          "Permission"
+        ]
       }
     },
     "/api/accessi/permission/groups-with-menus": {
@@ -768,6 +824,532 @@
           }
         ],
         "summary": "Recupera tutti i gruppi disponibili con i relativi menu",
+        "tags": [
+          "Permission"
+        ]
+      }
+    },
+    "/api/accessi/permission/menu-types": {
+      "get": {
+        "operationId": "getMenuTypes",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Elenco dei tipi menu",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GetMenuTypesResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Errore interno del server",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Recupera il catalogo dei tipi menu",
+        "tags": [
+          "Permission"
+        ]
+      },
+      "post": {
+        "operationId": "createMenuType",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "description": "Dati del nuovo tipo menu",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateMenuTypeRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Tipo menu creato con successo",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ActionResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Dati non validi",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Errore interno del server",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Crea un nuovo tipo menu",
+        "tags": [
+          "Permission"
+        ]
+      }
+    },
+    "/api/accessi/permission/menus/{codiceMenu}": {
+      "put": {
+        "operationId": "updateMenu",
+        "parameters": [
+          {
+            "name": "codiceMenu",
+            "required": true,
+            "in": "path",
+            "description": "Codice del menu da aggiornare",
+            "schema": {
+              "example": "MNU001",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "description": "Campi del menu da aggiornare",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateMenuRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Menu aggiornato con successo",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ActionResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Dati non validi",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Errore interno del server",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Aggiorna un menu esistente",
+        "tags": [
+          "Permission"
+        ]
+      },
+      "delete": {
+        "operationId": "deleteMenu",
+        "parameters": [
+          {
+            "name": "codiceMenu",
+            "required": true,
+            "in": "path",
+            "description": "Codice del menu da eliminare",
+            "schema": {
+              "example": "MNU001",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Menu eliminato con successo",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ActionResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Dati non validi",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Errore interno del server",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Elimina un menu",
+        "tags": [
+          "Permission"
+        ]
+      }
+    },
+    "/api/accessi/permission/menu-groups": {
+      "post": {
+        "operationId": "createMenuGroup",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "description": "Dati del nuovo gruppo",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateMenuGroupRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Gruppo creato con successo",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ActionResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Dati non validi",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Errore interno del server",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Crea un nuovo gruppo menu",
+        "tags": [
+          "Permission"
+        ]
+      }
+    },
+    "/api/accessi/permission/menu-groups/{codiceGruppo}": {
+      "put": {
+        "operationId": "updateMenuGroup",
+        "parameters": [
+          {
+            "name": "codiceGruppo",
+            "required": true,
+            "in": "path",
+            "description": "Codice del gruppo da aggiornare",
+            "schema": {
+              "example": "A",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "description": "Campi del gruppo da aggiornare",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateMenuGroupRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Gruppo aggiornato con successo",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ActionResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Dati non validi",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Errore interno del server",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Aggiorna un gruppo menu",
+        "tags": [
+          "Permission"
+        ]
+      },
+      "delete": {
+        "operationId": "deleteMenuGroup",
+        "parameters": [
+          {
+            "name": "codiceGruppo",
+            "required": true,
+            "in": "path",
+            "description": "Codice del gruppo da eliminare",
+            "schema": {
+              "example": "A",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Gruppo eliminato con successo",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ActionResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Dati non validi",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Errore interno del server",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Elimina un gruppo menu",
+        "tags": [
+          "Permission"
+        ]
+      }
+    },
+    "/api/accessi/permission/menu-types/{codiceTipo}": {
+      "put": {
+        "operationId": "updateMenuType",
+        "parameters": [
+          {
+            "name": "codiceTipo",
+            "required": true,
+            "in": "path",
+            "description": "Codice del tipo menu da aggiornare",
+            "schema": {
+              "example": "A",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "description": "Campi del tipo menu da aggiornare",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateMenuTypeRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Tipo menu aggiornato con successo",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ActionResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Dati non validi",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Errore interno del server",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Aggiorna un tipo menu",
+        "tags": [
+          "Permission"
+        ]
+      },
+      "delete": {
+        "operationId": "deleteMenuType",
+        "parameters": [
+          {
+            "name": "codiceTipo",
+            "required": true,
+            "in": "path",
+            "description": "Codice del tipo menu da eliminare",
+            "schema": {
+              "example": "A",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Tipo menu eliminato con successo",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ActionResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Dati non validi",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Errore interno del server",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Elimina un tipo menu",
         "tags": [
           "Permission"
         ]
@@ -1337,6 +1919,188 @@
         "tags": [
           "Filtri"
         ]
+      },
+      "post": {
+        "description": "Inserisce una nuova voce nel catalogo dei tipi di filtro. Operazione riservata al superutente.",
+        "operationId": "createTipoFiltro",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateFilterTypeRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Tipo filtro creato con successo",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ActionResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Dati non validi",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Errore interno del server",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Crea un tipo di filtro",
+        "tags": [
+          "Filtri"
+        ]
+      }
+    },
+    "/api/accessi/filtri/tipi/{tipFil}": {
+      "put": {
+        "description": "Aggiorna descrizione, campo o stato di un tipo di filtro esistente.",
+        "operationId": "updateTipoFiltro",
+        "parameters": [
+          {
+            "name": "tipFil",
+            "required": true,
+            "in": "path",
+            "description": "Identificativo del tipo filtro",
+            "schema": {
+              "example": 1,
+              "type": "number"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateFilterTypeRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Tipo filtro aggiornato con successo",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ActionResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Dati non validi",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Errore interno del server",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Aggiorna un tipo di filtro",
+        "tags": [
+          "Filtri"
+        ]
+      },
+      "delete": {
+        "description": "Elimina un tipo di filtro solo se nessun filtro utente lo utilizza.",
+        "operationId": "deleteTipoFiltro",
+        "parameters": [
+          {
+            "name": "tipFil",
+            "required": true,
+            "in": "path",
+            "description": "Identificativo del tipo filtro",
+            "schema": {
+              "example": 1,
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Tipo filtro eliminato con successo",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ActionResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Dati non validi",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Errore interno del server",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Elimina un tipo di filtro",
+        "tags": [
+          "Filtri"
+        ]
       }
     },
     "/api/accessi/filtri/utente": {
@@ -1757,6 +2521,63 @@
           }
         ],
         "summary": "Aggiorna o disabilita un provider SSO",
+        "tags": [
+          "Federated authentication"
+        ]
+      },
+      "delete": {
+        "description": "Riservato a superutente. Consentito solo se nessuna identita e collegata al provider; in alternativa disabilitalo.",
+        "operationId": "deleteFederatedProvider",
+        "parameters": [
+          {
+            "name": "provider",
+            "required": true,
+            "in": "path",
+            "description": "Chiave stabile del provider censito.",
+            "schema": {
+              "example": "azure-ad-acme-produzione",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ActionResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Provider non registrato.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Provider ancora utilizzato da identita collegate.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Elimina un provider SSO",
         "tags": [
           "Federated authentication"
         ]
@@ -3503,6 +4324,265 @@
           "Result"
         ]
       },
+      "MenuTypeEntity": {
+        "type": "object",
+        "properties": {
+          "codiceTipo": {
+            "type": "string",
+            "description": "Codice del tipo menu (1 carattere).",
+            "example": "A"
+          },
+          "descrizioneTipo": {
+            "type": "string",
+            "description": "Descrizione del tipo menu.",
+            "example": "Amministrazione"
+          }
+        },
+        "required": [
+          "codiceTipo"
+        ]
+      },
+      "GetMenuTypesResponse": {
+        "type": "object",
+        "properties": {
+          "Status": {
+            "$ref": "#/components/schemas/Status"
+          },
+          "Message": {
+            "type": "string",
+            "example": "Dati recuperati con successo.",
+            "description": "Messaggio informativo restituito dalla libreria quando presente."
+          },
+          "Result": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MenuTypeEntity"
+            }
+          }
+        },
+        "required": [
+          "Status",
+          "Result"
+        ]
+      },
+      "CreateMenuRequest": {
+        "type": "object",
+        "properties": {
+          "codiceMenu": {
+            "type": "string",
+            "description": "Codice univoco del menu.",
+            "example": "MNU001",
+            "maxLength": 20
+          },
+          "descrizioneMenu": {
+            "type": "string",
+            "description": "Descrizione del menu.",
+            "example": "Gestione Utenti",
+            "maxLength": 100
+          },
+          "codiceGruppo": {
+            "type": "string",
+            "description": "Codice del gruppo di appartenenza.",
+            "example": "A",
+            "maxLength": 1
+          },
+          "tipo": {
+            "type": "string",
+            "description": "Codice del tipo menu.",
+            "example": "A",
+            "maxLength": 1
+          },
+          "icona": {
+            "type": "string",
+            "description": "Percorso dell'icona.",
+            "example": "fa-users",
+            "maxLength": 50
+          },
+          "pagina": {
+            "type": "string",
+            "description": "Pagina associata al menu.",
+            "example": "/accessi/gestione-utenti",
+            "maxLength": 50
+          },
+          "ordineMenu": {
+            "type": "number",
+            "description": "Ordine di visualizzazione del menu.",
+            "example": 1
+          },
+          "enabled": {
+            "type": "boolean",
+            "description": "Menu abilitato.",
+            "example": true
+          },
+          "rifMenu": {
+            "type": "string",
+            "description": "Menu di riferimento (gerarchia).",
+            "example": "MNU000",
+            "maxLength": 20
+          },
+          "note": {
+            "type": "string",
+            "description": "Nota informativa associata al menu.",
+            "example": "Visibile solo agli amministratori",
+            "maxLength": 1000
+          }
+        },
+        "required": [
+          "codiceMenu",
+          "codiceGruppo"
+        ]
+      },
+      "UpdateMenuRequest": {
+        "type": "object",
+        "properties": {
+          "descrizioneMenu": {
+            "type": "string",
+            "description": "Descrizione del menu.",
+            "example": "Gestione Utenti",
+            "maxLength": 100
+          },
+          "codiceGruppo": {
+            "type": "string",
+            "description": "Codice del gruppo di appartenenza.",
+            "example": "A",
+            "maxLength": 1
+          },
+          "tipo": {
+            "type": "string",
+            "description": "Codice del tipo menu.",
+            "example": "A",
+            "maxLength": 1
+          },
+          "icona": {
+            "type": "string",
+            "description": "Percorso dell'icona.",
+            "example": "fa-users",
+            "maxLength": 50
+          },
+          "pagina": {
+            "type": "string",
+            "description": "Pagina associata al menu.",
+            "example": "/accessi/gestione-utenti",
+            "maxLength": 50
+          },
+          "ordineMenu": {
+            "type": "number",
+            "description": "Ordine di visualizzazione del menu.",
+            "example": 1
+          },
+          "enabled": {
+            "type": "boolean",
+            "description": "Menu abilitato.",
+            "example": true
+          },
+          "rifMenu": {
+            "type": "string",
+            "description": "Menu di riferimento (gerarchia).",
+            "example": "MNU000",
+            "maxLength": 20
+          },
+          "note": {
+            "type": "string",
+            "description": "Nota informativa associata al menu.",
+            "example": "Visibile solo agli amministratori",
+            "maxLength": 1000
+          }
+        }
+      },
+      "CreateMenuGroupRequest": {
+        "type": "object",
+        "properties": {
+          "codiceGruppo": {
+            "type": "string",
+            "description": "Codice del gruppo (1 carattere).",
+            "example": "A",
+            "maxLength": 1
+          },
+          "descrizioneGruppo": {
+            "type": "string",
+            "description": "Descrizione del gruppo.",
+            "example": "Gestione Accessi",
+            "maxLength": 100
+          },
+          "ordineGruppo": {
+            "type": "number",
+            "description": "Ordine di visualizzazione del gruppo.",
+            "example": 1
+          },
+          "enabled": {
+            "type": "boolean",
+            "description": "Gruppo abilitato.",
+            "example": true
+          },
+          "nomeCampo": {
+            "type": "string",
+            "description": "Nome del campo applicativo associato al gruppo.",
+            "example": "REPARTO",
+            "maxLength": 20
+          }
+        },
+        "required": [
+          "codiceGruppo"
+        ]
+      },
+      "UpdateMenuGroupRequest": {
+        "type": "object",
+        "properties": {
+          "descrizioneGruppo": {
+            "type": "string",
+            "description": "Descrizione del gruppo.",
+            "example": "Gestione Accessi",
+            "maxLength": 100
+          },
+          "ordineGruppo": {
+            "type": "number",
+            "description": "Ordine di visualizzazione del gruppo.",
+            "example": 1
+          },
+          "enabled": {
+            "type": "boolean",
+            "description": "Gruppo abilitato.",
+            "example": true
+          },
+          "nomeCampo": {
+            "type": "string",
+            "description": "Nome del campo applicativo associato al gruppo.",
+            "example": "REPARTO",
+            "maxLength": 20
+          }
+        }
+      },
+      "CreateMenuTypeRequest": {
+        "type": "object",
+        "properties": {
+          "codiceTipo": {
+            "type": "string",
+            "description": "Codice del tipo menu (1 carattere).",
+            "example": "A",
+            "maxLength": 1
+          },
+          "descrizioneTipo": {
+            "type": "string",
+            "description": "Descrizione del tipo menu.",
+            "example": "Amministrazione",
+            "maxLength": 20
+          }
+        },
+        "required": [
+          "codiceTipo"
+        ]
+      },
+      "UpdateMenuTypeRequest": {
+        "type": "object",
+        "properties": {
+          "descrizioneTipo": {
+            "type": "string",
+            "description": "Descrizione del tipo menu.",
+            "example": "Amministrazione",
+            "maxLength": 20
+          }
+        }
+      },
       "UserGrantsResponse": {
         "type": "object",
         "properties": {
@@ -3939,6 +5019,68 @@
           "Status",
           "Result"
         ]
+      },
+      "CreateFilterTypeRequest": {
+        "type": "object",
+        "properties": {
+          "tipFil": {
+            "type": "number",
+            "description": "Identificativo del tipo di filtro.",
+            "example": 1
+          },
+          "desFil": {
+            "type": "string",
+            "description": "Descrizione del filtro.",
+            "example": "Filtro standard",
+            "maxLength": 20
+          },
+          "fldFil": {
+            "type": "string",
+            "description": "Campo associato al filtro.",
+            "example": "CODCLI",
+            "maxLength": 20
+          },
+          "flgEnabled": {
+            "type": "number",
+            "description": "Filtro abilitato.",
+            "example": 1,
+            "enum": [
+              0,
+              1
+            ],
+            "default": 1
+          }
+        },
+        "required": [
+          "tipFil"
+        ]
+      },
+      "UpdateFilterTypeRequest": {
+        "type": "object",
+        "properties": {
+          "desFil": {
+            "type": "string",
+            "description": "Descrizione del filtro.",
+            "example": "Filtro standard",
+            "maxLength": 20
+          },
+          "fldFil": {
+            "type": "string",
+            "description": "Campo associato al filtro.",
+            "example": "CODCLI",
+            "maxLength": 20
+          },
+          "flgEnabled": {
+            "type": "number",
+            "description": "Filtro abilitato.",
+            "example": 1,
+            "enum": [
+              0,
+              1
+            ],
+            "default": 1
+          }
+        }
       },
       "GetFiltriUtenteResponse": {
         "type": "object",

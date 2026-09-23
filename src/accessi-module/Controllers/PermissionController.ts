@@ -30,6 +30,15 @@ import { RestUtilities } from '../../Utilities';
 import { ActionResponse, ErrorResponse } from '../Dtos/BaseResponse';
 import { AssignPermissionsToUserRequest } from '../Dtos/AssignPermissionsToUserRequest';
 import { AssignRolesToUserRequest } from '../Dtos/AssignRolesToUserRequest';
+import {
+  CreateMenuGroupRequest,
+  CreateMenuRequest,
+  CreateMenuTypeRequest,
+  GetMenuTypesResponse,
+  UpdateMenuGroupRequest,
+  UpdateMenuRequest,
+  UpdateMenuTypeRequest,
+} from '../Dtos/CatalogDtos';
 import { GetGroupsWithMenusResponse } from '../Dtos/GetGroupsWithMenusResponse';
 import { GetMenusResponse } from '../Dtos/GetMenusResponse';
 import { GetRolesResponse } from '../Dtos/GetRolesResponse';
@@ -317,6 +326,197 @@ export class PermissionController {
 
       const menus = await this.permissionService.getGroupsWithMenus(includeDisabledFlag);
       return RestUtilities.sendBaseResponse(res, menus);
+    } catch (error) {
+      return this.sendControllerError(res, error);
+    }
+  }
+
+  // -------------------------------------------------------------------------
+  // Gestione catalogo: tipi menu, gruppi, menu. Operazioni riservate al superutente.
+  // -------------------------------------------------------------------------
+
+  @ApiOperation({ summary: 'Recupera il catalogo dei tipi menu', operationId: 'getMenuTypes' })
+  @ApiOkResponse({ description: 'Elenco dei tipi menu', type: GetMenuTypesResponse })
+  @ApiResponse({ status: 500, description: 'Errore interno del server', type: ErrorResponse })
+  @Get('menu-types')
+  async getMenuTypes(@Res() res: Response) {
+    try {
+      const types = await this.permissionService.getMenuTypes();
+      return RestUtilities.sendBaseResponse(res, types);
+    } catch (error) {
+      return this.sendControllerError(res, error);
+    }
+  }
+
+  @ApiOperation({ summary: 'Crea un nuovo menu', operationId: 'createMenu' })
+  @ApiBody({ type: CreateMenuRequest, description: 'Dati del nuovo menu' })
+  @ApiResponse({ status: 201, description: 'Menu creato con successo', type: ActionResponse })
+  @ApiResponse({ status: 400, description: 'Dati non validi', type: ErrorResponse })
+  @ApiResponse({ status: 500, description: 'Errore interno del server', type: ErrorResponse })
+  @Post('menus')
+  async createMenu(@Req() request: Request, @Body() body: CreateMenuRequest, @Res() res: Response) {
+    try {
+      ensureSuperUser(getAuthenticatedAccessiUser(request), 'Solo gli amministratori possono creare menu.');
+      await this.permissionService.createMenu(body);
+      return RestUtilities.sendOKMessage(
+        res,
+        `Il menu ${body.codiceMenu} e' stato creato con successo.`,
+        HttpStatus.CREATED,
+      );
+    } catch (error) {
+      return this.sendControllerError(res, error);
+    }
+  }
+
+  @ApiOperation({ summary: 'Aggiorna un menu esistente', operationId: 'updateMenu' })
+  @ApiParam({ name: 'codiceMenu', description: 'Codice del menu da aggiornare', required: true, example: 'MNU001' })
+  @ApiBody({ type: UpdateMenuRequest, description: 'Campi del menu da aggiornare' })
+  @ApiResponse({ status: 200, description: 'Menu aggiornato con successo', type: ActionResponse })
+  @ApiResponse({ status: 400, description: 'Dati non validi', type: ErrorResponse })
+  @ApiResponse({ status: 500, description: 'Errore interno del server', type: ErrorResponse })
+  @Put('menus/:codiceMenu')
+  async updateMenu(
+    @Req() request: Request,
+    @Param('codiceMenu') codiceMenu: string,
+    @Body() body: UpdateMenuRequest,
+    @Res() res: Response,
+  ) {
+    try {
+      ensureSuperUser(getAuthenticatedAccessiUser(request), 'Solo gli amministratori possono modificare menu.');
+      await this.permissionService.updateMenu(codiceMenu, body);
+      return RestUtilities.sendOKMessage(res, `Il menu ${codiceMenu} e' stato aggiornato con successo.`);
+    } catch (error) {
+      return this.sendControllerError(res, error);
+    }
+  }
+
+  @ApiOperation({ summary: 'Elimina un menu', operationId: 'deleteMenu' })
+  @ApiParam({ name: 'codiceMenu', description: 'Codice del menu da eliminare', required: true, example: 'MNU001' })
+  @ApiResponse({ status: 200, description: 'Menu eliminato con successo', type: ActionResponse })
+  @ApiResponse({ status: 400, description: 'Dati non validi', type: ErrorResponse })
+  @ApiResponse({ status: 500, description: 'Errore interno del server', type: ErrorResponse })
+  @Delete('menus/:codiceMenu')
+  async deleteMenu(@Req() request: Request, @Param('codiceMenu') codiceMenu: string, @Res() res: Response) {
+    try {
+      ensureSuperUser(getAuthenticatedAccessiUser(request), 'Solo gli amministratori possono eliminare menu.');
+      await this.permissionService.deleteMenu(codiceMenu);
+      return RestUtilities.sendOKMessage(res, `Il menu ${codiceMenu} e' stato eliminato con successo.`);
+    } catch (error) {
+      return this.sendControllerError(res, error);
+    }
+  }
+
+  @ApiOperation({ summary: 'Crea un nuovo gruppo menu', operationId: 'createMenuGroup' })
+  @ApiBody({ type: CreateMenuGroupRequest, description: 'Dati del nuovo gruppo' })
+  @ApiResponse({ status: 201, description: 'Gruppo creato con successo', type: ActionResponse })
+  @ApiResponse({ status: 400, description: 'Dati non validi', type: ErrorResponse })
+  @ApiResponse({ status: 500, description: 'Errore interno del server', type: ErrorResponse })
+  @Post('menu-groups')
+  async createMenuGroup(@Req() request: Request, @Body() body: CreateMenuGroupRequest, @Res() res: Response) {
+    try {
+      ensureSuperUser(getAuthenticatedAccessiUser(request), 'Solo gli amministratori possono creare gruppi.');
+      await this.permissionService.createMenuGroup(body);
+      return RestUtilities.sendOKMessage(
+        res,
+        `Il gruppo ${body.codiceGruppo} e' stato creato con successo.`,
+        HttpStatus.CREATED,
+      );
+    } catch (error) {
+      return this.sendControllerError(res, error);
+    }
+  }
+
+  @ApiOperation({ summary: 'Aggiorna un gruppo menu', operationId: 'updateMenuGroup' })
+  @ApiParam({ name: 'codiceGruppo', description: 'Codice del gruppo da aggiornare', required: true, example: 'A' })
+  @ApiBody({ type: UpdateMenuGroupRequest, description: 'Campi del gruppo da aggiornare' })
+  @ApiResponse({ status: 200, description: 'Gruppo aggiornato con successo', type: ActionResponse })
+  @ApiResponse({ status: 400, description: 'Dati non validi', type: ErrorResponse })
+  @ApiResponse({ status: 500, description: 'Errore interno del server', type: ErrorResponse })
+  @Put('menu-groups/:codiceGruppo')
+  async updateMenuGroup(
+    @Req() request: Request,
+    @Param('codiceGruppo') codiceGruppo: string,
+    @Body() body: UpdateMenuGroupRequest,
+    @Res() res: Response,
+  ) {
+    try {
+      ensureSuperUser(getAuthenticatedAccessiUser(request), 'Solo gli amministratori possono modificare gruppi.');
+      await this.permissionService.updateMenuGroup(codiceGruppo, body);
+      return RestUtilities.sendOKMessage(res, `Il gruppo ${codiceGruppo} e' stato aggiornato con successo.`);
+    } catch (error) {
+      return this.sendControllerError(res, error);
+    }
+  }
+
+  @ApiOperation({ summary: 'Elimina un gruppo menu', operationId: 'deleteMenuGroup' })
+  @ApiParam({ name: 'codiceGruppo', description: 'Codice del gruppo da eliminare', required: true, example: 'A' })
+  @ApiResponse({ status: 200, description: 'Gruppo eliminato con successo', type: ActionResponse })
+  @ApiResponse({ status: 400, description: 'Dati non validi', type: ErrorResponse })
+  @ApiResponse({ status: 500, description: 'Errore interno del server', type: ErrorResponse })
+  @Delete('menu-groups/:codiceGruppo')
+  async deleteMenuGroup(@Req() request: Request, @Param('codiceGruppo') codiceGruppo: string, @Res() res: Response) {
+    try {
+      ensureSuperUser(getAuthenticatedAccessiUser(request), 'Solo gli amministratori possono eliminare gruppi.');
+      await this.permissionService.deleteMenuGroup(codiceGruppo);
+      return RestUtilities.sendOKMessage(res, `Il gruppo ${codiceGruppo} e' stato eliminato con successo.`);
+    } catch (error) {
+      return this.sendControllerError(res, error);
+    }
+  }
+
+  @ApiOperation({ summary: 'Crea un nuovo tipo menu', operationId: 'createMenuType' })
+  @ApiBody({ type: CreateMenuTypeRequest, description: 'Dati del nuovo tipo menu' })
+  @ApiResponse({ status: 201, description: 'Tipo menu creato con successo', type: ActionResponse })
+  @ApiResponse({ status: 400, description: 'Dati non validi', type: ErrorResponse })
+  @ApiResponse({ status: 500, description: 'Errore interno del server', type: ErrorResponse })
+  @Post('menu-types')
+  async createMenuType(@Req() request: Request, @Body() body: CreateMenuTypeRequest, @Res() res: Response) {
+    try {
+      ensureSuperUser(getAuthenticatedAccessiUser(request), 'Solo gli amministratori possono creare tipi menu.');
+      await this.permissionService.createMenuType(body);
+      return RestUtilities.sendOKMessage(
+        res,
+        `Il tipo menu ${body.codiceTipo} e' stato creato con successo.`,
+        HttpStatus.CREATED,
+      );
+    } catch (error) {
+      return this.sendControllerError(res, error);
+    }
+  }
+
+  @ApiOperation({ summary: 'Aggiorna un tipo menu', operationId: 'updateMenuType' })
+  @ApiParam({ name: 'codiceTipo', description: 'Codice del tipo menu da aggiornare', required: true, example: 'A' })
+  @ApiBody({ type: UpdateMenuTypeRequest, description: 'Campi del tipo menu da aggiornare' })
+  @ApiResponse({ status: 200, description: 'Tipo menu aggiornato con successo', type: ActionResponse })
+  @ApiResponse({ status: 400, description: 'Dati non validi', type: ErrorResponse })
+  @ApiResponse({ status: 500, description: 'Errore interno del server', type: ErrorResponse })
+  @Put('menu-types/:codiceTipo')
+  async updateMenuType(
+    @Req() request: Request,
+    @Param('codiceTipo') codiceTipo: string,
+    @Body() body: UpdateMenuTypeRequest,
+    @Res() res: Response,
+  ) {
+    try {
+      ensureSuperUser(getAuthenticatedAccessiUser(request), 'Solo gli amministratori possono modificare tipi menu.');
+      await this.permissionService.updateMenuType(codiceTipo, body);
+      return RestUtilities.sendOKMessage(res, `Il tipo menu ${codiceTipo} e' stato aggiornato con successo.`);
+    } catch (error) {
+      return this.sendControllerError(res, error);
+    }
+  }
+
+  @ApiOperation({ summary: 'Elimina un tipo menu', operationId: 'deleteMenuType' })
+  @ApiParam({ name: 'codiceTipo', description: 'Codice del tipo menu da eliminare', required: true, example: 'A' })
+  @ApiResponse({ status: 200, description: 'Tipo menu eliminato con successo', type: ActionResponse })
+  @ApiResponse({ status: 400, description: 'Dati non validi', type: ErrorResponse })
+  @ApiResponse({ status: 500, description: 'Errore interno del server', type: ErrorResponse })
+  @Delete('menu-types/:codiceTipo')
+  async deleteMenuType(@Req() request: Request, @Param('codiceTipo') codiceTipo: string, @Res() res: Response) {
+    try {
+      ensureSuperUser(getAuthenticatedAccessiUser(request), 'Solo gli amministratori possono eliminare tipi menu.');
+      await this.permissionService.deleteMenuType(codiceTipo);
+      return RestUtilities.sendOKMessage(res, `Il tipo menu ${codiceTipo} e' stato eliminato con successo.`);
     } catch (error) {
       return this.sendControllerError(res, error);
     }
