@@ -49,6 +49,8 @@ import {
   updateUtente,
 } from './generated/accessiApi';
 import { setAccessiConsoleToken } from './accessiFetch';
+import { WIKI_SECTIONS, wikiGroups, buildAiDigest } from './wiki';
+import type { WikiBlock } from './wiki';
 import type {
   CreateFederatedUserRequest,
   CreateFederatedProviderRequest,
@@ -84,7 +86,8 @@ type ConsoleView =
   | 'filterTypes'
   | 'ssoProviders'
   | 'ssoUsers'
-  | 'tokens';
+  | 'tokens'
+  | 'wiki';
 
 const routeSegment: Record<ConsoleView, string> = {
   users: 'utenti',
@@ -97,6 +100,7 @@ const routeSegment: Record<ConsoleView, string> = {
   ssoProviders: 'sso/provider',
   ssoUsers: 'sso/utenti',
   tokens: 'token-di-servizio',
+  wiki: 'wiki',
 };
 const routeView = Object.fromEntries(Object.entries(routeSegment).map(([view, segment]) => [segment, view])) as Record<string, ConsoleView>;
 // I padri dei sottomenu hanno un URL proprio: senza figlio selezionato si apre la prima voce.
@@ -1244,6 +1248,75 @@ function showIssuedServiceToken(issued: IssuedServiceTokenDto): void {
   byId('done-token').onclick = () => void show('tokens');
 }
 
+/** Rende un singolo blocco della wiki in HTML sicuro. */
+function renderWikiBlock(block: WikiBlock): string {
+  switch (block.kind) {
+    case 'p':
+      return `<p>${escapeHtml(block.text)}</p>`;
+    case 'h':
+      return `<h3>${escapeHtml(block.text)}</h3>`;
+    case 'list': {
+      const tag = block.ordered ? 'ol' : 'ul';
+      return `<${tag}>${block.items.map((item) => `<li>${escapeHtml(item)}</li>`).join('')}</${tag}>`;
+    }
+    case 'code': {
+      const variant = block.variant ? ` is-${block.variant}` : '';
+      const title = block.title ? `<span class="wiki-code-title">${escapeHtml(block.title)}</span>` : '';
+      return `<figure class="wiki-code${variant}"><figcaption class="wiki-code-head">${title}<span class="wiki-code-lang">${escapeHtml(block.language)}</span><button type="button" class="wiki-copy" data-wiki-copy aria-label="Copia il codice">Copia</button></figcaption><pre><code>${escapeHtml(block.code)}</code></pre></figure>`;
+    }
+    case 'callout':
+      return `<div class="wiki-callout is-${block.tone}">${block.title ? `<strong>${escapeHtml(block.title)}</strong>` : ''}<p>${escapeHtml(block.text)}</p></div>`;
+    case 'table':
+      return `<div class="wiki-table-wrap"><table><thead><tr>${block.head.map((cell) => `<th>${escapeHtml(cell)}</th>`).join('')}</tr></thead><tbody>${block.rows.map((row) => `<tr>${row.map((cell) => `<td>${escapeHtml(cell)}</td>`).join('')}</tr>`).join('')}</tbody></table></div>`;
+    default:
+      return '';
+  }
+}
+
+/** Indice laterale della wiki, raggruppato per area. */
+function wikiIndexMarkup(selectedId: string): string {
+  return wikiGroups().map(({ group, sections }) => `<div class="wiki-index-group"><span class="wiki-index-group-title">${escapeHtml(group)}</span><ul>${sections.map((section) => `<li><a href="#wiki-${escapeHtml(section.id)}" data-wiki="${escapeHtml(section.id)}"${section.id === selectedId ? ' aria-current="page"' : ''}>${escapeHtml(section.title)}</a></li>`).join('')}</ul></div>`).join('');
+}
+
+/** Wiki integrata: indice, contenuti e copia del digest per l'IA. */
+async function showWiki(sectionId?: string): Promise<void> {
+  const hashId = /^#wiki-([a-z0-9-]+)$/.exec(window.location.hash)?.[1];
+  const requested = sectionId ?? hashId;
+  const selected = WIKI_SECTIONS.find((section) => section.id === requested) ?? WIKI_SECTIONS[0];
+  if (!selected) return;
+
+  render(`<div class="wiki">
+    <aside class="wiki-index">
+      <div class="wiki-index-head"><strong>Indice</strong><button type="button" id="wiki-copy-ai">Copia per AI</button></div>
+      ${wikiIndexMarkup(selected.id)}
+    </aside>
+    <article class="wiki-content">
+      <header class="wiki-section-head"><h2>${escapeHtml(selected.title)}</h2><p>${escapeHtml(selected.summary)}</p></header>
+      ${selected.blocks.map(renderWikiBlock).join('')}
+    </article>
+  </div>`);
+
+  document.querySelectorAll<HTMLAnchorElement>('[data-wiki]').forEach((link) => {
+    link.onclick = (event) => {
+      event.preventDefault();
+      const id = link.dataset.wiki ?? '';
+      window.history.replaceState(null, '', `${routePath('wiki')}#wiki-${id}`);
+      showWiki(id);
+    };
+  });
+  document.querySelectorAll<HTMLButtonElement>('[data-wiki-copy]').forEach((button) => {
+    button.onclick = () => handleAction(async () => {
+      const codeEl = button.closest('.wiki-code')?.querySelector('code');
+      await navigator.clipboard.writeText(codeEl?.textContent ?? '');
+      showNotice('Codice copiato negli appunti.');
+    });
+  });
+  byId('wiki-copy-ai').onclick = () => handleAction(async () => {
+    await navigator.clipboard.writeText(buildAiDigest());
+    showNotice('Documentazione per AI copiata negli appunti.');
+  });
+}
+
 async function show(view: ConsoleView): Promise<void> {
   try {
     showNotice('');
@@ -1258,6 +1331,7 @@ async function show(view: ConsoleView): Promise<void> {
       ssoProviders: showSsoProviders,
       ssoUsers: showSsoUsers,
       tokens: showServiceTokens,
+      wiki: showWiki,
     };
     setActiveNavigation(view);
     const renderView = views[view];

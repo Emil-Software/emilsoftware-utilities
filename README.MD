@@ -1,3 +1,14 @@
+# Emilsoftware Utilities
+
+Documentazione completa del modulo Accessi, generata da `src/accessi-module/Console/wiki.ts` (stessa fonte della Wiki nella console):
+
+- **[WIKI.md](WIKI.md)** — guida completa con indice, esempi corretti e antipattern.
+- **[WIKI.ai.md](WIKI.ai.md)** — versione compatta da fornire a un'IA che costruisce il backend.
+
+Rigenera entrambi con `npm run generate:accessi-wiki` (incluso in `npm run build`).
+
+---
+
 Convenzioni per i Commit Message
 
 1. feat:

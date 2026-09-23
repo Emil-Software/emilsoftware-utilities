@@ -1,5 +1,8 @@
 # Accessi Module
 
+> **Wiki completa**: [WIKI.md](../../WIKI.md) (indice, esempi corretti e antipattern) · versione compatta per l'IA: [WIKI.ai.md](../../WIKI.ai.md).
+> Sono generate da `Console/wiki.ts` e rigenerate con `npm run generate:accessi-wiki`.
+
 Documentazione divisa per argomenti, per renderla piu' leggibile e facile da aggiornare.
 
 ## Indice

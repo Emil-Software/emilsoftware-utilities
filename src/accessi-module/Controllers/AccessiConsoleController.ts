@@ -33,6 +33,7 @@ export class AccessiConsoleController {
     'sso/provider',
     'sso/utenti',
     'token-di-servizio',
+    'wiki',
   ]);
 
   // Le route statiche vanno dichiarate prima di `:view/:sub`, che altrimenti
