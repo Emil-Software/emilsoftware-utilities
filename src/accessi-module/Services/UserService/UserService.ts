@@ -289,6 +289,25 @@ export class UserService {
     }
   }
 
+  /** Conteggio utenti con gli stessi filtri di `getUsers`, per la paginazione (header X-Total-Count). */
+  async countUsers(filters?: { email?: string; codiceUtente?: number }): Promise<number> {
+    const conditions: string[] = [];
+    const params: unknown[] = [];
+    if (filters?.email) {
+      conditions.push('LOWER(U.USRNAME) = ?');
+      params.push(filters.email.trim().toLowerCase());
+    }
+    if (filters?.codiceUtente) {
+      conditions.push('U.CODUTE = ?');
+      params.push(filters.codiceUtente);
+    }
+
+    const query = `SELECT COUNT(*) AS TOTAL FROM UTENTI U INNER JOIN UTENTI_CONFIG G ON U.CODUTE = G.CODUTE WHERE 1=1 ${conditions.map((condition) => `AND ${condition}`).join(' ')}`;
+    const rows = (await Orm.query(this.accessiOptions.databaseOptions, query, params, false)) as Array<Record<string, unknown>>;
+    const row = rows[0];
+    return Number(row?.TOTAL ?? row?.total ?? 0) || 0;
+  }
+
   private async loadExtensionFieldsForUsers(
     codiceUtenti: number[],
   ): Promise<Map<string, Map<number, Record<string, unknown>[]>>> {

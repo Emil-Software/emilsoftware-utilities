@@ -164,6 +164,8 @@ export class UserController {
       };
 
       const users = await this.userService.getUsers(filters, options);
+      const total = await this.userService.countUsers({ email, codiceUtente });
+      res.setHeader('X-Total-Count', String(total));
       return RestUtilities.sendBaseResponse(res, users);
     } catch (error) {
       this.logger.error('Errore durante il recupero degli utenti: ', error);

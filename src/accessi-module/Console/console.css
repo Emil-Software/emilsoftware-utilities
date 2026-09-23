@@ -31,6 +31,11 @@
   /* Spazio (8pt + sub 4px) */
   --s1: 4px; --s2: 8px; --s3: 12px; --s4: 16px; --s5: 24px; --s6: 32px; --s7: 48px;
 
+  /* Dimensioni layout */
+  --shell-max: 1728px;
+  --gutter: clamp(16px, 1.8vw, 32px);
+  --sidebar-w: clamp(224px, 17vw, 272px);
+
   /* Raggio */
   --r-sm: 6px; --r-md: 8px; --r-lg: 12px; --r-xl: 16px; --r-pill: 999px;
 
@@ -79,9 +84,10 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
 /* ---------------------------------------------------------------- layout */
 
 #app {
-  max-width: 1440px;
-  margin: 0 auto;
-  padding: var(--s5);
+  width: 100%;
+  max-width: var(--shell-max);
+  margin-inline: auto;
+  padding: var(--gutter);
 }
 
 .card {
@@ -95,15 +101,19 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
 }
 .card h1 { margin: 0 0 var(--s2); }
 .card > p { margin: 0 0 var(--s5); color: var(--muted); }
+.card form { gap: var(--s3); }
+.card form button, .card > button { width: 100%; }
 
-#console { display: grid; grid-template-columns: 256px minmax(0, 1fr); gap: var(--s5); align-items: start; }
+#console { display: grid; grid-template-columns: var(--sidebar-w) minmax(0, 1fr); gap: var(--gutter); align-items: start; }
 
 .sidebar {
   position: sticky;
-  top: var(--s5);
+  top: var(--gutter);
   display: flex;
   flex-direction: column;
-  gap: var(--s5);
+  gap: var(--s4);
+  max-height: calc(100vh - 2 * var(--gutter));
+  overflow: auto;
   padding: var(--s4);
   border: 1px solid var(--line);
   border-radius: var(--r-lg);
@@ -151,8 +161,8 @@ nav a[aria-current="page"] svg { opacity: 1; }
 .content > h2:first-child, #view > h2:first-child { margin-top: 0; }
 
 #view {
-  min-height: 420px;
-  padding: var(--s5);
+  min-height: 60vh;
+  padding: clamp(20px, 2vw, 32px);
   border: 1px solid var(--line);
   border-radius: var(--r-lg);
   background: var(--surface);
@@ -173,6 +183,7 @@ button {
   color: #fff;
   font-size: var(--fs-base);
   font-weight: 600;
+  white-space: nowrap;
   background: var(--brand);
   transition: background .15s ease, border-color .15s ease, box-shadow .15s ease;
 }
@@ -192,7 +203,8 @@ button:active { box-shadow: inset 0 1px 3px rgb(0 0 0 / 18%); }
 
 #back { margin-bottom: var(--s4); }
 
-.toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s2); margin: 0 0 var(--s5); }
+.toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s2); margin: 0 0 var(--s4); }
+.toolbar > .pager { margin-left: auto; }
 .toolbar + h2 { margin-top: 0; }
 
 form { display: grid; align-content: start; gap: var(--s4); }
@@ -378,6 +390,22 @@ article h3 { margin-bottom: var(--s2); }
 .token-reveal { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s3); margin: var(--s4) 0; padding: var(--s4); border: 1px solid var(--brand-line); border-radius: var(--r-md); background: var(--brand-soft); }
 .token-reveal code { flex: 1 1 100%; word-break: break-all; color: var(--brand-strong); font-family: var(--font-mono); font-size: var(--fs-sm); }
 .token-reveal button { flex: 0 0 auto; }
+
+/* Paginatore: riga orizzontale proporzionale al contenuto, allineata a destra */
+.pager { display: flex; flex: 0 0 auto; flex-wrap: nowrap; align-items: center; gap: var(--s1); margin-left: auto; white-space: nowrap; }
+.pager-row { display: flex; justify-content: flex-end; margin-top: var(--s4); }
+#notice:empty { display: none; }
+.pager-step { min-width: 34px; min-height: 34px; padding: 0 var(--s2); font-size: var(--fs-lg); line-height: 1; }
+.pager-page { min-width: 34px; min-height: 34px; padding: 0 var(--s2); border: 1px solid var(--line-strong); color: var(--ink-2); background: var(--surface); font-weight: 600; font-variant-numeric: tabular-nums; }
+.pager-page:hover { border-color: #b9c4cc; color: var(--ink); background: var(--surface-sunken); }
+.pager-page[aria-current="page"] { border-color: var(--brand); color: #fff; background: var(--brand); }
+.pager-gap { padding: 0 var(--s1); color: var(--muted); }
+.pager-total { margin-left: var(--s2); color: var(--muted); font-size: var(--fs-sm); font-variant-numeric: tabular-nums; }
+
+@media (max-width: 720px) {
+  .pager { margin-left: 0; }
+  .pager-total { flex-basis: 100%; margin-left: 0; }
+}
 
 /* Feedback di caricamento */
 #loading-overlay { position: fixed; z-index: 1000; inset: 0; display: grid; place-items: center; padding: var(--s5); background: rgb(12 28 39 / 28%); backdrop-filter: blur(2px); }

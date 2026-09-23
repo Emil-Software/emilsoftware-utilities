@@ -71,7 +71,7 @@ export async function initializeAccessiModule(app: Application, options: Accessi
         });
         logger.info("Applicazione Nest accessi creata.");
 
-        nestApp.enableCors();
+        nestApp.enableCors({ exposedHeaders: ['X-Total-Count'] });
         nestApp.useGlobalPipes(createAccessiValidationPipe());
         nestApp.useGlobalFilters(new AccessiHttpExceptionFilter());
 

@@ -78,6 +78,7 @@ let token = sessionStorage.getItem('accessi-console-token');
 let currentUser: ConsoleUser | null = null;
 let federatedAuthenticationAvailable = false;
 let usersPage = 0;
+let usersTotal = 0;
 let pendingNetworkRequests = 0;
 let loadingRevealTimer: number | undefined;
 let loadingHideTimer: number | undefined;
@@ -94,7 +95,8 @@ function result<T>(response: { data: object }): T {
 }
 
 function showNotice(message: string, isError = false): void {
-  byId('notice').innerHTML = `<span class="${isError ? 'error' : ''}">${escapeHtml(message)}</span>`;
+  // Un messaggio vuoto deve azzerare il contenitore, altrimenti resta visibile la barra di avviso.
+  byId('notice').innerHTML = message ? `<span class="${isError ? 'error' : ''}">${escapeHtml(message)}</span>` : '';
 }
 
 /** Renders operational menu metadata shared by the permissions and role views. */
@@ -312,13 +314,55 @@ async function loadUsers(): Promise<UserRow[]> {
   return result(await getUsers({ includeGrants: true })) as UserRow[];
 }
 
-/** Carica la pagina corrente della lista utenti. */
-async function loadUsersPage(): Promise<UserRow[]> {
-  return result(await getUsers({
+/** Carica la pagina corrente della lista utenti e il totale (header X-Total-Count). */
+async function loadUsersPage(): Promise<{ users: UserRow[]; total: number }> {
+  const response = await getUsers({
     includeGrants: true,
     limit: USERS_PAGE_SIZE,
     offset: usersPage * USERS_PAGE_SIZE,
-  })) as UserRow[];
+  });
+  const users = result<UserRow[]>(response);
+  const headers = (response as unknown as { headers?: Headers }).headers;
+  const totalHeader = headers?.get?.('X-Total-Count') ?? null;
+  const parsed = totalHeader !== null && totalHeader !== '' ? Number(totalHeader) : Number.NaN;
+  const total = Number.isFinite(parsed) ? parsed : usersPage * USERS_PAGE_SIZE + users.length;
+  return { users, total };
+}
+
+/** Numeri di pagina da mostrare, con ellissi quando le pagine sono molte. */
+function pageNumbers(current: number, total: number): Array<number | 'gap'> {
+  if (total <= 7) {
+    return Array.from({ length: total }, (_, index) => index + 1);
+  }
+  const wanted = new Set<number>([1, total, current, current - 1, current + 1]);
+  const sorted = Array.from(wanted).filter((page) => page >= 1 && page <= total).sort((a, b) => a - b);
+  const result: Array<number | 'gap'> = [];
+  let previous = 0;
+  for (const page of sorted) {
+    if (previous !== 0 && page - previous > 1) {
+      result.push('gap');
+    }
+    result.push(page);
+    previous = page;
+  }
+  return result;
+}
+
+/** Paginatore proporzionale con riepilogo e numeri di pagina troncati. */
+function pagerMarkup(totalPages: number): string {
+  const summary = `<span class="pager-total">${usersTotal} utenti${totalPages > 1 ? ` · pagina ${usersPage + 1} di ${totalPages}` : ''}</span>`;
+  if (totalPages <= 1) {
+    return `<nav class="pager" aria-label="Paginazione utenti">${summary}</nav>`;
+  }
+  const numbers = pageNumbers(usersPage + 1, totalPages).map((page) => page === 'gap'
+    ? '<span class="pager-gap" aria-hidden="true">&hellip;</span>'
+    : `<button type="button" class="pager-page" data-goto="${page}"${page === usersPage + 1 ? ' aria-current="page"' : ''}>${page}</button>`).join('');
+  return `<nav class="pager" aria-label="Paginazione utenti">`
+    + `<button type="button" class="secondary pager-step" data-goto="prev"${usersPage === 0 ? ' disabled' : ''} aria-label="Pagina precedente">&lsaquo;</button>`
+    + numbers
+    + `<button type="button" class="secondary pager-step" data-goto="next"${usersPage >= totalPages - 1 ? ' disabled' : ''} aria-label="Pagina successiva">&rsaquo;</button>`
+    + summary
+    + '</nav>';
 }
 
 async function detectFederatedAuthentication(): Promise<void> {
@@ -434,24 +478,27 @@ async function bootstrap(): Promise<void> {
 }
 
 async function showUsers(): Promise<void> {
-  const users = await loadUsersPage();
-  const hasNext = users.length === USERS_PAGE_SIZE;
-  render(`<div class="toolbar"><button id="new-local">Nuovo utente locale</button>${federatedAuthenticationAvailable ? '<button id="new-sso">Nuovo utente SSO</button>' : ''}<button id="reload-users" class="secondary">Aggiorna</button></div>
-    <h2>Utenti</h2><p class="muted">Pagina ${usersPage + 1} &middot; ${users.length} utent${users.length === 1 ? 'e' : 'i'}${usersPage > 0 || hasNext ? ' (paginati a 25)' : ''}</p><table><thead><tr><th>Utente</th><th>Stato</th><th>Accesso</th><th>2FA</th><th>Ruoli</th><th></th></tr></thead><tbody>
-    ${users.map(({ utente, userGrants }) => `<tr><td>${escapeHtml(utente.email)}<br><span class="muted">${escapeHtml(utente.nome)} ${escapeHtml(utente.cognome)}</span></td><td>${escapeHtml(utente.statoRegistrazione)}</td><td>${utente.passwordlessLoginEnabled ? 'codice email' : utente.passwordLoginEnabled === false ? 'solo SSO' : 'password'}</td><td>${utente.flagDueFattori ? 'Attiva' : 'Disattiva'}</td><td>${(userGrants?.ruoli ?? []).map((role) => role.codiceRuolo).join(', ')}</td><td><button data-user="${utente.codiceUtente}">Gestisci</button></td></tr>`).join('')}
-    </tbody></table><div class="toolbar"><button id="users-prev" class="secondary" ${usersPage === 0 ? 'disabled' : ''}>Precedente</button><button id="users-next" class="secondary" ${hasNext ? '' : 'disabled'}>Successiva</button></div>`);
+  const { users, total } = await loadUsersPage();
+  usersTotal = total;
+  const totalPages = Math.max(1, Math.ceil(total / USERS_PAGE_SIZE));
+  if (usersPage >= totalPages) usersPage = totalPages - 1;
+
+  render(`<div class="toolbar"><button id="new-local">Nuovo utente locale</button>${federatedAuthenticationAvailable ? '<button id="new-sso">Nuovo utente SSO</button>' : ''}<button id="reload-users" class="secondary">Aggiorna</button>${pagerMarkup(totalPages)}</div>
+    <table><thead><tr><th>Utente</th><th>Stato</th><th>Accesso</th><th>2FA</th><th>Ruoli</th><th></th></tr></thead><tbody>
+    ${users.map(({ utente, userGrants }) => `<tr><td>${escapeHtml(utente.email)}<br><span class="muted">${escapeHtml(utente.nome)} ${escapeHtml(utente.cognome)}</span></td><td>${escapeHtml(utente.statoRegistrazione)}</td><td>${utente.passwordlessLoginEnabled ? 'codice email' : utente.passwordLoginEnabled === false ? 'solo SSO' : 'password'}</td><td>${utente.flagDueFattori ? 'Attiva' : 'Disattiva'}</td><td>${(userGrants?.ruoli ?? []).map((role) => role.codiceRuolo).join(', ')}</td><td><button data-user="${utente.codiceUtente}">Gestisci</button></td></tr>`).join('') || '<tr><td colspan="6" class="muted">Nessun utente.</td></tr>'}
+    </tbody></table><div class="pager-row">${pagerMarkup(totalPages)}</div>`);
+
   byId('new-local').onclick = () => showLocalUserForm();
   if (federatedAuthenticationAvailable) byId('new-sso').onclick = () => handleAction(showSsoUserForm);
   byId('reload-users').onclick = () => handleAction(() => show('users'));
-  byId<HTMLButtonElement>('users-prev').onclick = () => handleAction(async () => {
-    if (usersPage === 0) return;
-    usersPage -= 1;
-    await show('users');
-  });
-  byId<HTMLButtonElement>('users-next').onclick = () => handleAction(async () => {
-    if (!hasNext) return;
-    usersPage += 1;
-    await show('users');
+  document.querySelectorAll<HTMLButtonElement>('[data-goto]').forEach((button) => {
+    button.onclick = () => handleAction(async () => {
+      const target = button.dataset.goto;
+      const nextPage = target === 'prev' ? usersPage - 1 : target === 'next' ? usersPage + 1 : Number(target) - 1;
+      if (!Number.isInteger(nextPage) || nextPage < 0 || nextPage >= totalPages || nextPage === usersPage) return;
+      usersPage = nextPage;
+      await show('users');
+    });
   });
   document.querySelectorAll<HTMLButtonElement>('[data-user]').forEach((button) => {
     button.onclick = () => handleAction(() => showUser(button.dataset.user ?? ''));
