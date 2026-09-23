@@ -3,7 +3,7 @@
 > Documento generato automaticamente da `src/accessi-module/Console/wiki.ts` (la stessa fonte della Wiki nella console).
 > Non modificarlo a mano: esegui `npm run generate:accessi-wiki`.
 
-La stessa documentazione e disponibile, resa in modo interattivo, nella console Accessi su `/api/accessi/console/wiki`.
+La stessa documentazione è disponibile, resa in modo interattivo, nella console Accessi su `/api/accessi/console/wiki`.
 Per una versione compatta da fornire a un'IA che costruisce il backend integratore, vedi [`WIKI.ai.md`](WIKI.ai.md).
 
 ## Indice
@@ -66,7 +66,7 @@ Accessi è un modulo Node/NestJS che aggiunge a un backend già esistente: auten
 
 ### Che cosa possiede il modulo
 
-- Le rotte sotto /api/accessi/* (login, utenti, ruoli, menu, filtri, SSO, token, console).
+- Le rotte sotto /api/accessi/\* (login, utenti, ruoli, menu, filtri, SSO, token, console).
 - Lo schema database del dominio Accessi, riconciliato automaticamente al bootstrap.
 - Il middleware di autorizzazione authorizeAccessi per le rotte della tua applicazione.
 - La console web su /api/accessi/console.
@@ -79,7 +79,7 @@ Accessi è un modulo Node/NestJS che aggiunge a un backend già esistente: auten
 
 ### Flusso di una richiesta protetta
 
-1. Il client chiama una rotta della tua app con header Authorization: Bearer <jwt>.
+1. Il client chiama una rotta della tua app con header Authorization: Bearer \<jwt\>.
 2. La tua rotta esegue authorizeAccessi, che verifica firma HS256, scadenza e stato utente corrente.
 3. Se passi un requisito, il modulo carica ruoli e grant dell'utente e li valuta.
 4. Su successo req.user, req.data e (se richiesto) req.userGrants sono popolati; altrimenti risponde con il contratto errore Accessi.
@@ -112,7 +112,7 @@ La libreria dipende da node-firebird per il database e da Express 5 come peer pe
 
 _initializeAccessiModule: ordine corretto e attesa prima di listen._
 
-Chiama initializeAccessiModule prima di aprire la porta HTTP. Durante il bootstrap, authorizeAccessi risponde 503 ACCESSI_AUTH_INITIALIZING invece di autorizzare richieste parziali.
+Chiama initializeAccessiModule prima di aprire la porta HTTP. Durante il bootstrap, authorizeAccessi risponde 503 ACCESSI\_AUTH\_INITIALIZING invece di autorizzare richieste parziali.
 
 **Esempio corretto — Express + Accessi**
 
@@ -148,7 +148,7 @@ await initializeAccessiModule(app, options); // le richieste nel frattempo ricev
 
 ### Rotte montate
 
-Accessi intercetta solo /api/accessi/*, /accessi/swagger* e /accessi/swagger.json. Tutte le altre rotte passano intatte al tuo stack Express.
+Accessi intercetta solo /api/accessi/\*, /accessi/swagger\* e /accessi/swagger.json. Tutte le altre rotte passano intatte al tuo stack Express.
 
 > [!TIP]
 > **req.user**
@@ -174,7 +174,7 @@ import { AccessiModule } from 'emilsoftware-utilities';
 export class AppModule {}
 ```
 
-Il global prefix api e le rotte /api/accessi/* sono gestiti dal modulo. Le tue rotte Nest si proteggono con JwtSimpleGuard usando il JWT Accessi.
+Il global prefix api e le rotte /api/accessi/\* sono gestiti dal modulo. Le tue rotte Nest si proteggono con JwtSimpleGuard usando il JWT Accessi.
 
 ---
 
@@ -195,13 +195,13 @@ _Ogni campo di configurazione con tipo, obbligo e note._
 | passwordExpirationDays | number | no | Valore predefinito: 90 giorni. |
 | legacyPasswordMigrationOnStartup | boolean | no | Predefinito true: converte le password legacy. |
 | autoUpdateDatabase | boolean | no | Predefinito true: riconcilia lo schema al boot. |
-| jwtOptions | { secret, expiresIn } | sì | Firma HS256 e durata dei JWT Accessi. |
+| jwtOptions | \{ secret, expiresIn \} | sì | Firma HS256 e durata dei JWT Accessi. |
 | emailOptions | EmailOptions | sì | SMTP per reset e codici email. |
 | publicAuthRateLimit | PublicAuthRateLimitOptions | no | Limiti in-memory sugli endpoint pubblici. |
-| publicRegistration | { enabled } | no | Registrazione pubblica: disattivata per impostazione predefinita. |
+| publicRegistration | \{ enabled \} | no | Registrazione pubblica: disattivata per impostazione predefinita. |
 | federatedAuthentication | FederatedAuthenticationOptions | no | Abilita l'SSO generico. |
-| extensionFieldsOptions | ExtensionFieldsOptions[] | no | Tabelle esterne allegate al profilo. |
-| serviceTokens | { enabled, defaultTtlDays } | no | Token macchina-a-macchina, abilitati per impostazione predefinita. |
+| extensionFieldsOptions | ExtensionFieldsOptions\[\] | no | Tabelle esterne allegate al profilo. |
+| serviceTokens | \{ enabled, defaultTtlDays \} | no | Token macchina-a-macchina, abilitati per impostazione predefinita. |
 
 **Esempio corretto — Configurazione tipica**
 
@@ -261,11 +261,11 @@ Accessi possiede lo schema del dominio. Con autoUpdateDatabase true (predefinito
 
 ### Tabelle principali
 
-- PARAMETRI, UTENTI, UTENTI_CONFIG, UTENTI_PWD, UTENTI_OLDPWD, UTENTI_GDPR
-- RUOLI, MENU_GRP, MENU_TIPI, MENU, ABILITAZIONI, RUOLI_MNU, UTENTI_RUOLI
-- FILTRI, FILTRI_TIPO
-- SSO_PROVIDER, UTENTI_IDENTITA_EXT
-- ACCESSI_2FA, ACCESSI_SERVICE_TOKEN
+- PARAMETRI, UTENTI, UTENTI\_CONFIG, UTENTI\_PWD, UTENTI\_OLDPWD, UTENTI\_GDPR
+- RUOLI, MENU\_GRP, MENU\_TIPI, MENU, ABILITAZIONI, RUOLI\_MNU, UTENTI\_RUOLI
+- FILTRI, FILTRI\_TIPO
+- SSO\_PROVIDER, UTENTI\_IDENTITA\_EXT
+- ACCESSI\_2FA, ACCESSI\_SERVICE\_TOKEN
 
 **CLI schema**
 
@@ -276,7 +276,7 @@ npm run db:check:accessi    # verifica senza modificare
 
 > [!WARNING]
 > **Versioni**
-> La libreria richiede uno schema compatibile con la versione corrente (ACCESSI_SCHEMA_VERSION). Se la verifica fallisce, leggi il codice errore ACCESSI_DATABASE_SCHEMA_OUTDATED ed esegui db:update:accessi.
+> La libreria richiede uno schema compatibile con la versione corrente (ACCESSI\_SCHEMA\_VERSION). Se la verifica fallisce, leggi il codice errore ACCESSI\_DATABASE\_SCHEMA\_OUTDATED ed esegui db:update:accessi.
 
 ---
 
@@ -310,7 +310,7 @@ const token = body.Result?.token;
 
 > [!WARNING]
 > **Password scaduta**
-> Con passwordExpiration attivo, una password scaduta produce una PasswordExpiredResponse con code PASSWORD_EXPIRED. Il client deve avviare il reset della password.
+> Con passwordExpiration attivo, una password scaduta produce una PasswordExpiredResponse con code PASSWORD\_EXPIRED. Il client deve avviare il reset della password.
 
 ### Verifica del token
 
@@ -331,7 +331,7 @@ Usalo per verificare un JWT e ottenere il profilo corrente (utile al bootstrap d
 
 _Verifica in due passi, challenge e policy per utente._
 
-La verifica con codice email è per-utente (flagDueFattori / UTENTI_CONFIG.FLG2FATT) ed è disattivata per impostazione predefinita. Con passwordlessLoginEnabled (FLGPWDLESS, richiede la 2FA attiva) l'accesso avviene con il solo codice email.
+La verifica con codice email è per-utente (flagDueFattori / UTENTI\_CONFIG.FLG2FATT) ed è disattivata per impostazione predefinita. Con passwordlessLoginEnabled (FLGPWDLESS, richiede la 2FA attiva) l'accesso avviene con il solo codice email.
 
 | Configurazione | Accesso locale | Accesso SSO |
 | --- | --- | --- |
@@ -433,7 +433,7 @@ app.get('/api/report', authorizeAccessi, (req, res) => {
 
 > [!CAUTION]
 > **Lo stato utente è sempre ricontrollato**
-> Un JWT valido non basta: se l'utente è stato bloccato, eliminato o ha cambiato policy, il middleware risponde 401 AUTH_USER_DISABLED.
+> Un JWT valido non basta: se l'utente è stato bloccato, eliminato o ha cambiato policy, il middleware risponde 401 AUTH\_USER\_DISABLED.
 
 ---
 
@@ -441,7 +441,7 @@ app.get('/api/report', authorizeAccessi, (req, res) => {
 
 _DSL accessiRequirement: permission, and, or, not, custom._
 
-I requisiti si compongono con accessiRequirement. La forma storica requirements è un AND di permessi. Il livello è TipoAbilitazione: NESSUNA=0, LETTURA=10, SCRITTURA=20, SPECIAL=30; il confronto è tipoAbilitazione >= soglia.
+I requisiti si compongono con accessiRequirement. La forma storica requirements è un AND di permessi. Il livello è TipoAbilitazione: NESSUNA=0, LETTURA=10, SCRITTURA=20, SPECIAL=30; il confronto è tipoAbilitazione \>= soglia.
 
 **Esempio corretto — Policy composte**
 
@@ -477,7 +477,7 @@ const empty = r.and();
 
 > [!WARNING]
 > **custom senza handler**
-> Un requisito custom la cui chiave non ha un handler produce 500 AUTH_REQUIREMENTS_MISCONFIGURED: è un errore di programmazione, non un 403.
+> Un requisito custom la cui chiave non ha un handler produce 500 AUTH\_REQUIREMENTS\_MISCONFIGURED: è un errore di programmazione, non un 403.
 
 ---
 
@@ -601,7 +601,7 @@ _Catalogo di navigazione e CRUD completo (superutente)._
 | POST | /api/accessi/permission/menu-groups | Crea un gruppo. |
 | PUT | /api/accessi/permission/menu-groups/:codiceGruppo | Aggiorna un gruppo. |
 | DELETE | /api/accessi/permission/menu-groups/:codiceGruppo | Elimina un gruppo (solo se vuoto). |
-| POST/PUT/DELETE | /api/accessi/permission/menu-types[/:codiceTipo] | CRUD dei tipi menu. |
+| POST/PUT/DELETE | /api/accessi/permission/menu-types\[/:codiceTipo\] | CRUD dei tipi menu. |
 
 I codici (CODMNU, CODGRP, CODTIP) sono chiavi immutabili: si indicano in creazione e poi si passano nel percorso. Un gruppo o un tipo si elimina solo se non è referenziato.
 
@@ -637,7 +637,7 @@ _Filtri per utente e catalogo dei tipi filtro._
 
 > [!NOTE]
 > **Mapping delle colonne**
-> I campi filtro sono mappati su colonne FILTRI in whitelist (FILTRI_UTENTE_DB_MAPPING). I campi non configurati nello schema vengono rifiutati.
+> I campi filtro sono mappati su colonne FILTRI in whitelist (FILTRI\_UTENTE\_DB\_MAPPING). I campi non configurati nello schema vengono rifiutati.
 
 ---
 
@@ -645,7 +645,7 @@ _Filtri per utente e catalogo dei tipi filtro._
 
 _Il backend valida il provider, Accessi gestisce identità e sessioni._
 
-Accessi non valida i token Azure, Google o SAML: è il TUO backend a validare il flusso SSO e a passare solo { provider, subject } verificati a FederatedAuthService. Così issuer, secret e token restano fuori dal modulo.
+Accessi non valida i token Azure, Google o SAML: è il TUO backend a validare il flusso SSO e a passare solo \{ provider, subject \} verificati a FederatedAuthService. Così issuer, secret e token restano fuori dal modulo.
 
 **Esempio corretto — Login SSO**
 
@@ -687,7 +687,7 @@ await federatedAuthService.authenticate({ provider, subject: req.body.email }); 
 
 _Autenticazione tecnica con scope: non è un superutente._
 
-Formato: st_<id>.<segreto> (segreto da 256 bit). Nel database si salva solo lo SHA-256 del segreto; il segreto è mostrato una sola volta. La verifica restituisce { tokenId, label, scopes }: nessun ruolo o grant.
+Formato: st\_\<id\>.\<segreto\> (segreto da 256 bit). Nel database si salva solo lo SHA-256 del segreto; il segreto è mostrato una sola volta. La verifica restituisce \{ tokenId, label, scopes \}: nessun ruolo o grant.
 
 > [!CAUTION]
 > **Non è un superutente**
@@ -706,7 +706,7 @@ ask() { /* req.accessiServiceToken = { tokenId, label, scopes } */ }
 
 ### Gestione (superutente)
 
-- POST /api/accessi/service-token (label, scopes, expiresAt o ttlDays) -> segreto mostrato una volta
+- POST /api/accessi/service-token (label, scopes, expiresAt o ttlDays) -\> segreto mostrato una volta
 - GET /api/accessi/service-token?includeRevoked=true
 - DELETE /api/accessi/service-token/:tokenId (revoca immediata)
 - POST /api/accessi/service-token/:tokenId/rotate
@@ -745,7 +745,7 @@ La console è servita dal modulo su /api/accessi/console e richiede un superuten
 
 ## Contratto errori e codici
 
-_Formato della risposta e codici stabili ACCESSI_* e AUTH_*._
+_Formato della risposta e codici stabili ACCESSI\_\* e AUTH\_\*._
 
 Gli errori HTTP delle API Accessi usano un contratto stabile: severity, status, statusCode, code, error (campo legacy uguale a code), message e details per gli errori di validazione.
 
@@ -765,22 +765,22 @@ Gli errori HTTP delle API Accessi usano un contratto stabile: severity, status, 
 
 | Codice | Quando |
 | --- | --- |
-| ACCESSI_VALIDATION_ERROR | Body o parametri non validi (400). |
-| ACCESSI_AUTH_INITIALIZING | Bootstrap in corso (503). |
-| ACCESSI_AUTH_NOT_INITIALIZED | Modulo non inizializzato (500). |
-| AUTH_HEADER_MISSING / AUTH_TOKEN_MISSING | Header Authorization assente (401). |
-| AUTH_TOKEN_INVALID | JWT non valido o scaduto (401). |
-| AUTH_USER_DISABLED | Utente non più autorizzato (401). |
-| AUTH_INSUFFICIENT_PERMISSIONS | Requisiti non soddisfatti (403). |
-| AUTH_REQUIREMENTS_MISCONFIGURED | Policy malformata o handler custom mancante (500). |
-| ACCESSI_DATABASE_SCHEMA_OUTDATED | Schema del database incompatibile. |
-| ACCESSI_SERVICE_TOKEN_RATE_LIMITED | Troppi tentativi (429). |
+| ACCESSI\_VALIDATION\_ERROR | Body o parametri non validi (400). |
+| ACCESSI\_AUTH\_INITIALIZING | Bootstrap in corso (503). |
+| ACCESSI\_AUTH\_NOT\_INITIALIZED | Modulo non inizializzato (500). |
+| AUTH\_HEADER\_MISSING / AUTH\_TOKEN\_MISSING | Header Authorization assente (401). |
+| AUTH\_TOKEN\_INVALID | JWT non valido o scaduto (401). |
+| AUTH\_USER\_DISABLED | Utente non più autorizzato (401). |
+| AUTH\_INSUFFICIENT\_PERMISSIONS | Requisiti non soddisfatti (403). |
+| AUTH\_REQUIREMENTS\_MISCONFIGURED | Policy malformata o handler custom mancante (500). |
+| ACCESSI\_DATABASE\_SCHEMA\_OUTDATED | Schema del database incompatibile. |
+| ACCESSI\_SERVICE\_TOKEN\_RATE\_LIMITED | Troppi tentativi (429). |
 
 ---
 
 ## Indice degli endpoint
 
-_Tutte le rotte /api/accessi/* in una tabella._
+_Tutte le rotte /api/accessi/\* in una tabella._
 
 | Area | Endpoint principali |
 | --- | --- |
@@ -788,9 +788,9 @@ _Tutte le rotte /api/accessi/* in una tabella._
 | Email | POST email/send-reset-password-email, GET email/reset-password-page/:token |
 | Utenti | GET user/get-users, POST user/create-managed-user, PUT user/update-user/:codiceUtente, DELETE user/delete-user/:codiceUtente, POST user/set-stato, PATCH user/set-gdpr/:codiceUtente, POST user/register |
 | Permessi | GET permission/roles, POST permission/create-role, PUT permission/update-role/:codiceRuolo, DELETE permission/delete-role/:codiceRuolo, POST permission/assign-roles/:codiceUtente, POST permission/assign-permissions/:codiceUtente, GET permission/grants/:codiceUtente, GET permission/menus, GET permission/menu-types, GET permission/groups-with-menus |
-| Catalogo | POST/PUT/DELETE permission/menus[/:codiceMenu], permission/menu-groups[/:codiceGruppo], permission/menu-types[/:codiceTipo] |
+| Catalogo | POST/PUT/DELETE permission/menus\[/:codiceMenu\], permission/menu-groups\[/:codiceGruppo\], permission/menu-types\[/:codiceTipo\] |
 | Configurator | PATCH configurator/menus/:codiceMenu/enabled, PATCH configurator/groups/:codiceGruppo/enabled |
-| Filtri | GET filtri/tipi, POST/PUT/DELETE filtri/tipi[/:tipFil], GET/POST filtri/utente |
+| Filtri | GET filtri/tipi, POST/PUT/DELETE filtri/tipi\[/:tipFil\], GET/POST filtri/utente |
 | SSO | GET/POST federated-auth/providers, PATCH/DELETE providers/:provider, GET/POST users/:codiceUtente/identities, POST users, PATCH users/:codiceUtente/password-login |
 | Token | POST/GET service-token, DELETE service-token/:tokenId, POST service-token/:tokenId/rotate |
 | Console | GET console, console/:view, console/:view/:sub, console/assets/:file |
@@ -805,7 +805,7 @@ _Che cosa non fare, in breve._
 - Non usare authorizeAccessi come unico strato: valida sempre anche l'input applicativo.
 - Non dare per scontato che req.userGrants esista se non hai richiesto dei requisiti.
 - Non considerare incrementali assignRolesToUser e assignPermissionsToUser: sono sostitutivi.
-- Non far validare i token SSO ad Accessi: passagli solo { provider, subject } verificati.
+- Non far validare i token SSO ad Accessi: passagli solo \{ provider, subject \} verificati.
 - Non usare un service token come identità utente.
 - Non versionare segreti; jwtOptions.secret deve essere unico per ambiente.
 - Non eliminare gruppi o tipi in uso: gestisci l'errore 400 e disabilita invece.

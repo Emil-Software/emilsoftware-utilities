@@ -1,4 +1,13 @@
 <!-- Documento generato automaticamente da src/accessi-module/Console/wiki.ts. Non modificare a mano: npm run generate:accessi-wiki. -->
+
+# Guida compatta per l'IA
+
+Versione sintetica della wiki, pensata per essere incollata a un'IA che costruisce il backend integratore.
+Disponibile anche nella console con il pulsante "Copia per AI" (`/api/accessi/console/wiki`).
+
+Il contenuto è racchiuso in un blocco di codice per essere copiato verbatim, senza interpretazione Markdown.
+
+````text
 # Accessi (emilsoftware-utilities) - guida compatta per l'integrazione backend
 
 Modulo NestJS/Express + Firebird per autenticazione JWT, autorizzazione per menu, utenti, 2FA e passwordless, SSO generico, service token e console.
@@ -520,3 +529,4 @@ Che cosa non fare, in breve.
 - Non eliminare gruppi o tipi in uso: gestisci l'errore 400 e disabilita invece.
 - Non usare il challenge 2FA come JWT.
 [OK] Checklist di rilascio: Schema verificato (db:check), segreti da un secret manager, mockDemoUser=false, rate limit pubblico configurato, SMTP reale testato, serviceTokens.defaultTtlDays impostato.
+````
