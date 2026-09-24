@@ -1,3 +1,10 @@
+# [2.0.0-dev.26](https://github.com/Emil-Software/emilsoftware-utilities/compare/v2.0.0-dev.25...v2.0.0-dev.26) (2026-09-24)
+
+
+### Features
+
+* test per FB 2.5 ([df0c927](https://github.com/Emil-Software/emilsoftware-utilities/commit/df0c927689d190ac8edf4650a5cdc74502bb4aa0))
+
 # [2.0.0-dev.25](https://github.com/Emil-Software/emilsoftware-utilities/compare/v2.0.0-dev.24...v2.0.0-dev.25) (2026-09-24)
 
 
