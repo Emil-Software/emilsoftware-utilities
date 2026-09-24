@@ -1,6 +1,6 @@
 {
   "name": "emilsoftware-utilities",
-  "version": "2.0.0-dev.24",
+  "version": "2.0.0-dev.25",
   "description": "Utilities for EmilSoftware",
   "main": "dist/index.js",
   "module": "dist/index.js",
@@ -26,6 +26,7 @@
     "test:integration": "node test/integration/run-firebird.cjs 5",
     "test:integration:fb5": "node test/integration/run-firebird.cjs 5",
     "test:integration:fb3": "node test/integration/run-firebird.cjs 3",
+    "test:integration:fb25": "node test/integration/run-firebird.cjs 2.5",
     "test:accessi-console": "npm run build && node test/console-two-factor.cjs",
     "accessi:seed-admin": "node scripts/seed-accessi-admin.cjs",
     "accessi:console": "node scripts/run-accessi-console.cjs",

@@ -1,6 +1,8 @@
 # Aggiornamento e verifica del database Accessi
 
-La libreria richiede lo schema generico **1.5.0** e Firebird **3.0 o successivo**. Lo schema necessario e dichiarato in `database-updates/accessiSchema.ts`; l'updater confronta questa definizione con i metadati reali del database a ogni avvio.
+La libreria richiede lo schema generico **1.5.0** e Firebird **2.5 o successivo**. Lo schema necessario e dichiarato in `database-updates/accessiSchema.ts`; l'updater confronta questa definizione con i metadati reali del database a ogni avvio.
+
+Su Firebird 2.5 i generatori sono creati con `CREATE GENERATOR` (in 2.5 non esiste `CREATE SEQUENCE`), mentre da Firebird 3.0 si usa `CREATE SEQUENCE`. Il resto del DDL, le query e la verifica dei metadati sono comuni: l'updater non usa funzionalita introdotte dopo la 2.5 (niente window function, `RDB$RELATION_TYPE` o `NEXT VALUE FOR`).
 
 ## Avvio del modulo
 

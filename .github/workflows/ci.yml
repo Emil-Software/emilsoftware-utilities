@@ -40,13 +40,31 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        firebird: ["5", "3"]
+        include:
+          # Firebird 3/5: immagine ufficiale, autenticazione SRP e wire crypt.
+          - firebird: "5"
+            image: firebirdsql/firebird:5
+            database: /var/lib/firebird/data/test_accessi.fdb
+            plugin: ""
+            wireCrypt: ""
+          - firebird: "3"
+            image: firebirdsql/firebird:3
+            database: /var/lib/firebird/data/test_accessi.fdb
+            plugin: ""
+            wireCrypt: ""
+          # Firebird 2.5: immagine jacobalberty (SuperServer), solo Legacy_Auth e senza wire crypt.
+          - firebird: "2.5"
+            image: jacobalberty/firebird:v2.5.9-ss
+            database: /firebird/data/test_accessi.fdb
+            plugin: Legacy_Auth
+            wireCrypt: disabled
     services:
       firebird:
-        image: firebirdsql/firebird:${{ matrix.firebird }}
+        image: ${{ matrix.image }}
         env:
           FIREBIRD_ROOT_PASSWORD: masterkey
           FIREBIRD_DATABASE_DEFAULT_CHARSET: UTF8
+          ISC_PASSWORD: masterkey
         ports:
           - 3050:3050
         options: >-
@@ -68,10 +86,16 @@ jobs:
         run: npm ci
 
       - name: Wait for Firebird
+        env:
+          ACCESSI_TEST_DB_DATABASE: ${{ matrix.database }}
+          ACCESSI_TEST_DB_AUTH_PLUGIN: ${{ matrix.plugin }}
+          ACCESSI_TEST_DB_WIRE_CRYPT: ${{ matrix.wireCrypt }}
         run: |
           node -e "
             const F = require('node-firebird');
-            const opts = { host: '127.0.0.1', port: 3050, database: '/var/lib/firebird/data/test_accessi.fdb', user: 'SYSDBA', password: 'masterkey' };
+            const opts = { host: '127.0.0.1', port: 3050, database: process.env.ACCESSI_TEST_DB_DATABASE, user: 'SYSDBA', password: 'masterkey' };
+            if (process.env.ACCESSI_TEST_DB_AUTH_PLUGIN) opts.pluginName = process.env.ACCESSI_TEST_DB_AUTH_PLUGIN;
+            if (process.env.ACCESSI_TEST_DB_WIRE_CRYPT === 'disabled') opts.wireCrypt = F.WIRE_CRYPT_DISABLE;
             const deadline = Date.now() + 180000;
             let lastError = 'nessun tentativo completato';
             const attempt = () => {
@@ -94,6 +118,8 @@ jobs:
           ACCESSI_TEST_REQUIRE_DB: "1"
           ACCESSI_TEST_DB_HOST: 127.0.0.1
           ACCESSI_TEST_DB_PORT: "3050"
-          ACCESSI_TEST_DB_DATABASE: /var/lib/firebird/data/test_accessi.fdb
+          ACCESSI_TEST_DB_DATABASE: ${{ matrix.database }}
           ACCESSI_TEST_DB_USER: SYSDBA
           ACCESSI_TEST_DB_PASSWORD: masterkey
+          ACCESSI_TEST_DB_AUTH_PLUGIN: ${{ matrix.plugin }}
+          ACCESSI_TEST_DB_WIRE_CRYPT: ${{ matrix.wireCrypt }}

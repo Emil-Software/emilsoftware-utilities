@@ -1,10 +1,11 @@
-# Firebird per gli integration test: una versione moderna e una legacy.
+# Firebird per gli integration test: versioni moderna, legacy e 2.5.
 # Il database viene creato dal test (attachOrCreate) cosi i permessi del file
 # sono corretti, indipendentemente dall'entrypoint dell'immagine.
 #
 # Avvio:  docker compose -f docker-compose.test.yml up -d
-# Test:   npm run test:integration:fb5   (porta 3055)
-#         npm run test:integration:fb3   (porta 3056)
+# Test:   npm run test:integration:fb5    (porta 3055)
+#         npm run test:integration:fb3    (porta 3056)
+#         npm run test:integration:fb25   (porta 3057)
 # Stop:   docker compose -f docker-compose.test.yml down -v
 services:
   firebird5:
@@ -22,3 +23,13 @@ services:
       FIREBIRD_DATABASE_DEFAULT_CHARSET: UTF8
     ports:
       - "3056:3050"
+
+  # Firebird 2.5: l'immagine ufficiale firebirdsql/firebird non copre la 2.5,
+  # si usa jacobalberty/firebird (variante SuperServer). La 2.5 usa Legacy_Auth
+  # e non supporta la cifratura del wire, quindi il test imposta plugin e wireCrypt.
+  firebird25:
+    image: jacobalberty/firebird:v2.5.9-ss
+    environment:
+      ISC_PASSWORD: masterkey
+    ports:
+      - "3057:3050"

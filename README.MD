@@ -58,19 +58,22 @@ La documentazione operativa del modulo accessi si trova in [src/accessi-module/R
 | `npm run test:unit` | Solo test unitari (`node --test`) |
 | `npm run test:coverage` | Test unitari con report e **soglie minime** di copertura |
 | `npm run test:integration` | Integration test su Firebird reale (default: porta 3055) |
-| `npm run test:integration:fb5` / `:fb3` | Integration test su Firebird 5 / 3 |
+| `npm run test:integration:fb5` / `:fb3` / `:fb25` | Integration test su Firebird 5 / 3 / 2.5 |
 | `npm run test:accessi-console` | Test end-to-end della console (richiede un browser Chromium e la build) |
 
 ### Integration test su Firebird reale
 
-Avvia i database di test (Firebird 5 sulla 3055, Firebird 3 sulla 3056) e lancia la suite:
+Avvia i database di test (Firebird 5 sulla 3055, Firebird 3 sulla 3056, Firebird 2.5 sulla 3057) e lancia la suite:
 
 ```bash
 docker compose -f docker-compose.test.yml up -d
 npm run test:integration:fb5
 npm run test:integration:fb3
+npm run test:integration:fb25
 docker compose -f docker-compose.test.yml down -v
 ```
+
+Firebird 2.5 usa l'immagine `jacobalberty/firebird:v2.5.9-ss` (l'immagine ufficiale non copre la 2.5) con `Legacy_Auth` e wire crypt disabilitato: lo script `test:integration:fb25` imposta da solo plugin e wireCrypt.
 
 Il database viene creato dal test stesso (`attachOrCreate`) e lo schema costruito dal migrator
 della libreria (`AccessiDatabaseUpdater`), quindi gli integration test validano anche migrazione e

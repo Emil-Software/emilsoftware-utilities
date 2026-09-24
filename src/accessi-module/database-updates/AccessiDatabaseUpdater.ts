@@ -71,15 +71,25 @@ export class AccessiDatabaseUpdater extends DatabaseUpdater implements OnModuleI
   }
 
   private static async relationIssues(options: AccessiOptions): Promise<string[]> {
-    const rows = await this.query(options, `SELECT TRIM(RDB$RELATION_NAME) AS NAME, COALESCE(RDB$RELATION_TYPE, 0) AS KIND
-      FROM RDB$RELATIONS WHERE COALESCE(RDB$SYSTEM_FLAG, 0) = 0`);
-    return rows.filter(row => accessiTables[String(row.NAME)] && Number(row.KIND) !== 0).map(row => `${row.NAME}: richiesta tabella persistente, trovato tipo relazione ${row.KIND}`);
+    // RDB$VIEW_BLR esiste in tutte le versioni; RDB$RELATION_TYPE solo da Firebird 3.0.
+    // Una vista ha RDB$VIEW_BLR non nullo: se una tabella Accessi esiste come vista, va segnalato.
+    const rows = await this.query(options, `SELECT TRIM(RDB$RELATION_NAME) AS NAME
+      FROM RDB$RELATIONS WHERE COALESCE(RDB$SYSTEM_FLAG, 0) = 0 AND RDB$VIEW_BLR IS NOT NULL`);
+    return rows.filter(row => accessiTables[String(row.NAME)]).map(row => `${row.NAME}: richiesta tabella persistente, trovata vista`);
+  }
+
+  private static async engineInfo(options: AccessiOptions): Promise<{ version: string; major: number; minor: number }> {
+    const rows = await this.query(options, "SELECT RDB$GET_CONTEXT('SYSTEM', 'ENGINE_VERSION') AS ENGINE_VERSION FROM RDB$DATABASE");
+    const version = String(rows[0]?.ENGINE_VERSION ?? 'sconosciuta');
+    const match = /^(\d+)(?:\.(\d+))?/.exec(version);
+    return { version, major: match ? Number(match[1]) : Number.NaN, minor: match?.[2] ? Number(match[2]) : 0 };
   }
 
   private static async engineIssue(options: AccessiOptions): Promise<string | undefined> {
-    const rows = await this.query(options, "SELECT RDB$GET_CONTEXT('SYSTEM', 'ENGINE_VERSION') AS ENGINE_VERSION FROM RDB$DATABASE");
-    const version = String(rows[0]?.ENGINE_VERSION ?? 'sconosciuta');
-    if (!(Number.parseInt(version, 10) >= 3)) return `Firebird ${version}: lo schema Accessi richiede Firebird 3.0 o successivo`;
+    const { version, major, minor } = await this.engineInfo(options);
+    // Firebird 2.5 e successivi: la 2.5 usa CREATE GENERATOR, dalla 3.0 lo schema usa CREATE SEQUENCE.
+    const supported = major > 2 || (major === 2 && minor >= 5);
+    if (!supported) return `Firebird ${version}: lo schema Accessi richiede Firebird 2.5 o successivo`;
   }
 
   private static async columns(options: AccessiOptions): Promise<Row[]> {
@@ -245,7 +255,7 @@ export class AccessiDatabaseUpdater extends DatabaseUpdater implements OnModuleI
       if (!triggers.some(row => this.compatibleTrigger(row, trigger))) issues.push(`${trigger.name}: trigger richiesto attivo ${trigger.event} su ${trigger.table}, con le operazioni Accessi previste`);
     }
     for (const generator of accessiGenerators) {
-      if (!(await this.sequenceExists(options, generator.name))) issues.push(`${generator.name}: sequence mancante`);
+      if (!(await this.sequenceExists(options, generator.name))) issues.push(`${generator.name}: sequence/generatore mancante`);
       else if (columns.some(row => row.TABLE_NAME === generator.table && row.COLUMN_NAME === generator.column)) {
         const rows = await this.query(options, `SELECT GEN_ID(${generator.name}, 0) AS CURRENT_VALUE, (SELECT COALESCE(MAX(${generator.column}), 0) FROM ${generator.table}) AS MAX_VALUE FROM RDB$DATABASE`);
         if (Number(rows[0]?.CURRENT_VALUE) < Number(rows[0]?.MAX_VALUE)) issues.push(`${generator.name}: sequence inferiore agli identificativi esistenti`);
@@ -273,6 +283,7 @@ export class AccessiDatabaseUpdater extends DatabaseUpdater implements OnModuleI
     this.logger.info('Verifica dello schema effettivo Accessi.');
     const engine = await this.engineIssue(options);
     if (engine) throw new Error(engine);
+    const { major: engineMajor } = await this.engineInfo(options);
     const columns = await this.columns(options);
     const future = await this.futureVersionIssue(options, columns);
     if (future) throw new Error(future);
@@ -351,7 +362,10 @@ export class AccessiDatabaseUpdater extends DatabaseUpdater implements OnModuleI
       }
     }
     for (const generator of accessiGenerators) {
-      if (!(await this.sequenceExists(options, generator.name))) await this.execute(options, `CREATE SEQUENCE ${generator.name}`);
+      if (!(await this.sequenceExists(options, generator.name))) {
+        // Firebird 2.5 non conosce CREATE SEQUENCE: usa CREATE GENERATOR. Da 3.0 si usa la sintassi standard.
+        await this.execute(options, engineMajor >= 3 ? `CREATE SEQUENCE ${generator.name}` : `CREATE GENERATOR ${generator.name}`);
+      }
       // Advance by a positive delta only: do not reset an existing sequence or reuse an allocated value.
       await this.execute(options, `EXECUTE BLOCK AS DECLARE VARIABLE MAX_ID BIGINT; DECLARE VARIABLE CURRENT_ID BIGINT; DECLARE VARIABLE NEXT_ID BIGINT;
         BEGIN SELECT COALESCE(MAX(${generator.column}), 0) FROM ${generator.table} INTO :MAX_ID;
