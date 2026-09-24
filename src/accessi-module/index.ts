@@ -8,9 +8,9 @@ import { setupSwagger } from "../swagger/SwaggerConfig";
 import {
     beginAccessiAuthInitialization,
     failAccessiAuthInitialization,
-    AuthenticateGenService,
     setAccessiAuthService
 } from "./middleware/authenticateGen";
+import { registerAccessiModuleServices } from "./accessiRuntime";
 import { createAccessiValidationPipe } from './security/accessiValidation';
 import { AccessiHttpExceptionFilter } from './security/AccessiHttpExceptionFilter';
 import { assertEmailConfigured } from './security/emailConfiguration';
@@ -98,9 +98,9 @@ export async function initializeAccessiModule(app: Application, options: Accessi
             logger.info("Migrazione password legacy accessi completata.");
         }
 
-        const accessiAuthService = nestApp.get(AuthenticateGenService);
-        app.locals.accessiAuthService = accessiAuthService;
-        setAccessiAuthService(accessiAuthService);
+        const accessiServices = registerAccessiModuleServices(app, nestApp);
+        app.locals.accessiAuthService = accessiServices.authenticateGenService;
+        setAccessiAuthService(accessiServices.authenticateGenService);
         const elapsedMs = performance.now() - startedAt;
         logger.info(`Accessi initialized. Tempo totale bootstrap: ${elapsedMs.toFixed(2)} ms`);
 
@@ -137,6 +137,12 @@ export {
     authenticateGen
 } from "./middleware/authenticateGen";
 export { accessiRequirement } from "./middleware/accessiRequirements";
+export {
+    registerAccessiModuleServices,
+    getAccessiModuleServices,
+    ACCESSI_MODULE_SERVICES_LOCALS_KEY
+} from "./accessiRuntime";
+export type { AccessiModuleServices } from "./accessiRuntime";
 export type {
     AccessiAuthorizationOptions,
     AccessiRequirementNode,

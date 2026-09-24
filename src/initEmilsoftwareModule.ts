@@ -7,9 +7,9 @@ import { EmilsoftwareModule, EmilsoftwareOptions } from "./EmilsoftwareModule";
 import {
     beginAccessiAuthInitialization,
     failAccessiAuthInitialization,
-    AuthenticateGenService,
     setAccessiAuthService
 } from "./accessi-module/middleware/authenticateGen";
+import { registerAccessiModuleServices } from "./accessi-module/accessiRuntime";
 import { createAccessiValidationPipe } from './accessi-module/security/accessiValidation';
 import { AccessiHttpExceptionFilter } from './accessi-module/security/AccessiHttpExceptionFilter';
 
@@ -63,9 +63,9 @@ export async function initEmilsoftwareModule(app: Application, options: Emilsoft
 
         await nestApp.init();
         if (options?.accessiOptions) {
-            const authService = nestApp.get(AuthenticateGenService);
-            app.locals.accessiAuthService = authService;
-            setAccessiAuthService(authService);
+            const accessiServices = registerAccessiModuleServices(app, nestApp);
+            app.locals.accessiAuthService = accessiServices.authenticateGenService;
+            setAccessiAuthService(accessiServices.authenticateGenService);
         }
 
         logger.info("Emilsoftware module initialized successfully");
