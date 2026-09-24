@@ -1,3 +1,10 @@
+# [2.0.0-dev.29](https://github.com/Emil-Software/emilsoftware-utilities/compare/v2.0.0-dev.28...v2.0.0-dev.29) (2026-09-24)
+
+
+### Features
+
+* filtrs ([12b5b74](https://github.com/Emil-Software/emilsoftware-utilities/commit/12b5b74d500a17287f98d12280d0b128cb7a6f61))
+
 # [2.0.0-dev.28](https://github.com/Emil-Software/emilsoftware-utilities/compare/v2.0.0-dev.27...v2.0.0-dev.28) (2026-09-24)
 
 
