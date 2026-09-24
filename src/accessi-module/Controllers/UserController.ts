@@ -213,6 +213,58 @@ export class UserController {
   }
 
   @ApiOperation({
+    summary: 'Forza l invio dell email di reset password a un utente',
+    operationId: 'forcePasswordReset',
+    description: 'Riservato al superutente. Richiede un servizio email configurato; altrimenti risponde con ACCESSI_EMAIL_NOT_CONFIGURED.',
+  })
+  @ApiParam({ name: 'codiceUtente', description: 'Codice identificativo dell utente', required: true, example: 123, type: Number })
+  @ApiResponse({ status: 200, description: 'Email di reset inviata', type: ActionResponse })
+  @ApiResponse({ status: 400, description: 'Servizio email non configurato', type: ErrorResponse })
+  @ApiResponse({ status: 404, description: 'Utente non trovato', type: ErrorResponse })
+  @ApiBearerAuth()
+  @UseGuards(JwtSimpleGuard)
+  @Post('force-password-reset/:codiceUtente')
+  async forcePasswordReset(
+    @Req() request: Request,
+    @Param('codiceUtente', ParseIntPipe) codiceUtente: number,
+    @Res() res: Response,
+  ) {
+    try {
+      ensureSuperUser(
+        getAuthenticatedAccessiUser(request),
+        'Solo gli amministratori possono forzare il reset password.',
+      );
+      await this.userService.forcePasswordReset(codiceUtente);
+      return RestUtilities.sendOKMessage(res, `Email di reset inviata all utente ${codiceUtente}.`);
+    } catch (error) {
+      return this.sendControllerError(res, error);
+    }
+  }
+
+  @ApiOperation({
+    summary: 'Forza il reset password per tutti gli utenti con password legacy',
+    operationId: 'forcePasswordResetLegacy',
+    description: 'Riservato al superutente. Invia l email di reset a tutti gli utenti la cui password non e ancora nel formato moderno. Richiede un servizio email configurato.',
+  })
+  @ApiResponse({ status: 200, description: 'Email di reset inviate', type: ActionResponse })
+  @ApiResponse({ status: 400, description: 'Servizio email non configurato', type: ErrorResponse })
+  @ApiBearerAuth()
+  @UseGuards(JwtSimpleGuard)
+  @Post('force-password-reset-legacy')
+  async forcePasswordResetLegacy(@Req() request: Request, @Res() res: Response) {
+    try {
+      ensureSuperUser(
+        getAuthenticatedAccessiUser(request),
+        'Solo gli amministratori possono forzare il reset password.',
+      );
+      const sent = await this.userService.forcePasswordResetForLegacyPasswords();
+      return RestUtilities.sendOKMessage(res, `Email di reset inviata a ${sent} utenti con password legacy.`);
+    } catch (error) {
+      return this.sendControllerError(res, error);
+    }
+  }
+
+  @ApiOperation({
     summary: 'Imposta lo stato di registrazione di un utente',
     operationId: 'setStatoRegistrazione',
   })

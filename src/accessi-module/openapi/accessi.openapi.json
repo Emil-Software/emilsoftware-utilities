@@ -1597,6 +1597,103 @@
         ]
       }
     },
+    "/api/accessi/user/force-password-reset/{codiceUtente}": {
+      "post": {
+        "description": "Riservato al superutente. Richiede un servizio email configurato; altrimenti risponde con ACCESSI_EMAIL_NOT_CONFIGURED.",
+        "operationId": "forcePasswordReset",
+        "parameters": [
+          {
+            "name": "codiceUtente",
+            "required": true,
+            "in": "path",
+            "description": "Codice identificativo dell utente",
+            "schema": {
+              "example": 123,
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Email di reset inviata",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ActionResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Servizio email non configurato",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Utente non trovato",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Forza l invio dell email di reset password a un utente",
+        "tags": [
+          "User"
+        ]
+      }
+    },
+    "/api/accessi/user/force-password-reset-legacy": {
+      "post": {
+        "description": "Riservato al superutente. Invia l email di reset a tutti gli utenti la cui password non e ancora nel formato moderno. Richiede un servizio email configurato.",
+        "operationId": "forcePasswordResetLegacy",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Email di reset inviate",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ActionResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Servizio email non configurato",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Forza il reset password per tutti gli utenti con password legacy",
+        "tags": [
+          "User"
+        ]
+      }
+    },
     "/api/accessi/user/set-stato": {
       "post": {
         "operationId": "setStatoRegistrazione",

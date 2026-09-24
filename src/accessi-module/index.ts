@@ -13,6 +13,7 @@ import {
 } from "./middleware/authenticateGen";
 import { createAccessiValidationPipe } from './security/accessiValidation';
 import { AccessiHttpExceptionFilter } from './security/AccessiHttpExceptionFilter';
+import { assertEmailConfigured } from './security/emailConfiguration';
 
 function describeDatabaseTarget(options: AccessiOptions): string {
     const dbOptions = options.databaseOptions as {
@@ -37,6 +38,8 @@ function describeDatabaseTarget(options: AccessiOptions): string {
  * @param options Configurazione riservata del modulo; proviene normalmente da variabili d'ambiente o secret manager.
  */
 export async function initializeAccessiModule(app: Application, options: AccessiOptions): Promise<void> {
+    // Il servizio email e obbligatorio: reset password, 2FA e creazione utente ne dipendono.
+    assertEmailConfigured(options);
     const logger: Logger = new Logger("initializeAccessiModule");
     beginAccessiAuthInitialization();
     const startedAt = performance.now();
@@ -125,6 +128,7 @@ export type {
     IssueServiceTokenInput
 } from './Services/ServiceTokenService/ServiceTokenService';
 export { ServiceTokenGuard, RequireServiceTokenScopes, getAccessiServiceToken } from './security/serviceTokenGuard';
+export { assertEmailConfigured, isEmailConfigured, AccessiEmailNotConfiguredError, ACCESSI_EMAIL_NOT_CONFIGURED } from './security/emailConfiguration';
 export { FederatedAuthService } from './federated-auth/FederatedAuthService';
 export type { FederatedAuthenticationResult, FederatedIdentity, FederatedProvider, VerifiedFederatedIdentity } from './federated-auth/FederatedAuthTypes';
 export * from "./Dtos";

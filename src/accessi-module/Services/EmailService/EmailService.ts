@@ -9,6 +9,7 @@ import {
   createPasswordResetToken,
   getAccessiJwtSecret,
 } from '../../security/passwordResetToken';
+import { assertEmailConfigured } from '../../security/emailConfiguration';
 
 @Injectable()
 /** Sends password lifecycle email. It deliberately does not expose whether an email exists to public callers. */
@@ -25,6 +26,7 @@ export class EmailService {
 
   /** Sends the one-time login code without including it in application logs. */
   public async sendTwoFactorCode(email: string, code: string, validityMinutes: number): Promise<void> {
+    assertEmailConfigured(this.accessiOptions);
     await this.transporter.sendMail({
       from: this.accessiOptions.emailOptions.from,
       to: email,
@@ -38,6 +40,8 @@ export class EmailService {
    * return without error to prevent account enumeration. On delivery failure the stored reset nonce is cleared.
    */
   public async sendPasswordResetEmail(email: string, htmlMail?: string): Promise<void> {
+    // Fuori dal try: deve propagare ACCESSI_EMAIL_NOT_CONFIGURED, non essere mascherato dall'errore generico.
+    assertEmailConfigured(this.accessiOptions);
     let codiceUtente: number | null = null;
     let resetToken: string | null = null;
     let nonce: string | null = null;

@@ -28,6 +28,7 @@ import { AccessiConsoleController } from './Controllers/AccessiConsoleController
 import { ServiceTokenController } from './Controllers/ServiceTokenController';
 import { ServiceTokenService } from './Services/ServiceTokenService/ServiceTokenService';
 import { ServiceTokenGuard } from './security/serviceTokenGuard';
+import { assertEmailConfigured } from './security/emailConfiguration';
 
 /** JWT emesso da Accessi dopo un login locale o SSO. Non riutilizzare il segreto del provider SSO. */
 export interface JwtOptions {
@@ -186,6 +187,8 @@ export class AccessiModule {
    * La configurazione viene registrata con il token DI `ACCESSI_OPTIONS` ed e condivisa dai servizi.
    */
   static forRoot(options: AccessiOptions): DynamicModule {
+    // Il servizio email e obbligatorio: reset password, 2FA e creazione utente ne dipendono.
+    assertEmailConfigured(options);
     return {
       module: AccessiModule,
       providers: [

@@ -39,7 +39,14 @@ async function database(t) {
   }));
   // Il file puo' essere su un server remoto (docker): la pulizia locale e' best-effort.
   t.after(() => { try { if (fs.existsSync(file)) fs.unlinkSync(file); } catch { /* file remoto: il container e' effimero */ } });
-  return { databaseOptions, autoUpdateDatabase: true, jwtOptions: { secret: 'schema-test-only', expiresIn: '1h' }, emailOptions: {}, mockDemoUser: false };
+  return {
+    databaseOptions,
+    autoUpdateDatabase: true,
+    jwtOptions: { secret: 'schema-test-only', expiresIn: '1h' },
+    // L'email e obbligatoria per il bootstrap del modulo.
+    emailOptions: { host: 'localhost', port: 25, secure: false, requireTLS: false, tls: { rejectUnauthorized: false }, from: 'test@example.local', auth: { user: 'test', pass: 'test' } },
+    mockDemoUser: false,
+  };
 }
 const query = (o, sql, params = []) => Orm.query(o.databaseOptions, sql, params, false);
 const exec = (o, sql, params = []) => Orm.execute(o.databaseOptions, sql, params, false);

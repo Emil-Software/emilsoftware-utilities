@@ -1,4 +1,4 @@
-import { BadRequestException, ConflictException, Inject, Injectable } from '@nestjs/common';
+import { BadRequestException, ConflictException, Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { getTableColumns, optionalColumn } from '../../database-updates/optionalColumns';
 import { autobind } from '../../../autobind';
 import { Orm } from '../../../Orm';
@@ -11,6 +11,7 @@ import { StatoRegistrazione } from '../../Dtos/StatoRegistrazione';
 import { UserDto } from '../../Dtos/UserDto';
 import { UserGrantsDto } from '../../Dtos/UserGrantsDto';
 import { AccessiAuthenticatedUserSnapshot } from '../../security/authenticatedToken';
+import { assertEmailConfigured } from '../../security/emailConfiguration';
 import { EmailService } from '../EmailService/EmailService';
 import { FiltriService } from '../FiltriService/FiltriService';
 import { PermissionService } from '../PermissionService/PermissionService';
@@ -26,7 +27,7 @@ interface OptionalField<T> {
 export class UserService {
   constructor(
     @Inject('ACCESSI_OPTIONS') private readonly accessiOptions: AccessiOptions,
-    _emailService: EmailService,
+    private readonly emailService: EmailService,
     private readonly permissionService: PermissionService,
     private readonly filtriService: FiltriService,
   ) {}
@@ -765,5 +766,48 @@ export class UserService {
     } catch (error) {
       throw error;
     }
+  }
+
+  /**
+   * Forza l'invio dell'email di reset password per un utente. Operazione amministrativa.
+   * Richiede un servizio email configurato: altrimenti solleva ACCESSI_EMAIL_NOT_CONFIGURED.
+   */
+  public async forcePasswordReset(codiceUtente: number): Promise<void> {
+    assertEmailConfigured(this.accessiOptions);
+    const rows = await this.getUsers({ codiceUtente });
+    const email = rows[0]?.utente?.email;
+    if (typeof email !== 'string' || email.trim() === '') {
+      throw new NotFoundException(`Nessun utente con email per il codice ${codiceUtente}.`);
+    }
+    await this.emailService.sendPasswordResetEmail(email);
+  }
+
+  /**
+   * Forza l'invio dell'email di reset a tutti gli utenti la cui password non e ancora nel formato
+   * moderno (`scrypt$...`), cioe' legacy grezza o `scrypt-legacy` non piu verificabile. Utile quando
+   * la `encryptionKey` storica e perduta. Richiede email configurata. Ritorna quanti utenti hanno
+   * ricevuto l'email.
+   */
+  public async forcePasswordResetForLegacyPasswords(): Promise<number> {
+    assertEmailConfigured(this.accessiOptions);
+    const rows = await Orm.query(
+      this.accessiOptions.databaseOptions,
+      `SELECT U.CODUTE AS codice_utente, U.USRNAME AS email
+       FROM UTENTI U
+       JOIN UTENTI_PWD P ON P.CODUTE = U.CODUTE
+       WHERE P.PWD IS NOT NULL AND P.PWD NOT STARTING WITH 'scrypt$'`,
+      [],
+      false,
+    );
+
+    let sent = 0;
+    for (const row of rows as Array<Record<string, unknown>>) {
+      const raw = RestUtilities.convertKeysToCamelCase(row) as Record<string, unknown>;
+      const email = typeof raw.email === 'string' ? raw.email.trim() : '';
+      if (email === '') continue;
+      await this.emailService.sendPasswordResetEmail(email);
+      sent += 1;
+    }
+    return sent;
   }
 }

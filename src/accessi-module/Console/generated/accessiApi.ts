@@ -815,6 +815,56 @@ return accessiFetch<Promise<deleteUserResponse>>(getDeleteUserUrl(codiceUtente),
 
 
 /**
+ * Riservato al superutente. Richiede un servizio email configurato; altrimenti risponde con ACCESSI_EMAIL_NOT_CONFIGURED.
+ * @summary Forza l invio dell email di reset password a un utente
+ */
+export type forcePasswordResetResponse = {
+  data: ActionResponse;
+  status: number;
+}
+
+export const getForcePasswordResetUrl = (codiceUtente: number,) => {
+
+
+  return `/api/accessi/user/force-password-reset/${codiceUtente}`
+}
+
+export const forcePasswordReset = async (codiceUtente: number, options?: RequestInit): Promise<forcePasswordResetResponse> => {
+return accessiFetch<Promise<forcePasswordResetResponse>>(getForcePasswordResetUrl(codiceUtente),
+  {      
+    ...options,
+    method: 'POST'
+    
+  }
+);}
+
+
+/**
+ * Riservato al superutente. Invia l email di reset a tutti gli utenti la cui password non e ancora nel formato moderno. Richiede un servizio email configurato.
+ * @summary Forza il reset password per tutti gli utenti con password legacy
+ */
+export type forcePasswordResetLegacyResponse = {
+  data: ActionResponse;
+  status: number;
+}
+
+export const getForcePasswordResetLegacyUrl = () => {
+
+
+  return `/api/accessi/user/force-password-reset-legacy`
+}
+
+export const forcePasswordResetLegacy = async ( options?: RequestInit): Promise<forcePasswordResetLegacyResponse> => {
+return accessiFetch<Promise<forcePasswordResetLegacyResponse>>(getForcePasswordResetLegacyUrl(),
+  {      
+    ...options,
+    method: 'POST'
+    
+  }
+);}
+
+
+/**
  * @summary Imposta lo stato di registrazione di un utente
  */
 export type setStatoRegistrazioneResponse = {

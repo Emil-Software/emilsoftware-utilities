@@ -50,8 +50,46 @@ async function buildServices(t) {
   const userService = new UserService(options, emailService, permissionService, filtriService);
   const authService = new AuthService(userService, filtriService, options, twoFactorService);
 
-  return { options, userService, filtriService, permissionService, twoFactorService, authService };
+  return { options, userService, filtriService, permissionService, twoFactorService, authService, emailService };
 }
+
+test('reset forzato: singolo utente e batch legacy su DB reale', async (t) => {
+  const services = await buildServices(t);
+  if (!services) return;
+  const { options, userService, emailService, permissionService, filtriService } = services;
+
+  const email = uniqueEmail('forced');
+  const id = await userService.register({ email, nome: 'Forced', cognome: 'Reset' }, { initialState: StatoRegistrazione.CONF });
+
+  const sent = [];
+  emailService.sendPasswordResetEmail = async (target) => { sent.push(target); };
+
+  // Forzatura sul singolo utente.
+  await userService.forcePasswordReset(id);
+  assert.deepEqual(sent, [email]);
+
+  // Batch: l'utente con password legacy deve essere contattato.
+  const { CryptUtilities } = require('../../src/Utilities');
+  const legacyCipher = CryptUtilities.encrypt('Legacy-123', options.encryptionKey);
+  await Orm.execute(
+    options.databaseOptions,
+    'UPDATE OR INSERT INTO UTENTI_PWD (CODUTE, PWD) VALUES (?, ?) MATCHING (CODUTE)',
+    [id, legacyCipher],
+    false,
+  );
+
+  sent.length = 0;
+  const count = await userService.forcePasswordResetForLegacyPasswords();
+  assert.ok(count >= 1, 'il batch deve contattare almeno un utente legacy');
+  assert.ok(sent.includes(email), 'il batch deve contattare l utente con password legacy');
+
+  // Senza email configurata l'operazione non deve procedere.
+  const noEmailUserService = new UserService({ ...options, emailOptions: {} }, emailService, permissionService, filtriService);
+  await assert.rejects(
+    noEmailUserService.forcePasswordReset(id),
+    (error) => error.code === 'ACCESSI_EMAIL_NOT_CONFIGURED',
+  );
+});
 
 test('migrazione schema idempotente su Firebird reale', async (t) => {
   const ctx = await getContext();
