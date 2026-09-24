@@ -179,6 +179,7 @@ export class UserService {
       numRep?: number | number[];
       codDipendente?: number;
       cellulare?: string;
+      cellute?: string;
       tipFil?: number;
       flagSuper?: boolean;
       limit?: number;
@@ -189,6 +190,7 @@ export class UserService {
     try {
       const configColumns = await getTableColumns(this.accessiOptions, 'UTENTI_CONFIG');
       const filterColumns = await getTableColumns(this.accessiOptions, 'FILTRI');
+      const utentiColumns = await getTableColumns(this.accessiOptions, 'UTENTI');
 
       // Paginazione opzionale con limiti sani: il default resta "tutti gli utenti".
       const limit = Number.isInteger(filters?.limit) && (filters?.limit ?? 0) > 0
@@ -209,6 +211,7 @@ export class UserService {
                 U.DATSCAPWD as data_scadenza_password, 
                 U.DATLASTLOGIN as data_last_login, 
                 U.STAREG as stato_registrazione, 
+                ${optionalColumn(utentiColumns, 'ENABLEIA', 'U', 'enable_ia')},
                 G.COGNOME as cognome, 
                 G.NOME as nome, 
                 G.AVATAR as avatar, 
@@ -281,6 +284,11 @@ export class UserService {
       if (filters?.cellulare) {
         query += ` AND TRIM(G.CELLULARE) = ? `;
         queryParams.push(String(filters.cellulare).trim());
+      }
+
+      if (filters?.cellute) {
+        query += ` AND TRIM(U.CELLUTE) = ? `;
+        queryParams.push(String(filters.cellute).trim());
       }
 
       if (filters?.flagSuper !== undefined) {
