@@ -1,3 +1,41 @@
+# [2.0.0-dev.24](https://github.com/Emil-Software/emilsoftware-utilities/compare/v2.0.0-dev.23...v2.0.0-dev.24) (2026-09-24)
+
+
+* feat!: chiavi JWT separate, allegati sicuri di default e pool attivo ([dcd8249](https://github.com/Emil-Software/emilsoftware-utilities/commit/dcd82490820b5d58366a38bc8b5e577bbd16c514))
+* feat!: CRUD completo dei cataloghi dalla console Accessi ([215d6be](https://github.com/Emil-Software/emilsoftware-utilities/commit/215d6be2e04448207ac16df5eb22fecb6e82917f))
+
+
+### Bug Fixes
+
+* paginatore orizzontale, barra avvisi vuota nascosta e layout piu ampio ([95169b4](https://github.com/Emil-Software/emilsoftware-utilities/commit/95169b46ea1dc2441564922b9d5a140f5c37ad49))
+* semantic-release 25 per npm trusted publishing (OIDC) ([e078064](https://github.com/Emil-Software/emilsoftware-utilities/commit/e0780648cd6d2bce849e5d1437038f37ea5066dc))
+* status HTTP corretti per errori di validazione e documentazione estesa ([a4d6a5e](https://github.com/Emil-Software/emilsoftware-utilities/commit/a4d6a5e08047ac8d0cacfa6c6d97d962d147d7b2))
+
+
+### Features
+
+* audit e rate limit sui service token, avviso allegati non protetti ([137e32d](https://github.com/Emil-Software/emilsoftware-utilities/commit/137e32d8577fc9b44d8785b944c7549d739b99e6))
+* console Accessi con paginazione utenti, audit revoca e badge scadenza token ([45b8286](https://github.com/Emil-Software/emilsoftware-utilities/commit/45b828676fd7ad94ac2de19aebc73a8b0374a765))
+* guida contestuale sui campi della console Accessi ([109b0f3](https://github.com/Emil-Software/emilsoftware-utilities/commit/109b0f32b418cd60ab1c444ba4dc86884f1c9066))
+* redesign UI/UX della console Accessi ([bc852b3](https://github.com/Emil-Software/emilsoftware-utilities/commit/bc852b37a033812ef64979a8c948b7a6ee4485de))
+* service token macchina-a-macchina (gestione, guard, console e test) ([f21147f](https://github.com/Emil-Software/emilsoftware-utilities/commit/f21147f99455d0bebad4614f840842b61c278e10))
+* supporto Firebird 2.5 nel migrator e nei test di integrazione ([a506468](https://github.com/Emil-Software/emilsoftware-utilities/commit/a50646801260cf1b7de62388ab782a7ac617500f))
+* trigger dev release ([957a3bc](https://github.com/Emil-Software/emilsoftware-utilities/commit/957a3bcbe4f31354af94e0e80b75d46999db1ef9))
+
+
+### BREAKING CHANGES
+
+* la console riorganizza le sezioni in sottomenu e i deep link cambiano percorso (es. menu-e-gruppi/gruppi, filtri/tipi, sso/provider); la schermata Ruoli e stata ricostruita con le abilitazioni ad albero.
+* i JWT usano chiavi derivate per scopo (access/reset/2fa) e il claim typ e obbligatorio: gli access token emessi prima non sono piu validi (richiesto nuovo login).
+* gli endpoint Allegati sono protetti di default: senza allegatiOptions.authorize rispondono 403. Per il comportamento storico impostare requireAuthorization: false.
+* il pool di connessioni e attivo di default (poolSize 5); poolSize: 0 ripristina una connessione per query. Gli script di breve durata devono chiamare Orm.closePools().
+
+feat: getUsers supporta paginazione opzionale (limit/offset).
+
+fix: AllegatiService verifica la tabella in onModuleInit (niente promise floating).
+
+test: integration su FB3/FB5 aggiornati (10/10); unit 46.
+
 # [2.0.0-dev.23](https://github.com/Emil-Software/emilsoftware-utilities/compare/v2.0.0-dev.22...v2.0.0-dev.23) (2026-09-11)
 
 
