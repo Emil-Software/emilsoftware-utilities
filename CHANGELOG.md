@@ -1,3 +1,10 @@
+# [2.0.0-dev.31](https://github.com/Emil-Software/emilsoftware-utilities/compare/v2.0.0-dev.30...v2.0.0-dev.31) (2026-09-24)
+
+
+### Features
+
+* **accessi:** flag applicativi utente e NOMECAMPO dei gruppi menu ([8738536](https://github.com/Emil-Software/emilsoftware-utilities/commit/87385361fbf73560207ed65f9e21ae4f55111746))
+
 # [2.0.0-dev.30](https://github.com/Emil-Software/emilsoftware-utilities/compare/v2.0.0-dev.29...v2.0.0-dev.30) (2026-09-24)
 
 
