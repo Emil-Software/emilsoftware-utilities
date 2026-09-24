@@ -1,3 +1,10 @@
+# [2.0.0-dev.27](https://github.com/Emil-Software/emilsoftware-utilities/compare/v2.0.0-dev.26...v2.0.0-dev.27) (2026-09-24)
+
+
+### Features
+
+* force deploy ([744d18b](https://github.com/Emil-Software/emilsoftware-utilities/commit/744d18b78659fda0c339fab250d4c44d2d9a6349))
+
 # [2.0.0-dev.26](https://github.com/Emil-Software/emilsoftware-utilities/compare/v2.0.0-dev.25...v2.0.0-dev.26) (2026-09-24)
 
 
