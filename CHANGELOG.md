@@ -1,3 +1,10 @@
+# [2.0.0-dev.25](https://github.com/Emil-Software/emilsoftware-utilities/compare/v2.0.0-dev.24...v2.0.0-dev.25) (2026-09-24)
+
+
+### Features
+
+* verifica npm trusted publishing ([e3ff617](https://github.com/Emil-Software/emilsoftware-utilities/commit/e3ff617dcb5b128e5b3b244b807956a03c7b8b32))
+
 # [2.0.0-dev.24](https://github.com/Emil-Software/emilsoftware-utilities/compare/v2.0.0-dev.23...v2.0.0-dev.24) (2026-09-24)
 
 
