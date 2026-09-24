@@ -554,6 +554,20 @@ article h3 { margin-bottom: var(--s2); }
   .wiki-index { position: static; max-height: none; }
 }
 
+/* Aiuto contestuale: icona "i" e popover con la miniguida del campo */
+.help-dot { display: inline-flex; align-items: center; justify-content: center; width: 18px; height: 18px; min-height: 0; margin-left: var(--s1); padding: 0; border: 1px solid var(--line-strong); border-radius: 50%; color: var(--muted); font-size: 11px; font-weight: 700; line-height: 1; background: var(--surface); vertical-align: middle; cursor: pointer; }
+.help-dot:hover, .help-dot:focus-visible { color: var(--brand-strong); border-color: var(--brand-line); background: var(--brand-soft); }
+.help-popover { position: fixed; z-index: 3000; width: min(460px, 94vw); max-height: 72vh; overflow: auto; padding: var(--s4); border: 1px solid var(--line); border-radius: var(--r-md); background: var(--surface); box-shadow: var(--shadow-md); }
+.help-popover-head { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--s3); margin-bottom: var(--s3); }
+.help-popover-head h4 { margin: 0; color: var(--ink); font-size: var(--fs-md); }
+.help-close { width: 28px; min-height: 28px; padding: 0; font-size: var(--fs-lg); line-height: 1; }
+.help-popover-body { display: grid; gap: var(--s3); }
+.help-popover-body p { margin: 0; font-size: var(--fs-sm); line-height: 1.55; }
+.help-popover-body ul, .help-popover-body ol { display: grid; gap: var(--s1); margin: 0; padding-left: var(--s4); font-size: var(--fs-sm); }
+.help-popover-body h3 { margin: 0; font-size: var(--fs-base); }
+.help-popover-body .wiki-table-wrap table { min-width: 0; }
+.help-popover-body .wiki-code pre { padding: var(--s3); }
+
 /* Feedback di caricamento */
 #loading-overlay { position: fixed; z-index: 1000; inset: 0; display: grid; place-items: center; padding: var(--s5); background: rgb(12 28 39 / 28%); backdrop-filter: blur(2px); }
 .loading-panel { display: flex; align-items: center; gap: var(--s4); width: min(100%, 340px); padding: var(--s4) var(--s5); border: 1px solid var(--line); border-radius: var(--r-lg); background: var(--surface); box-shadow: var(--shadow-md); }

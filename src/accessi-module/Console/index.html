@@ -24,8 +24,8 @@
       <h1 id="login-title">Accessi Console</h1>
       <p>Gestione di utenti, ruoli, grant e accessi.</p>
       <form id="login-form" method="post" action="" novalidate>
-        <label>Email o utente<input name="email" required autocomplete="username"></label>
-        <label id="password-field" hidden>Password<input name="password" type="password" autocomplete="current-password" disabled></label>
+        <label>Email o utente <button type="button" class="help-dot" data-help="login-email" aria-label="Aiuto: Email o utente">i</button><input name="email" required autocomplete="username"></label>
+        <label id="password-field" hidden>Password <button type="button" class="help-dot" data-help="login-password" aria-label="Aiuto: Password">i</button><input name="password" type="password" autocomplete="current-password" disabled></label>
         <button id="login-submit" type="submit">Continua</button>
       </form>
       <form id="two-factor-form" hidden>

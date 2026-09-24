@@ -51,6 +51,7 @@ import {
 import { setAccessiConsoleToken } from './accessiFetch';
 import { WIKI_SECTIONS, wikiGroups, buildAiDigest } from './wiki';
 import type { WikiBlock } from './wiki';
+import { HELP } from './help';
 import type {
   CreateFederatedUserRequest,
   CreateFederatedProviderRequest,
@@ -168,7 +169,7 @@ function groupMetadata(group: GroupWithMenusEntity): string {
 
 /** Builds the full-width, grouped direct-grant editor for an individual user. */
 function directGrantEditor(groups: GroupWithMenusEntity[], grants: Permission[] | undefined): string {
-  return `<form id="grants" class="user-editor-section grants-editor" data-user-panel="grants" role="tabpanel" aria-labelledby="user-tab-grants"><h3>Grant diretti</h3><p class="form-help">Grant diretti, indipendenti dai ruoli. Seleziona <strong>nessuno</strong> per rimuoverli.</p><div class="grant-menu-groups">${groups.map((group) => `<fieldset class="grant-menu-group"><legend>${escapeHtml(group.descrizioneGruppo)}</legend>${groupMetadata(group)}<div class="grant-menu-options">${group.menus.map((menu) => { const grant = (grants ?? []).find((item) => item.codiceMenu === menu.codiceMenu); return `<div class="grant-menu-option ${menu.enabled === false ? 'is-disabled' : ''}"><div class="grant-menu-info"><strong>${escapeHtml(menu.descrizioneMenu)}</strong>${menuMetadata(menu)}</div><label class="grant-level">Livello di grant<select name="grant:${escapeHtml(menu.codiceMenu)}"><option value="">nessuno</option>${permissionSelectOptions(grant?.tipoAbilitazione)}</select></label></div>`; }).join('') || '<p class="form-help">Nessun menu configurato in questo gruppo.</p>'}</div></fieldset>`).join('')}</div><button>Salva grant</button></form>`;
+  return `<form id="grants" class="user-editor-section grants-editor" data-user-panel="grants" role="tabpanel" aria-labelledby="user-tab-grants"><h3>Grant diretti ${helpDot('grant-direct')}</h3><p class="form-help">Grant diretti, indipendenti dai ruoli. Seleziona <strong>nessuno</strong> per rimuoverli.</p><div class="grant-menu-groups">${groups.map((group) => `<fieldset class="grant-menu-group"><legend>${escapeHtml(group.descrizioneGruppo)}</legend>${groupMetadata(group)}<div class="grant-menu-options">${group.menus.map((menu) => { const grant = (grants ?? []).find((item) => item.codiceMenu === menu.codiceMenu); return `<div class="grant-menu-option ${menu.enabled === false ? 'is-disabled' : ''}"><div class="grant-menu-info"><strong>${escapeHtml(menu.descrizioneMenu)}</strong>${menuMetadata(menu)}</div><label class="grant-level">Livello di grant ${helpDot('grant-level')}<select name="grant:${escapeHtml(menu.codiceMenu)}"><option value="">nessuno</option>${permissionSelectOptions(grant?.tipoAbilitazione)}</select></label></div>`; }).join('') || '<p class="form-help">Nessun menu configurato in questo gruppo.</p>'}</div></fieldset>`).join('')}</div><button>Salva grant</button></form>`;
 }
 
 /** Converts Accessi's persisted permission value into its documented label. */
@@ -184,7 +185,7 @@ function rolePermissionLevel(value: unknown): string {
 /** Renders selectable roles together with their effective groups, menus and permission levels. */
 function roleAssignmentEditor(roles: Role[], assignedRoles: Array<{ codiceRuolo?: number }> | undefined, groups: GroupWithMenusEntity[]): string {
   const catalogMenus = new Map(groups.flatMap((group) => group.menus.map((menu) => [menu.codiceMenu, menu])));
-  return `<form id="roles" class="user-editor-section roles-editor" data-user-panel="roles" role="tabpanel" aria-labelledby="user-tab-roles"><h3>Ruoli</h3><p class="form-help">Salvare sostituisce i ruoli dell'utente (non i grant diretti).</p><div class="role-assignment-list">${roles.map((role) => { const roleMenus = role.menu ?? []; const assigned = (assignedRoles ?? []).some((current) => current.codiceRuolo === role.codiceRuolo); const groupedMenus = groups.map((group) => ({ group, entries: group.menus.map((menu) => ({ menu, assignment: roleMenus.find((item) => item.codiceMenu === menu.codiceMenu) })).filter((entry) => entry.assignment) })).filter((entry) => entry.entries.length > 0); const missingMenus = roleMenus.filter((item) => !catalogMenus.has(item.codiceMenu)); return `<article class="role-assignment-card"><div class="role-assignment-heading"><label class="check"><input type="checkbox" name="role" value="${escapeHtml(role.codiceRuolo)}" ${assigned ? 'checked' : ''}><span><strong>${escapeHtml(role.descrizioneRuolo)}</strong><small>Codice ruolo: ${escapeHtml(role.codiceRuolo)}</small></span></label><span class="role-menu-count">${roleMenus.length} menu</span></div><div class="role-permission-groups">${groupedMenus.map(({ group, entries }) => `<section class="role-permission-group"><div class="role-permission-group-heading"><strong>${escapeHtml(group.descrizioneGruppo)}</strong>${groupMetadata(group)}</div>${entries.map(({ menu, assignment }) => `<div class="role-permission-entry ${menu.enabled === false ? 'is-disabled' : ''}"><div><strong>${escapeHtml(menu.descrizioneMenu)}</strong>${menuMetadata(menu)}</div><span class="permission-level">${escapeHtml(rolePermissionLevel(assignment?.tipoAbilitazione))}</span></div>`).join('')}</section>`).join('') || '<p class="form-help">Questo ruolo non contiene menu attivi nel catalogo.</p>'}${missingMenus.length ? `<section class="role-permission-group missing-role-menus"><strong>Menu non più presenti nel catalogo</strong>${missingMenus.map((menu) => `<div class="role-permission-entry"><div><strong>${escapeHtml(menu.codiceMenu)}</strong><p class="entity-note">Il menu è ancora associato al ruolo ma non è disponibile nel catalogo corrente.</p></div><span class="permission-level">${escapeHtml(rolePermissionLevel(menu.tipoAbilitazione))}</span></div>`).join('')}</section>` : ''}</div></article>`; }).join('')}</div><button>Salva ruoli</button></form>`;
+  return `<form id="roles" class="user-editor-section roles-editor" data-user-panel="roles" role="tabpanel" aria-labelledby="user-tab-roles"><h3>Ruoli ${helpDot('role-assignment')}</h3><p class="form-help">Salvare sostituisce i ruoli dell'utente (non i grant diretti).</p><div class="role-assignment-list">${roles.map((role) => { const roleMenus = role.menu ?? []; const assigned = (assignedRoles ?? []).some((current) => current.codiceRuolo === role.codiceRuolo); const groupedMenus = groups.map((group) => ({ group, entries: group.menus.map((menu) => ({ menu, assignment: roleMenus.find((item) => item.codiceMenu === menu.codiceMenu) })).filter((entry) => entry.assignment) })).filter((entry) => entry.entries.length > 0); const missingMenus = roleMenus.filter((item) => !catalogMenus.has(item.codiceMenu)); return `<article class="role-assignment-card"><div class="role-assignment-heading"><label class="check"><input type="checkbox" name="role" value="${escapeHtml(role.codiceRuolo)}" ${assigned ? 'checked' : ''}><span><strong>${escapeHtml(role.descrizioneRuolo)}</strong><small>Codice ruolo: ${escapeHtml(role.codiceRuolo)}</small></span></label><span class="role-menu-count">${roleMenus.length} menu</span></div><div class="role-permission-groups">${groupedMenus.map(({ group, entries }) => `<section class="role-permission-group"><div class="role-permission-group-heading"><strong>${escapeHtml(group.descrizioneGruppo)}</strong>${groupMetadata(group)}</div>${entries.map(({ menu, assignment }) => `<div class="role-permission-entry ${menu.enabled === false ? 'is-disabled' : ''}"><div><strong>${escapeHtml(menu.descrizioneMenu)}</strong>${menuMetadata(menu)}</div><span class="permission-level">${escapeHtml(rolePermissionLevel(assignment?.tipoAbilitazione))}</span></div>`).join('')}</section>`).join('') || '<p class="form-help">Questo ruolo non contiene menu attivi nel catalogo.</p>'}${missingMenus.length ? `<section class="role-permission-group missing-role-menus"><strong>Menu non più presenti nel catalogo</strong>${missingMenus.map((menu) => `<div class="role-permission-entry"><div><strong>${escapeHtml(menu.codiceMenu)}</strong><p class="entity-note">Il menu è ancora associato al ruolo ma non è disponibile nel catalogo corrente.</p></div><span class="permission-level">${escapeHtml(rolePermissionLevel(menu.tipoAbilitazione))}</span></div>`).join('')}</section>` : ''}</div></article>`; }).join('')}</div><button>Salva ruoli</button></form>`;
 }
 
 /** Vista compatta di un ruolo: identità, azioni e albero delle abilitazioni su richiesta. */
@@ -300,6 +301,7 @@ function handleAction(action: () => Promise<void>): void {
 }
 
 function render(markup: string): void {
+  closeHelp();
   byId('view').innerHTML = markup;
 }
 
@@ -355,9 +357,9 @@ function eventForm(event: Event): HTMLFormElement {
 
 /** Shared identity fields: values are verified by the hosting backend, never by this console. */
 function federatedIdentityFields(providers: FederatedProvider[]): string {
-  return `<label>Provider<select name="provider" required><option value="">Seleziona un provider</option>${providers.filter((provider) => provider.active).map((provider) => `<option value="${escapeHtml(provider.provider)}">${escapeHtml(provider.description)} (${escapeHtml(provider.provider)})</option>`).join('')}</select><span class="form-help">Deve corrispondere alla configurazione backend (per Azure: tenant e ambiente).</span></label>
-    <label>ID utente del provider (subject)<input name="subject" required><span class="form-help">Identificatore stabile della persona nel provider, es. <code>oid</code> Azure, <code>sub</code> OIDC, <code>NameID</code> SAML. Non usare l'email.</span></label>
-    <label>Nota<input name="note"><span class="form-help">Nota interna, non inviata al provider.</span></label>`;
+  return `<label>Provider ${helpDot('sso-provider')}<select name="provider" required><option value="">Seleziona un provider</option>${providers.filter((provider) => provider.active).map((provider) => `<option value="${escapeHtml(provider.provider)}">${escapeHtml(provider.description)} (${escapeHtml(provider.provider)})</option>`).join('')}</select><span class="form-help">Deve corrispondere alla configurazione del backend.</span></label>
+    <label>ID utente del provider (subject) ${helpDot('sso-subject')}<input name="subject" required><span class="form-help">Identificatore stabile (es. <code>oid</code> Azure, <code>sub</code> Google/OIDC, <code>NameID</code> SAML). Mai l'email: apri la guida.</span></label>
+    <label>Nota ${helpDot('sso-note')}<input name="note"><span class="form-help">Nota interna, non inviata al provider.</span></label>`;
 }
 
 /** Renders high-priority SSO identity management for one Accessi user. */
@@ -644,16 +646,16 @@ async function showUsers(): Promise<void> {
 
 function authenticationPolicyFields(user: UserDto): string {
   return `<fieldset><legend>Verifica dell'accesso (opzionale)</legend>
-    <label class="check"><input name="flagDueFattori" type="checkbox" ${user.flagDueFattori ? 'checked' : ''}> Richiedi un codice via email (2FA)</label>
+    <label class="check"><input name="flagDueFattori" type="checkbox" ${user.flagDueFattori ? 'checked' : ''}> Richiedi un codice via email (2FA) ${helpDot('user-2fa')}</label>
     <p class="form-help">Se attiva, il codice è richiesto dopo password o SSO.</p>
-    <label class="check"><input name="passwordlessLoginEnabled" type="checkbox" ${user.passwordlessLoginEnabled ? 'checked' : ''} ${user.flagDueFattori ? '' : 'disabled'}> Consenti accesso con il solo codice email</label>
+    <label class="check"><input name="passwordlessLoginEnabled" type="checkbox" ${user.passwordlessLoginEnabled ? 'checked' : ''} ${user.flagDueFattori ? '' : 'disabled'}> Consenti accesso con il solo codice email ${helpDot('user-passwordless')}</label>
     <p class="form-help">Accesso senza password (richiede il codice email).</p>
     </fieldset>`;
 }
 
 function showLocalUserForm(): void {
   render(`<button id="back">Indietro</button><h2>Nuovo utente locale</h2><p class="muted">Viene inviata l'e-mail per impostare la password.</p>
-    <form id="local-user"><label>Email<input name="email" type="email" required><span class="form-help">Identificativo di accesso; riceverà l'email per la password.</span></label><label>Nome<input name="nome"></label><label>Cognome<input name="cognome"></label><button>Crea utente</button></form>`);
+    <form id="local-user"><label>Email ${helpDot('user-email')}<input name="email" type="email" required><span class="form-help">Identificativo di accesso; riceverà l'email per la password.</span></label><label>Nome ${helpDot('user-name')}<input name="nome"></label><label>Cognome ${helpDot('user-name')}<input name="cognome"></label><button>Crea utente</button></form>`);
   byId('back').onclick = () => show('users');
   const localUserForm = document.getElementById('local-user') as HTMLFormElement | null;
   if (localUserForm) localUserForm.onsubmit = (event) => {
@@ -672,7 +674,7 @@ async function showSsoUserForm(): Promise<void> {
     throw new Error('Prima di creare un utente SSO, censisci e abilita almeno un provider SSO.');
   }
   render(`<button id="back">Indietro</button><h2>Nuovo utente SSO</h2><p class="muted">Salva solo collegamenti già verificati dal backend.</p>
-    <form id="sso-user"><label>Email<input name="email" type="email" required><span class="form-help">Email di contatto e identificativo Accessi dell'utente.</span></label><label>Nome<input name="nome"></label><label>Cognome<input name="cognome"></label>${federatedIdentityFields(providers)}<label class="check"><input name="passwordLoginEnabled" type="checkbox"> Abilita anche la password locale</label><span class="form-help">Se disattivato, l'utente accede solo via SSO.</span><button>Crea utente SSO</button></form>`);
+    <form id="sso-user"><label>Email ${helpDot('user-email')}<input name="email" type="email" required><span class="form-help">Email di contatto e identificativo Accessi dell'utente.</span></label><label>Nome ${helpDot('user-name')}<input name="nome"></label><label>Cognome ${helpDot('user-name')}<input name="cognome"></label>${federatedIdentityFields(providers)}<label class="check"><input name="passwordLoginEnabled" type="checkbox"> Abilita anche la password locale ${helpDot('user-password-login')}</label><span class="form-help">Se disattivato, l'utente accede solo via SSO.</span><button>Crea utente SSO</button></form>`);
   byId('back').onclick = () => show('ssoUsers');
   const ssoUserForm = document.getElementById('sso-user') as HTMLFormElement | null;
   if (ssoUserForm) ssoUserForm.onsubmit = (event) => {
@@ -725,7 +727,7 @@ async function showSsoUsers(): Promise<void> {
 /** Creates or updates catalog metadata; the provider key is immutable once identities reference it. */
 function showProviderForm(provider?: FederatedProvider): void {
   const isExisting = provider !== undefined;
-  render(`<button id="back" type="button">Indietro</button><div class="page-header"><div><p class="eyebrow">Catalogo SSO</p><h2>${isExisting ? 'Gestisci provider' : 'Nuovo provider'}</h2></div><span class="muted">Le configurazioni tecniche restano nel backend</span></div><form id="provider-form"><label>Chiave provider<input name="provider" value="${escapeHtml(provider?.provider)}" ${isExisting ? 'readonly' : ''} required><span class="form-help">Chiave usata dal backend nel payload SSO (es. <code>azure-ad-acme-prod</code>). Non modificabile dopo il censimento.</span></label><label>Descrizione<input name="description" value="${escapeHtml(provider?.description)}" required><span class="form-help">Nome leggibile per gli amministratori.</span></label><label>Nota<input name="note" value="${escapeHtml(provider?.note)}"><span class="form-help">Non inserire segreti o dati personali.</span></label>${isExisting ? `<label class="check"><input name="active" type="checkbox" ${provider.active ? 'checked' : ''}> Provider attivo</label><span class="form-help">Blocca nuovi login e collegamenti; lo storico resta.</span>` : ''}<button>${isExisting ? 'Salva provider' : 'Censisci provider'}</button>${isExisting ? '<button type="button" id="delete-provider" class="danger-button">Elimina provider</button>' : ''}</form>`);
+  render(`<button id="back" type="button">Indietro</button><div class="page-header"><div><p class="eyebrow">Catalogo SSO</p><h2>${isExisting ? 'Gestisci provider' : 'Nuovo provider'}</h2></div><span class="muted">Le configurazioni tecniche restano nel backend</span></div><form id="provider-form"><label>Chiave provider ${helpDot('provider-key')}<input name="provider" value="${escapeHtml(provider?.provider)}" ${isExisting ? 'readonly' : ''} required><span class="form-help">Chiave usata dal backend nel payload SSO (es. <code>azure-ad-acme-prod</code>). Non modificabile dopo il censimento.</span></label><label>Descrizione ${helpDot('provider-description')}<input name="description" value="${escapeHtml(provider?.description)}" required><span class="form-help">Nome leggibile per gli amministratori.</span></label><label>Nota ${helpDot('provider-note')}<input name="note" value="${escapeHtml(provider?.note)}"><span class="form-help">Non inserire segreti o dati personali.</span></label>${isExisting ? `<label class="check"><input name="active" type="checkbox" ${provider.active ? 'checked' : ''}> Provider attivo ${helpDot('provider-active')}</label><span class="form-help">Blocca nuovi login e collegamenti; lo storico resta.</span>` : ''}<button>${isExisting ? 'Salva provider' : 'Censisci provider'}</button>${isExisting ? '<button type="button" id="delete-provider" class="danger-button">Elimina provider</button>' : ''}</form>`);
   byId('back').onclick = () => show('ssoProviders');
   const deleteProviderButton = document.getElementById('delete-provider') as HTMLButtonElement | null;
   if (deleteProviderButton && provider) {
@@ -793,9 +795,9 @@ async function showUser(rawCode: string): Promise<void> {
     : [];
   const identitySection = federatedAuthenticationAvailable ? federatedIdentitySection(linked, providerList) : '';
   const defaultUserTab: UserDetailTab = federatedAuthenticationAvailable ? 'sso' : 'profile';
-  render(`<div class="user-action-bar"><button id="back" type="button" class="secondary">Indietro</button><label class="inline-field">Stato registrazione<select id="user-state">${registrationStateOptions(user.statoRegistrazione)}</select></label><button id="save-state" type="button" class="secondary">Aggiorna stato</button><button id="disable-user" type="button" class="danger-button">Imposta stato eliminato</button></div><div class="page-header"><div><p class="eyebrow">Utente ${codiceUtente}</p><h2>${escapeHtml(user.email)}</h2></div><span class="muted">Gestione profilo, ruoli e autorizzazioni</span></div>${userDetailTabs(federatedAuthenticationAvailable)}<div class="user-editor">
+  render(`<div class="user-action-bar"><button id="back" type="button" class="secondary">Indietro</button><label class="inline-field">Stato registrazione ${helpDot('user-state')}<select id="user-state">${registrationStateOptions(user.statoRegistrazione)}</select></label><button id="save-state" type="button" class="secondary">Aggiorna stato</button><button id="disable-user" type="button" class="danger-button">Imposta stato eliminato</button>${helpDot('user-delete')}</div><div class="page-header"><div><p class="eyebrow">Utente ${codiceUtente}</p><h2>${escapeHtml(user.email)}</h2></div><span class="muted">Gestione profilo, ruoli e autorizzazioni</span></div>${userDetailTabs(federatedAuthenticationAvailable)}<div class="user-editor">
     ${identitySection}
-    <form id="profile" data-user-panel="profile" role="tabpanel" aria-labelledby="user-tab-profile"><h3>Profilo e accesso</h3><label>Nome<input name="nome" value="${escapeHtml(user.nome)}"></label><label>Cognome<input name="cognome" value="${escapeHtml(user.cognome)}"></label><label>Email<input name="email" type="email" value="${escapeHtml(user.email)}" required><span class="form-help">Identificativo di accesso e recapito.</span></label>${federatedAuthenticationAvailable ? `<label class="check"><input name="passwordLoginEnabled" type="checkbox" ${user.passwordLoginEnabled !== false ? 'checked' : ''}> Login con password</label><span class="form-help">Se disabilitato, il login con email e password restituisce un errore esplicito; restano valide le identità SSO attive.</span>` : ''}${authenticationPolicyFields(user)}<button>Salva</button></form>
+    <form id="profile" data-user-panel="profile" role="tabpanel" aria-labelledby="user-tab-profile"><h3>Profilo e accesso</h3><label>Nome ${helpDot('user-name')}<input name="nome" value="${escapeHtml(user.nome)}"></label><label>Cognome ${helpDot('user-name')}<input name="cognome" value="${escapeHtml(user.cognome)}"></label><label>Email ${helpDot('user-email')}<input name="email" type="email" value="${escapeHtml(user.email)}" required><span class="form-help">Identificativo di accesso e recapito.</span></label>${federatedAuthenticationAvailable ? `<label class="check"><input name="passwordLoginEnabled" type="checkbox" ${user.passwordLoginEnabled !== false ? 'checked' : ''}> Login con password ${helpDot('user-password-login')}</label><span class="form-help">Se disabilitato, il login con email e password restituisce un errore esplicito; restano valide le identità SSO attive.</span>` : ''}${authenticationPolicyFields(user)}<button>Salva</button></form>
     ${roleAssignmentEditor(allRoles, userGrants.ruoli, menuGroups)}
     ${directGrantEditor(menuGroups, userGrants.abilitazioni)}
     </div>`);
@@ -880,7 +882,7 @@ async function showRoles(): Promise<void> {
   const groups = result(groupsResponse) as GroupWithMenusEntity[];
   render(`<div class="toolbar"><button id="new-role">Nuovo ruolo</button></div><h2>Ruoli</h2><p class="form-help">Definisci i ruoli e i menu che concedono. L'assegnazione agli utenti si gestisce dalla scheda utente.</p><div class="role-overview-list">${roles.map((role) => roleOverview(role, groups)).join('') || '<p class="muted">Nessun ruolo configurato.</p>'}</div>`);
   const roleForm = (role?: Role) => {
-    render(`<button id="back" type="button">Indietro</button><h2>${role ? 'Modifica' : 'Nuovo'} ruolo</h2><form id="role-form"><label>Descrizione<input name="descrizione" value="${escapeHtml(role?.descrizioneRuolo)}" required><span class="form-help">Nome del ruolo.</span></label><p class="form-help">Seleziona i menu e il livello; il salvataggio sostituisce la configurazione del ruolo.</p><div class="role-menu-groups">${groups.map((group) => roleMenuEditorTable(group, role)).join('')}</div><button>Salva ruolo</button></form>`);
+    render(`<button id="back" type="button">Indietro</button><h2>${role ? 'Modifica' : 'Nuovo'} ruolo</h2><form id="role-form"><label>Descrizione ${helpDot('role-description')}<input name="descrizione" value="${escapeHtml(role?.descrizioneRuolo)}" required><span class="form-help">Nome del ruolo.</span></label><p class="form-help">Seleziona i menu e il livello ${helpDot('role-level')}; il salvataggio sostituisce la configurazione del ruolo.</p><div class="role-menu-groups">${groups.map((group) => roleMenuEditorTable(group, role)).join('')}</div><button>Salva ruolo</button></form>`);
     byId('back').onclick = () => show('roles');
     document.querySelectorAll<HTMLInputElement>('#role-form input[name="menu"]').forEach((checkbox) => {
       checkbox.onchange = () => {
@@ -1016,10 +1018,10 @@ function showMenuGroupForm(group?: GroupWithMenusEntity): void {
   const isExisting = group !== undefined;
   render(`<button id="back" type="button">Indietro</button><h2>${isExisting ? 'Modifica' : 'Nuovo'} gruppo menu</h2>
     <form id="group-form">
-      <label>Codice gruppo<input name="codiceGruppo" maxlength="1" value="${escapeHtml(group?.codiceGruppo)}" ${isExisting ? 'readonly' : ''} required><span class="form-help">Un solo carattere, es. <code>A</code>. Immutabile dopo la creazione.</span></label>
+      <label>Codice gruppo ${helpDot('menu-group-code')}<input name="codiceGruppo" maxlength="1" value="${escapeHtml(group?.codiceGruppo)}" ${isExisting ? 'readonly' : ''} required><span class="form-help">Un solo carattere, es. <code>A</code>. Immutabile dopo la creazione.</span></label>
       <label>Descrizione<input name="descrizioneGruppo" maxlength="100" value="${escapeHtml(group?.descrizioneGruppo)}" required></label>
-      <label>Ordine<input name="ordineGruppo" type="number" value="${group?.ordineGruppo ?? ''}"><span class="form-help">Usato per ordinare i gruppi nella navigazione.</span></label>
-      <label class="check"><input name="enabled" type="checkbox" ${group?.enabled !== false ? 'checked' : ''}> Gruppo abilitato</label>
+      <label>Ordine ${helpDot('menu-group-order')}<input name="ordineGruppo" type="number" value="${group?.ordineGruppo ?? ''}"><span class="form-help">Usato per ordinare i gruppi nella navigazione.</span></label>
+      <label class="check"><input name="enabled" type="checkbox" ${group?.enabled !== false ? 'checked' : ''}> Gruppo abilitato ${helpDot('menu-group-enabled')}</label>
       <button>${isExisting ? 'Salva gruppo' : 'Crea gruppo'}</button>
     </form>`);
   byId('back').onclick = () => handleAction(showMenuGroups);
@@ -1050,16 +1052,16 @@ function showMenuForm(menu: MenuEntity | undefined, groups: GroupWithMenusEntity
   const typeOptions = `<option value="">Nessun tipo</option>${menuTypes.map((type) => `<option value="${escapeHtml(type.codiceTipo)}" ${menu?.tipo === type.codiceTipo ? 'selected' : ''}>${escapeHtml(type.codiceTipo)} \u2013 ${escapeHtml(type.descrizioneTipo || '')}</option>`).join('')}`;
   render(`<button id="back" type="button">Indietro</button><h2>${isExisting ? 'Modifica' : 'Nuovo'} menu</h2>
     <form id="menu-form">
-      <label>Codice menu<input name="codiceMenu" maxlength="20" value="${escapeHtml(menu?.codiceMenu)}" ${isExisting ? 'readonly' : ''} required><span class="form-help">Chiave tecnica, es. <code>MNU001</code>. Immutabile dopo la creazione.</span></label>
+      <label>Codice menu ${helpDot('menu-code')}<input name="codiceMenu" maxlength="20" value="${escapeHtml(menu?.codiceMenu)}" ${isExisting ? 'readonly' : ''} required><span class="form-help">Chiave tecnica, es. <code>MNU001</code>. Immutabile dopo la creazione.</span></label>
       <label>Descrizione<input name="descrizioneMenu" maxlength="100" value="${escapeHtml(menu?.descrizioneMenu)}" required></label>
-      <label>Gruppo<select name="codiceGruppo" required>${groupOptions}</select><span class="form-help">Crea prima un gruppo se non ne esistono.</span></label>
-      <label>Tipo menu<select name="tipo">${typeOptions}</select></label>
-      <label>Icona<input name="icona" maxlength="50" value="${escapeHtml(menu?.icona)}"><span class="form-help">Identificatore icona usato dalla UI host.</span></label>
-      <label>Pagina<input name="pagina" maxlength="50" value="${escapeHtml(menu?.pagina)}"><span class="form-help">Percorso o pagina associata al menu.</span></label>
-      <label>Ordine<input name="ordineMenu" type="number" value="${menu?.ordineMenu ?? ''}"></label>
-      <label>Menu di riferimento<input name="rifMenu" maxlength="20" value="${escapeHtml((menu as (MenuEntity & { rifMenu?: string }) | undefined)?.rifMenu)}"><span class="form-help">Codice di un menu padre, opzionale.</span></label>
-      <label>Nota<textarea name="note" rows="3" maxlength="1000">${escapeHtml(menu?.note)}</textarea></label>
-      <label class="check"><input name="enabled" type="checkbox" ${menu?.enabled !== false ? 'checked' : ''}> Menu abilitato</label>
+      <label>Gruppo ${helpDot('menu-group-select')}<select name="codiceGruppo" required>${groupOptions}</select><span class="form-help">Crea prima un gruppo se non ne esistono.</span></label>
+      <label>Tipo menu ${helpDot('menu-type-select')}<select name="tipo">${typeOptions}</select></label>
+      <label>Icona ${helpDot('menu-icon')}<input name="icona" maxlength="50" value="${escapeHtml(menu?.icona)}"><span class="form-help">Identificatore icona usato dalla UI host.</span></label>
+      <label>Pagina ${helpDot('menu-page')}<input name="pagina" maxlength="50" value="${escapeHtml(menu?.pagina)}"><span class="form-help">Percorso o pagina associata al menu.</span></label>
+      <label>Ordine ${helpDot('menu-order')}<input name="ordineMenu" type="number" value="${menu?.ordineMenu ?? ''}"></label>
+      <label>Menu di riferimento ${helpDot('menu-rifmenu')}<input name="rifMenu" maxlength="20" value="${escapeHtml((menu as (MenuEntity & { rifMenu?: string }) | undefined)?.rifMenu)}"><span class="form-help">Codice di un menu padre, opzionale.</span></label>
+      <label>Nota ${helpDot('menu-note')}<textarea name="note" rows="3" maxlength="1000">${escapeHtml(menu?.note)}</textarea></label>
+      <label class="check"><input name="enabled" type="checkbox" ${menu?.enabled !== false ? 'checked' : ''}> Menu abilitato ${helpDot('menu-enabled')}</label>
       <button>${isExisting ? 'Salva menu' : 'Crea menu'}</button>
     </form>`);
   byId('back').onclick = () => handleAction(showMenuItems);
@@ -1094,7 +1096,7 @@ function showMenuTypeForm(type?: MenuTypeEntity): void {
   const isExisting = type !== undefined;
   render(`<button id="back" type="button">Indietro</button><h2>${isExisting ? 'Modifica' : 'Nuovo'} tipo menu</h2>
     <form id="menu-type-form">
-      <label>Codice tipo<input name="codiceTipo" maxlength="1" value="${escapeHtml(type?.codiceTipo)}" ${isExisting ? 'readonly' : ''} required><span class="form-help">Un solo carattere, es. <code>A</code>. Immutabile dopo la creazione.</span></label>
+      <label>Codice tipo ${helpDot('menu-type-code')}<input name="codiceTipo" maxlength="1" value="${escapeHtml(type?.codiceTipo)}" ${isExisting ? 'readonly' : ''} required><span class="form-help">Un solo carattere, es. <code>A</code>. Immutabile dopo la creazione.</span></label>
       <label>Descrizione<input name="descrizioneTipo" maxlength="20" value="${escapeHtml(type?.descrizioneTipo)}"></label>
       <button>${isExisting ? 'Salva tipo' : 'Crea tipo'}</button>
     </form>`);
@@ -1122,7 +1124,7 @@ function filterTypeRows(types: TipoFiltro[]): string {
 /** Filtri utente: lettura e salvataggio dei filtri applicativi per singolo utente. */
 async function showFilters(): Promise<void> {
   const users = await loadUsers();
-  render(`<h2>Filtri utente</h2><p class="form-help">Filtri applicativi salvati per singolo utente.</p><form id="filters"><label>Utente<select name="codUte">${users.map(({ utente }) => `<option value="${utente.codiceUtente}">${escapeHtml(utente.email)}</option>`).join('')}</select><span class="form-help">Salvati per l'utente selezionato.</span></label><label>Filtro JSON<textarea name="json" rows="12">{}</textarea><span class="form-help">Usa Carica per partire dalla struttura esistente.</span></label><button name="action" value="load">Carica</button><button name="action" value="save">Salva</button></form>`);
+  render(`<h2>Filtri utente</h2><p class="form-help">Filtri applicativi salvati per singolo utente.</p><form id="filters"><label>Utente ${helpDot('filters-user')}<select name="codUte">${users.map(({ utente }) => `<option value="${utente.codiceUtente}">${escapeHtml(utente.email)}</option>`).join('')}</select><span class="form-help">Salvati per l'utente selezionato.</span></label><label>Filtro JSON ${helpDot('filters-json')}<textarea name="json" rows="12">{}</textarea><span class="form-help">Usa Carica per partire dalla struttura esistente.</span></label><button name="action" value="load">Carica</button><button name="action" value="save">Salva</button></form>`);
   const filtersForm = document.getElementById('filters') as HTMLFormElement | null;
   if (filtersForm) filtersForm.onsubmit = async (event) => { event.preventDefault(); const form = eventForm(event); const action = (event.submitter as HTMLButtonElement | null)?.value; const code = Number(formValues(form).codUte); if (action === 'load') { const filters = result<FiltriUtente[]>(await getFiltriUtente({ codUte: code })); (form.elements.namedItem('json') as HTMLTextAreaElement).value = JSON.stringify(filters[0] ?? { codUte: code }, null, 2); } else { const parsed = JSON.parse(formValues(form).json ?? '{}') as Omit<FiltriUtente, 'codUte'>; await saveFiltriUtente({ ...parsed, codUte: code }); showNotice('Filtri salvati.'); } };
 }
@@ -1149,10 +1151,10 @@ function showFilterTypeForm(type?: TipoFiltro): void {
   const isExisting = type !== undefined;
   render(`<button id="back" type="button">Indietro</button><h2>${isExisting ? 'Modifica' : 'Nuovo'} tipo filtro</h2>
     <form id="filter-type-form">
-      <label>Codice<input name="tipFil" type="number" value="${escapeHtml(type?.tipFil)}" ${isExisting ? 'readonly' : ''} required><span class="form-help">Identificativo numerico. Immutabile dopo la creazione.</span></label>
+      <label>Codice ${helpDot('filter-type-code')}<input name="tipFil" type="number" value="${escapeHtml(type?.tipFil)}" ${isExisting ? 'readonly' : ''} required><span class="form-help">Identificativo numerico. Immutabile dopo la creazione.</span></label>
       <label>Descrizione<input name="desFil" maxlength="20" value="${escapeHtml(type?.desFil)}"></label>
-      <label>Campo<input name="fldFil" maxlength="20" value="${escapeHtml(type?.fldFil)}"><span class="form-help">Nome del campo applicativo associato al filtro.</span></label>
-      <label class="check"><input name="flgEnabled" type="checkbox" ${type?.flgEnabled !== 0 ? 'checked' : ''}> Abilitato</label>
+      <label>Campo ${helpDot('filter-type-field')}<input name="fldFil" maxlength="20" value="${escapeHtml(type?.fldFil)}"><span class="form-help">Nome del campo applicativo associato al filtro.</span></label>
+      <label class="check"><input name="flgEnabled" type="checkbox" ${type?.flgEnabled !== 0 ? 'checked' : ''}> Abilitato ${helpDot('filter-type-enabled')}</label>
       <button>${isExisting ? 'Salva tipo' : 'Crea tipo'}</button>
     </form>`);
   byId('back').onclick = () => handleAction(showFilterTypes);
@@ -1223,7 +1225,7 @@ async function showServiceTokens(includeRevoked = false): Promise<void> {
 }
 
 function showServiceTokenForm(): void {
-  render(`<button id="back" type="button" class="secondary">Indietro</button><h2>Nuovo token di servizio</h2><form id="token-form"><label>Descrizione<input name="label" required maxlength="100"><span class="form-help">Identifica l'integrazione, ad esempio "IA - produzione".</span></label><label>Scope<input name="scopes" placeholder="ia, chat"><span class="form-help">Separati da virgola (lettere, numeri, ':', '_', '-'). Definiscono cosa puo fare il token.</span></label><label>Durata in giorni<input name="ttlDays" type="number" min="1" step="1"><span class="form-help">Opzionale. Lascia vuoto per un token senza scadenza.</span></label><button>Crea token</button></form>`);
+  render(`<button id="back" type="button" class="secondary">Indietro</button><h2>Nuovo token di servizio</h2><form id="token-form"><label>Descrizione ${helpDot('token-label')}<input name="label" required maxlength="100"><span class="form-help">Identifica l'integrazione, ad esempio "IA - produzione".</span></label><label>Scope ${helpDot('token-scopes')}<input name="scopes" placeholder="ia, chat"><span class="form-help">Separati da virgola (lettere, numeri, ':', '_', '-'). Definiscono cosa può fare il token.</span></label><label>Durata in giorni ${helpDot('token-ttl')}<input name="ttlDays" type="number" min="1" step="1"><span class="form-help">Opzionale. Lascia vuoto per un token senza scadenza.</span></label><button>Crea token</button></form>`);
   byId('back').onclick = () => void show('tokens');
   const form = document.getElementById('token-form') as HTMLFormElement | null;
   if (form) form.onsubmit = (event) => {
@@ -1273,6 +1275,65 @@ function renderWikiBlock(block: WikiBlock): string {
   }
 }
 
+/** Collega i pulsanti "Copia" dei blocchi di codice contenuti in `root`. */
+function bindCopyButtons(root: ParentNode): void {
+  root.querySelectorAll<HTMLButtonElement>('[data-wiki-copy]').forEach((button) => {
+    button.onclick = () => handleAction(async () => {
+      const codeEl = button.closest('.wiki-code')?.querySelector('code');
+      await navigator.clipboard.writeText(codeEl?.textContent ?? '');
+      showNotice('Codice copiato negli appunti.');
+    });
+  });
+}
+
+/** Icona "i" che apre la miniguida contestuale del campo. */
+function helpDot(key: string): string {
+  return `<button type="button" class="help-dot" data-help="${escapeHtml(key)}" aria-label="Aiuto: ${escapeHtml(HELP[key]?.title ?? key)}">i</button>`;
+}
+
+let helpPopover: HTMLElement | null = null;
+let helpAnchor: HTMLElement | null = null;
+
+function ensureHelpPopover(): HTMLElement {
+  if (!helpPopover) {
+    helpPopover = document.createElement('div');
+    helpPopover.className = 'help-popover';
+    helpPopover.hidden = true;
+    helpPopover.setAttribute('role', 'dialog');
+    document.body.appendChild(helpPopover);
+  }
+  return helpPopover;
+}
+
+function closeHelp(): void {
+  if (helpPopover) helpPopover.hidden = true;
+  helpAnchor = null;
+}
+
+/** Posiziona il popover sotto l'icona, correggendo i bordi dello schermo. */
+function positionHelp(): void {
+  if (!helpPopover || !helpAnchor || helpPopover.hidden) return;
+  const rect = helpAnchor.getBoundingClientRect();
+  const width = helpPopover.offsetWidth;
+  const height = helpPopover.offsetHeight;
+  const left = Math.max(8, Math.min(rect.right - width, window.innerWidth - width - 8));
+  let top = rect.bottom + 6;
+  if (top + height > window.innerHeight - 8) top = Math.max(8, rect.top - height - 6);
+  helpPopover.style.left = `${left}px`;
+  helpPopover.style.top = `${top}px`;
+}
+
+function openHelp(anchor: HTMLElement): void {
+  const entry = HELP[anchor.dataset.help ?? ''];
+  if (!entry) return;
+  const popover = ensureHelpPopover();
+  popover.innerHTML = `<div class="help-popover-head"><h4>${escapeHtml(entry.title)}</h4><button type="button" class="help-close" data-help-close aria-label="Chiudi">&times;</button></div><div class="help-popover-body">${entry.blocks.map(renderWikiBlock).join('')}</div>`;
+  popover.hidden = false;
+  helpAnchor = anchor;
+  bindCopyButtons(popover);
+  positionHelp();
+}
+
 /** Indice laterale della wiki, raggruppato per area. */
 function wikiIndexMarkup(selectedId: string): string {
   return wikiGroups().map(({ group, sections }) => `<div class="wiki-index-group"><span class="wiki-index-group-title">${escapeHtml(group)}</span><ul>${sections.map((section) => `<li><a href="#wiki-${escapeHtml(section.id)}" data-wiki="${escapeHtml(section.id)}"${section.id === selectedId ? ' aria-current="page"' : ''}>${escapeHtml(section.title)}</a></li>`).join('')}</ul></div>`).join('');
@@ -1304,13 +1365,7 @@ async function showWiki(sectionId?: string): Promise<void> {
       showWiki(id);
     };
   });
-  document.querySelectorAll<HTMLButtonElement>('[data-wiki-copy]').forEach((button) => {
-    button.onclick = () => handleAction(async () => {
-      const codeEl = button.closest('.wiki-code')?.querySelector('code');
-      await navigator.clipboard.writeText(codeEl?.textContent ?? '');
-      showNotice('Codice copiato negli appunti.');
-    });
-  });
+  bindCopyButtons(document);
   byId('wiki-copy-ai').onclick = () => handleAction(async () => {
     await navigator.clipboard.writeText(buildAiDigest());
     showNotice('Documentazione per AI copiata negli appunti.');
@@ -1387,6 +1442,26 @@ window.addEventListener('popstate', () => {
 window.addEventListener('accessi-console-network', (event: Event) => {
   updateLoadingState((event as CustomEvent<{ active: boolean }>).detail.active);
 });
+// Tooltip di aiuto: apertura dall'icona "i", chiusura su click esterno o Esc.
+document.addEventListener('click', (event) => {
+  const target = event.target as HTMLElement;
+  const dot = target.closest<HTMLElement>('[data-help]');
+  if (dot) {
+    event.preventDefault();
+    openHelp(dot);
+    return;
+  }
+  if (target.closest('[data-help-close]')) {
+    closeHelp();
+    return;
+  }
+  if (helpPopover && !helpPopover.hidden && !target.closest('.help-popover')) closeHelp();
+});
+window.addEventListener('keydown', (event) => {
+  if (event.key === 'Escape') closeHelp();
+});
+window.addEventListener('resize', positionHelp);
+window.addEventListener('scroll', positionHelp, true);
 // Optional handoff from the hosting backend after its SSO callback. The fragment
 // contains only an opaque challenge id, never an access token or provider token.
 const ssoChallenge = /^#two-factor=([a-f0-9]{64})$/.exec(window.location.hash)?.[1];
