@@ -173,7 +173,17 @@ export class UserService {
    * quando richiesti esplicitamente nelle opzioni; usare filtri puntuali nei flussi di autenticazione.
    */
   async getUsers(
-    filters?: { email?: string; codiceUtente?: number; limit?: number; offset?: number },
+    filters?: {
+      email?: string;
+      codiceUtente?: number | number[];
+      numRep?: number | number[];
+      codDipendente?: number;
+      cellulare?: string;
+      tipFil?: number;
+      flagSuper?: boolean;
+      limit?: number;
+      offset?: number;
+    },
     options?: { includeExtensionFields: boolean; includeGrants: boolean },
   ): Promise<GetUsersResult[]> {
     try {
@@ -213,6 +223,8 @@ export class UserService {
                 G.JSON_METADATA as json_metadata,
                 ${optionalColumn(configColumns, 'RAGSOCCLI', 'G', 'rag_soc_cli', false)},
                 ${optionalColumn(configColumns, 'NUMMAC', 'G', 'nummac')},
+                ${optionalColumn(configColumns, 'CAUMOV', 'G', 'caumov')},
+                ${optionalColumn(filterColumns, 'CODDIP', 'F', 'cod_dipendente')},
                 ${optionalColumn(filterColumns, 'NUMREP', 'F', 'num_rep', true)},
                 ${optionalColumn(filterColumns, 'IDXPERS', 'F', 'idx_pers', true)},
                 ${optionalColumn(filterColumns, 'CODCLISUPER', 'F', 'cod_cli_super', true)},
@@ -234,9 +246,45 @@ export class UserService {
         queryParams.push(filters.email.trim().toLowerCase());
       }
 
-      if (filters?.codiceUtente) {
-        query += ` AND U.CODUTE = ? `;
-        queryParams.push(filters.codiceUtente);
+      if (filters?.codiceUtente !== undefined) {
+        const codes = (Array.isArray(filters.codiceUtente) ? filters.codiceUtente : [filters.codiceUtente])
+          .map((value) => Number(value))
+          .filter((value) => Number.isFinite(value) && value > 0);
+        if (codes.length === 0) {
+          return [];
+        }
+        query += ` AND U.CODUTE IN (${codes.map(() => '?').join(', ')}) `;
+        queryParams.push(...codes);
+      }
+
+      if (filters?.numRep !== undefined) {
+        const reparti = (Array.isArray(filters.numRep) ? filters.numRep : [filters.numRep])
+          .map((value) => Number(value))
+          .filter((value) => Number.isFinite(value));
+        if (reparti.length === 0) {
+          return [];
+        }
+        query += ` AND F.NUMREP IN (${reparti.map(() => '?').join(', ')}) `;
+        queryParams.push(...reparti);
+      }
+
+      if (filters?.codDipendente !== undefined) {
+        query += ` AND F.CODDIP = ? `;
+        queryParams.push(Number(filters.codDipendente));
+      }
+
+      if (filters?.tipFil !== undefined) {
+        query += ` AND F.TIPFIL = ? `;
+        queryParams.push(Number(filters.tipFil));
+      }
+
+      if (filters?.cellulare) {
+        query += ` AND TRIM(G.CELLULARE) = ? `;
+        queryParams.push(String(filters.cellulare).trim());
+      }
+
+      if (filters?.flagSuper !== undefined) {
+        query += filters.flagSuper ? ` AND COALESCE(G.FLGSUPER, 0) <> 0 ` : ` AND COALESCE(G.FLGSUPER, 0) = 0 `;
       }
 
       query += ` ORDER BY U.CODUTE DESC `;
