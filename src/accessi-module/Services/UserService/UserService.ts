@@ -17,10 +17,27 @@ import { FiltriService } from '../FiltriService/FiltriService';
 import { PermissionService } from '../PermissionService/PermissionService';
 
 interface OptionalField<T> {
-  key: keyof RegisterRequest;
+  key: string;
   dbField: string;
   transform?: (value: unknown) => T;
 }
+
+/**
+ * Flag applicativi UTENTI_CONFIG esposti e gestibili dal modulo.
+ * `key` = nome camelCase nel DTO, `column` = colonna fisica, `alias` = alias SELECT.
+ */
+const APPLICATION_FLAG_FIELDS: ReadonlyArray<{ key: string; column: string; alias: string }> = [
+  { key: 'flagMop', column: 'FLGMOP', alias: 'flag_mop' },
+  { key: 'flagPiana', column: 'FLGPIANA', alias: 'flag_piana' },
+  { key: 'flagAddetti', column: 'FLGADDETTI', alias: 'flag_addetti' },
+  { key: 'flagOspiti', column: 'FLGOSPITI', alias: 'flag_ospiti' },
+  { key: 'flagPianaRfid', column: 'FLGPIANARFID', alias: 'flag_piana_rfid' },
+  { key: 'flagConta', column: 'FLGCONTA', alias: 'flag_conta' },
+  { key: 'flagCubi', column: 'FLGCUBI', alias: 'flag_cubi' },
+  { key: 'flagCicliPass', column: 'FLGCICLPASS', alias: 'flag_cicli_pass' },
+  { key: 'flagDipendenti', column: 'FLGDIPENDENTI', alias: 'flag_dipendenti' },
+  { key: 'flagInventari', column: 'FLGINVENTARI', alias: 'flag_inventari' },
+];
 
 @autobind
 @Injectable()
@@ -56,13 +73,22 @@ export class UserService {
   }
 
   private normalizeUserFlags(user: UserDto): UserDto {
-    return { ...user,
+    const normalized: UserDto = { ...user,
       flagSuper: this.normalizeDatabaseBoolean(user.flagSuper),
       flagAdminConfigurator: this.normalizeDatabaseBoolean(user.flagAdminConfigurator),
       flagDueFattori: this.normalizeDatabaseBoolean(user.flagDueFattori),
       passwordlessLoginEnabled: this.normalizeDatabaseBoolean(user.passwordlessLoginEnabled),
       passwordLoginEnabled: user.passwordLoginEnabled == null || this.normalizeDatabaseBoolean(user.passwordLoginEnabled),
+      enableIa: this.normalizeDatabaseBoolean(user.enableIa),
     };
+
+    for (const field of APPLICATION_FLAG_FIELDS) {
+      (normalized as unknown as Record<string, unknown>)[field.key] = this.normalizeDatabaseBoolean(
+        (user as unknown as Record<string, unknown>)[field.key],
+      );
+    }
+
+    return normalized;
   }
 
   private normalizeEmail(email: string): string {
@@ -227,6 +253,7 @@ export class UserService {
                 ${optionalColumn(configColumns, 'RAGSOCCLI', 'G', 'rag_soc_cli', false)},
                 ${optionalColumn(configColumns, 'NUMMAC', 'G', 'nummac')},
                 ${optionalColumn(configColumns, 'CAUMOV', 'G', 'caumov')},
+                ${APPLICATION_FLAG_FIELDS.map((field) => optionalColumn(configColumns, field.column, 'G', field.alias)).join(',\n                ')},
                 ${optionalColumn(filterColumns, 'CODDIP', 'F', 'cod_dipendente')},
                 ${optionalColumn(filterColumns, 'NUMREP', 'F', 'num_rep', true)},
                 ${optionalColumn(filterColumns, 'IDXPERS', 'F', 'idx_pers', true)},
@@ -433,6 +460,7 @@ export class UserService {
   /** Recupera il profilo locale usato dal login, compresi filtri Accessi eventualmente presenti. */
   async getUserByEmail(email: string): Promise<UserDto | null> {
     const configColumns = await getTableColumns(this.accessiOptions, 'UTENTI_CONFIG');
+    const utentiColumns = await getTableColumns(this.accessiOptions, 'UTENTI');
     const query = `
             SELECT 
                 U.CODUTE AS codice_utente, 
@@ -440,6 +468,7 @@ export class UserService {
                 U.FLGGDPR AS flag_gdpr,
                 U.DATSCAPWD as data_scadenza_password,
                 U.STAREG AS stato_registrazione, 
+                ${optionalColumn(utentiColumns, 'ENABLEIA', 'U', 'enable_ia')},
                 C.COGNOME AS cognome, 
                 C.NOME AS nome, 
                 C.AVATAR AS avatar, 
@@ -451,8 +480,10 @@ export class UserService {
                 C.FLGADMINCONFIG AS flag_admin_configurator,
                 COALESCE(C.FLGPASSWORD, 1) AS password_login_enabled,
                 C.PAGDEF AS pagina_default,
+                ${optionalColumn(configColumns, 'CAUMOV', 'C', 'caumov')},
                 ${optionalColumn(configColumns, 'NUMMAC', 'C', 'nummac')},
-                ${optionalColumn(configColumns, 'RAGSOCCLI', 'C', 'rag_soc_cli', false)}
+                ${optionalColumn(configColumns, 'RAGSOCCLI', 'C', 'rag_soc_cli', false)},
+                ${APPLICATION_FLAG_FIELDS.map((field) => optionalColumn(configColumns, field.column, 'C', field.alias)).join(',\n                ')}
             FROM UTENTI U
             INNER JOIN UTENTI_CONFIG C ON C.CODUTE = U.CODUTE
             WHERE LOWER(U.USRNAME) = ?
@@ -576,6 +607,11 @@ export class UserService {
           dbField: 'RAGSOCCLI',
           transform: (v) => String(v),
         },
+        {
+          key: 'caumov',
+          dbField: 'CAUMOV',
+          transform: (v) => String(v),
+        },
       ];
 
       if (allowPrivilegedFields) {
@@ -591,10 +627,18 @@ export class UserService {
             transform: (v) => (v ? 1 : 0),
           },
         );
+
+        for (const flag of APPLICATION_FLAG_FIELDS) {
+          optionalFields.push({
+            key: flag.key,
+            dbField: flag.column,
+            transform: (v) => (v ? 1 : 0),
+          });
+        }
       }
 
       for (const field of optionalFields) {
-        const value = registrationData[field.key];
+        const value = (registrationData as unknown as Record<string, unknown>)[field.key];
         if (value !== undefined && value !== null) {
           utentiConfigFields.push(field.dbField);
           utentiConfigPlaceholders.push('?');
@@ -690,6 +734,10 @@ export class UserService {
         utentiUpdates.push('flggdpr = ?');
         utentiParams.push(user.flagGdpr);
       }
+      if (allowPrivilegedChanges && user.enableIa !== undefined) {
+        utentiUpdates.push('enableia = ?');
+        utentiParams.push(user.enableIa ? 1 : 0);
+      }
       if (allowPrivilegedChanges && user.statoRegistrazione !== undefined) {
         utentiUpdates.push('stareg = ?');
         utentiParams.push(user.statoRegistrazione);
@@ -739,6 +787,19 @@ export class UserService {
       if (allowPrivilegedChanges && user.flagAdminConfigurator !== undefined) {
         utentiConfigUpdates.push('flgadminconfig = ?');
         utentiConfigParams.push(user.flagAdminConfigurator);
+      }
+      if (allowPrivilegedChanges && user.caumov !== undefined) {
+        utentiConfigUpdates.push('caumov = ?');
+        utentiConfigParams.push(user.caumov);
+      }
+      if (allowPrivilegedChanges) {
+        for (const flag of APPLICATION_FLAG_FIELDS) {
+          const value = (user as unknown as Record<string, unknown>)[flag.key];
+          if (value !== undefined) {
+            utentiConfigUpdates.push(`${flag.column.toLowerCase()} = ?`);
+            utentiConfigParams.push(value ? 1 : 0);
+          }
+        }
       }
       if (allowPrivilegedChanges && user.passwordLoginEnabled !== undefined) {
         utentiConfigUpdates.push('flgpassword = ?');

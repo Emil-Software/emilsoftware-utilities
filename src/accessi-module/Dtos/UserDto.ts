@@ -200,6 +200,77 @@ export class UserDto extends OmitType(FiltriUtente, ['codUte'] as const) {
   @IsString({ message: 'La ragione sociale deve essere una stringa.' })
   ragSocCli?: string;
 
+  @ApiPropertyOptional({ description: 'Codice causale movimento applicativa.', example: 'VEN' })
+  @IsOptional()
+  @IsString({ message: 'Il codice causale deve essere una stringa.' })
+  caumov?: string;
+
+  @ApiPropertyOptional({ description: 'Abilita l\'utente all\'uso dell\'assistente IA.', default: false })
+  @IsOptional()
+  @IsBoolean({ message: 'Il flag IA deve essere booleano.' })
+  @Transform(({ obj, key }) => obj[key])
+  enableIa?: boolean;
+
+  @ApiPropertyOptional({ description: 'Abilitazione funzionalita MOP.', default: false })
+  @IsOptional()
+  @IsBoolean({ message: 'Il flag MOP deve essere booleano.' })
+  @Transform(({ obj, key }) => obj[key])
+  flagMop?: boolean;
+
+  @ApiPropertyOptional({ description: 'Abilitazione funzionalita Piana.', default: false })
+  @IsOptional()
+  @IsBoolean({ message: 'Il flag Piana deve essere booleano.' })
+  @Transform(({ obj, key }) => obj[key])
+  flagPiana?: boolean;
+
+  @ApiPropertyOptional({ description: 'Abilitazione funzionalita Addetti.', default: false })
+  @IsOptional()
+  @IsBoolean({ message: 'Il flag Addetti deve essere booleano.' })
+  @Transform(({ obj, key }) => obj[key])
+  flagAddetti?: boolean;
+
+  @ApiPropertyOptional({ description: 'Abilitazione funzionalita Ospiti.', default: false })
+  @IsOptional()
+  @IsBoolean({ message: 'Il flag Ospiti deve essere booleano.' })
+  @Transform(({ obj, key }) => obj[key])
+  flagOspiti?: boolean;
+
+  @ApiPropertyOptional({ description: 'Abilitazione Piana RFID.', default: false })
+  @IsOptional()
+  @IsBoolean({ message: 'Il flag Piana RFID deve essere booleano.' })
+  @Transform(({ obj, key }) => obj[key])
+  flagPianaRfid?: boolean;
+
+  @ApiPropertyOptional({ description: 'Abilitazione funzionalita Contabilita.', default: false })
+  @IsOptional()
+  @IsBoolean({ message: 'Il flag Conta deve essere booleano.' })
+  @Transform(({ obj, key }) => obj[key])
+  flagConta?: boolean;
+
+  @ApiPropertyOptional({ description: 'Abilitazione funzionalita Cubi.', default: false })
+  @IsOptional()
+  @IsBoolean({ message: 'Il flag Cubi deve essere booleano.' })
+  @Transform(({ obj, key }) => obj[key])
+  flagCubi?: boolean;
+
+  @ApiPropertyOptional({ description: 'Abilitazione funzionalita Cicli passivi.', default: false })
+  @IsOptional()
+  @IsBoolean({ message: 'Il flag Cicli passivi deve essere booleano.' })
+  @Transform(({ obj, key }) => obj[key])
+  flagCicliPass?: boolean;
+
+  @ApiPropertyOptional({ description: 'Abilitazione gestione dipendenti.', default: false })
+  @IsOptional()
+  @IsBoolean({ message: 'Il flag Dipendenti deve essere booleano.' })
+  @Transform(({ obj, key }) => obj[key])
+  flagDipendenti?: boolean;
+
+  @ApiPropertyOptional({ description: 'Abilitazione gestione inventari.', default: false })
+  @IsOptional()
+  @IsBoolean({ message: 'Il flag Inventari deve essere booleano.' })
+  @Transform(({ obj, key }) => obj[key])
+  flagInventari?: boolean;
+
   @ApiPropertyOptional({ description: "Ruoli assegnati all'utente.", example: [1, 2] })
   @IsOptional()
   @IsArray({ message: 'I ruoli devono essere un array.' })

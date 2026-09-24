@@ -3786,6 +3786,66 @@
             "description": "Ragione sociale cliente.",
             "example": "ACME Corp SpA"
           },
+          "caumov": {
+            "type": "string",
+            "description": "Codice causale movimento applicativa.",
+            "example": "VEN"
+          },
+          "enableIa": {
+            "type": "boolean",
+            "description": "Abilita l'utente all'uso dell'assistente IA.",
+            "default": false
+          },
+          "flagMop": {
+            "type": "boolean",
+            "description": "Abilitazione funzionalita MOP.",
+            "default": false
+          },
+          "flagPiana": {
+            "type": "boolean",
+            "description": "Abilitazione funzionalita Piana.",
+            "default": false
+          },
+          "flagAddetti": {
+            "type": "boolean",
+            "description": "Abilitazione funzionalita Addetti.",
+            "default": false
+          },
+          "flagOspiti": {
+            "type": "boolean",
+            "description": "Abilitazione funzionalita Ospiti.",
+            "default": false
+          },
+          "flagPianaRfid": {
+            "type": "boolean",
+            "description": "Abilitazione Piana RFID.",
+            "default": false
+          },
+          "flagConta": {
+            "type": "boolean",
+            "description": "Abilitazione funzionalita Contabilita.",
+            "default": false
+          },
+          "flagCubi": {
+            "type": "boolean",
+            "description": "Abilitazione funzionalita Cubi.",
+            "default": false
+          },
+          "flagCicliPass": {
+            "type": "boolean",
+            "description": "Abilitazione funzionalita Cicli passivi.",
+            "default": false
+          },
+          "flagDipendenti": {
+            "type": "boolean",
+            "description": "Abilitazione gestione dipendenti.",
+            "default": false
+          },
+          "flagInventari": {
+            "type": "boolean",
+            "description": "Abilitazione gestione inventari.",
+            "default": false
+          },
           "roles": {
             "description": "Ruoli assegnati all'utente.",
             "example": [
@@ -4328,6 +4388,11 @@
             "type": "string",
             "description": "Nota informativa associata al menu.",
             "example": "Visibile solo agli amministratori"
+          },
+          "nomeCampo": {
+            "type": "string",
+            "description": "Colonna UTENTI_CONFIG che regola l'abilitazione del gruppo del menu.",
+            "example": "FLGDIPENDENTI"
           }
         },
         "required": [
@@ -4383,8 +4448,13 @@
             "description": "Flag che indica se il gruppo e abilitato.",
             "example": true
           },
+          "nomeCampo": {
+            "type": "string",
+            "description": "Colonna UTENTI_CONFIG che regola l'abilitazione del gruppo.",
+            "example": "FLGDIPENDENTI"
+          },
           "menus": {
-            "description": "Lista dei menù associati al gruppo.",
+            "description": "Lista dei men�� associati al gruppo.",
             "type": "array",
             "items": {
               "$ref": "#/components/schemas/MenuEntity"

@@ -35,8 +35,15 @@ export class GroupWithMenusEntity {
     })
     enabled?: boolean;
 
+    @ApiPropertyOptional({
+        description: "Colonna UTENTI_CONFIG che regola l'abilitazione del gruppo.",
+        type: String,
+        example: "FLGDIPENDENTI"
+    })
+    nomeCampo?: string | null;
+
     @ApiProperty({
-        description: "Lista dei menù associati al gruppo.",
+        description: "Lista dei men�� associati al gruppo.",
         type: [MenuEntity]
     })
     @ValidateNested({ each: true })

@@ -535,6 +535,14 @@ fetch("/api/accessi/user/register", {
 ```
 
 > [!NOTE]
+> **Flag applicativi**
+> Il profilo espone i flag UTENTI\_CONFIG (FLGMOP, FLGPIANA, FLGADDETTI, FLGOSPITI, FLGPIANARFID, FLGCONTA, FLGCUBI, FLGCICLPASS, FLGDIPENDENTI, FLGINVENTARI), il codice causale CAUMOV e ENABLEIA (assistente IA). Sono modificabili solo da flussi privilegiati (allowPrivilegedFields/allowPrivilegedChanges) e visibili nella scheda utente della console.
+
+> [!NOTE]
+> **Gruppi menu e NOMECAMPO**
+> Ogni gruppo menu puo dichiarare NOMECAMPO, la colonna UTENTI\_CONFIG che ne regola l'abilitazione (es. FLGDIPENDENTI). get-groups-with-menus e get-menus espongono nomeCampo.
+
+> [!NOTE]
 > **Campi estesi**
 > extensionFieldsOptions allega colonne di tabelle applicative al profilo (per esempio la ragione sociale). Le colonne sono in whitelist: non costruirle mai da input HTTP.
 

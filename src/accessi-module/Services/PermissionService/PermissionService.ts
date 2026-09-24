@@ -464,13 +464,14 @@ export class PermissionService {
                     M.CODGRP AS codiceGruppo,
                     G.DESGRP AS descrizioneGruppo,
                     M.ICON AS icona,
-                    M.CODTIP AS tipo,
-                    M.PAGINA AS pagina,
-                    M.NOTE AS note
-                FROM MENU M
-                LEFT JOIN MENU_GRP G ON M.CODGRP = G.CODGRP
-                WHERE M.FLGENABLED = 1 AND COALESCE(G.FLGENABLED, 1) = 1
-                ORDER BY G.CODGRP, M.CODMNU
+  M.CODTIP AS tipo,
+  M.PAGINA AS pagina,
+  M.NOTE AS note,
+  G.NOMECAMPO AS nome_campo
+  FROM MENU M
+  LEFT JOIN MENU_GRP G ON M.CODGRP = G.CODGRP
+  WHERE M.FLGENABLED = 1 AND COALESCE(G.FLGENABLED, 1) = 1
+  ORDER BY G.CODGRP, M.CODMNU
             `;
 
         const result = await Orm.query(this.accessiOptions.databaseOptions, query, []);
@@ -500,7 +501,8 @@ export class PermissionService {
                     G.ORDINE AS ordine_gruppo,
                     M.ORDINE as ordine_menu,
                     M.FLGENABLED AS menu_enabled,
-                    G.FLGENABLED AS group_enabled
+                    G.FLGENABLED AS group_enabled,
+                    G.NOMECAMPO AS nome_campo
                 FROM MENU M
                 LEFT JOIN MENU_GRP G ON M.CODGRP = G.CODGRP
                 ${filtersClause}
@@ -532,6 +534,7 @@ export class PermissionService {
                     codiceGruppo: menuBase.codiceGruppo ?? normalizedGroupKey,
                     descrizioneGruppo: menuBase.descrizioneGruppo ?? '',
                     ordineGruppo: menuBase.ordineGruppo,
+                    nomeCampo: menuBase.nomeCampo ?? null,
                     enabled: groupEnabledFlag,
                     menus: [],
                 });

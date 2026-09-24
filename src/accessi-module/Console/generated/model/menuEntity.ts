@@ -18,6 +18,8 @@ export interface MenuEntity {
   enabled?: boolean;
   /** Percorso dell'icona associata al menù. */
   icona?: string;
+  /** Colonna UTENTI_CONFIG che regola l'abilitazione del gruppo del menu. */
+  nomeCampo?: string;
   /** Nota informativa associata al menu. */
   note?: string;
   /** Ordine del gruppo. */

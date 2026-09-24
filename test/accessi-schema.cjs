@@ -61,8 +61,8 @@ integration('fresh database: generic schema, actual user operations and idempote
   const o = await database(t);
   await Updater.run(o);
   assert.deepEqual(await Updater.inspectSchema(o), { compatible: true, issues: [] });
-  const columns = await query(o, "SELECT TRIM(RDB$FIELD_NAME) AS NAME FROM RDB$RELATION_FIELDS WHERE RDB$RELATION_NAME IN ('UTENTI_CONFIG', 'FILTRI')");
-  for (const name of ['NUMMAC', 'IDXPOS', 'CODVET', 'NUMREP', 'RAGSOCCLI']) assert(!columns.some(c => c.NAME === name));
+  const columns = await query(o, "SELECT TRIM(RDB$FIELD_NAME) AS NAME FROM RDB$RELATION_FIELDS WHERE RDB$RELATION_NAME IN ('UTENTI', 'UTENTI_CONFIG', 'FILTRI')");
+  for (const name of ['ENABLEIA', 'NUMMAC', 'IDXPOS', 'CODVET', 'NUMREP', 'RAGSOCCLI', 'CAUMOV', 'FLGMOP', 'FLGINVENTARI', 'FLGDIPENDENTI']) assert(columns.some(c => c.NAME === name), `colonna mancante: ${name}`);
   for (const table of ['UTENTI', 'MENU', 'FILTRI_TIPO', 'SSO_PROVIDER']) assert.equal((await query(o, `SELECT COUNT(*) AS N FROM ${table}`))[0].N, 0);
   const filters = new FiltriService(o);
   const users = new UserService(o, {}, new PermissionService(o), filters);
@@ -75,9 +75,14 @@ integration('fresh database: generic schema, actual user operations and idempote
   assert.equal((await users.getUsers())[0].utente.codiceUtente, id);
   await filters.upsertFiltriUtente(id, { tipFil: 7 });
   assert.equal((await filters.getFiltriUser(id))[0].tipFil, 7);
-  await assert.rejects(users.register({ email: 'unsupported@example.test', nummac: 10 }), /Campo applicativo non configurato/);
-  assert.equal((await query(o, 'SELECT COUNT(*) AS N FROM UTENTI'))[0].N, 1);
-  await assert.rejects(filters.upsertFiltriUtente(id, { codVet: 20 }), /Filtro applicativo non configurato/);
+  const privilegedId = await users.register({ email: 'flags@example.test', nummac: 10, caumov: 'VEN', flagMop: true }, { allowPrivilegedFields: true });
+  const privilegedUser = await users.getUserByEmail('flags@example.test');
+  assert.equal(privilegedUser.nummac, 10);
+  assert.equal(privilegedUser.caumov, 'VEN');
+  assert.equal(privilegedUser.flagMop, true);
+  assert.equal((await query(o, 'SELECT COUNT(*) AS N FROM UTENTI'))[0].N, 2);
+  await filters.upsertFiltriUtente(privilegedId, { codVet: 20 });
+  assert.equal((await filters.getFiltriUser(privilegedId))[0].codVet, 20);
   await users.updateUser(id, { nome: 'Updated', ragSocCli: null, codVet: null });
   await users.setGdpr(id);
   assert.equal((await query(o, 'SELECT FLGGDPR FROM UTENTI WHERE CODUTE = ?', [id]))[0].FLGGDPR, 1);

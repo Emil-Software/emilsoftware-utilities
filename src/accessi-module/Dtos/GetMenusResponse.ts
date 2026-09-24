@@ -99,6 +99,13 @@ export class MenuEntity {
         example: "Visibile solo agli amministratori"
     })
     note?: string | null;
+
+    @ApiPropertyOptional({
+        description: "Colonna UTENTI_CONFIG che regola l'abilitazione del gruppo del menu.",
+        type: String,
+        example: "FLGDIPENDENTI"
+    })
+    nomeCampo?: string | null;
 }
 
 export class GetMenusResponse extends BaseResponse {
