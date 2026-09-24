@@ -45,17 +45,20 @@ jobs:
           - firebird: "5"
             image: firebirdsql/firebird:5
             database: /var/lib/firebird/data/test_accessi.fdb
+            directory: /var/lib/firebird/data
             plugin: ""
             wireCrypt: ""
           - firebird: "3"
             image: firebirdsql/firebird:3
             database: /var/lib/firebird/data/test_accessi.fdb
+            directory: /var/lib/firebird/data
             plugin: ""
             wireCrypt: ""
           # Firebird 2.5: immagine jacobalberty (SuperServer), solo Legacy_Auth e senza wire crypt.
           - firebird: "2.5"
             image: jacobalberty/firebird:v2.5.9-ss
             database: /firebird/data/test_accessi.fdb
+            directory: /firebird/data
             plugin: Legacy_Auth
             wireCrypt: disabled
     services:
@@ -113,12 +116,17 @@ jobs:
           "
 
       - name: Integration tests (Firebird ${{ matrix.firebird }})
-        run: node --test --test-concurrency=1 test/integration/accessi.integration.cjs test/integration/allegati.integration.cjs
+        run: |
+          node --test --test-concurrency=1 \
+            test/integration/accessi.integration.cjs \
+            test/integration/allegati.integration.cjs \
+            test/accessi-schema.cjs
         env:
           ACCESSI_TEST_REQUIRE_DB: "1"
           ACCESSI_TEST_DB_HOST: 127.0.0.1
           ACCESSI_TEST_DB_PORT: "3050"
           ACCESSI_TEST_DB_DATABASE: ${{ matrix.database }}
+          ACCESSI_TEST_DB_DIRECTORY: ${{ matrix.directory }}
           ACCESSI_TEST_DB_USER: SYSDBA
           ACCESSI_TEST_DB_PASSWORD: masterkey
           ACCESSI_TEST_DB_AUTH_PLUGIN: ${{ matrix.plugin }}

@@ -70,6 +70,18 @@ export class AccessiDatabaseUpdater extends DatabaseUpdater implements OnModuleI
     return rows.length > 0;
   }
 
+  /** Nome deterministico del CHECK che replica NOT NULL su Firebird 2.5 (limite identificatore: 31 caratteri). */
+  private static notNullConstraint(table: string, column: string): string {
+    return `CK_NN_${table}_${column}`.toUpperCase().slice(0, 31);
+  }
+
+  /** Su Firebird 2.5 NOT NULL sulle colonne esistenti e' replicato da un CHECK: la verifica lo accetta. */
+  private static notNullEnforcedByCheck(checks: Row[], engineMajor: number, table: string, column: string): boolean {
+    if (engineMajor >= 3) return false;
+    const name = this.notNullConstraint(table, column);
+    return checks.some(row => row.NAME === name && this.sameCheck(String(row.CHECK_SOURCE), `${column} IS NOT NULL`));
+  }
+
   private static async relationIssues(options: AccessiOptions): Promise<string[]> {
     // RDB$VIEW_BLR esiste in tutte le versioni; RDB$RELATION_TYPE solo da Firebird 3.0.
     // Una vista ha RDB$VIEW_BLR non nullo: se una tabella Accessi esiste come vista, va segnalato.
@@ -218,8 +230,10 @@ export class AccessiDatabaseUpdater extends DatabaseUpdater implements OnModuleI
   static async inspectSchema(options: AccessiOptions): Promise<AccessiSchemaReport> {
     const engine = await this.engineIssue(options);
     if (engine) return { compatible: false, issues: [engine] };
+    const { major: engineMajor } = await this.engineInfo(options);
     const issues: string[] = await this.relationIssues(options);
     const columns = await this.columns(options);
+    const checks = await this.checks(options);
     const future = await this.futureVersionIssue(options, columns);
     if (future) issues.push(future);
     for (const [table, schema] of Object.entries(accessiTables)) {
@@ -230,12 +244,13 @@ export class AccessiDatabaseUpdater extends DatabaseUpdater implements OnModuleI
         if (!row) { issues.push(`Colonna mancante: ${table}.${name}`); continue; }
         const problem = this.typeIssue(row, definition);
         if (problem) issues.push(`${table}.${name}: ${problem}`);
-        if (definition.includes('NOT NULL') && !Number(row.NOT_NULL)) issues.push(`${table}.${name}: manca NOT NULL`);
+        if (definition.includes('NOT NULL') && !Number(row.NOT_NULL) && !this.notNullEnforcedByCheck(checks, engineMajor, table, name)) {
+          issues.push(`${table}.${name}: manca NOT NULL`);
+        }
         const expected = this.defaultValue(definition);
         if (expected && this.normalizeDefault(row.DEFAULT_SOURCE) !== this.normalizeDefault(expected)) issues.push(`${table}.${name}: richiesto DEFAULT ${expected}`);
       }
     }
-    const checks = await this.checks(options);
     for (const check of accessiChecks) {
       if (!checks.some(row => row.TABLE_NAME === check.table && this.sameCheck(String(row.CHECK_SOURCE), check.expression))) issues.push(`${check.table}: manca CHECK (${check.expression})`);
     }
@@ -285,6 +300,7 @@ export class AccessiDatabaseUpdater extends DatabaseUpdater implements OnModuleI
     if (engine) throw new Error(engine);
     const { major: engineMajor } = await this.engineInfo(options);
     const columns = await this.columns(options);
+    const checks = await this.checks(options);
     const future = await this.futureVersionIssue(options, columns);
     if (future) throw new Error(future);
     // Detect incompatible existing definitions before making any changes. Never guess at data conversion.
@@ -318,7 +334,15 @@ export class AccessiDatabaseUpdater extends DatabaseUpdater implements OnModuleI
           if (expected && this.normalizeDefault(row.DEFAULT_SOURCE) !== this.normalizeDefault(expected)) await this.execute(options, `ALTER TABLE ${table} ALTER ${name} SET DEFAULT ${expected}`);
           if (definition.includes('NOT NULL') && !Number(row.NOT_NULL)) {
             if (expected) await this.execute(options, `UPDATE ${table} SET ${name} = ${expected} WHERE ${name} IS NULL`);
-            await this.execute(options, `ALTER TABLE ${table} ALTER ${name} SET NOT NULL`);
+            if (engineMajor >= 3) {
+              await this.execute(options, `ALTER TABLE ${table} ALTER ${name} SET NOT NULL`);
+            } else {
+              // Firebird 2.5 non supporta ALTER ... SET NOT NULL: replica la regola con un CHECK equivalente.
+              const nnName = this.notNullConstraint(table, name);
+              if (!checks.some(entry => entry.NAME === nnName)) {
+                await this.execute(options, `ALTER TABLE ${table} ADD CONSTRAINT ${nnName} CHECK (${name} IS NOT NULL)`);
+              }
+            }
           }
         }
       }
@@ -348,7 +372,6 @@ export class AccessiDatabaseUpdater extends DatabaseUpdater implements OnModuleI
       }
       await this.execute(options, `ALTER TABLE ${fk.table} ADD CONSTRAINT ${fk.name} FOREIGN KEY (${fk.column}) REFERENCES ${fk.target} (${fk.targetColumn})${fk.cascade ? ' ON DELETE CASCADE' : ''}`);
     }
-    const checks = await this.checks(options);
     for (const check of accessiChecks) {
       if (!checks.some(row => row.TABLE_NAME === check.table && this.sameCheck(String(row.CHECK_SOURCE), check.expression))) {
         await this.execute(options, `ALTER TABLE ${check.table} ADD CONSTRAINT ${check.name} CHECK (${check.expression})`);

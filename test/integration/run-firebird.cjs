@@ -9,6 +9,7 @@ const DEFAULTS = {
   '2.5': {
     ACCESSI_TEST_DB_PORT: '3057',
     ACCESSI_TEST_DB_DATABASE: '/firebird/data/test_accessi.fdb',
+    ACCESSI_TEST_DB_DIRECTORY: '/firebird/data',
     // Firebird 2.5 usa Legacy_Auth e non supporta la cifratura del wire.
     ACCESSI_TEST_DB_AUTH_PLUGIN: 'Legacy_Auth',
     ACCESSI_TEST_DB_WIRE_CRYPT: 'disabled',
@@ -16,10 +17,12 @@ const DEFAULTS = {
   '3': {
     ACCESSI_TEST_DB_PORT: '3056',
     ACCESSI_TEST_DB_DATABASE: '/var/lib/firebird/data/test_accessi.fdb',
+    ACCESSI_TEST_DB_DIRECTORY: '/var/lib/firebird/data',
   },
   '5': {
     ACCESSI_TEST_DB_PORT: '3055',
     ACCESSI_TEST_DB_DATABASE: '/var/lib/firebird/data/test_accessi.fdb',
+    ACCESSI_TEST_DB_DIRECTORY: '/var/lib/firebird/data',
   },
 };
 
@@ -33,6 +36,8 @@ const result = spawnSync(
     '--test-concurrency=1',
     path.join(__dirname, 'accessi.integration.cjs'),
     path.join(__dirname, 'allegati.integration.cjs'),
+    // Scenari di migrazione profondi (schema legacy, backfill, trigger, snapshot), comuni a 2.5/3/5.
+    path.join(__dirname, '..', 'accessi-schema.cjs'),
   ],
   { stdio: 'inherit', env: { ...selected, ...process.env } },
 );

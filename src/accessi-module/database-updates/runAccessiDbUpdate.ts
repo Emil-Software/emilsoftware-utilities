@@ -22,14 +22,22 @@ function getOptionalBoolean(name: string, fallback: boolean): boolean {
 }
 
 function createAccessiOptionsFromEnv(): AccessiOptions {
+  const databaseOptions = DatabaseUtilities.createOption(
+    getEnv(["ACCESSI_DB_HOST", "ACCESSI_FIREBIRD_HOST"]),
+    Number(getEnv(["ACCESSI_DB_PORT", "ACCESSI_FIREBIRD_PORT"], "3050")),
+    getEnv(["ACCESSI_DB_DATABASE", "ACCESSI_FIREBIRD_DATABASE"]),
+    getEnv(["ACCESSI_DB_USER", "ACCESSI_FIREBIRD_USER"], "SYSDBA"),
+    getEnv(["ACCESSI_DB_PASSWORD", "ACCESSI_FIREBIRD_PASSWORD"], "masterkey")
+  );
+
+  // Firebird 2.5 richiede Legacy_Auth e non supporta la cifratura del wire: override opzionale via env.
+  const wireCrypt = process.env.ACCESSI_DB_WIRE_CRYPT;
+  const authPlugin = process.env.ACCESSI_DB_AUTH_PLUGIN;
+  if (wireCrypt) (databaseOptions as { wireCrypt?: string }).wireCrypt = wireCrypt;
+  if (authPlugin) (databaseOptions as { pluginName?: string }).pluginName = authPlugin;
+
   return {
-    databaseOptions: DatabaseUtilities.createOption(
-      getEnv(["ACCESSI_DB_HOST", "ACCESSI_FIREBIRD_HOST"]),
-      Number(getEnv(["ACCESSI_DB_PORT", "ACCESSI_FIREBIRD_PORT"], "3050")),
-      getEnv(["ACCESSI_DB_DATABASE", "ACCESSI_FIREBIRD_DATABASE"]),
-      getEnv(["ACCESSI_DB_USER", "ACCESSI_FIREBIRD_USER"], "SYSDBA"),
-      getEnv(["ACCESSI_DB_PASSWORD", "ACCESSI_FIREBIRD_PASSWORD"], "masterkey")
-    ),
+    databaseOptions,
     confirmationEmailUrl: getEnv("ACCESSI_CONFIRMATION_EMAIL_URL", "http://localhost"),
     confirmationEmailReturnUrl: getEnv("ACCESSI_CONFIRMATION_RETURN_EMAIL_URL", "http://localhost"),
     confirmationEmailPrefix: process.env.ACCESSI_CONFIRMATION_EMAIL_PREFIX,
