@@ -61,9 +61,9 @@ integration('fresh database: generic schema, actual user operations and idempote
   const o = await database(t);
   await Updater.run(o);
   assert.deepEqual(await Updater.inspectSchema(o), { compatible: true, issues: [] });
-  const columns = await query(o, "SELECT TRIM(RDB$FIELD_NAME) AS NAME FROM RDB$RELATION_FIELDS WHERE RDB$RELATION_NAME IN ('UTENTI', 'UTENTI_CONFIG', 'FILTRI')");
-  for (const name of ['ENABLEIA', 'FLGADMIN', 'FLG2FATT', 'FLGPWDLESS', 'FLGPASSWORD', 'IDXPOS', 'CODVET', 'NUMREP']) assert(columns.some(c => c.NAME === name), `colonna mancante: ${name}`);
-  for (const name of ['FLGADMINCONFIG', 'NUMMAC', 'RAGSOCCLI', 'CAUMOV', 'FLGMOP', 'FLGPIANA', 'FLGINVENTARI', 'FLGDIPENDENTI']) assert(!columns.some(c => c.NAME === name), `colonna ibrida non rimossa: ${name}`);
+  const columns = await query(o, "SELECT TRIM(RDB$FIELD_NAME) AS NAME FROM RDB$RELATION_FIELDS WHERE RDB$RELATION_NAME IN ('UTENTI', 'UTENTI_CONFIG', 'FILTRI', 'MENU_GRP')");
+  for (const name of ['FLGADMIN', 'FLG2FATT', 'FLGPWDLESS', 'FLGPASSWORD', 'CELLULARE', 'IDXPOS', 'CODVET', 'NUMREP']) assert(columns.some(c => c.NAME === name), `colonna mancante: ${name}`);
+  for (const name of ['FLGADMINCONFIG', 'NUMMAC', 'RAGSOCCLI', 'CAUMOV', 'FLGMOP', 'FLGPIANA', 'FLGINVENTARI', 'FLGDIPENDENTI', 'ENABLEIA', 'PAGDEF', 'NOMECAMPO', 'CELLUTE']) assert(!columns.some(c => c.NAME === name), `colonna ibrida non rimossa: ${name}`);
   for (const table of ['UTENTI', 'MENU', 'FILTRI_TIPO', 'SSO_PROVIDER']) assert.equal((await query(o, `SELECT COUNT(*) AS N FROM ${table}`))[0].N, 0);
   const filters = new FiltriService(o);
   const users = new UserService(o, {}, new PermissionService(o), filters);

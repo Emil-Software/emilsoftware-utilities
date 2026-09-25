@@ -1,4 +1,4 @@
--- Generic Accessi schema 1.9.0 for an EMPTY, already-created Firebird database (3.0+).
+-- Generic Accessi schema 1.10.0 for an EMPTY, already-created Firebird database (3.0+).
 -- For existing databases use AccessiDatabaseUpdater.run: this snapshot is not an upgrade script.
 -- No users, menus, filter catalogs, credentials or grants are provisioned; generic columns are.
 SET SQL DIALECT 3;
@@ -21,8 +21,7 @@ CREATE TABLE UTENTI (
     DATSCAPWD DATE,
     DATLASTLOGIN DATE,
     STAREG SMALLINT DEFAULT 0,
-    KEYREG VARCHAR(100),
-    ENABLEIA SMALLINT DEFAULT 0
+    KEYREG VARCHAR(100)
 );
 
 ALTER TABLE UTENTI ADD CONSTRAINT PK_UTENTI PRIMARY KEY (CODUTE);
@@ -38,8 +37,7 @@ CREATE TABLE UTENTI_CONFIG (
     CODLINGUA VARCHAR(2) DEFAULT 'IT',
     FLGSUPER SMALLINT DEFAULT 0,
     FLGADMIN SMALLINT DEFAULT 0,
-    CELLULARE VARCHAR(15),
-    PAGDEF VARCHAR(50),
+    CELLULARE VARCHAR(30),
     JSON_METADATA BLOB SUB_TYPE 1
 );
 
@@ -78,8 +76,7 @@ CREATE TABLE MENU_GRP (
     CODGRP VARCHAR(1) NOT NULL,
     DESGRP VARCHAR(100),
     FLGENABLED SMALLINT DEFAULT 0,
-    ORDINE SMALLINT DEFAULT 0,
-    NOMECAMPO VARCHAR(20)
+    ORDINE SMALLINT DEFAULT 0
 );
 
 ALTER TABLE MENU_GRP ADD CONSTRAINT PK_MENU_GRP PRIMARY KEY (CODGRP);

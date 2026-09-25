@@ -43,7 +43,6 @@ export class UserService {
       flagDueFattori: this.normalizeDatabaseBoolean(user.flagDueFattori),
       passwordlessLoginEnabled: this.normalizeDatabaseBoolean(user.passwordlessLoginEnabled),
       passwordLoginEnabled: user.passwordLoginEnabled == null || this.normalizeDatabaseBoolean(user.passwordLoginEnabled),
-      enableIa: this.normalizeDatabaseBoolean(user.enableIa),
     };
 
     return normalized;
@@ -163,7 +162,6 @@ export class UserService {
       numRep?: number | number[];
       codDipendente?: number;
       cellulare?: string;
-      cellute?: string;
       tipFil?: number;
       flagSuper?: boolean;
       limit?: number;
@@ -173,7 +171,6 @@ export class UserService {
   ): Promise<GetUsersResult[]> {
     try {
       const filterColumns = await getTableColumns(this.accessiOptions, 'FILTRI');
-      const utentiColumns = await getTableColumns(this.accessiOptions, 'UTENTI');
 
       // Paginazione opzionale con limiti sani: il default resta "tutti gli utenti".
       const limit = Number.isInteger(filters?.limit) && (filters?.limit ?? 0) > 0
@@ -194,7 +191,6 @@ export class UserService {
                 U.DATSCAPWD as data_scadenza_password, 
                 U.DATLASTLOGIN as data_last_login, 
                 U.STAREG as stato_registrazione, 
-                ${optionalColumn(utentiColumns, 'ENABLEIA', 'U', 'enable_ia')},
                 G.COGNOME as cognome, 
                 G.NOME as nome, 
                 G.AVATAR as avatar, 
@@ -205,7 +201,6 @@ export class UserService {
                 G.FLGSUPER as flag_super, 
                 G.FLGADMIN as flag_admin,
                 COALESCE(G.FLGPASSWORD, 1) as password_login_enabled,
-                G.PAGDEF as pagina_default,
                 G.JSON_METADATA as json_metadata,
                 ${optionalColumn(filterColumns, 'CODDIP', 'F', 'cod_dipendente')},
                 ${optionalColumn(filterColumns, 'NUMREP', 'F', 'num_rep', true)},
@@ -264,11 +259,6 @@ export class UserService {
       if (filters?.cellulare) {
         query += ` AND TRIM(G.CELLULARE) = ? `;
         queryParams.push(String(filters.cellulare).trim());
-      }
-
-      if (filters?.cellute) {
-        query += ` AND TRIM(U.CELLUTE) = ? `;
-        queryParams.push(String(filters.cellute).trim());
       }
 
       if (filters?.flagSuper !== undefined) {
@@ -412,7 +402,6 @@ export class UserService {
 
   /** Recupera il profilo locale usato dal login, compresi filtri Accessi eventualmente presenti. */
   async getUserByEmail(email: string): Promise<UserDto | null> {
-    const utentiColumns = await getTableColumns(this.accessiOptions, 'UTENTI');
     const query = `
             SELECT 
                 U.CODUTE AS codice_utente, 
@@ -420,7 +409,6 @@ export class UserService {
                 U.FLGGDPR AS flag_gdpr,
                 U.DATSCAPWD as data_scadenza_password,
                 U.STAREG AS stato_registrazione, 
-                ${optionalColumn(utentiColumns, 'ENABLEIA', 'U', 'enable_ia')},
                 C.COGNOME AS cognome, 
                 C.NOME AS nome, 
                 C.AVATAR AS avatar, 
@@ -430,8 +418,7 @@ export class UserService {
                 C.CELLULARE AS cellulare, 
                 C.FLGSUPER AS flag_super,
                 C.FLGADMIN AS flag_admin,
-                COALESCE(C.FLGPASSWORD, 1) AS password_login_enabled,
-                C.PAGDEF AS pagina_default
+                COALESCE(C.FLGPASSWORD, 1) AS password_login_enabled
             FROM UTENTI U
             INNER JOIN UTENTI_CONFIG C ON C.CODUTE = U.CODUTE
             WHERE LOWER(U.USRNAME) = ?
@@ -538,11 +525,6 @@ export class UserService {
           key: 'flagDueFattori',
           dbField: 'FLG2FATT',
           transform: (v) => (v ? 1 : 0),
-        },
-        {
-          key: 'paginaDefault',
-          dbField: 'PAGDEF',
-          transform: (v) => String(v),
         },
       ];
 
@@ -657,10 +639,6 @@ export class UserService {
         utentiUpdates.push('flggdpr = ?');
         utentiParams.push(user.flagGdpr);
       }
-      if (allowPrivilegedChanges && user.enableIa !== undefined) {
-        utentiUpdates.push('enableia = ?');
-        utentiParams.push(user.enableIa ? 1 : 0);
-      }
       if (allowPrivilegedChanges && user.statoRegistrazione !== undefined) {
         utentiUpdates.push('stareg = ?');
         utentiParams.push(user.statoRegistrazione);
@@ -714,10 +692,6 @@ export class UserService {
       if (allowPrivilegedChanges && user.passwordLoginEnabled !== undefined) {
         utentiConfigUpdates.push('flgpassword = ?');
         utentiConfigParams.push(user.passwordLoginEnabled ? 1 : 0);
-      }
-      if (user.paginaDefault !== undefined) {
-        utentiConfigUpdates.push('pagdef = ?');
-        utentiConfigParams.push(user.paginaDefault);
       }
       if (user.jsonMetadata !== undefined) {
         utentiConfigUpdates.push('json_metadata = ?');

@@ -13,11 +13,6 @@ export interface UpdateMenuGroupRequest {
   descrizioneGruppo?: string;
   /** Gruppo abilitato. */
   enabled?: boolean;
-  /**
-   * Nome del campo applicativo associato al gruppo.
-   * @maxLength 20
-   */
-  nomeCampo?: string;
   /** Ordine di visualizzazione del gruppo. */
   ordineGruppo?: number;
 }

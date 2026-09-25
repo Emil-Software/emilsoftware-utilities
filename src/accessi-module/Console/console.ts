@@ -653,14 +653,6 @@ function authenticationPolicyFields(user: UserDto): string {
     </fieldset>`;
 }
 
-/** Campi applicativi residui mantenuti dallo schema (ENABLEIA). */
-function applicationFlagFields(user: UserDto): string {
-  const record = user as unknown as Record<string, unknown>;
-  return `<fieldset><legend>Abilitazioni applicative</legend>
-    <label class="check"><input name="enableIa" type="checkbox" ${record.enableIa ? 'checked' : ''}> Assistente IA (ENABLEIA)</label>
-    </fieldset>`;
-}
-
 function showLocalUserForm(): void {
   render(`<button id="back">Indietro</button><h2>Nuovo utente locale</h2><p class="muted">Viene inviata l'e-mail per impostare la password.</p>
     <form id="local-user"><label>Email ${helpDot('user-email')}<input name="email" type="email" required><span class="form-help">Identificativo di accesso; riceverÃ  l'email per la password.</span></label><label>Nome ${helpDot('user-name')}<input name="nome"></label><label>Cognome ${helpDot('user-name')}<input name="cognome"></label><button>Crea utente</button></form>`);
@@ -805,7 +797,7 @@ async function showUser(rawCode: string): Promise<void> {
   const defaultUserTab: UserDetailTab = federatedAuthenticationAvailable ? 'sso' : 'profile';
   render(`<div class="user-action-bar"><button id="back" type="button" class="secondary">Indietro</button><label class="inline-field">Stato registrazione ${helpDot('user-state')}<select id="user-state">${registrationStateOptions(user.statoRegistrazione)}</select></label><button id="save-state" type="button" class="secondary">Aggiorna stato</button><button id="disable-user" type="button" class="danger-button">Imposta stato eliminato</button>${helpDot('user-delete')}</div><div class="page-header"><div><p class="eyebrow">Utente ${codiceUtente}</p><h2>${escapeHtml(user.email)}</h2></div><span class="muted">Gestione profilo, ruoli e autorizzazioni</span></div>${userDetailTabs(federatedAuthenticationAvailable)}<div class="user-editor">
     ${identitySection}
-    <form id="profile" data-user-panel="profile" role="tabpanel" aria-labelledby="user-tab-profile"><h3>Profilo e accesso</h3><label>Nome ${helpDot('user-name')}<input name="nome" value="${escapeHtml(user.nome)}"></label><label>Cognome ${helpDot('user-name')}<input name="cognome" value="${escapeHtml(user.cognome)}"></label><label>Email ${helpDot('user-email')}<input name="email" type="email" value="${escapeHtml(user.email)}" required><span class="form-help">Identificativo di accesso e recapito.</span></label>${federatedAuthenticationAvailable ? `<label class="check"><input name="passwordLoginEnabled" type="checkbox" ${user.passwordLoginEnabled !== false ? 'checked' : ''}> Login con password ${helpDot('user-password-login')}</label><span class="form-help">Se disabilitato, il login con email e password restituisce un errore esplicito; restano valide le identitÃ  SSO attive.</span>` : ''}${authenticationPolicyFields(user)}${applicationFlagFields(user)}<button>Salva</button></form>
+    <form id="profile" data-user-panel="profile" role="tabpanel" aria-labelledby="user-tab-profile"><h3>Profilo e accesso</h3><label>Nome ${helpDot('user-name')}<input name="nome" value="${escapeHtml(user.nome)}"></label><label>Cognome ${helpDot('user-name')}<input name="cognome" value="${escapeHtml(user.cognome)}"></label><label>Email ${helpDot('user-email')}<input name="email" type="email" value="${escapeHtml(user.email)}" required><span class="form-help">Identificativo di accesso e recapito.</span></label>${federatedAuthenticationAvailable ? `<label class="check"><input name="passwordLoginEnabled" type="checkbox" ${user.passwordLoginEnabled !== false ? 'checked' : ''}> Login con password ${helpDot('user-password-login')}</label><span class="form-help">Se disabilitato, il login con email e password restituisce un errore esplicito; restano valide le identitÃ  SSO attive.</span>` : ''}${authenticationPolicyFields(user)}<button>Salva</button></form>
     ${roleAssignmentEditor(allRoles, userGrants.ruoli, menuGroups)}
     ${directGrantEditor(menuGroups, userGrants.abilitazioni)}
     </div>`);
@@ -843,7 +835,6 @@ async function showUser(rawCode: string): Promise<void> {
           codiceUtente, email: values.email ?? '', nome: values.nome || undefined, cognome: values.cognome || undefined,
           flagDueFattori: fields.has('flagDueFattori'),
           passwordlessLoginEnabled: fields.has('passwordlessLoginEnabled'),
-          enableIa: fields.has('enableIa'),
           ...(federatedAuthenticationAvailable ? { passwordLoginEnabled: fields.has('passwordLoginEnabled') } : {}),
         } as UserDto);
         if (codiceUtente === currentUser?.codiceUtente && (

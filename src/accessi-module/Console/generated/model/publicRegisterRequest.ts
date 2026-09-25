@@ -39,8 +39,6 @@ export interface PublicRegisterRequest {
   nome?: string;
   /** Numero del reparto associato */
   numRep?: number;
-  /** Pagina di default dell'utente. */
-  paginaDefault?: string;
   /** Progressivo identificativo del filtro */
   progressivo?: number;
   /** Tipo di filtro applicato */

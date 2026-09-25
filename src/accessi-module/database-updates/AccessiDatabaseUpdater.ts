@@ -3,7 +3,7 @@ import type { AccessiOptions } from '../AccessiModule';
 import { DatabaseUpdater } from '../../DatabaseUpdater';
 import { Orm } from '../../Orm';
 import { Logger } from '../../Logger';
-import { ACCESSI_SCHEMA_VERSION, ACCESSI_VERSION_KEY, accessiTables, accessiForeignKeys, accessiIndexes, accessiTriggers, accessiGenerators, accessiChecks, accessiRenamedColumns, accessiObsoleteColumns } from './accessiSchema';
+import { ACCESSI_SCHEMA_VERSION, ACCESSI_VERSION_KEY, accessiTables, accessiForeignKeys, accessiIndexes, accessiTriggers, accessiGenerators, accessiChecks, accessiRenamedColumns, accessiObsoleteColumns, accessiColumnCopies } from './accessiSchema';
 
 type Row = Record<string, unknown>;
 export interface AccessiSchemaReport { compatible: boolean; issues: string[]; }
@@ -354,6 +354,15 @@ export class AccessiDatabaseUpdater extends DatabaseUpdater implements OnModuleI
       if (!hasLegacy) continue;
       await this.execute(options, `UPDATE ${rename.table} SET ${rename.to} = ${rename.from} WHERE ${rename.to} IS NULL AND ${rename.from} IS NOT NULL`);
       await this.execute(options, `ALTER TABLE ${rename.table} DROP ${rename.from}`);
+    }
+    // Copie tra tabelle diverse (es. telefono legacy UTENTI.CELLUTE -> UTENTI_CONFIG.CELLULARE).
+    for (const copy of accessiColumnCopies) {
+      const hasSource = columns.some(row => row.TABLE_NAME === copy.sourceTable && row.COLUMN_NAME === copy.sourceColumn);
+      if (!hasSource) continue;
+      await this.execute(
+        options,
+        `UPDATE ${copy.targetTable} SET ${copy.targetColumn} = (SELECT S.${copy.sourceColumn} FROM ${copy.sourceTable} S WHERE S.${copy.joinColumn} = ${copy.targetTable}.${copy.joinColumn}) WHERE ${copy.targetColumn} IS NULL AND EXISTS (SELECT 1 FROM ${copy.sourceTable} S WHERE S.${copy.joinColumn} = ${copy.targetTable}.${copy.joinColumn} AND S.${copy.sourceColumn} IS NOT NULL)`,
+      );
     }
     for (const [table, obsoleteColumns] of Object.entries(accessiObsoleteColumns)) {
       for (const column of obsoleteColumns) {

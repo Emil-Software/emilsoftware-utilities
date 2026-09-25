@@ -3766,20 +3766,10 @@
             "description": "Abilita il login locale con password. Se false, l utente puo autenticarsi solo tramite identita SSO attive.",
             "example": false
           },
-          "paginaDefault": {
-            "type": "string",
-            "description": "Pagina di default dell'utente all'accesso.",
-            "example": "/dashboard"
-          },
           "jsonMetadata": {
             "type": "string",
             "description": "Metadata JSON personalizzato.",
             "example": "{\"theme\": \"dark\"}"
-          },
-          "enableIa": {
-            "type": "boolean",
-            "description": "Abilita l'utente all'uso dell'assistente IA.",
-            "default": false
           },
           "roles": {
             "description": "Ruoli assegnati all'utente.",
@@ -4323,11 +4313,6 @@
             "type": "string",
             "description": "Nota informativa associata al menu.",
             "example": "Visibile solo agli amministratori"
-          },
-          "nomeCampo": {
-            "type": "string",
-            "description": "Colonna UTENTI_CONFIG che regola l'abilitazione del gruppo del menu.",
-            "example": "FLGDIPENDENTI"
           }
         },
         "required": [
@@ -4382,11 +4367,6 @@
             "type": "boolean",
             "description": "Flag che indica se il gruppo e abilitato.",
             "example": true
-          },
-          "nomeCampo": {
-            "type": "string",
-            "description": "Colonna UTENTI_CONFIG che regola l'abilitazione del gruppo.",
-            "example": "FLGDIPENDENTI"
           },
           "menus": {
             "description": "Lista dei men�� associati al gruppo.",
@@ -4615,12 +4595,6 @@
             "type": "boolean",
             "description": "Gruppo abilitato.",
             "example": true
-          },
-          "nomeCampo": {
-            "type": "string",
-            "description": "Nome del campo applicativo associato al gruppo.",
-            "example": "REPARTO",
-            "maxLength": 20
           }
         },
         "required": [
@@ -4645,12 +4619,6 @@
             "type": "boolean",
             "description": "Gruppo abilitato.",
             "example": true
-          },
-          "nomeCampo": {
-            "type": "string",
-            "description": "Nome del campo applicativo associato al gruppo.",
-            "example": "REPARTO",
-            "maxLength": 20
           }
         }
       },
@@ -4869,11 +4837,6 @@
             "description": "Avatar dell'utente.",
             "example": "user.svg"
           },
-          "paginaDefault": {
-            "type": "string",
-            "description": "Pagina di default dell'utente.",
-            "example": "/dashboard"
-          },
           "htmlMail": {
             "type": "string",
             "description": "HTML mail personalizzato",
@@ -5028,11 +4991,6 @@
             "type": "boolean",
             "description": "Flag autenticazione a due fattori.",
             "example": false
-          },
-          "paginaDefault": {
-            "type": "string",
-            "description": "Pagina di default dell'utente.",
-            "example": "/dashboard"
           },
           "htmlMail": {
             "type": "string",

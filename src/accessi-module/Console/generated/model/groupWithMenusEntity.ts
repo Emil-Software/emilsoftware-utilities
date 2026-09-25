@@ -15,8 +15,6 @@ export interface GroupWithMenusEntity {
   enabled?: boolean;
   /** Lista dei men�� associati al gruppo. */
   menus: MenuEntity[];
-  /** Colonna UTENTI_CONFIG che regola l'abilitazione del gruppo. */
-  nomeCampo?: string;
   /** Ordine del gruppo. */
   ordineGruppo: number;
 }

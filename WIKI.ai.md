@@ -339,8 +339,8 @@ fetch("/api/accessi/user/register", {
   body: JSON.stringify({ email, flagSuper: true }), // ignorato o negato
 });
 ```
-[INFO] Campi di dominio: UTENTI_CONFIG contiene solo i flag di dominio Accessi: FLGSUPER, FLGADMIN, FLG2FATT (2FA), FLGPWDLESS (passwordless) e FLGPASSWORD (login locale). I flag applicativi legacy (FLGMOP, FLGPIANA, FLGADDETTI, FLGOSPITI, FLGPIANARFID, FLGCONTA, FLGCUBI, FLGCICLPASS, FLGDIPENDENTI, FLGINVENTARI) e le colonne applicative (CAUMOV, NUMMAC, RAGSOCCLI) sono stati rimossi dallo schema: i backend devono gestirli in tabelle proprie. ENABLEIA resta per l'assistente IA.
-[INFO] Gruppi menu e NOMECAMPO: Ogni gruppo menu puo dichiarare NOMECAMPO. get-groups-with-menus e get-menus espongono nomeCampo. Dopo la pulizia dello schema NOMECAMPO non deve piu puntare a colonne applicative rimosse.
+[INFO] Campi di dominio: UTENTI_CONFIG contiene solo i flag di dominio Accessi: FLGSUPER, FLGADMIN, FLG2FATT (2FA), FLGPWDLESS (passwordless) e FLGPASSWORD (login locale). I flag/colonne applicativi (FLGMOP, FLGPIANA, FLGADDETTI, FLGOSPITI, FLGPIANARFID, FLGCONTA, FLGCUBI, FLGCICLPASS, FLGDIPENDENTI, FLGINVENTARI, CAUMOV, NUMMAC, RAGSOCCLI, PAGDEF, ENABLEIA, CELLUTE e NOMECAMPO) sono stati rimossi: i backend devono gestirli in tabelle proprie. Il telefono canonico e UTENTI_CONFIG.CELLULARE.
+[INFO] Autorizzazioni: I gruppi/menu si abilitano tramite ABILITAZIONI, RUOLI_MNU e UTENTI_RUOLI. Il vecchio meccanismo NOMECAMPO (flag applicativo su UTENTI_CONFIG) e stato rimosso.
 [INFO] Campi estesi: extensionFieldsOptions allega colonne di tabelle applicative al profilo (per esempio la ragione sociale). Le colonne sono in whitelist: non costruirle mai da input HTTP.
 
 ### Ruoli e permessi

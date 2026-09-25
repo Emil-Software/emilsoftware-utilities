@@ -170,26 +170,12 @@ export class UserDto extends OmitType(FiltriUtente, ['codUte'] as const) {
   passwordLoginEnabled?: boolean;
 
   @ApiPropertyOptional({
-    description: "Pagina di default dell'utente all'accesso.",
-    example: '/dashboard',
-  })
-  @IsOptional()
-  @IsString({ message: 'La pagina di default deve essere una stringa.' })
-  paginaDefault?: string;
-
-  @ApiPropertyOptional({
     description: 'Metadata JSON personalizzato.',
     example: '{"theme": "dark"}',
   })
   @IsOptional()
   @IsString({ message: 'I metadata JSON devono essere una stringa.' })
   jsonMetadata?: string;
-
-  @ApiPropertyOptional({ description: 'Abilita l\'utente all\'uso dell\'assistente IA.', default: false })
-  @IsOptional()
-  @IsBoolean({ message: 'Il flag IA deve essere booleano.' })
-  @Transform(({ obj, key }) => obj[key])
-  enableIa?: boolean;
 
   @ApiPropertyOptional({ description: "Ruoli assegnati all'utente.", example: [1, 2] })
   @IsOptional()

@@ -536,11 +536,11 @@ fetch("/api/accessi/user/register", {
 
 > [!NOTE]
 > **Campi di dominio**
-> UTENTI\_CONFIG contiene solo i flag di dominio Accessi: FLGSUPER, FLGADMIN, FLG2FATT (2FA), FLGPWDLESS (passwordless) e FLGPASSWORD (login locale). I flag applicativi legacy (FLGMOP, FLGPIANA, FLGADDETTI, FLGOSPITI, FLGPIANARFID, FLGCONTA, FLGCUBI, FLGCICLPASS, FLGDIPENDENTI, FLGINVENTARI) e le colonne applicative (CAUMOV, NUMMAC, RAGSOCCLI) sono stati rimossi dallo schema: i backend devono gestirli in tabelle proprie. ENABLEIA resta per l'assistente IA.
+> UTENTI\_CONFIG contiene solo i flag di dominio Accessi: FLGSUPER, FLGADMIN, FLG2FATT (2FA), FLGPWDLESS (passwordless) e FLGPASSWORD (login locale). I flag/colonne applicativi (FLGMOP, FLGPIANA, FLGADDETTI, FLGOSPITI, FLGPIANARFID, FLGCONTA, FLGCUBI, FLGCICLPASS, FLGDIPENDENTI, FLGINVENTARI, CAUMOV, NUMMAC, RAGSOCCLI, PAGDEF, ENABLEIA, CELLUTE e NOMECAMPO) sono stati rimossi: i backend devono gestirli in tabelle proprie. Il telefono canonico e UTENTI\_CONFIG.CELLULARE.
 
 > [!NOTE]
-> **Gruppi menu e NOMECAMPO**
-> Ogni gruppo menu puo dichiarare NOMECAMPO. get-groups-with-menus e get-menus espongono nomeCampo. Dopo la pulizia dello schema NOMECAMPO non deve piu puntare a colonne applicative rimosse.
+> **Autorizzazioni**
+> I gruppi/menu si abilitano tramite ABILITAZIONI, RUOLI\_MNU e UTENTI\_RUOLI. Il vecchio meccanismo NOMECAMPO (flag applicativo su UTENTI\_CONFIG) e stato rimosso.
 
 > [!NOTE]
 > **Campi estesi**

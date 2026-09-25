@@ -107,14 +107,6 @@ export class RegisterRequest extends OmitType(FiltriUtente, ['codUte'] as const)
   flagDueFattori?: boolean;
 
   @ApiPropertyOptional({
-    description: "Pagina di default dell'utente.",
-    example: "/dashboard",
-  })
-  @IsOptional()
-  @IsString({ message: "La pagina di default deve essere una stringa." })
-  paginaDefault?: string;
-
-  @ApiPropertyOptional({
     description: "HTML mail personalizzato",
     example: "<html></html>",
   })

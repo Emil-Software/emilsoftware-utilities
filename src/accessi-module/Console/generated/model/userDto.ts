@@ -46,8 +46,6 @@ export interface UserDto {
   dataScadenzaPassword?: string;
   /** Email dell'utente. */
   email: string;
-  /** Abilita l'utente all'uso dell'assistente IA. */
-  enableIa?: boolean;
   /** Flag che indica se l'utente Ã¨ configuratore */
   flagAdmin?: boolean;
   /** Flag che indica se l'autenticazione a due fattori Ã¨ attivata. */
@@ -68,8 +66,6 @@ export interface UserDto {
   nome?: string;
   /** Numero del reparto associato */
   numRep?: number;
-  /** Pagina di default dell'utente all'accesso. */
-  paginaDefault?: string;
   /** Consente accesso con il solo codice email. Richiede flagDueFattori e viene gestito dagli amministratori. */
   passwordlessLoginEnabled?: boolean;
   /** Abilita il login locale con password. Se false, l utente puo autenticarsi solo tramite identita SSO attive. */

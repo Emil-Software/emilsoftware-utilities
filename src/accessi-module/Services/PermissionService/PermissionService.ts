@@ -466,8 +466,7 @@ export class PermissionService {
                     M.ICON AS icona,
   M.CODTIP AS tipo,
   M.PAGINA AS pagina,
-  M.NOTE AS note,
-  G.NOMECAMPO AS nome_campo
+  M.NOTE AS note
   FROM MENU M
   LEFT JOIN MENU_GRP G ON M.CODGRP = G.CODGRP
   WHERE M.FLGENABLED = 1 AND COALESCE(G.FLGENABLED, 1) = 1
@@ -501,8 +500,7 @@ export class PermissionService {
                     G.ORDINE AS ordine_gruppo,
                     M.ORDINE as ordine_menu,
                     M.FLGENABLED AS menu_enabled,
-                    G.FLGENABLED AS group_enabled,
-                    G.NOMECAMPO AS nome_campo
+                    G.FLGENABLED AS group_enabled
                 FROM MENU M
                 LEFT JOIN MENU_GRP G ON M.CODGRP = G.CODGRP
                 ${filtersClause}
@@ -534,7 +532,6 @@ export class PermissionService {
                     codiceGruppo: menuBase.codiceGruppo ?? normalizedGroupKey,
                     descrizioneGruppo: menuBase.descrizioneGruppo ?? '',
                     ordineGruppo: menuBase.ordineGruppo,
-                    nomeCampo: menuBase.nomeCampo ?? null,
                     enabled: groupEnabledFlag,
                     menus: [],
                 });
@@ -641,13 +638,12 @@ export class PermissionService {
         }
         await Orm.execute(
             this.accessiOptions.databaseOptions,
-            `INSERT INTO MENU_GRP (CODGRP, DESGRP, FLGENABLED, ORDINE, NOMECAMPO) VALUES (?, ?, ?, ?, ?)`,
+            `INSERT INTO MENU_GRP (CODGRP, DESGRP, FLGENABLED, ORDINE) VALUES (?, ?, ?, ?)`,
             [
                 input.codiceGruppo,
                 input.descrizioneGruppo ?? null,
                 input.enabled === false ? 0 : 1,
                 input.ordineGruppo ?? 0,
-                input.nomeCampo ?? null,
             ],
         );
     }
@@ -668,10 +664,6 @@ export class PermissionService {
         if (input.enabled !== undefined) {
             sets.push('FLGENABLED = ?');
             params.push(input.enabled ? 1 : 0);
-        }
-        if (input.nomeCampo !== undefined) {
-            sets.push('NOMECAMPO = ?');
-            params.push(input.nomeCampo);
         }
         if (sets.length === 0) return;
 

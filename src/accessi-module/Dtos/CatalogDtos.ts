@@ -85,12 +85,6 @@ export class CreateMenuGroupRequest {
   @IsBoolean({ message: 'Il flag enabled deve essere booleano.' })
   @IsOptional()
   enabled?: boolean;
-
-  @ApiPropertyOptional({ description: 'Nome del campo applicativo associato al gruppo.', example: 'REPARTO', maxLength: 20 })
-  @IsString({ message: 'Il nome campo deve essere una stringa.' })
-  @IsOptional()
-  @MaxLength(20, { message: 'Il nome campo non puo superare 20 caratteri.' })
-  nomeCampo?: string;
 }
 
 export class UpdateMenuGroupRequest {
@@ -110,12 +104,6 @@ export class UpdateMenuGroupRequest {
   @IsBoolean({ message: 'Il flag enabled deve essere booleano.' })
   @IsOptional()
   enabled?: boolean;
-
-  @ApiPropertyOptional({ description: 'Nome del campo applicativo associato al gruppo.', example: 'REPARTO', maxLength: 20 })
-  @IsString({ message: 'Il nome campo deve essere una stringa.' })
-  @IsOptional()
-  @MaxLength(20, { message: 'Il nome campo non puo superare 20 caratteri.' })
-  nomeCampo?: string;
 }
 
 // ---------------------------------------------------------------------------

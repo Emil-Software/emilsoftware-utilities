@@ -4,24 +4,40 @@ export interface SchemaTable {
   primaryKey: string[];
 }
 
-export const ACCESSI_SCHEMA_VERSION = '1.9.0';
+export const ACCESSI_SCHEMA_VERSION = '1.10.0';
 export const ACCESSI_VERSION_KEY = 'AccessiVersion';
 
 /**
  * Colonne storiche/applicative non piu di dominio Accessi. La riconciliazione le copia (se
- * previsto un rename) e poi le elimina, per evitare campi ibridi in UTENTI_CONFIG.
+ * previsto un rename) e poi le elimina, per evitare campi ibridi nello schema Accessi.
  */
 export const accessiRenamedColumns: ReadonlyArray<{ table: string; from: string; to: string }> = [
   { table: 'UTENTI_CONFIG', from: 'FLGADMINCONFIG', to: 'FLGADMIN' },
 ];
 
+/**
+ * Copie di dati prima della rimozione di colonne applicative (anche tra tabelle diverse).
+ * `joinColumn` e la chiave comune usata per correlare sorgente e destinazione.
+ */
+export const accessiColumnCopies: ReadonlyArray<{
+  sourceTable: string;
+  sourceColumn: string;
+  targetTable: string;
+  targetColumn: string;
+  joinColumn: string;
+}> = [
+  { sourceTable: 'UTENTI', sourceColumn: 'CELLUTE', targetTable: 'UTENTI_CONFIG', targetColumn: 'CELLULARE', joinColumn: 'CODUTE' },
+];
+
 /** Colonne application-specific eliminate dallo schema Accessi: i backend devono gestirle altrove. */
 export const accessiObsoleteColumns: Record<string, readonly string[]> = {
+  UTENTI: ['ENABLEIA', 'CELLUTE'],
   UTENTI_CONFIG: [
     'FLGMOP', 'FLGPIANA', 'FLGADDETTI', 'FLGOSPITI', 'FLGPIANARFID',
     'FLGCONTA', 'FLGCUBI', 'FLGCICLPASS', 'FLGDIPENDENTI', 'FLGINVENTARI',
-    'CAUMOV', 'NUMMAC', 'RAGSOCCLI',
+    'CAUMOV', 'NUMMAC', 'RAGSOCCLI', 'PAGDEF',
   ],
+  MENU_GRP: ['NOMECAMPO'],
 };
 
 export const accessiTables: Record<string, SchemaTable> = {
@@ -29,19 +45,18 @@ export const accessiTables: Record<string, SchemaTable> = {
   UTENTI: { columns: {
     CODUTE: 'INTEGER NOT NULL', USRNAME: 'VARCHAR(100)', FLGGDPR: 'SMALLINT DEFAULT 0', DATGDPR: 'DATE',
     DATINS: 'DATE', DATSCAPWD: 'DATE', DATLASTLOGIN: 'DATE', STAREG: 'SMALLINT DEFAULT 0', KEYREG: 'VARCHAR(100)',
-    ENABLEIA: 'SMALLINT DEFAULT 0',
   }, primaryKey: ['CODUTE'] },
   UTENTI_CONFIG: { columns: {
     CODUTE: 'INTEGER NOT NULL', COGNOME: 'VARCHAR(50)', NOME: 'VARCHAR(50)', AVATAR: 'VARCHAR(30)',
     FLG2FATT: 'SMALLINT DEFAULT 0', FLGPWDLESS: 'SMALLINT DEFAULT 0 NOT NULL', FLGPASSWORD: 'SMALLINT DEFAULT 1 NOT NULL',
     CODLINGUA: "VARCHAR(2) DEFAULT 'IT'", FLGSUPER: 'SMALLINT DEFAULT 0', FLGADMIN: 'SMALLINT DEFAULT 0',
-    CELLULARE: 'VARCHAR(15)', PAGDEF: 'VARCHAR(50)', JSON_METADATA: 'BLOB SUB_TYPE 1',
+    CELLULARE: 'VARCHAR(30)', JSON_METADATA: 'BLOB SUB_TYPE 1',
   }, primaryKey: ['CODUTE'] },
   UTENTI_PWD: { columns: { CODUTE: 'INTEGER NOT NULL', PWD: 'VARCHAR(255)' }, primaryKey: ['CODUTE'] },
   UTENTI_OLDPWD: { columns: { CODUTE: 'INTEGER NOT NULL', OLDPWD: 'VARCHAR(255)' }, primaryKey: ['CODUTE'] },
   UTENTI_GDPR: { columns: { CODUTE: 'INTEGER NOT NULL', DATACC: 'DATE NOT NULL', GDPR: 'VARCHAR(2000)' }, primaryKey: ['CODUTE', 'DATACC'] },
   RUOLI: { columns: { CODRUO: 'INTEGER NOT NULL', DESRUO: 'VARCHAR(30)' }, primaryKey: ['CODRUO'] },
-  MENU_GRP: { columns: { CODGRP: 'VARCHAR(1) NOT NULL', DESGRP: 'VARCHAR(100)', FLGENABLED: 'SMALLINT DEFAULT 0', ORDINE: 'SMALLINT DEFAULT 0', NOMECAMPO: 'VARCHAR(20)' }, primaryKey: ['CODGRP'] },
+  MENU_GRP: { columns: { CODGRP: 'VARCHAR(1) NOT NULL', DESGRP: 'VARCHAR(100)', FLGENABLED: 'SMALLINT DEFAULT 0', ORDINE: 'SMALLINT DEFAULT 0' }, primaryKey: ['CODGRP'] },
   MENU_TIPI: { columns: { CODTIP: 'VARCHAR(1) NOT NULL', DESTIP: 'VARCHAR(20)' }, primaryKey: ['CODTIP'] },
   MENU: { columns: {
     CODMNU: 'VARCHAR(20) NOT NULL', DESMNU: 'VARCHAR(100)', CODGRP: 'VARCHAR(1) NOT NULL', FLGENABLED: 'INTEGER DEFAULT 0',

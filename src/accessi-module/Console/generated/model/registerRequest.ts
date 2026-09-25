@@ -46,8 +46,6 @@ export interface RegisterRequest {
   nome?: string;
   /** Numero del reparto associato */
   numRep?: number;
-  /** Pagina di default dell'utente. */
-  paginaDefault?: string;
   /** Permessi assegnati all'utente. */
   permissions?: Permission[];
   /** Progressivo identificativo del filtro */

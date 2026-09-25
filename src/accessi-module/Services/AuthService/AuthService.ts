@@ -1,4 +1,4 @@
-import { Inject, Injectable, UnauthorizedException } from "@nestjs/common";
+﻿import { Inject, Injectable, UnauthorizedException } from "@nestjs/common";
 import { TwoFactorService, TwoFactorProof } from '../TwoFactorService/TwoFactorService';
 import * as jwt from "jsonwebtoken";
 import { Orm } from "../../../Orm";
@@ -431,7 +431,6 @@ export class AuthService {
         codiceLingua: "IT",
         cellulare: "+391234567890",
         flagSuper: true,
-        paginaDefault: "/home",
         roles: [],
         permissions: [],
       },
@@ -459,7 +458,6 @@ export class AuthService {
         codiceLingua: "IT",
         cellulare: "+391234567890",
         flagSuper: false,
-        paginaDefault: "/home",
         roles: [],
         permissions: [],
       },
