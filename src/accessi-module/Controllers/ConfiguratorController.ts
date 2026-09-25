@@ -20,9 +20,8 @@ import { Request, Response } from 'express';
 import { RestUtilities } from '../../Utilities';
 import { ActionResponse, ErrorResponse, UpdateEnabledStatusRequest } from '../Dtos';
 import { ConfiguratorService } from '../Services/ConfiguratorService/ConfiguratorService';
-import { UserService } from '../Services/UserService/UserService';
 import { JwtSimpleGuard } from '../jwt/jwt.strategy';
-import { getAuthenticatedAccessiUser } from '../security/accessControl';
+import { ensureAdmin, getAuthenticatedAccessiUser } from '../security/accessControl';
 
 @ApiBearerAuth()
 @ApiTags('Configurator')
@@ -31,7 +30,6 @@ import { getAuthenticatedAccessiUser } from '../security/accessControl';
 /** Endpoint amministrativi per abilitare o disabilitare cataloghi menu senza cancellarne lo storico. */
 export class ConfiguratorController {
   constructor(
-    private userService: UserService,
     private configuratorService: ConfiguratorService,
   ) {}
 
@@ -63,19 +61,7 @@ export class ConfiguratorController {
       if (body?.enabled === undefined) throw new BadRequestException('Lo stato di abilitazione e obbligatorio.');
 
       const authenticatedUser = getAuthenticatedAccessiUser(req);
-
-      const canConfigure =
-        authenticatedUser.flagSuper ||
-        authenticatedUser.flagAdmin ||
-        (await this.userService.isAdminConfigurator(authenticatedUser.codiceUtente));
-      if (!canConfigure) {
-        return RestUtilities.sendErrorMessage(
-          res,
-          'Utente non autorizzato ad aggiornare i menu.',
-          ConfiguratorController.name,
-          403,
-        );
-      }
+      ensureAdmin(authenticatedUser, 'Utente non autorizzato ad aggiornare i menu.');
 
       await this.configuratorService.setMenuEnabled(codiceMenu, body.enabled);
 
@@ -117,19 +103,7 @@ export class ConfiguratorController {
       if (body?.enabled === undefined) throw new BadRequestException('Lo stato di abilitazione e obbligatorio.');
 
       const authenticatedUser = getAuthenticatedAccessiUser(req);
-
-      const canConfigure =
-        authenticatedUser.flagSuper ||
-        authenticatedUser.flagAdmin ||
-        (await this.userService.isAdminConfigurator(authenticatedUser.codiceUtente));
-      if (!canConfigure) {
-        return RestUtilities.sendErrorMessage(
-          res,
-          'Utente non autorizzato ad aggiornare i gruppi menu.',
-          ConfiguratorController.name,
-          403,
-        );
-      }
+      ensureAdmin(authenticatedUser, 'Utente non autorizzato ad aggiornare i gruppi menu.');
 
       await this.configuratorService.setGroupEnabled(codiceGruppo, body.enabled);
 

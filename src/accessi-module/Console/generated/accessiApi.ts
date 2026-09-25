@@ -1258,7 +1258,7 @@ return accessiFetch<Promise<createFederatedProviderResponse>>(getCreateFederated
 
 
 /**
- * Riservato a superutente. La chiave provider è immutabile: disabilitarla blocca nuovi login SSO ma conserva i collegamenti storici.
+ * Riservato a superutente. La chiave provider Ã¨ immutabile: disabilitarla blocca nuovi login SSO ma conserva i collegamenti storici.
  * @summary Aggiorna o disabilita un provider SSO
  */
 export type updateFederatedProviderResponse = {
@@ -1467,7 +1467,7 @@ return accessiFetch<Promise<updateFederatedIdentityResponse>>(getUpdateFederated
 
 
 /**
- * Riservato a superutente. Rimuove il collegamento provider e subject dall’utente, senza eliminare l’utente Accessi.
+ * Riservato a superutente. Rimuove il collegamento provider e subject dallâ€™utente, senza eliminare lâ€™utente Accessi.
  * @summary Elimina definitivamente un collegamento SSO
  */
 export type deleteFederatedIdentityPermanentlyResponse = {

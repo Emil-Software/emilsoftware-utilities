@@ -11,7 +11,7 @@
     "generate:accessi-openapi": "ts-node --transpile-only src/scripts/generateAccessiOpenApi.ts",
     "generate:accessi-client": "orval --config orval.config.ts",
     "generate:accessi-wiki": "ts-node --transpile-only src/scripts/generateAccessiWiki.ts",
-    "build:accessi-console": "esbuild src/accessi-module/Console/console.ts --bundle --platform=browser --format=esm --target=es2020 --outfile=dist/accessi-module/Console/console.js",
+    "build:accessi-console": "esbuild src/accessi-module/Console/console.ts --bundle --platform=browser --format=esm --target=es2020 --loader:.md=text --outfile=dist/accessi-module/Console/console.js",
     "copy-views": "node copy-views.js",
     "db:update:accessi": "ts-node src/accessi-module/database-updates/runAccessiDbUpdate.ts",
     "db:update:accessi:dist": "npm run build && node dist/accessi-module/database-updates/runAccessiDbUpdate.js",

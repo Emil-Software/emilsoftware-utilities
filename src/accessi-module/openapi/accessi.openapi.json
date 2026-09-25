@@ -2576,7 +2576,7 @@
     },
     "/api/accessi/federated-auth/providers/{provider}": {
       "patch": {
-        "description": "Riservato a superutente. La chiave provider è immutabile: disabilitarla blocca nuovi login SSO ma conserva i collegamenti storici.",
+        "description": "Riservato a superutente. La chiave provider Ã¨ immutabile: disabilitarla blocca nuovi login SSO ma conserva i collegamenti storici.",
         "operationId": "updateFederatedProvider",
         "parameters": [
           {
@@ -2821,7 +2821,7 @@
             }
           },
           "409": {
-            "description": "Email o identità SSO già associate a un utente.",
+            "description": "Email o identitÃ  SSO giÃ  associate a un utente.",
             "content": {
               "application/json": {
                 "schema": {
@@ -2996,7 +2996,7 @@
     },
     "/api/accessi/federated-auth/users/{codiceUtente}/identities/{identityKey}": {
       "delete": {
-        "description": "Riservato a superutente. Rimuove il collegamento provider e subject dall’utente, senza eliminare l’utente Accessi.",
+        "description": "Riservato a superutente. Rimuove il collegamento provider e subject dallâ€™utente, senza eliminare lâ€™utente Accessi.",
         "operationId": "deleteFederatedIdentityPermanently",
         "parameters": [
           {
@@ -3030,7 +3030,7 @@
             }
           },
           "404": {
-            "description": "Collegamento assente o non appartenente all’utente.",
+            "description": "Collegamento assente o non appartenente allâ€™utente.",
             "content": {
               "application/json": {
                 "schema": {

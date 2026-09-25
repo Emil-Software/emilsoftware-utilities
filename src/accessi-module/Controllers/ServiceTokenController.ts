@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, HttpException, Inject, Param, Post, Query, Req, Res, UseGuards } from '@nestjs/common';
+﻿import { Body, Controller, Delete, Get, HttpException, Inject, Param, Post, Query, Req, Res, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiBody, ApiOperation, ApiParam, ApiQuery, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { Request, Response } from 'express';
 import { RestUtilities } from '../../Utilities';
@@ -10,7 +10,7 @@ import {
   GetServiceTokensResponse,
 } from '../Dtos';
 import { JwtSimpleGuard } from '../jwt/jwt.strategy';
-import { getAuthenticatedAccessiUser, ensureSuperUser } from '../security/accessControl';
+import { getAuthenticatedAccessiUser, ensureAdmin } from '../security/accessControl';
 import { ServiceTokenService } from '../Services/ServiceTokenService/ServiceTokenService';
 
 /**
@@ -39,7 +39,7 @@ export class ServiceTokenController {
   private requireSuperUser(req: Request) {
     this.assertEnabled();
     const user = getAuthenticatedAccessiUser(req);
-    ensureSuperUser(user, 'Solo un superutente puo gestire i token di servizio.');
+      ensureAdmin(user, 'Solo un admin puo gestire i token di servizio.');
     return user;
   }
 

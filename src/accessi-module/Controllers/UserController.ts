@@ -1,4 +1,4 @@
-import {
+﻿import {
   BadRequestException,
   Body,
   Controller,
@@ -49,7 +49,7 @@ import {
 } from '../security/publicAuthRateLimit';
 import {
   ensureSelfOrSuperUser,
-  ensureSuperUser,
+  ensureUserManagement,
   getAuthenticatedAccessiUser,
   hasPrivilegedUserChanges,
 } from '../security/accessControl';
@@ -152,7 +152,7 @@ export class UserController {
     @Query('offset', new ParseIntPipe({ optional: true })) offset?: number,
   ) {
     try {
-      ensureSuperUser(
+      ensureUserManagement(
         getAuthenticatedAccessiUser(request),
         'Solo gli amministratori possono consultare gli utenti.',
       );
@@ -200,7 +200,7 @@ export class UserController {
     @Res() res: Response,
   ) {
     try {
-      ensureSuperUser(
+      ensureUserManagement(
         getAuthenticatedAccessiUser(request),
         'Solo gli amministratori possono eliminare utenti.',
       );
@@ -230,7 +230,7 @@ export class UserController {
     @Res() res: Response,
   ) {
     try {
-      ensureSuperUser(
+      ensureUserManagement(
         getAuthenticatedAccessiUser(request),
         'Solo gli amministratori possono forzare il reset password.',
       );
@@ -253,7 +253,7 @@ export class UserController {
   @Post('force-password-reset-legacy')
   async forcePasswordResetLegacy(@Req() request: Request, @Res() res: Response) {
     try {
-      ensureSuperUser(
+      ensureUserManagement(
         getAuthenticatedAccessiUser(request),
         'Solo gli amministratori possono forzare il reset password.',
       );
@@ -293,7 +293,7 @@ export class UserController {
     @Res() res: Response,
   ) {
     try {
-      ensureSuperUser(
+      ensureUserManagement(
         getAuthenticatedAccessiUser(request),
         'Solo gli amministratori possono modificare lo stato di registrazione.',
       );
@@ -383,7 +383,7 @@ export class UserController {
   @Post('create-managed-user')
   async createManagedUser(@Req() request: Request, @Body() registrationData: RegisterRequest, @Res() res: Response) {
     try {
-      ensureSuperUser(getAuthenticatedAccessiUser(request), 'Solo gli amministratori possono creare utenti.');
+      ensureUserManagement(getAuthenticatedAccessiUser(request), 'Solo gli amministratori possono creare utenti.');
       const codiceUtente = await this.userService.register(registrationData, { allowPrivilegedFields: true });
       await this.emailService.sendPasswordResetEmail(registrationData.email, registrationData.htmlMail);
       return RestUtilities.sendBaseResponse(res, codiceUtente, HttpStatus.CREATED);
@@ -428,7 +428,7 @@ export class UserController {
       const isPrivilegedUpdate = hasPrivilegedUserChanges(user);
 
       if (isPrivilegedUpdate) {
-        ensureSuperUser(
+        ensureUserManagement(
           authenticatedUser,
           'Solo gli amministratori possono modificare ruoli, permessi o flag privilegiati.',
         );
@@ -445,7 +445,7 @@ export class UserController {
       }
 
       await this.userService.updateUser(codiceUtente, user, {
-        allowPrivilegedChanges: authenticatedUser.flagSuper,
+        allowPrivilegedChanges: authenticatedUser.flagSuper || authenticatedUser.flagAdmin,
       });
 
       return RestUtilities.sendOKMessage(

@@ -736,7 +736,7 @@ fetch('/api/profilo', { headers: { Authorization: 'Bearer ' + serviceToken } });
 
 _Accesso, sezioni e che cosa si può fare._
 
-La console è servita dal modulo su /api/accessi/console e richiede un superutente Accessi. Non ha stato proprio: ogni azione chiama le API protette con il JWT dell'utente connesso.
+La console è servita dal modulo su /api/accessi/console. Non ha stato proprio: ogni azione chiama le API protette con il JWT dell'utente connesso.
 
 - Utenti: elenco, creazione locale o SSO, profilo, ruoli, grant diretti, stato, 2FA.
 - Ruoli e grant: CRUD dei ruoli con l'albero delle abilitazioni.
@@ -744,10 +744,19 @@ La console è servita dal modulo su /api/accessi/console e richiede un superuten
 - Filtri: filtri utente e tipi filtro.
 - Token di servizio: creazione, rotazione, revoca.
 - SSO: provider e identità.
+- Wiki e Changelog: documentazione e novità della libreria.
+
+> [!NOTE]
+> **Superutente (FLGSUPER)**
+> Riceve TUTTE le abilitazioni al livello massimo (30) dopo il login. In console vede solo la sezione Utenti e gestisce utenti, ruoli e grant.
+
+> [!NOTE]
+> **Admin (FLGADMIN)**
+> Accede a tutta la console (catalogo, token, SSO, utenti) ma NON conferisce abilitazioni: i menu restano quelli assegnati via ABILITAZIONI/RUOLI\_MNU.
 
 > [!NOTE]
 > **Accesso**
-> Apri /api/accessi/console e accedi con un utente con flagSuper=true. Le sezioni sono raggiungibili anche tramite deep link (per esempio /api/accessi/console/menu-e-gruppi/menu).
+> Apri /api/accessi/console e accedi con un utente con FLGSUPER o FLGADMIN. Le sezioni sono raggiungibili anche tramite deep link (per esempio /api/accessi/console/menu-e-gruppi/menu).
 
 ---
 

@@ -586,7 +586,7 @@ export const WIKI_SECTIONS: WikiSection[] = [
     title: 'Console amministrativa',
     summary: 'Accesso, sezioni e che cosa si può fare.',
     blocks: [
-      p(`La console è servita dal modulo su /api/accessi/console e richiede un superutente Accessi. Non ha stato proprio: ogni azione chiama le API protette con il JWT dell'utente connesso.`),
+      p(`La console è servita dal modulo su /api/accessi/console. Non ha stato proprio: ogni azione chiama le API protette con il JWT dell'utente connesso.`),
       list([
         `Utenti: elenco, creazione locale o SSO, profilo, ruoli, grant diretti, stato, 2FA.`,
         `Ruoli e grant: CRUD dei ruoli con l'albero delle abilitazioni.`,
@@ -594,8 +594,11 @@ export const WIKI_SECTIONS: WikiSection[] = [
         `Filtri: filtri utente e tipi filtro.`,
         `Token di servizio: creazione, rotazione, revoca.`,
         `SSO: provider e identità.`,
+        `Wiki e Changelog: documentazione e novità della libreria.`,
       ]),
-      note('info', `Accesso`, `Apri /api/accessi/console e accedi con un utente con flagSuper=true. Le sezioni sono raggiungibili anche tramite deep link (per esempio /api/accessi/console/menu-e-gruppi/menu).`),
+      note('info', `Superutente (FLGSUPER)`, `Riceve TUTTE le abilitazioni al livello massimo (30) dopo il login. In console vede solo la sezione Utenti e gestisce utenti, ruoli e grant.`),
+      note('info', `Admin (FLGADMIN)`, `Accede a tutta la console (catalogo, token, SSO, utenti) ma NON conferisce abilitazioni: i menu restano quelli assegnati via ABILITAZIONI/RUOLI_MNU.`),
+      note('info', `Accesso`, `Apri /api/accessi/console e accedi con un utente con FLGSUPER o FLGADMIN. Le sezioni sono raggiungibili anche tramite deep link (per esempio /api/accessi/console/menu-e-gruppi/menu).`),
     ],
   },
   // -------------------------------------------------------------------------

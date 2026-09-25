@@ -50,6 +50,7 @@
 } from './generated/accessiApi';
 import { setAccessiConsoleToken } from './accessiFetch';
 import { WIKI_SECTIONS, wikiGroups, buildAiDigest } from './wiki';
+import changelogMarkdown from './changelog.md';
 import type { WikiBlock } from './wiki';
 import { HELP } from './help';
 import type {
@@ -88,7 +89,8 @@ type ConsoleView =
   | 'ssoProviders'
   | 'ssoUsers'
   | 'tokens'
-  | 'wiki';
+  | 'wiki'
+  | 'changelog';
 
 const routeSegment: Record<ConsoleView, string> = {
   users: 'utenti',
@@ -102,6 +104,7 @@ const routeSegment: Record<ConsoleView, string> = {
   ssoUsers: 'sso/utenti',
   tokens: 'token-di-servizio',
   wiki: 'wiki',
+  changelog: 'changelog',
 };
 const routeView = Object.fromEntries(Object.entries(routeSegment).map(([view, segment]) => [segment, view])) as Record<string, ConsoleView>;
 // I padri dei sottomenu hanno un URL proprio: senza figlio selezionato si apre la prima voce.
@@ -334,6 +337,10 @@ function viewFromLocation(): ConsoleView {
 
 /** Navigates through the browser history and renders the requested SPA section. */
 async function navigate(view: ConsoleView, replace = false): Promise<void> {
+  if (!isViewAllowed(view)) {
+    view = 'users';
+    replace = true;
+  }
   const destination = routePath(view);
   if (window.location.pathname !== destination) {
     window.history[replace ? 'replaceState' : 'pushState']({ view }, '', destination);
@@ -343,8 +350,32 @@ async function navigate(view: ConsoleView, replace = false): Promise<void> {
   await show(view);
 }
 
-function requireAdmin(): void {
-  if (!currentUser?.flagSuper) throw new Error('La console richiede un superutente Accessi.');
+function requireConsoleAccess(): void {
+  if (!currentUser?.flagSuper && !currentUser?.flagAdmin) {
+    throw new Error('La console richiede un superutente o un admin Accessi.');
+  }
+}
+
+/**
+ * Un admin accede a tutte le sezioni. Un superutente (senza admin) gestisce solo gli Utenti.
+ */
+function isViewAllowed(view: ConsoleView): boolean {
+  if (!currentUser) return false;
+  if (currentUser.flagAdmin) return true;
+  return view === 'users';
+}
+
+/** Mostra/nasconde le voci di navigazione in base ai flag dell'utente connesso. */
+function applyRoleNavigation(): void {
+  document.querySelectorAll<HTMLElement>('#nav [data-view]').forEach((link) => {
+    const view = link.dataset.view as ConsoleView;
+    const item = link.closest('li') ?? link;
+    item.hidden = !isViewAllowed(view);
+  });
+  document.querySelectorAll<HTMLElement>('#nav details[data-nav-group]').forEach((branch) => {
+    const hasVisible = Array.from(branch.querySelectorAll<HTMLElement>('[data-view]')).some((link) => !link.closest('li')!.hidden);
+    branch.hidden = !hasVisible;
+  });
 }
 
 function formValues(form: HTMLFormElement): Record<string, string> {
@@ -597,9 +628,11 @@ async function bootstrap(): Promise<void> {
     if (!token) throw new Error('Inserisci le credenziali amministrative.');
     const payload = result<AuthenticatedTokenPayloadDto>(await getUserByToken({ token }));
     currentUser = payload.userData;
-    requireAdmin();
+    requireConsoleAccess();
+    applyRoleNavigation();
     await detectFederatedAuthentication();
-    byId('who').textContent = `${currentUser.email} - superutente`;
+    const roleLabel = currentUser.flagSuper && currentUser.flagAdmin ? 'super + admin' : currentUser.flagAdmin ? 'admin' : 'superutente';
+    byId('who').textContent = `${currentUser.email} - ${roleLabel}`;
     byId<HTMLButtonElement>('sso-navigation').hidden = !federatedAuthenticationAvailable;
     finishBoot('console');
     await navigate(viewFromLocation(), window.location.pathname === consoleBasePath);
@@ -1372,6 +1405,52 @@ async function showWiki(sectionId?: string): Promise<void> {
   });
 }
 
+/** Rendering minimale di Markdown (heading, liste, codice, grassetto/code inline). */
+function inlineMarkdown(text: string): string {
+  return escapeHtml(text)
+    .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
+    .replace(/`([^`]+)`/g, '<code>$1</code>');
+}
+
+function renderMarkdown(markdown: string): string {
+  const lines = markdown.replace(/\r\n/g, '\n').split('\n');
+  const html: string[] = [];
+  let inList = false;
+  let inCode = false;
+  const closeList = () => { if (inList) { html.push('</ul>'); inList = false; } };
+
+  for (const line of lines) {
+    if (line.startsWith('```')) {
+      closeList();
+      html.push(inCode ? '</code></pre>' : '<pre class="markdown-code"><code>');
+      inCode = !inCode;
+      continue;
+    }
+    if (inCode) { html.push(escapeHtml(line)); continue; }
+
+    const heading = /^(#{1,4})\s+(.*)$/.exec(line);
+    if (heading) { closeList(); const level = (heading[1] ?? '').length; html.push(`<h${level}>${inlineMarkdown(heading[2] ?? '')}</h${level}>`); continue; }
+
+    const bullet = /^\s*[-*]\s+(.*)$/.exec(line);
+    if (bullet) { if (!inList) { html.push('<ul>'); inList = true; } html.push(`<li>${inlineMarkdown(bullet[1] ?? '')}</li>`); continue; }
+
+    if (line.trim() === '') { closeList(); continue; }
+    closeList();
+    html.push(`<p>${inlineMarkdown(line)}</p>`);
+  }
+
+  if (inCode) html.push('</code></pre>');
+  closeList();
+  return html.join('');
+}
+
+async function showChangelog(): Promise<void> {
+  render(`<div class="wiki"><article class="wiki-content markdown-body">
+    <header class="wiki-section-head"><h2>Changelog</h2><p>Novita e modifiche rilevanti del modulo Accessi.</p></header>
+    ${renderMarkdown(changelogMarkdown)}
+  </article></div>`);
+}
+
 async function show(view: ConsoleView): Promise<void> {
   try {
     showNotice('');
@@ -1387,6 +1466,7 @@ async function show(view: ConsoleView): Promise<void> {
       ssoUsers: showSsoUsers,
       tokens: showServiceTokens,
       wiki: showWiki,
+      changelog: showChangelog,
     };
     setActiveNavigation(view);
     const renderView = views[view];

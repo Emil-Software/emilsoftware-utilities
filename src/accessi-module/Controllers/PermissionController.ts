@@ -1,4 +1,4 @@
-import {
+﻿import {
   BadRequestException,
   Body,
   Controller,
@@ -48,7 +48,8 @@ import { PermissionService } from '../Services/PermissionService/PermissionServi
 import { JwtSimpleGuard } from '../jwt/jwt.strategy';
 import {
   ensureSelfOrSuperUser,
-  ensureSuperUser,
+  ensureAdmin,
+  ensureUserManagement,
   getAuthenticatedAccessiUser,
 } from '../security/accessControl';
 
@@ -114,7 +115,7 @@ export class PermissionController {
     @Res() res: Response,
   ) {
     try {
-      ensureSuperUser(
+      ensureAdmin(
         getAuthenticatedAccessiUser(request),
         'Solo gli amministratori possono modificare i ruoli.',
       );
@@ -147,7 +148,7 @@ export class PermissionController {
   @Post('create-role')
   async createRole(@Req() request: Request, @Res() res: Response, @Body() role: Role) {
     try {
-      ensureSuperUser(
+      ensureAdmin(
         getAuthenticatedAccessiUser(request),
         'Solo gli amministratori possono creare ruoli.',
       );
@@ -187,7 +188,7 @@ export class PermissionController {
     @Body() assignRolesRequest: AssignRolesToUserRequest,
   ) {
     try {
-      ensureSuperUser(
+      ensureUserManagement(
         getAuthenticatedAccessiUser(request),
         'Solo gli amministratori possono assegnare ruoli agli utenti.',
       );
@@ -231,7 +232,7 @@ export class PermissionController {
     @Body() assignPermissionsRequest: AssignPermissionsToUserRequest,
   ) {
     try {
-      ensureSuperUser(
+      ensureUserManagement(
         getAuthenticatedAccessiUser(request),
         'Solo gli amministratori possono assegnare permessi agli utenti.',
       );
@@ -271,7 +272,7 @@ export class PermissionController {
     @Res() res: Response,
   ) {
     try {
-      ensureSuperUser(
+      ensureAdmin(
         getAuthenticatedAccessiUser(request),
         'Solo gli amministratori possono eliminare ruoli.',
       );
@@ -356,7 +357,7 @@ export class PermissionController {
   @Post('menus')
   async createMenu(@Req() request: Request, @Body() body: CreateMenuRequest, @Res() res: Response) {
     try {
-      ensureSuperUser(getAuthenticatedAccessiUser(request), 'Solo gli amministratori possono creare menu.');
+      ensureAdmin(getAuthenticatedAccessiUser(request), 'Solo gli amministratori possono creare menu.');
       await this.permissionService.createMenu(body);
       return RestUtilities.sendOKMessage(
         res,
@@ -382,7 +383,7 @@ export class PermissionController {
     @Res() res: Response,
   ) {
     try {
-      ensureSuperUser(getAuthenticatedAccessiUser(request), 'Solo gli amministratori possono modificare menu.');
+      ensureAdmin(getAuthenticatedAccessiUser(request), 'Solo gli amministratori possono modificare menu.');
       await this.permissionService.updateMenu(codiceMenu, body);
       return RestUtilities.sendOKMessage(res, `Il menu ${codiceMenu} e' stato aggiornato con successo.`);
     } catch (error) {
@@ -398,7 +399,7 @@ export class PermissionController {
   @Delete('menus/:codiceMenu')
   async deleteMenu(@Req() request: Request, @Param('codiceMenu') codiceMenu: string, @Res() res: Response) {
     try {
-      ensureSuperUser(getAuthenticatedAccessiUser(request), 'Solo gli amministratori possono eliminare menu.');
+      ensureAdmin(getAuthenticatedAccessiUser(request), 'Solo gli amministratori possono eliminare menu.');
       await this.permissionService.deleteMenu(codiceMenu);
       return RestUtilities.sendOKMessage(res, `Il menu ${codiceMenu} e' stato eliminato con successo.`);
     } catch (error) {
@@ -414,7 +415,7 @@ export class PermissionController {
   @Post('menu-groups')
   async createMenuGroup(@Req() request: Request, @Body() body: CreateMenuGroupRequest, @Res() res: Response) {
     try {
-      ensureSuperUser(getAuthenticatedAccessiUser(request), 'Solo gli amministratori possono creare gruppi.');
+      ensureAdmin(getAuthenticatedAccessiUser(request), 'Solo gli amministratori possono creare gruppi.');
       await this.permissionService.createMenuGroup(body);
       return RestUtilities.sendOKMessage(
         res,
@@ -440,7 +441,7 @@ export class PermissionController {
     @Res() res: Response,
   ) {
     try {
-      ensureSuperUser(getAuthenticatedAccessiUser(request), 'Solo gli amministratori possono modificare gruppi.');
+      ensureAdmin(getAuthenticatedAccessiUser(request), 'Solo gli amministratori possono modificare gruppi.');
       await this.permissionService.updateMenuGroup(codiceGruppo, body);
       return RestUtilities.sendOKMessage(res, `Il gruppo ${codiceGruppo} e' stato aggiornato con successo.`);
     } catch (error) {
@@ -456,7 +457,7 @@ export class PermissionController {
   @Delete('menu-groups/:codiceGruppo')
   async deleteMenuGroup(@Req() request: Request, @Param('codiceGruppo') codiceGruppo: string, @Res() res: Response) {
     try {
-      ensureSuperUser(getAuthenticatedAccessiUser(request), 'Solo gli amministratori possono eliminare gruppi.');
+      ensureAdmin(getAuthenticatedAccessiUser(request), 'Solo gli amministratori possono eliminare gruppi.');
       await this.permissionService.deleteMenuGroup(codiceGruppo);
       return RestUtilities.sendOKMessage(res, `Il gruppo ${codiceGruppo} e' stato eliminato con successo.`);
     } catch (error) {
@@ -472,7 +473,7 @@ export class PermissionController {
   @Post('menu-types')
   async createMenuType(@Req() request: Request, @Body() body: CreateMenuTypeRequest, @Res() res: Response) {
     try {
-      ensureSuperUser(getAuthenticatedAccessiUser(request), 'Solo gli amministratori possono creare tipi menu.');
+      ensureAdmin(getAuthenticatedAccessiUser(request), 'Solo gli amministratori possono creare tipi menu.');
       await this.permissionService.createMenuType(body);
       return RestUtilities.sendOKMessage(
         res,
@@ -498,7 +499,7 @@ export class PermissionController {
     @Res() res: Response,
   ) {
     try {
-      ensureSuperUser(getAuthenticatedAccessiUser(request), 'Solo gli amministratori possono modificare tipi menu.');
+      ensureAdmin(getAuthenticatedAccessiUser(request), 'Solo gli amministratori possono modificare tipi menu.');
       await this.permissionService.updateMenuType(codiceTipo, body);
       return RestUtilities.sendOKMessage(res, `Il tipo menu ${codiceTipo} e' stato aggiornato con successo.`);
     } catch (error) {
@@ -514,7 +515,7 @@ export class PermissionController {
   @Delete('menu-types/:codiceTipo')
   async deleteMenuType(@Req() request: Request, @Param('codiceTipo') codiceTipo: string, @Res() res: Response) {
     try {
-      ensureSuperUser(getAuthenticatedAccessiUser(request), 'Solo gli amministratori possono eliminare tipi menu.');
+      ensureAdmin(getAuthenticatedAccessiUser(request), 'Solo gli amministratori possono eliminare tipi menu.');
       await this.permissionService.deleteMenuType(codiceTipo);
       return RestUtilities.sendOKMessage(res, `Il tipo menu ${codiceTipo} e' stato eliminato con successo.`);
     } catch (error) {

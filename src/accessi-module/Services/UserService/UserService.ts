@@ -75,23 +75,6 @@ export class UserService {
     }
   }
 
-  /** Determina se l'utente puo amministrare il configuratore Accessi (`FLGADMIN`). */
-  async isAdminConfigurator(codiceUtente: number): Promise<boolean> {
-    if (!codiceUtente) {
-      return false;
-    }
-
-    const query = `SELECT FLGADMIN AS flag_admin FROM UTENTI_CONFIG WHERE CODUTE = ?`;
-    const result = await Orm.query(this.accessiOptions.databaseOptions, query, [codiceUtente]);
-
-    if (result.length === 0) {
-      return false;
-    }
-
-    const mapped = result.map(RestUtilities.convertKeysToCamelCase);
-    return this.normalizeDatabaseBoolean(mapped[0]?.flagAdmin);
-  }
-
   /**
    * Legge il minimo profilo autorevole usato da JWT e middleware. Restituisce `null` per utenti inesistenti.
    * Non usare `UserDto` dal token per decisioni di sicurezza: i flag vengono sempre riletti qui.

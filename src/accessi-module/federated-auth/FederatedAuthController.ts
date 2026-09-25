@@ -1,11 +1,11 @@
-import { Body, Controller, Delete, Get, HttpException, HttpStatus, Param, ParseIntPipe, Patch, Post, Req, Res, UseGuards } from '@nestjs/common';
+﻿import { Body, Controller, Delete, Get, HttpException, HttpStatus, Param, ParseIntPipe, Patch, Post, Req, Res, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiBody, ApiCreatedResponse, ApiOkResponse, ApiOperation, ApiParam, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { Request, Response } from 'express';
 import { RestUtilities } from '../../Utilities';
 import { ActionResponse, ErrorResponse } from '../Dtos/BaseResponse';
 import { CreateFederatedIdentityRequest, CreateFederatedProviderRequest, CreateFederatedUserRequest, FederatedIdentityListResponse, FederatedIdentityResponse, FederatedProviderListResponse, FederatedProviderResponse, SetPasswordLoginPolicyRequest, UpdateFederatedIdentityRequest, UpdateFederatedProviderRequest } from '../Dtos/FederatedIdentityDtos';
 import { JwtSimpleGuard } from '../jwt/jwt.strategy';
-import { ensureSuperUser, getAuthenticatedAccessiUser } from '../security/accessControl';
+import { ensureAdmin, getAuthenticatedAccessiUser } from '../security/accessControl';
 import { FederatedAuthService } from './FederatedAuthService';
 
 /**
@@ -25,7 +25,7 @@ export class FederatedAuthController {
   @Get('providers')
   async getProviders(@Req() request: Request, @Res() res: Response) {
     try {
-      ensureSuperUser(getAuthenticatedAccessiUser(request));
+      ensureAdmin(getAuthenticatedAccessiUser(request));
       return RestUtilities.sendBaseResponse(res, await this.federatedAuthService.getProviders());
     } catch (error) {
       return this.sendError(res, error);
@@ -38,21 +38,21 @@ export class FederatedAuthController {
   @Post('providers')
   async createProvider(@Req() request: Request, @Body() body: CreateFederatedProviderRequest, @Res() res: Response) {
     try {
-      ensureSuperUser(getAuthenticatedAccessiUser(request));
+      ensureAdmin(getAuthenticatedAccessiUser(request));
       return RestUtilities.sendBaseResponse(res, await this.federatedAuthService.createProvider(body), HttpStatus.CREATED);
     } catch (error) {
       return this.sendError(res, error);
     }
   }
 
-  @ApiOperation({ summary: 'Aggiorna o disabilita un provider SSO', operationId: 'updateFederatedProvider', description: 'Riservato a superutente. La chiave provider è immutabile: disabilitarla blocca nuovi login SSO ma conserva i collegamenti storici.' })
+  @ApiOperation({ summary: 'Aggiorna o disabilita un provider SSO', operationId: 'updateFederatedProvider', description: 'Riservato a superutente. La chiave provider Ã¨ immutabile: disabilitarla blocca nuovi login SSO ma conserva i collegamenti storici.' })
   @ApiParam({ name: 'provider', example: 'azure-ad-acme-produzione', description: 'Chiave stabile del provider censito.' })
   @ApiBody({ type: UpdateFederatedProviderRequest })
   @ApiOkResponse({ type: FederatedProviderResponse })
   @Patch('providers/:provider')
   async updateProvider(@Req() request: Request, @Param('provider') provider: string, @Body() body: UpdateFederatedProviderRequest, @Res() res: Response) {
     try {
-      ensureSuperUser(getAuthenticatedAccessiUser(request));
+      ensureAdmin(getAuthenticatedAccessiUser(request));
       return RestUtilities.sendBaseResponse(res, await this.federatedAuthService.updateProvider(provider, body));
     } catch (error) {
       return this.sendError(res, error);
@@ -67,7 +67,7 @@ export class FederatedAuthController {
   @Delete('providers/:provider')
   async deleteProvider(@Req() request: Request, @Param('provider') provider: string, @Res() res: Response) {
     try {
-      ensureSuperUser(getAuthenticatedAccessiUser(request));
+      ensureAdmin(getAuthenticatedAccessiUser(request));
       await this.federatedAuthService.deleteProvider(provider);
       return RestUtilities.sendOKMessage(res, `Provider SSO ${provider} eliminato.`);
     } catch (error) {
@@ -82,7 +82,7 @@ export class FederatedAuthController {
   @Get('users/:codiceUtente/identities')
   async getIdentities(@Req() request: Request, @Param('codiceUtente', ParseIntPipe) codiceUtente: number, @Res() res: Response) {
     try {
-      ensureSuperUser(getAuthenticatedAccessiUser(request));
+      ensureAdmin(getAuthenticatedAccessiUser(request));
       return RestUtilities.sendBaseResponse(res, await this.federatedAuthService.getUserIdentities(codiceUtente));
     } catch (error) {
       return this.sendError(res, error);
@@ -96,7 +96,7 @@ export class FederatedAuthController {
   @Post('users/:codiceUtente/identities')
   async linkIdentity(@Req() request: Request, @Param('codiceUtente', ParseIntPipe) codiceUtente: number, @Body() body: CreateFederatedIdentityRequest, @Res() res: Response) {
     try {
-      ensureSuperUser(getAuthenticatedAccessiUser(request));
+      ensureAdmin(getAuthenticatedAccessiUser(request));
       const identity = await this.federatedAuthService.linkIdentity(codiceUtente, body, body.note);
       return RestUtilities.sendBaseResponse(res, identity, HttpStatus.CREATED);
     } catch (error) {
@@ -109,13 +109,13 @@ export class FederatedAuthController {
   @ApiCreatedResponse({ type: FederatedIdentityResponse })
   @ApiResponse({ status: 400, type: ErrorResponse, description: 'Provider o subject non validi.' })
   @ApiResponse({ status: 404, type: ErrorResponse, description: 'Provider SSO non censito.' })
-  @ApiResponse({ status: 409, type: ErrorResponse, description: 'Email o identità SSO già associate a un utente.' })
+  @ApiResponse({ status: 409, type: ErrorResponse, description: 'Email o identitÃ  SSO giÃ  associate a un utente.' })
   @ApiResponse({ status: 503, type: ErrorResponse, description: 'Schema Accessi non aggiornato.' })
   @ApiResponse({ status: 500, type: ErrorResponse, description: 'Errore inatteso durante il provisioning; la risposta contiene FEDERATED_USER_PROVISIONING_FAILED.' })
   @Post('users')
   async createUser(@Req() request: Request, @Body() body: CreateFederatedUserRequest, @Res() res: Response) {
     try {
-      ensureSuperUser(getAuthenticatedAccessiUser(request));
+      ensureAdmin(getAuthenticatedAccessiUser(request));
       const identity = await this.federatedAuthService.createManagedFederatedUser(body.user, body, body.passwordLoginEnabled === true, body.note);
       return RestUtilities.sendBaseResponse(res, identity, HttpStatus.CREATED);
     } catch (error) {
@@ -130,7 +130,7 @@ export class FederatedAuthController {
   @Patch('users/:codiceUtente/password-login')
   async setPasswordPolicy(@Req() request: Request, @Param('codiceUtente', ParseIntPipe) codiceUtente: number, @Body() body: SetPasswordLoginPolicyRequest, @Res() res: Response) {
     try {
-      ensureSuperUser(getAuthenticatedAccessiUser(request));
+      ensureAdmin(getAuthenticatedAccessiUser(request));
       await this.federatedAuthService.setPasswordLoginEnabled(codiceUtente, body.passwordLoginEnabled);
       return RestUtilities.sendOKMessage(res, 'Policy di autenticazione aggiornata.');
     } catch (error) {
@@ -144,7 +144,7 @@ export class FederatedAuthController {
   @Delete('identities/:identityKey')
   async disableIdentity(@Req() request: Request, @Param('identityKey') identityKey: string, @Res() res: Response) {
     try {
-      ensureSuperUser(getAuthenticatedAccessiUser(request));
+      ensureAdmin(getAuthenticatedAccessiUser(request));
       await this.federatedAuthService.disableIdentity(identityKey);
       return RestUtilities.sendOKMessage(res, 'Identita SSO disabilitata.');
     } catch (error) {
@@ -152,15 +152,15 @@ export class FederatedAuthController {
     }
   }
 
-  @ApiOperation({ summary: 'Elimina definitivamente un collegamento SSO', operationId: 'deleteFederatedIdentityPermanently', description: 'Riservato a superutente. Rimuove il collegamento provider e subject dall’utente, senza eliminare l’utente Accessi.' })
+  @ApiOperation({ summary: 'Elimina definitivamente un collegamento SSO', operationId: 'deleteFederatedIdentityPermanently', description: 'Riservato a superutente. Rimuove il collegamento provider e subject dallâ€™utente, senza eliminare lâ€™utente Accessi.' })
   @ApiParam({ name: 'codiceUtente', example: 123 })
   @ApiParam({ name: 'identityKey', description: 'SHA-256 del collegamento da eliminare.' })
   @ApiOkResponse({ type: ActionResponse })
-  @ApiResponse({ status: 404, type: ErrorResponse, description: 'Collegamento assente o non appartenente all’utente.' })
+  @ApiResponse({ status: 404, type: ErrorResponse, description: 'Collegamento assente o non appartenente allâ€™utente.' })
   @Delete('users/:codiceUtente/identities/:identityKey')
   async deleteIdentity(@Req() request: Request, @Param('codiceUtente', ParseIntPipe) codiceUtente: number, @Param('identityKey') identityKey: string, @Res() res: Response) {
     try {
-      ensureSuperUser(getAuthenticatedAccessiUser(request));
+      ensureAdmin(getAuthenticatedAccessiUser(request));
       await this.federatedAuthService.deleteIdentity(codiceUtente, identityKey);
       return RestUtilities.sendOKMessage(res, 'Collegamento SSO eliminato definitivamente.');
     } catch (error) {
@@ -175,7 +175,7 @@ export class FederatedAuthController {
   @Patch('identities/:identityKey')
   async updateIdentity(@Req() request: Request, @Param('identityKey') identityKey: string, @Body() body: UpdateFederatedIdentityRequest, @Res() res: Response) {
     try {
-      ensureSuperUser(getAuthenticatedAccessiUser(request));
+      ensureAdmin(getAuthenticatedAccessiUser(request));
       await this.federatedAuthService.updateIdentity(identityKey, body);
       return RestUtilities.sendOKMessage(res, 'Collegamento SSO aggiornato.');
     } catch (error) {

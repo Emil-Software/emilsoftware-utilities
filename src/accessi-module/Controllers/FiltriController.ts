@@ -1,4 +1,4 @@
-import {
+﻿import {
   Body,
   Controller,
   Delete,
@@ -29,7 +29,7 @@ import { FiltriService } from '../Services/FiltriService/FiltriService';
 import { JwtSimpleGuard } from '../jwt/jwt.strategy';
 import {
   ensureSelfOrSuperUser,
-  ensureSuperUser,
+  ensureAdmin,
   getAuthenticatedAccessiUser,
 } from '../security/accessControl';
 
@@ -83,7 +83,7 @@ export class FiltriController {
     @Body() body: CreateFilterTypeRequest,
   ) {
     try {
-      ensureSuperUser(getAuthenticatedAccessiUser(request), 'Solo gli amministratori possono creare tipi filtro.');
+      ensureAdmin(getAuthenticatedAccessiUser(request), 'Solo gli amministratori possono creare tipi filtro.');
       await this.filtriService.createTipoFiltro(body);
       return RestUtilities.sendOKMessage(
         res,
@@ -112,7 +112,7 @@ export class FiltriController {
     @Body() body: UpdateFilterTypeRequest,
   ) {
     try {
-      ensureSuperUser(getAuthenticatedAccessiUser(request), 'Solo gli amministratori possono modificare tipi filtro.');
+      ensureAdmin(getAuthenticatedAccessiUser(request), 'Solo gli amministratori possono modificare tipi filtro.');
       await this.filtriService.updateTipoFiltro(tipFil, body);
       return RestUtilities.sendOKMessage(res, `Il tipo filtro ${tipFil} e' stato aggiornato con successo.`);
     } catch (error) {
@@ -136,7 +136,7 @@ export class FiltriController {
     @Param('tipFil', ParseIntPipe) tipFil: number,
   ) {
     try {
-      ensureSuperUser(getAuthenticatedAccessiUser(request), 'Solo gli amministratori possono eliminare tipi filtro.');
+      ensureAdmin(getAuthenticatedAccessiUser(request), 'Solo gli amministratori possono eliminare tipi filtro.');
       await this.filtriService.deleteTipoFiltro(tipFil);
       return RestUtilities.sendOKMessage(res, `Il tipo filtro ${tipFil} e' stato eliminato con successo.`);
     } catch (error) {
@@ -180,7 +180,7 @@ export class FiltriController {
       const targetUserCode = req?.codUte;
 
       if (targetUserCode === undefined) {
-        ensureSuperUser(
+        ensureAdmin(
           authenticatedUser,
           'Solo gli amministratori possono consultare i filtri di tutti gli utenti.',
         );

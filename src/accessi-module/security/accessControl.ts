@@ -39,23 +39,56 @@ export function getAuthenticatedAccessiUser(req: Request): AuthenticatedAccessiU
   };
 }
 
-/** Impone il flag superutente, necessario per configurazione globale, utenti e catalogo SSO. */
+/** Impone il flag superutente: gestione utenti e dei loro grant. */
 export function ensureSuperUser(
   user: AuthenticatedAccessiUser,
-  message = 'Operazione riservata agli amministratori.',
+  message = 'Operazione riservata ai superutenti.',
 ): void {
   if (!user.flagSuper) {
     throw new ForbiddenException(message);
   }
 }
 
-/** Permette l'operazione al proprietario della risorsa o a un superutente. */
+/** Impone il flag admin: catalogo (menu, gruppi, tipi), token di servizio e provider SSO. */
+export function ensureAdmin(
+  user: AuthenticatedAccessiUser,
+  message = 'Operazione riservata agli amministratori.',
+): void {
+  if (!user.flagAdmin) {
+    throw new ForbiddenException(message);
+  }
+}
+
+/**
+ * Gestione utenti e assegnazioni: consentita a superutenti e admin.
+ * `flagAdmin` non conferisce abilitazioni, ma abilita la console completa.
+ */
+export function ensureUserManagement(
+  user: AuthenticatedAccessiUser,
+  message = 'Operazione riservata agli amministratori degli utenti.',
+): void {
+  if (!user.flagSuper && !user.flagAdmin) {
+    throw new ForbiddenException(message);
+  }
+}
+
+/** Accesso alla console: superutenti e admin. */
+export function ensureConsoleAccess(
+  user: AuthenticatedAccessiUser,
+  message = 'La console richiede un superutente o un admin Accessi.',
+): void {
+  if (!user.flagSuper && !user.flagAdmin) {
+    throw new ForbiddenException(message);
+  }
+}
+
+/** Permette l'operazione al proprietario della risorsa o a superutenti/admin. */
 export function ensureSelfOrSuperUser(
   user: AuthenticatedAccessiUser,
   targetUserCode: number,
   message = 'Operazione non autorizzata su questo utente.',
 ): void {
-  if (user.flagSuper || user.codiceUtente === targetUserCode) {
+  if (user.flagSuper || user.flagAdmin || user.codiceUtente === targetUserCode) {
     return;
   }
 

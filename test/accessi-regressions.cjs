@@ -11,6 +11,7 @@ const { Orm } = require('../src/Orm');
 const { PermissionService } = require('../src/accessi-module/Services/PermissionService/PermissionService');
 const { UserService } = require('../src/accessi-module/Services/UserService/UserService');
 const { buildAuthenticatedTokenPayload, resolveCodiceUtenteFromTokenPayload, extractAccessiBearerToken } = require('../src/accessi-module/security/authenticatedToken');
+const { ensureSuperUser, ensureAdmin, ensureUserManagement, ensureConsoleAccess, ensureSelfOrSuperUser } = require('../src/accessi-module/security/accessControl');
 
 test('daily logs append across restart and rotate at local midnight even when idle', async t => {
   const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'accessi-logs-'));
@@ -119,4 +120,32 @@ test('batch grants match the historical single-user composition', async t => {
 
   const user2 = result.get(2);
   assert.deepEqual(user2.grants.map(g => g.codiceMenu), ['m1']);
+});
+
+test('super and admin responsibilities stay separate', () => {
+  const superUser = { codiceUtente: 1, flagSuper: true, flagAdmin: false };
+  const admin = { codiceUtente: 2, flagSuper: false, flagAdmin: true };
+  const plain = { codiceUtente: 3, flagSuper: false, flagAdmin: false };
+
+  // Admin: catalogo/token/SSO, ma non e un superutente.
+  assert.doesNotThrow(() => ensureAdmin(admin));
+  assert.throws(() => ensureAdmin(superUser), /riservata agli amministratori/);
+  assert.throws(() => ensureAdmin(plain));
+
+  // Superutente: gestione utenti (non quella del catalogo).
+  assert.doesNotThrow(() => ensureSuperUser(superUser));
+  assert.throws(() => ensureSuperUser(admin));
+
+  // Console: super o admin; utenti: entrambi.
+  assert.doesNotThrow(() => ensureConsoleAccess(superUser));
+  assert.doesNotThrow(() => ensureConsoleAccess(admin));
+  assert.throws(() => ensureConsoleAccess(plain));
+  assert.doesNotThrow(() => ensureUserManagement(superUser));
+  assert.doesNotThrow(() => ensureUserManagement(admin));
+  assert.throws(() => ensureUserManagement(plain));
+
+  // Self-or-super lascia passare anche l'admin sui dati altrui.
+  assert.doesNotThrow(() => ensureSelfOrSuperUser(admin, 999));
+  assert.doesNotThrow(() => ensureSelfOrSuperUser(plain, 3));
+  assert.throws(() => ensureSelfOrSuperUser(plain, 999));
 });
