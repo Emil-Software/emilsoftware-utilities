@@ -1,4 +1,4 @@
-require('ts-node/register/transpile-only');
+﻿require('ts-node/register/transpile-only');
 require('reflect-metadata');
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
@@ -54,7 +54,7 @@ test('strict Bearer and current privileges replace legacy top-level claims', () 
   assert.equal(extractAccessiBearerToken('bearer\tabc'), 'abc');
   assert.equal(resolveCodiceUtenteFromTokenPayload({ codiceUtente: 1.5 }), undefined);
   assert.equal(resolveCodiceUtenteFromTokenPayload({ codiceUtente: 1, typ: 'password-reset' }), undefined);
-  const payload = buildAuthenticatedTokenPayload({ codiceUtente: 1, flagSuper: true }, { codiceUtente: 1, flagSuper: false, flagAdminConfigurator: false, statoRegistrazione: 1 });
+  const payload = buildAuthenticatedTokenPayload({ codiceUtente: 1, flagSuper: true }, { codiceUtente: 1, flagSuper: false, flagAdmin: false, statoRegistrazione: 1 });
   assert.equal(payload.flagSuper, false);
   assert.equal(payload.utente.flagSuper, false);
   assert.equal(payload.userData.utente.flagSuper, false);

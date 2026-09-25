@@ -8,7 +8,7 @@
 export interface AuthenticatedUserPayloadDto {
   codiceUtente: number;
   email?: string;
-  flagAdminConfigurator: boolean;
+  flagAdmin: boolean;
   /** Verifica email richiesta per questo utente. */
   flagDueFattori?: boolean;
   flagSuper: boolean;

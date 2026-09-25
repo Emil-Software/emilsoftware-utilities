@@ -3,7 +3,7 @@ import type { AccessiOptions } from '../AccessiModule';
 import { DatabaseUpdater } from '../../DatabaseUpdater';
 import { Orm } from '../../Orm';
 import { Logger } from '../../Logger';
-import { ACCESSI_SCHEMA_VERSION, ACCESSI_VERSION_KEY, accessiTables, accessiForeignKeys, accessiIndexes, accessiTriggers, accessiGenerators, accessiChecks } from './accessiSchema';
+import { ACCESSI_SCHEMA_VERSION, ACCESSI_VERSION_KEY, accessiTables, accessiForeignKeys, accessiIndexes, accessiTriggers, accessiGenerators, accessiChecks, accessiRenamedColumns, accessiObsoleteColumns } from './accessiSchema';
 
 type Row = Record<string, unknown>;
 export interface AccessiSchemaReport { compatible: boolean; issues: string[]; }
@@ -344,6 +344,21 @@ export class AccessiDatabaseUpdater extends DatabaseUpdater implements OnModuleI
               }
             }
           }
+        }
+      }
+    }
+    // Pulizia delle colonne ibride: rinomina con copia dati e rimozione dei campi applicativi.
+    // Gira dopo l'aggiunta delle colonne canoniche, cosi il target del rename esiste sempre.
+    for (const rename of accessiRenamedColumns) {
+      const hasLegacy = columns.some(row => row.TABLE_NAME === rename.table && row.COLUMN_NAME === rename.from);
+      if (!hasLegacy) continue;
+      await this.execute(options, `UPDATE ${rename.table} SET ${rename.to} = ${rename.from} WHERE ${rename.to} IS NULL AND ${rename.from} IS NOT NULL`);
+      await this.execute(options, `ALTER TABLE ${rename.table} DROP ${rename.from}`);
+    }
+    for (const [table, obsoleteColumns] of Object.entries(accessiObsoleteColumns)) {
+      for (const column of obsoleteColumns) {
+        if (columns.some(row => row.TABLE_NAME === table && row.COLUMN_NAME === column)) {
+          await this.execute(options, `ALTER TABLE ${table} DROP ${column}`);
         }
       }
     }

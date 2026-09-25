@@ -535,12 +535,12 @@ fetch("/api/accessi/user/register", {
 ```
 
 > [!NOTE]
-> **Flag applicativi**
-> Il profilo espone i flag UTENTI\_CONFIG (FLGMOP, FLGPIANA, FLGADDETTI, FLGOSPITI, FLGPIANARFID, FLGCONTA, FLGCUBI, FLGCICLPASS, FLGDIPENDENTI, FLGINVENTARI), il codice causale CAUMOV e ENABLEIA (assistente IA). Sono modificabili solo da flussi privilegiati (allowPrivilegedFields/allowPrivilegedChanges) e visibili nella scheda utente della console.
+> **Campi di dominio**
+> UTENTI\_CONFIG contiene solo i flag di dominio Accessi: FLGSUPER, FLGADMIN, FLG2FATT (2FA), FLGPWDLESS (passwordless) e FLGPASSWORD (login locale). I flag applicativi legacy (FLGMOP, FLGPIANA, FLGADDETTI, FLGOSPITI, FLGPIANARFID, FLGCONTA, FLGCUBI, FLGCICLPASS, FLGDIPENDENTI, FLGINVENTARI) e le colonne applicative (CAUMOV, NUMMAC, RAGSOCCLI) sono stati rimossi dallo schema: i backend devono gestirli in tabelle proprie. ENABLEIA resta per l'assistente IA.
 
 > [!NOTE]
 > **Gruppi menu e NOMECAMPO**
-> Ogni gruppo menu puo dichiarare NOMECAMPO, la colonna UTENTI\_CONFIG che ne regola l'abilitazione (es. FLGDIPENDENTI). get-groups-with-menus e get-menus espongono nomeCampo.
+> Ogni gruppo menu puo dichiarare NOMECAMPO. get-groups-with-menus e get-menus espongono nomeCampo. Dopo la pulizia dello schema NOMECAMPO non deve piu puntare a colonne applicative rimosse.
 
 > [!NOTE]
 > **Campi estesi**

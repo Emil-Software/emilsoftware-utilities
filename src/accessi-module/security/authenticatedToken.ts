@@ -1,4 +1,4 @@
-import { StatoRegistrazione } from '../Dtos/StatoRegistrazione';
+﻿import { StatoRegistrazione } from '../Dtos/StatoRegistrazione';
 
 /** Stato autorevole minimo riletto dal database per ogni verifica JWT. */
 export interface AccessiAuthenticatedUserSnapshot {
@@ -6,7 +6,7 @@ export interface AccessiAuthenticatedUserSnapshot {
   email?: string;
   statoRegistrazione: StatoRegistrazione;
   flagSuper: boolean;
-  flagAdminConfigurator: boolean;
+  flagAdmin: boolean;
   flagDueFattori?: boolean;
   passwordlessLoginEnabled?: boolean;
   passwordLoginEnabled?: boolean;
@@ -62,7 +62,7 @@ export function buildAuthenticatedTokenPayload(
   const normalizedUser = {
     ...utente,
     flagSuper: normalizeBooleanFlag(utente.flagSuper),
-    flagAdminConfigurator: normalizeBooleanFlag(utente.flagAdminConfigurator),
+    flagAdmin: normalizeBooleanFlag(utente.flagAdmin),
     flagDueFattori: normalizeBooleanFlag(utente.flagDueFattori),
     passwordlessLoginEnabled: normalizeBooleanFlag(utente.passwordlessLoginEnabled),
   };
@@ -73,7 +73,7 @@ export function buildAuthenticatedTokenPayload(
     email: normalizedUser.email,
     statoRegistrazione: normalizedUser.statoRegistrazione,
     flagSuper: normalizedUser.flagSuper,
-    flagAdminConfigurator: normalizedUser.flagAdminConfigurator,
+    flagAdmin: normalizedUser.flagAdmin,
     flagDueFattori: normalizedUser.flagDueFattori,
     passwordlessLoginEnabled: normalizedUser.passwordlessLoginEnabled,
     passwordLoginEnabled: normalizedUser.passwordLoginEnabled,

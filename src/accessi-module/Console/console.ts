@@ -1,4 +1,4 @@
-import {
+﻿import {
   assignPermissionsToUser,
   assignRolesToUser,
   createFederatedUser,
@@ -73,7 +73,7 @@ import type {
 } from './generated/model';
 
 type UserRow = { utente: UserDto; userGrants?: { ruoli?: Array<{ codiceRuolo?: number; descrizioneRuolo?: string }> } };
-type ConsoleUser = { codiceUtente: number; email?: string; flagSuper: boolean; flagAdminConfigurator: boolean };
+type ConsoleUser = { codiceUtente: number; email?: string; flagSuper: boolean; flagAdmin: boolean };
 type FederatedProvider = FederatedProviderResponseDto;
 type ConsoleFederatedIdentity = { identityKey: string; provider: string; subject: string; active: boolean; note?: string };
 type UserDetailTab = 'sso' | 'profile' | 'roles' | 'grants';
@@ -185,10 +185,10 @@ function rolePermissionLevel(value: unknown): string {
 /** Renders selectable roles together with their effective groups, menus and permission levels. */
 function roleAssignmentEditor(roles: Role[], assignedRoles: Array<{ codiceRuolo?: number }> | undefined, groups: GroupWithMenusEntity[]): string {
   const catalogMenus = new Map(groups.flatMap((group) => group.menus.map((menu) => [menu.codiceMenu, menu])));
-  return `<form id="roles" class="user-editor-section roles-editor" data-user-panel="roles" role="tabpanel" aria-labelledby="user-tab-roles"><h3>Ruoli ${helpDot('role-assignment')}</h3><p class="form-help">Salvare sostituisce i ruoli dell'utente (non i grant diretti).</p><div class="role-assignment-list">${roles.map((role) => { const roleMenus = role.menu ?? []; const assigned = (assignedRoles ?? []).some((current) => current.codiceRuolo === role.codiceRuolo); const groupedMenus = groups.map((group) => ({ group, entries: group.menus.map((menu) => ({ menu, assignment: roleMenus.find((item) => item.codiceMenu === menu.codiceMenu) })).filter((entry) => entry.assignment) })).filter((entry) => entry.entries.length > 0); const missingMenus = roleMenus.filter((item) => !catalogMenus.has(item.codiceMenu)); return `<article class="role-assignment-card"><div class="role-assignment-heading"><label class="check"><input type="checkbox" name="role" value="${escapeHtml(role.codiceRuolo)}" ${assigned ? 'checked' : ''}><span><strong>${escapeHtml(role.descrizioneRuolo)}</strong><small>Codice ruolo: ${escapeHtml(role.codiceRuolo)}</small></span></label><span class="role-menu-count">${roleMenus.length} menu</span></div><div class="role-permission-groups">${groupedMenus.map(({ group, entries }) => `<section class="role-permission-group"><div class="role-permission-group-heading"><strong>${escapeHtml(group.descrizioneGruppo)}</strong>${groupMetadata(group)}</div>${entries.map(({ menu, assignment }) => `<div class="role-permission-entry ${menu.enabled === false ? 'is-disabled' : ''}"><div><strong>${escapeHtml(menu.descrizioneMenu)}</strong>${menuMetadata(menu)}</div><span class="permission-level">${escapeHtml(rolePermissionLevel(assignment?.tipoAbilitazione))}</span></div>`).join('')}</section>`).join('') || '<p class="form-help">Questo ruolo non contiene menu attivi nel catalogo.</p>'}${missingMenus.length ? `<section class="role-permission-group missing-role-menus"><strong>Menu non più presenti nel catalogo</strong>${missingMenus.map((menu) => `<div class="role-permission-entry"><div><strong>${escapeHtml(menu.codiceMenu)}</strong><p class="entity-note">Il menu è ancora associato al ruolo ma non è disponibile nel catalogo corrente.</p></div><span class="permission-level">${escapeHtml(rolePermissionLevel(menu.tipoAbilitazione))}</span></div>`).join('')}</section>` : ''}</div></article>`; }).join('')}</div><button>Salva ruoli</button></form>`;
+  return `<form id="roles" class="user-editor-section roles-editor" data-user-panel="roles" role="tabpanel" aria-labelledby="user-tab-roles"><h3>Ruoli ${helpDot('role-assignment')}</h3><p class="form-help">Salvare sostituisce i ruoli dell'utente (non i grant diretti).</p><div class="role-assignment-list">${roles.map((role) => { const roleMenus = role.menu ?? []; const assigned = (assignedRoles ?? []).some((current) => current.codiceRuolo === role.codiceRuolo); const groupedMenus = groups.map((group) => ({ group, entries: group.menus.map((menu) => ({ menu, assignment: roleMenus.find((item) => item.codiceMenu === menu.codiceMenu) })).filter((entry) => entry.assignment) })).filter((entry) => entry.entries.length > 0); const missingMenus = roleMenus.filter((item) => !catalogMenus.has(item.codiceMenu)); return `<article class="role-assignment-card"><div class="role-assignment-heading"><label class="check"><input type="checkbox" name="role" value="${escapeHtml(role.codiceRuolo)}" ${assigned ? 'checked' : ''}><span><strong>${escapeHtml(role.descrizioneRuolo)}</strong><small>Codice ruolo: ${escapeHtml(role.codiceRuolo)}</small></span></label><span class="role-menu-count">${roleMenus.length} menu</span></div><div class="role-permission-groups">${groupedMenus.map(({ group, entries }) => `<section class="role-permission-group"><div class="role-permission-group-heading"><strong>${escapeHtml(group.descrizioneGruppo)}</strong>${groupMetadata(group)}</div>${entries.map(({ menu, assignment }) => `<div class="role-permission-entry ${menu.enabled === false ? 'is-disabled' : ''}"><div><strong>${escapeHtml(menu.descrizioneMenu)}</strong>${menuMetadata(menu)}</div><span class="permission-level">${escapeHtml(rolePermissionLevel(assignment?.tipoAbilitazione))}</span></div>`).join('')}</section>`).join('') || '<p class="form-help">Questo ruolo non contiene menu attivi nel catalogo.</p>'}${missingMenus.length ? `<section class="role-permission-group missing-role-menus"><strong>Menu non piÃ¹ presenti nel catalogo</strong>${missingMenus.map((menu) => `<div class="role-permission-entry"><div><strong>${escapeHtml(menu.codiceMenu)}</strong><p class="entity-note">Il menu Ã¨ ancora associato al ruolo ma non Ã¨ disponibile nel catalogo corrente.</p></div><span class="permission-level">${escapeHtml(rolePermissionLevel(menu.tipoAbilitazione))}</span></div>`).join('')}</section>` : ''}</div></article>`; }).join('')}</div><button>Salva ruoli</button></form>`;
 }
 
-/** Vista compatta di un ruolo: identità, azioni e albero delle abilitazioni su richiesta. */
+/** Vista compatta di un ruolo: identitÃ , azioni e albero delle abilitazioni su richiesta. */
 function roleOverview(role: Role, groups: GroupWithMenusEntity[]): string {
   const roleMenus = role.menu ?? [];
   const assignments = new Map(roleMenus.map((item) => [item.codiceMenu, item]));
@@ -200,7 +200,7 @@ function roleOverview(role: Role, groups: GroupWithMenusEntity[]): string {
 
   const groupNodes = tree.map(({ group, entries }) => `<li class="role-tree-group ${group.enabled === false ? 'is-disabled' : ''}"><div class="role-tree-group-head"><strong>${escapeHtml(group.descrizioneGruppo)}</strong><span class="role-tree-count">${entries.length}</span></div><ul class="role-tree-menus">${entries.map((menu) => `<li class="role-tree-menu ${menu.enabled === false ? 'is-disabled' : ''}"><span class="role-tree-menu-name">${escapeHtml(menu.descrizioneMenu)}</span><span class="permission-level">${escapeHtml(rolePermissionLevel(assignments.get(menu.codiceMenu)?.tipoAbilitazione))}</span></li>`).join('')}</ul></li>`).join('');
   const orphanNode = orphans.length
-    ? `<li class="role-tree-group is-orphan"><div class="role-tree-group-head"><strong>Menu non più nel catalogo</strong><span class="role-tree-count">${orphans.length}</span></div><ul class="role-tree-menus">${orphans.map((item) => `<li class="role-tree-menu"><span class="role-tree-menu-name"><code>${escapeHtml(item.codiceMenu)}</code></span><span class="permission-level">${escapeHtml(rolePermissionLevel(item.tipoAbilitazione))}</span></li>`).join('')}</ul></li>`
+    ? `<li class="role-tree-group is-orphan"><div class="role-tree-group-head"><strong>Menu non piÃ¹ nel catalogo</strong><span class="role-tree-count">${orphans.length}</span></div><ul class="role-tree-menus">${orphans.map((item) => `<li class="role-tree-menu"><span class="role-tree-menu-name"><code>${escapeHtml(item.codiceMenu)}</code></span><span class="permission-level">${escapeHtml(rolePermissionLevel(item.tipoAbilitazione))}</span></li>`).join('')}</ul></li>`
     : '';
 
   return `<article class="role-card">
@@ -239,7 +239,7 @@ function roleMenuEditorTable(group: GroupWithMenusEntity, role?: Role): string {
  */
 function updateLoadingState(active: boolean): void {
   pendingNetworkRequests = Math.max(0, pendingNetworkRequests + (active ? 1 : -1));
-  // Durante il boot l'overlay è gestito manualmente (verifica sessione), non dalle richieste di rete.
+  // Durante il boot l'overlay Ã¨ gestito manualmente (verifica sessione), non dalle richieste di rete.
   if (booting) {
     return;
   }
@@ -364,13 +364,13 @@ function federatedIdentityFields(providers: FederatedProvider[]): string {
 
 /** Renders high-priority SSO identity management for one Accessi user. */
 function federatedIdentitySection(identities: ConsoleFederatedIdentity[], providers: FederatedProvider[]): string {
-  return `<section class="user-editor-section sso-identity-section" data-user-panel="sso" role="tabpanel" aria-labelledby="user-tab-sso"><div class="section-heading"><div><p class="eyebrow">Autenticazione esterna</p><h3>Identità SSO</h3></div><span class="muted">Collegamenti verificati dal backend</span></div><p class="form-help">Disabilita conserva lo storico; elimina rimuove il collegamento (l'utente resta).</p><div class="sso-identity-list">${identities.map((identity) => `<article class="sso-identity-item ${identity.active ? '' : 'is-disabled'}"><div class="sso-identity-data"><strong>${escapeHtml(identity.provider)}</strong><dl class="entity-metadata"><div><dt>Subject</dt><dd>${escapeHtml(identity.subject)}</dd></div><div><dt>Stato</dt><dd>${identity.active ? 'Abilitata' : 'Disabilitata'}</dd></div></dl>${identity.note ? `<p class="entity-note"><strong>Nota</strong>${escapeHtml(identity.note)}</p>` : ''}</div><div class="sso-identity-actions"><button type="button" class="secondary" data-identity-toggle="${escapeHtml(identity.identityKey)}" data-active="${String(!identity.active)}">${identity.active ? 'Disabilita' : 'Abilita'}</button><button type="button" class="icon-button danger-button" data-identity-delete="${escapeHtml(identity.identityKey)}" aria-label="Elimina definitivamente il collegamento SSO ${escapeHtml(identity.provider)}" title="Elimina definitivamente il collegamento SSO"><span aria-hidden="true">&#128465;</span></button></div></article>`).join('') || '<p class="muted">Nessun collegamento SSO.</p>'}</div>${providers.some((provider) => provider.active) ? `<form id="link-sso" class="sso-link-form">${federatedIdentityFields(providers)}<button>Collega SSO verificato</button></form>` : '<p class="form-help">Non ci sono provider SSO attivi. Censiscine uno nella sezione SSO prima di creare collegamenti.</p>'}</section>`;
+  return `<section class="user-editor-section sso-identity-section" data-user-panel="sso" role="tabpanel" aria-labelledby="user-tab-sso"><div class="section-heading"><div><p class="eyebrow">Autenticazione esterna</p><h3>IdentitÃ  SSO</h3></div><span class="muted">Collegamenti verificati dal backend</span></div><p class="form-help">Disabilita conserva lo storico; elimina rimuove il collegamento (l'utente resta).</p><div class="sso-identity-list">${identities.map((identity) => `<article class="sso-identity-item ${identity.active ? '' : 'is-disabled'}"><div class="sso-identity-data"><strong>${escapeHtml(identity.provider)}</strong><dl class="entity-metadata"><div><dt>Subject</dt><dd>${escapeHtml(identity.subject)}</dd></div><div><dt>Stato</dt><dd>${identity.active ? 'Abilitata' : 'Disabilitata'}</dd></div></dl>${identity.note ? `<p class="entity-note"><strong>Nota</strong>${escapeHtml(identity.note)}</p>` : ''}</div><div class="sso-identity-actions"><button type="button" class="secondary" data-identity-toggle="${escapeHtml(identity.identityKey)}" data-active="${String(!identity.active)}">${identity.active ? 'Disabilita' : 'Abilita'}</button><button type="button" class="icon-button danger-button" data-identity-delete="${escapeHtml(identity.identityKey)}" aria-label="Elimina definitivamente il collegamento SSO ${escapeHtml(identity.provider)}" title="Elimina definitivamente il collegamento SSO"><span aria-hidden="true">&#128465;</span></button></div></article>`).join('') || '<p class="muted">Nessun collegamento SSO.</p>'}</div>${providers.some((provider) => provider.active) ? `<form id="link-sso" class="sso-link-form">${federatedIdentityFields(providers)}<button>Collega SSO verificato</button></form>` : '<p class="form-help">Non ci sono provider SSO attivi. Censiscine uno nella sezione SSO prima di creare collegamenti.</p>'}</section>`;
 }
 
 /** Builds the tab list for user administration without coupling it to a framework router. */
 function userDetailTabs(hasSso: boolean): string {
   const tabs: Array<{ id: UserDetailTab; label: string }> = [
-    ...(hasSso ? [{ id: 'sso' as const, label: 'Identità SSO' }] : []),
+    ...(hasSso ? [{ id: 'sso' as const, label: 'IdentitÃ  SSO' }] : []),
     { id: 'profile', label: 'Profilo e accesso' },
     { id: 'roles', label: 'Ruoli' },
     { id: 'grants', label: 'Grant diretti' },
@@ -439,7 +439,7 @@ function pageNumbers(current: number, total: number): Array<number | 'gap'> {
 
 /** Paginatore orizzontale con numeri di pagina (troncati) e riepilogo del contesto. */
 function pagerMarkup(totalPages: number): string {
-  const context = `<span class="pager-context">${usersTotal} utent${usersTotal === 1 ? 'e' : 'i'}${totalPages > 1 ? ` · pagina ${usersPage + 1} di ${totalPages}` : ''}</span>`;
+  const context = `<span class="pager-context">${usersTotal} utent${usersTotal === 1 ? 'e' : 'i'}${totalPages > 1 ? ` Â· pagina ${usersPage + 1} di ${totalPages}` : ''}</span>`;
   if (totalPages <= 1) {
     return `<nav class="pager" aria-label="Paginazione utenti">${context}</nav>`;
   }
@@ -647,41 +647,23 @@ async function showUsers(): Promise<void> {
 function authenticationPolicyFields(user: UserDto): string {
   return `<fieldset><legend>Verifica dell'accesso (opzionale)</legend>
     <label class="check"><input name="flagDueFattori" type="checkbox" ${user.flagDueFattori ? 'checked' : ''}> Richiedi un codice via email (2FA) ${helpDot('user-2fa')}</label>
-    <p class="form-help">Se attiva, il codice è richiesto dopo password o SSO.</p>
+    <p class="form-help">Se attiva, il codice Ã¨ richiesto dopo password o SSO.</p>
     <label class="check"><input name="passwordlessLoginEnabled" type="checkbox" ${user.passwordlessLoginEnabled ? 'checked' : ''} ${user.flagDueFattori ? '' : 'disabled'}> Consenti accesso con il solo codice email ${helpDot('user-passwordless')}</label>
     <p class="form-help">Accesso senza password (richiede il codice email).</p>
     </fieldset>`;
 }
 
-/** Flag applicativi UTENTI_CONFIG mostrati nella scheda utente. */
-const APPLICATION_FLAGS: ReadonlyArray<readonly [string, string]> = [
-  ['flagMop', 'MOP'],
-  ['flagPiana', 'Piana'],
-  ['flagAddetti', 'Addetti'],
-  ['flagOspiti', 'Ospiti'],
-  ['flagPianaRfid', 'Piana RFID'],
-  ['flagConta', 'Contabilità'],
-  ['flagCubi', 'Cubi'],
-  ['flagCicliPass', 'Cicli passivi'],
-  ['flagDipendenti', 'Gestione dipendenti'],
-  ['flagInventari', 'Gestione inventari'],
-];
-
+/** Campi applicativi residui mantenuti dallo schema (ENABLEIA). */
 function applicationFlagFields(user: UserDto): string {
   const record = user as unknown as Record<string, unknown>;
-  const checks = APPLICATION_FLAGS
-    .map(([key, label]) => `<label class="check"><input name="${key}" type="checkbox" ${record[key] ? 'checked' : ''}> ${label}</label>`)
-    .join('');
   return `<fieldset><legend>Abilitazioni applicative</legend>
-    ${checks}
-    <label>Codice causale <input name="caumov" value="${escapeHtml(String(record.caumov ?? ''))}"></label>
     <label class="check"><input name="enableIa" type="checkbox" ${record.enableIa ? 'checked' : ''}> Assistente IA (ENABLEIA)</label>
     </fieldset>`;
 }
 
 function showLocalUserForm(): void {
   render(`<button id="back">Indietro</button><h2>Nuovo utente locale</h2><p class="muted">Viene inviata l'e-mail per impostare la password.</p>
-    <form id="local-user"><label>Email ${helpDot('user-email')}<input name="email" type="email" required><span class="form-help">Identificativo di accesso; riceverà l'email per la password.</span></label><label>Nome ${helpDot('user-name')}<input name="nome"></label><label>Cognome ${helpDot('user-name')}<input name="cognome"></label><button>Crea utente</button></form>`);
+    <form id="local-user"><label>Email ${helpDot('user-email')}<input name="email" type="email" required><span class="form-help">Identificativo di accesso; riceverÃ  l'email per la password.</span></label><label>Nome ${helpDot('user-name')}<input name="nome"></label><label>Cognome ${helpDot('user-name')}<input name="cognome"></label><button>Crea utente</button></form>`);
   byId('back').onclick = () => show('users');
   const localUserForm = document.getElementById('local-user') as HTMLFormElement | null;
   if (localUserForm) localUserForm.onsubmit = (event) => {
@@ -699,7 +681,7 @@ async function showSsoUserForm(): Promise<void> {
   if (!providers.some((provider) => provider.active)) {
     throw new Error('Prima di creare un utente SSO, censisci e abilita almeno un provider SSO.');
   }
-  render(`<button id="back">Indietro</button><h2>Nuovo utente SSO</h2><p class="muted">Salva solo collegamenti già verificati dal backend.</p>
+  render(`<button id="back">Indietro</button><h2>Nuovo utente SSO</h2><p class="muted">Salva solo collegamenti giÃ  verificati dal backend.</p>
     <form id="sso-user"><label>Email ${helpDot('user-email')}<input name="email" type="email" required><span class="form-help">Email di contatto e identificativo Accessi dell'utente.</span></label><label>Nome ${helpDot('user-name')}<input name="nome"></label><label>Cognome ${helpDot('user-name')}<input name="cognome"></label>${federatedIdentityFields(providers)}<label class="check"><input name="passwordLoginEnabled" type="checkbox"> Abilita anche la password locale ${helpDot('user-password-login')}</label><span class="form-help">Se disattivato, l'utente accede solo via SSO.</span><button>Crea utente SSO</button></form>`);
   byId('back').onclick = () => show('ssoUsers');
   const ssoUserForm = document.getElementById('sso-user') as HTMLFormElement | null;
@@ -724,10 +706,10 @@ async function showSsoUserForm(): Promise<void> {
 
 /** Catalogo dei provider SSO: elenco, censimento, modifica ed eliminazione. */
 async function showSsoProviders(): Promise<void> {
-  if (!federatedAuthenticationAvailable) throw new Error('SSO non è abilitato in questa istanza Accessi.');
+  if (!federatedAuthenticationAvailable) throw new Error('SSO non Ã¨ abilitato in questa istanza Accessi.');
   const providerList = result<FederatedProvider[]>(await getFederatedProviders());
   render(`<div class="toolbar"><button id="new-provider">Nuovo provider</button><button id="reload-providers" class="secondary">Aggiorna</button></div>
-    <h2>Provider SSO</h2><p class="muted">La validazione di token, issuer e segreti resta nel backend. Un provider si elimina solo se nessuna identità è collegata.</p>
+    <h2>Provider SSO</h2><p class="muted">La validazione di token, issuer e segreti resta nel backend. Un provider si elimina solo se nessuna identitÃ  Ã¨ collegata.</p>
     <div class="menu-table-wrap"><table><thead><tr><th>Provider</th><th>Descrizione</th><th>Stato</th><th></th></tr></thead><tbody>${providerList.map((provider) => `<tr class="${provider.active ? '' : 'is-disabled'}"><td><code>${escapeHtml(provider.provider)}</code></td><td>${escapeHtml(provider.description)}</td><td>${provider.active ? 'Attivo' : 'Disabilitato'}</td><td class="row-actions"><button data-provider="${escapeHtml(provider.provider)}">Gestisci</button></td></tr>`).join('') || '<tr><td colspan="4" class="muted">Nessun provider censito.</td></tr>'}</tbody></table></div>`);
   byId('new-provider').onclick = () => showProviderForm();
   byId('reload-providers').onclick = () => handleAction(showSsoProviders);
@@ -736,13 +718,13 @@ async function showSsoProviders(): Promise<void> {
   });
 }
 
-/** Utenti e identità SSO: elenco e collegamento delle identità. */
+/** Utenti e identitÃ  SSO: elenco e collegamento delle identitÃ . */
 async function showSsoUsers(): Promise<void> {
-  if (!federatedAuthenticationAvailable) throw new Error('SSO non è abilitato in questa istanza Accessi.');
+  if (!federatedAuthenticationAvailable) throw new Error('SSO non Ã¨ abilitato in questa istanza Accessi.');
   const users = await loadUsers();
   render(`<div class="toolbar"><button id="new-sso">Nuovo utente SSO</button><button id="reload-sso-users" class="secondary">Aggiorna</button></div>
-    <h2>Utenti e identità SSO</h2><p class="muted">Gestisci i collegamenti provider/subject già verificati dal backend.</p>
-    <div class="menu-table-wrap"><table><thead><tr><th>Utente</th><th>Accesso</th><th></th></tr></thead><tbody>${users.map(({ utente }) => `<tr><td>${escapeHtml(utente.email)}</td><td>${utente.passwordLoginEnabled === false ? 'solo SSO' : 'password e SSO'}</td><td class="row-actions"><button data-sso-user="${utente.codiceUtente}">Gestisci identità</button></td></tr>`).join('') || '<tr><td colspan="3" class="muted">Nessun utente.</td></tr>'}</tbody></table></div>`);
+    <h2>Utenti e identitÃ  SSO</h2><p class="muted">Gestisci i collegamenti provider/subject giÃ  verificati dal backend.</p>
+    <div class="menu-table-wrap"><table><thead><tr><th>Utente</th><th>Accesso</th><th></th></tr></thead><tbody>${users.map(({ utente }) => `<tr><td>${escapeHtml(utente.email)}</td><td>${utente.passwordLoginEnabled === false ? 'solo SSO' : 'password e SSO'}</td><td class="row-actions"><button data-sso-user="${utente.codiceUtente}">Gestisci identitÃ </button></td></tr>`).join('') || '<tr><td colspan="3" class="muted">Nessun utente.</td></tr>'}</tbody></table></div>`);
   byId('new-sso').onclick = () => handleAction(showSsoUserForm);
   byId('reload-sso-users').onclick = () => handleAction(showSsoUsers);
   document.querySelectorAll<HTMLButtonElement>('[data-sso-user]').forEach((button) => {
@@ -823,7 +805,7 @@ async function showUser(rawCode: string): Promise<void> {
   const defaultUserTab: UserDetailTab = federatedAuthenticationAvailable ? 'sso' : 'profile';
   render(`<div class="user-action-bar"><button id="back" type="button" class="secondary">Indietro</button><label class="inline-field">Stato registrazione ${helpDot('user-state')}<select id="user-state">${registrationStateOptions(user.statoRegistrazione)}</select></label><button id="save-state" type="button" class="secondary">Aggiorna stato</button><button id="disable-user" type="button" class="danger-button">Imposta stato eliminato</button>${helpDot('user-delete')}</div><div class="page-header"><div><p class="eyebrow">Utente ${codiceUtente}</p><h2>${escapeHtml(user.email)}</h2></div><span class="muted">Gestione profilo, ruoli e autorizzazioni</span></div>${userDetailTabs(federatedAuthenticationAvailable)}<div class="user-editor">
     ${identitySection}
-    <form id="profile" data-user-panel="profile" role="tabpanel" aria-labelledby="user-tab-profile"><h3>Profilo e accesso</h3><label>Nome ${helpDot('user-name')}<input name="nome" value="${escapeHtml(user.nome)}"></label><label>Cognome ${helpDot('user-name')}<input name="cognome" value="${escapeHtml(user.cognome)}"></label><label>Email ${helpDot('user-email')}<input name="email" type="email" value="${escapeHtml(user.email)}" required><span class="form-help">Identificativo di accesso e recapito.</span></label>${federatedAuthenticationAvailable ? `<label class="check"><input name="passwordLoginEnabled" type="checkbox" ${user.passwordLoginEnabled !== false ? 'checked' : ''}> Login con password ${helpDot('user-password-login')}</label><span class="form-help">Se disabilitato, il login con email e password restituisce un errore esplicito; restano valide le identità SSO attive.</span>` : ''}${authenticationPolicyFields(user)}${applicationFlagFields(user)}<button>Salva</button></form>
+    <form id="profile" data-user-panel="profile" role="tabpanel" aria-labelledby="user-tab-profile"><h3>Profilo e accesso</h3><label>Nome ${helpDot('user-name')}<input name="nome" value="${escapeHtml(user.nome)}"></label><label>Cognome ${helpDot('user-name')}<input name="cognome" value="${escapeHtml(user.cognome)}"></label><label>Email ${helpDot('user-email')}<input name="email" type="email" value="${escapeHtml(user.email)}" required><span class="form-help">Identificativo di accesso e recapito.</span></label>${federatedAuthenticationAvailable ? `<label class="check"><input name="passwordLoginEnabled" type="checkbox" ${user.passwordLoginEnabled !== false ? 'checked' : ''}> Login con password ${helpDot('user-password-login')}</label><span class="form-help">Se disabilitato, il login con email e password restituisce un errore esplicito; restano valide le identitÃ  SSO attive.</span>` : ''}${authenticationPolicyFields(user)}${applicationFlagFields(user)}<button>Salva</button></form>
     ${roleAssignmentEditor(allRoles, userGrants.ruoli, menuGroups)}
     ${directGrantEditor(menuGroups, userGrants.abilitazioni)}
     </div>`);
@@ -857,16 +839,11 @@ async function showUser(rawCode: string): Promise<void> {
       handleAction(async () => {
         const values = formValues(eventForm(event));
         const fields = new FormData(eventForm(event));
-        const applicationFlags = Object.fromEntries(
-          APPLICATION_FLAGS.map(([key]) => [key, fields.has(key)])
-        );
         await updateUtente(codiceUtente, {
           codiceUtente, email: values.email ?? '', nome: values.nome || undefined, cognome: values.cognome || undefined,
           flagDueFattori: fields.has('flagDueFattori'),
           passwordlessLoginEnabled: fields.has('passwordlessLoginEnabled'),
-          caumov: values.caumov || undefined,
           enableIa: fields.has('enableIa'),
-          ...applicationFlags,
           ...(federatedAuthenticationAvailable ? { passwordLoginEnabled: fields.has('passwordLoginEnabled') } : {}),
         } as UserDto);
         if (codiceUtente === currentUser?.codiceUtente && (
@@ -896,7 +873,7 @@ async function showUser(rawCode: string): Promise<void> {
     const linkForm = document.getElementById('link-sso') as HTMLFormElement | null;
     if (linkForm) linkForm.onsubmit = (event) => { event.preventDefault(); handleAction(async () => { const values = formValues(eventForm(event)); await linkFederatedIdentity(codiceUtente, { provider: values.provider ?? '', subject: values.subject ?? '', note: values.note || undefined }); await showUser(String(codiceUtente)); }); };
     document.querySelectorAll<HTMLButtonElement>('[data-identity-toggle]').forEach((button) => { button.onclick = () => handleAction(async () => { await updateFederatedIdentity(button.dataset.identityToggle ?? '', { active: button.dataset.active === 'true' }); await showUser(String(codiceUtente)); }); });
-    document.querySelectorAll<HTMLButtonElement>('[data-identity-delete]').forEach((button) => { button.onclick = () => handleAction(async () => { if (!window.confirm('Eliminare definitivamente questo collegamento SSO? L’utente Accessi non verrà eliminato.')) return; await deleteFederatedIdentityPermanently(codiceUtente, button.dataset.identityDelete ?? ''); showNotice('Collegamento SSO eliminato definitivamente.'); await showUser(String(codiceUtente)); }); });
+    document.querySelectorAll<HTMLButtonElement>('[data-identity-delete]').forEach((button) => { button.onclick = () => handleAction(async () => { if (!window.confirm('Eliminare definitivamente questo collegamento SSO? Lâ€™utente Accessi non verrÃ  eliminato.')) return; await deleteFederatedIdentityPermanently(codiceUtente, button.dataset.identityDelete ?? ''); showNotice('Collegamento SSO eliminato definitivamente.'); await showUser(String(codiceUtente)); }); });
   }
   byId('save-state').onclick = () => handleAction(async () => {
     const stateSelect = document.getElementById('user-state') as HTMLSelectElement | null;
@@ -1028,7 +1005,7 @@ async function showMenuItems(): Promise<void> {
 async function showMenuTypes(): Promise<void> {
   const menuTypes = result(await getMenuTypes()) as MenuTypeEntity[];
   render(`<div class="toolbar"><button id="new-menu-type">Nuovo tipo menu</button><button id="reload-menu-types" class="secondary">Aggiorna</button></div>
-    <h2>Tipi menu</h2><p class="form-help">Classificano i menu (es. amministrazione, operatività). Un tipo si elimina solo se non è usato da alcun menu.</p>
+    <h2>Tipi menu</h2><p class="form-help">Classificano i menu (es. amministrazione, operativitÃ ). Un tipo si elimina solo se non Ã¨ usato da alcun menu.</p>
     ${menuTypeTable(menuTypes)}`);
   byId('new-menu-type').onclick = () => showMenuTypeForm();
   byId('reload-menu-types').onclick = () => handleAction(showMenuTypes);
@@ -1257,7 +1234,7 @@ async function showServiceTokens(includeRevoked = false): Promise<void> {
 }
 
 function showServiceTokenForm(): void {
-  render(`<button id="back" type="button" class="secondary">Indietro</button><h2>Nuovo token di servizio</h2><form id="token-form"><label>Descrizione ${helpDot('token-label')}<input name="label" required maxlength="100"><span class="form-help">Identifica l'integrazione, ad esempio "IA - produzione".</span></label><label>Scope ${helpDot('token-scopes')}<input name="scopes" placeholder="ia, chat"><span class="form-help">Separati da virgola (lettere, numeri, ':', '_', '-'). Definiscono cosa può fare il token.</span></label><label>Durata in giorni ${helpDot('token-ttl')}<input name="ttlDays" type="number" min="1" step="1"><span class="form-help">Opzionale. Lascia vuoto per un token senza scadenza.</span></label><button>Crea token</button></form>`);
+  render(`<button id="back" type="button" class="secondary">Indietro</button><h2>Nuovo token di servizio</h2><form id="token-form"><label>Descrizione ${helpDot('token-label')}<input name="label" required maxlength="100"><span class="form-help">Identifica l'integrazione, ad esempio "IA - produzione".</span></label><label>Scope ${helpDot('token-scopes')}<input name="scopes" placeholder="ia, chat"><span class="form-help">Separati da virgola (lettere, numeri, ':', '_', '-'). Definiscono cosa puÃ² fare il token.</span></label><label>Durata in giorni ${helpDot('token-ttl')}<input name="ttlDays" type="number" min="1" step="1"><span class="form-help">Opzionale. Lascia vuoto per un token senza scadenza.</span></label><button>Crea token</button></form>`);
   byId('back').onclick = () => void show('tokens');
   const form = document.getElementById('token-form') as HTMLFormElement | null;
   if (form) form.onsubmit = (event) => {

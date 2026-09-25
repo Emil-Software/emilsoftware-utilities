@@ -3462,7 +3462,7 @@
             "type": "boolean",
             "example": false
           },
-          "flagAdminConfigurator": {
+          "flagAdmin": {
             "type": "boolean",
             "example": false
           },
@@ -3489,7 +3489,7 @@
         "required": [
           "codiceUtente",
           "flagSuper",
-          "flagAdminConfigurator",
+          "flagAdmin",
           "statoRegistrazione"
         ]
       },
@@ -3732,7 +3732,7 @@
           },
           "flagDueFattori": {
             "type": "boolean",
-            "description": "Flag che indica se l'autenticazione a due fattori è attivata.",
+            "description": "Flag che indica se l'autenticazione a due fattori Ã¨ attivata.",
             "example": true
           },
           "passwordlessLoginEnabled": {
@@ -3756,9 +3756,9 @@
             "description": "Flag superutente.",
             "example": false
           },
-          "flagAdminConfigurator": {
+          "flagAdmin": {
             "type": "boolean",
-            "description": "Flag che indica se l'utente è configuratore",
+            "description": "Flag che indica se l'utente Ã¨ configuratore",
             "example": false
           },
           "passwordLoginEnabled": {
@@ -3771,79 +3771,14 @@
             "description": "Pagina di default dell'utente all'accesso.",
             "example": "/dashboard"
           },
-          "nummac": {
-            "type": "number",
-            "description": "Numero MAC associato all'utente.",
-            "example": 12
-          },
           "jsonMetadata": {
             "type": "string",
             "description": "Metadata JSON personalizzato.",
             "example": "{\"theme\": \"dark\"}"
           },
-          "ragSocCli": {
-            "type": "string",
-            "description": "Ragione sociale cliente.",
-            "example": "ACME Corp SpA"
-          },
-          "caumov": {
-            "type": "string",
-            "description": "Codice causale movimento applicativa.",
-            "example": "VEN"
-          },
           "enableIa": {
             "type": "boolean",
             "description": "Abilita l'utente all'uso dell'assistente IA.",
-            "default": false
-          },
-          "flagMop": {
-            "type": "boolean",
-            "description": "Abilitazione funzionalita MOP.",
-            "default": false
-          },
-          "flagPiana": {
-            "type": "boolean",
-            "description": "Abilitazione funzionalita Piana.",
-            "default": false
-          },
-          "flagAddetti": {
-            "type": "boolean",
-            "description": "Abilitazione funzionalita Addetti.",
-            "default": false
-          },
-          "flagOspiti": {
-            "type": "boolean",
-            "description": "Abilitazione funzionalita Ospiti.",
-            "default": false
-          },
-          "flagPianaRfid": {
-            "type": "boolean",
-            "description": "Abilitazione Piana RFID.",
-            "default": false
-          },
-          "flagConta": {
-            "type": "boolean",
-            "description": "Abilitazione funzionalita Contabilita.",
-            "default": false
-          },
-          "flagCubi": {
-            "type": "boolean",
-            "description": "Abilitazione funzionalita Cubi.",
-            "default": false
-          },
-          "flagCicliPass": {
-            "type": "boolean",
-            "description": "Abilitazione funzionalita Cicli passivi.",
-            "default": false
-          },
-          "flagDipendenti": {
-            "type": "boolean",
-            "description": "Abilitazione gestione dipendenti.",
-            "default": false
-          },
-          "flagInventari": {
-            "type": "boolean",
-            "description": "Abilitazione gestione inventari.",
             "default": false
           },
           "roles": {
@@ -4939,16 +4874,6 @@
             "description": "Pagina di default dell'utente.",
             "example": "/dashboard"
           },
-          "nummac": {
-            "type": "number",
-            "description": "Numero MAC associato all'utente.",
-            "example": 12
-          },
-          "ragSocCli": {
-            "type": "string",
-            "description": "Ragione sociale cliente.",
-            "example": "ALIVAL STOCK"
-          },
           "htmlMail": {
             "type": "string",
             "description": "HTML mail personalizzato",
@@ -5065,9 +4990,9 @@
             "description": "Flag superutente.",
             "example": false
           },
-          "flagAdminConfigurator": {
+          "flagAdmin": {
             "type": "boolean",
-            "description": "Flag che indica se l'utente è configuratore",
+            "description": "Flag che indica se l'utente Ã¨ configuratore",
             "example": false
           },
           "roles": {
@@ -5108,16 +5033,6 @@
             "type": "string",
             "description": "Pagina di default dell'utente.",
             "example": "/dashboard"
-          },
-          "nummac": {
-            "type": "number",
-            "description": "Numero MAC associato all'utente.",
-            "example": 12
-          },
-          "ragSocCli": {
-            "type": "string",
-            "description": "Ragione sociale cliente.",
-            "example": "ALIVAL STOCK"
           },
           "htmlMail": {
             "type": "string",

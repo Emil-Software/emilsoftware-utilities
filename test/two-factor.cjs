@@ -1,4 +1,4 @@
-require('ts-node/register/transpile-only');
+﻿require('ts-node/register/transpile-only');
 require('reflect-metadata');
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
@@ -15,7 +15,7 @@ const { StatoRegistrazione } = require('../src/accessi-module/Dtos/StatoRegistra
 const { isAccessiTokenAllowedForUser } = require('../src/accessi-module/security/authenticatedToken');
 const { getAccessiJwtSecret } = require('../src/accessi-module/security/passwordResetToken');
 const options = { databaseOptions: {}, jwtOptions: { secret: 'test-two-factor-secret', expiresIn: '1h' }, federatedAuthentication: { enabled: true } };
-const baseUser = { codiceUtente: 1, email: 'user@example.com', statoRegistrazione: StatoRegistrazione.CONF, flagSuper: false, flagAdminConfigurator: false, flagDueFattori: false, passwordlessLoginEnabled: false, passwordLoginEnabled: true };
+const baseUser = { codiceUtente: 1, email: 'user@example.com', statoRegistrazione: StatoRegistrazione.CONF, flagSuper: false, flagAdmin: false, flagDueFattori: false, passwordlessLoginEnabled: false, passwordLoginEnabled: true };
 
 /** Isolated transactional adapter: real service hashing, limits and lifecycle, no live database or email. */
 function challengeFixture(t) {

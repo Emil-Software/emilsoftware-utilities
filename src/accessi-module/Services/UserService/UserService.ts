@@ -1,4 +1,4 @@
-import { BadRequestException, ConflictException, Inject, Injectable, NotFoundException } from '@nestjs/common';
+﻿import { BadRequestException, ConflictException, Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { getTableColumns, optionalColumn } from '../../database-updates/optionalColumns';
 import { autobind } from '../../../autobind';
 import { Orm } from '../../../Orm';
@@ -22,23 +22,6 @@ interface OptionalField<T> {
   transform?: (value: unknown) => T;
 }
 
-/**
- * Flag applicativi UTENTI_CONFIG esposti e gestibili dal modulo.
- * `key` = nome camelCase nel DTO, `column` = colonna fisica, `alias` = alias SELECT.
- */
-const APPLICATION_FLAG_FIELDS: ReadonlyArray<{ key: string; column: string; alias: string }> = [
-  { key: 'flagMop', column: 'FLGMOP', alias: 'flag_mop' },
-  { key: 'flagPiana', column: 'FLGPIANA', alias: 'flag_piana' },
-  { key: 'flagAddetti', column: 'FLGADDETTI', alias: 'flag_addetti' },
-  { key: 'flagOspiti', column: 'FLGOSPITI', alias: 'flag_ospiti' },
-  { key: 'flagPianaRfid', column: 'FLGPIANARFID', alias: 'flag_piana_rfid' },
-  { key: 'flagConta', column: 'FLGCONTA', alias: 'flag_conta' },
-  { key: 'flagCubi', column: 'FLGCUBI', alias: 'flag_cubi' },
-  { key: 'flagCicliPass', column: 'FLGCICLPASS', alias: 'flag_cicli_pass' },
-  { key: 'flagDipendenti', column: 'FLGDIPENDENTI', alias: 'flag_dipendenti' },
-  { key: 'flagInventari', column: 'FLGINVENTARI', alias: 'flag_inventari' },
-];
-
 @autobind
 @Injectable()
 export class UserService {
@@ -49,25 +32,6 @@ export class UserService {
     private readonly filtriService: FiltriService,
   ) {}
 
-  private async validateApplicationFields(value: { nummac?: number; ragSocCli?: string } & Partial<FiltriUtente>): Promise<{ configColumns?: Set<string> }> {
-    type ApplicationField = 'nummac' | 'ragSocCli';
-    const applicationFields: ReadonlyArray<readonly [ApplicationField, string]> = [['nummac', 'NUMMAC'], ['ragSocCli', 'RAGSOCCLI']];
-    let configColumns: Set<string> | undefined;
-    if (applicationFields.some(([key]) => value[key] !== undefined)) {
-      configColumns = await getTableColumns(this.accessiOptions, 'UTENTI_CONFIG');
-      for (const [key, column] of applicationFields) {
-        if (value[key] !== undefined && value[key] !== null && !configColumns.has(column)) {
-          throw new BadRequestException(`Campo applicativo non configurato: UTENTI_CONFIG.${column}`);
-        }
-      }
-    }
-    const filterKeys = Object.keys(FILTRI_UTENTE_DB_MAPPING) as Array<keyof FiltriUtente>;
-    if (filterKeys.some(key => value[key] !== undefined && value[key] !== null && value[key] !== '')) {
-      await this.filtriService.validateSupportedFields(value);
-    }
-    return { configColumns };
-  }
-
   private normalizeDatabaseBoolean(value: unknown): boolean {
     return value === true || value === 1 || value === '1';
   }
@@ -75,25 +39,19 @@ export class UserService {
   private normalizeUserFlags(user: UserDto): UserDto {
     const normalized: UserDto = { ...user,
       flagSuper: this.normalizeDatabaseBoolean(user.flagSuper),
-      flagAdminConfigurator: this.normalizeDatabaseBoolean(user.flagAdminConfigurator),
+      flagAdmin: this.normalizeDatabaseBoolean(user.flagAdmin),
       flagDueFattori: this.normalizeDatabaseBoolean(user.flagDueFattori),
       passwordlessLoginEnabled: this.normalizeDatabaseBoolean(user.passwordlessLoginEnabled),
       passwordLoginEnabled: user.passwordLoginEnabled == null || this.normalizeDatabaseBoolean(user.passwordLoginEnabled),
       enableIa: this.normalizeDatabaseBoolean(user.enableIa),
     };
 
-    for (const field of APPLICATION_FLAG_FIELDS) {
-      (normalized as unknown as Record<string, unknown>)[field.key] = this.normalizeDatabaseBoolean(
-        (user as unknown as Record<string, unknown>)[field.key],
-      );
-    }
-
     return normalized;
   }
 
   private normalizeEmail(email: string): string {
     if (typeof email !== 'string' || email.trim() === '') {
-      throw new BadRequestException({ code: 'ACCESSI_EMAIL_REQUIRED', message: "L'email è obbligatoria." });
+      throw new BadRequestException({ code: 'ACCESSI_EMAIL_REQUIRED', message: "L'email Ã¨ obbligatoria." });
     }
 
     return email.trim().toLowerCase();
@@ -114,17 +72,17 @@ export class UserService {
       existingUser?.codiceUtente &&
       (!currentUserCode || existingUser.codiceUtente !== currentUserCode)
     ) {
-      throw new ConflictException({ code: 'ACCESSI_EMAIL_ALREADY_EXISTS', message: "L'email è già associata a un utente Accessi." });
+      throw new ConflictException({ code: 'ACCESSI_EMAIL_ALREADY_EXISTS', message: "L'email Ã¨ giÃ  associata a un utente Accessi." });
     }
   }
 
-  /** Determina se l'utente puo amministrare il configuratore Accessi (`FLGADMINCONFIG`). */
+  /** Determina se l'utente puo amministrare il configuratore Accessi (`FLGADMIN`). */
   async isAdminConfigurator(codiceUtente: number): Promise<boolean> {
     if (!codiceUtente) {
       return false;
     }
 
-    const query = `SELECT FLGADMINCONFIG AS flag_admin_configurator FROM UTENTI_CONFIG WHERE CODUTE = ?`;
+    const query = `SELECT FLGADMIN AS flag_admin FROM UTENTI_CONFIG WHERE CODUTE = ?`;
     const result = await Orm.query(this.accessiOptions.databaseOptions, query, [codiceUtente]);
 
     if (result.length === 0) {
@@ -132,7 +90,7 @@ export class UserService {
     }
 
     const mapped = result.map(RestUtilities.convertKeysToCamelCase);
-    return this.normalizeDatabaseBoolean(mapped[0]?.flagAdminConfigurator);
+    return this.normalizeDatabaseBoolean(mapped[0]?.flagAdmin);
   }
 
   /**
@@ -154,7 +112,7 @@ export class UserService {
           U.USRNAME AS email,
           U.STAREG AS stato_registrazione,
           C.FLGSUPER AS flag_super,
-          C.FLGADMINCONFIG AS flag_admin_configurator
+          C.FLGADMIN AS flag_admin
           , C.FLG2FATT AS flag_due_fattori
           , C.FLGPWDLESS AS passwordless_login_enabled
           , COALESCE(C.FLGPASSWORD, 1) AS password_login_enabled
@@ -171,7 +129,7 @@ export class UserService {
           email?: string;
           statoRegistrazione?: StatoRegistrazione | number;
           flagSuper?: unknown;
-          flagAdminConfigurator?: unknown;
+          flagAdmin?: unknown;
           flagDueFattori?: unknown;
           passwordlessLoginEnabled?: unknown;
           passwordLoginEnabled?: unknown;
@@ -187,7 +145,7 @@ export class UserService {
       email: typeof user.email === 'string' ? user.email : undefined,
       statoRegistrazione: Number(user.statoRegistrazione) as StatoRegistrazione,
       flagSuper: this.normalizeDatabaseBoolean(user.flagSuper),
-      flagAdminConfigurator: this.normalizeDatabaseBoolean(user.flagAdminConfigurator),
+      flagAdmin: this.normalizeDatabaseBoolean(user.flagAdmin),
       flagDueFattori: this.normalizeDatabaseBoolean(user.flagDueFattori),
       passwordlessLoginEnabled: this.normalizeDatabaseBoolean(user.passwordlessLoginEnabled),
       passwordLoginEnabled: this.normalizeDatabaseBoolean(user.passwordLoginEnabled),
@@ -214,7 +172,6 @@ export class UserService {
     options?: { includeExtensionFields: boolean; includeGrants: boolean },
   ): Promise<GetUsersResult[]> {
     try {
-      const configColumns = await getTableColumns(this.accessiOptions, 'UTENTI_CONFIG');
       const filterColumns = await getTableColumns(this.accessiOptions, 'FILTRI');
       const utentiColumns = await getTableColumns(this.accessiOptions, 'UTENTI');
 
@@ -246,14 +203,10 @@ export class UserService {
                 G.CODLINGUA as codice_lingua,
                 G.CELLULARE as cellulare,
                 G.FLGSUPER as flag_super, 
-                G.FLGADMINCONFIG as flag_admin_configurator,
+                G.FLGADMIN as flag_admin,
                 COALESCE(G.FLGPASSWORD, 1) as password_login_enabled,
                 G.PAGDEF as pagina_default,
                 G.JSON_METADATA as json_metadata,
-                ${optionalColumn(configColumns, 'RAGSOCCLI', 'G', 'rag_soc_cli', false)},
-                ${optionalColumn(configColumns, 'NUMMAC', 'G', 'nummac')},
-                ${optionalColumn(configColumns, 'CAUMOV', 'G', 'caumov')},
-                ${APPLICATION_FLAG_FIELDS.map((field) => optionalColumn(configColumns, field.column, 'G', field.alias)).join(',\n                ')},
                 ${optionalColumn(filterColumns, 'CODDIP', 'F', 'cod_dipendente')},
                 ${optionalColumn(filterColumns, 'NUMREP', 'F', 'num_rep', true)},
                 ${optionalColumn(filterColumns, 'IDXPERS', 'F', 'idx_pers', true)},
@@ -459,7 +412,6 @@ export class UserService {
 
   /** Recupera il profilo locale usato dal login, compresi filtri Accessi eventualmente presenti. */
   async getUserByEmail(email: string): Promise<UserDto | null> {
-    const configColumns = await getTableColumns(this.accessiOptions, 'UTENTI_CONFIG');
     const utentiColumns = await getTableColumns(this.accessiOptions, 'UTENTI');
     const query = `
             SELECT 
@@ -477,13 +429,9 @@ export class UserService {
                 C.CODLINGUA AS codice_lingua, 
                 C.CELLULARE AS cellulare, 
                 C.FLGSUPER AS flag_super,
-                C.FLGADMINCONFIG AS flag_admin_configurator,
+                C.FLGADMIN AS flag_admin,
                 COALESCE(C.FLGPASSWORD, 1) AS password_login_enabled,
-                C.PAGDEF AS pagina_default,
-                ${optionalColumn(configColumns, 'CAUMOV', 'C', 'caumov')},
-                ${optionalColumn(configColumns, 'NUMMAC', 'C', 'nummac')},
-                ${optionalColumn(configColumns, 'RAGSOCCLI', 'C', 'rag_soc_cli', false)},
-                ${APPLICATION_FLAG_FIELDS.map((field) => optionalColumn(configColumns, field.column, 'C', field.alias)).join(',\n                ')}
+                C.PAGDEF AS pagina_default
             FROM UTENTI U
             INNER JOIN UTENTI_CONFIG C ON C.CODUTE = U.CODUTE
             WHERE LOWER(U.USRNAME) = ?
@@ -538,7 +486,7 @@ export class UserService {
       if (
         !allowPrivilegedFields &&
         (registrationData.flagSuper !== undefined ||
-          registrationData.flagAdminConfigurator !== undefined ||
+          registrationData.flagAdmin !== undefined ||
           registrationData.flagDueFattori !== undefined ||
           registrationData.roles !== undefined ||
           registrationData.permissions !== undefined)
@@ -546,7 +494,6 @@ export class UserService {
         throw new Error('I campi privilegiati non sono consentiti nella registrazione pubblica.');
       }
 
-      await this.validateApplicationFields(registrationData);
       await this.ensureEmailIsAvailable(normalizedEmail);
 
       const queryUtenti = `INSERT INTO UTENTI (USRNAME, STAREG) VALUES (?,?) RETURNING CODUTE`;
@@ -554,7 +501,7 @@ export class UserService {
       const paramsUtenti = [normalizedEmail, options?.initialState ?? StatoRegistrazione.INVIO];
 
       // Utente e configurazione sono creati in un'unica transazione; filtri e assegnazioni restano
-      // fuori perché delegati a servizi dedicati.
+      // fuori perchÃ© delegati a servizi dedicati.
       const codiceUtente = await Orm.withTransaction(
         this.accessiOptions.databaseOptions,
         async (transaction) => {
@@ -597,21 +544,6 @@ export class UserService {
           dbField: 'PAGDEF',
           transform: (v) => String(v),
         },
-        {
-          key: 'nummac',
-          dbField: 'NUMMAC',
-          transform: (v) => Number(v),
-        },
-        {
-          key: 'ragSocCli',
-          dbField: 'RAGSOCCLI',
-          transform: (v) => String(v),
-        },
-        {
-          key: 'caumov',
-          dbField: 'CAUMOV',
-          transform: (v) => String(v),
-        },
       ];
 
       if (allowPrivilegedFields) {
@@ -622,19 +554,11 @@ export class UserService {
             transform: (v) => (v ? 1 : 0),
           },
           {
-            key: 'flagAdminConfigurator',
-            dbField: 'FLGADMINCONFIG',
+            key: 'flagAdmin',
+            dbField: 'FLGADMIN',
             transform: (v) => (v ? 1 : 0),
           },
         );
-
-        for (const flag of APPLICATION_FLAG_FIELDS) {
-          optionalFields.push({
-            key: flag.key,
-            dbField: flag.column,
-            transform: (v) => (v ? 1 : 0),
-          });
-        }
       }
 
       for (const field of optionalFields) {
@@ -699,7 +623,7 @@ export class UserService {
         !allowPrivilegedChanges &&
         (user.statoRegistrazione !== undefined ||
           user.flagSuper !== undefined ||
-          user.flagAdminConfigurator !== undefined ||
+          user.flagAdmin !== undefined ||
           user.passwordLoginEnabled !== undefined ||
           user.passwordlessLoginEnabled !== undefined ||
           user.flagDueFattori !== undefined ||
@@ -720,7 +644,6 @@ export class UserService {
         }
       }
 
-      const { configColumns } = await this.validateApplicationFields(user);
       const utentiUpdates = [];
       const utentiParams = [];
 
@@ -784,22 +707,9 @@ export class UserService {
         utentiConfigUpdates.push('flgsuper = ?');
         utentiConfigParams.push(user.flagSuper);
       }
-      if (allowPrivilegedChanges && user.flagAdminConfigurator !== undefined) {
-        utentiConfigUpdates.push('flgadminconfig = ?');
-        utentiConfigParams.push(user.flagAdminConfigurator);
-      }
-      if (allowPrivilegedChanges && user.caumov !== undefined) {
-        utentiConfigUpdates.push('caumov = ?');
-        utentiConfigParams.push(user.caumov);
-      }
-      if (allowPrivilegedChanges) {
-        for (const flag of APPLICATION_FLAG_FIELDS) {
-          const value = (user as unknown as Record<string, unknown>)[flag.key];
-          if (value !== undefined) {
-            utentiConfigUpdates.push(`${flag.column.toLowerCase()} = ?`);
-            utentiConfigParams.push(value ? 1 : 0);
-          }
-        }
+      if (allowPrivilegedChanges && user.flagAdmin !== undefined) {
+        utentiConfigUpdates.push('FLGADMIN = ?');
+        utentiConfigParams.push(user.flagAdmin);
       }
       if (allowPrivilegedChanges && user.passwordLoginEnabled !== undefined) {
         utentiConfigUpdates.push('flgpassword = ?');
@@ -812,10 +722,6 @@ export class UserService {
       if (user.jsonMetadata !== undefined) {
         utentiConfigUpdates.push('json_metadata = ?');
         utentiConfigParams.push(user.jsonMetadata);
-      }
-      if (user.ragSocCli !== undefined && (user.ragSocCli !== null || configColumns?.has('RAGSOCCLI'))) {
-        utentiConfigUpdates.push('ragsoccli = ?');
-        utentiConfigParams.push(user.ragSocCli);
       }
 
       if (utentiConfigUpdates.length > 0) {

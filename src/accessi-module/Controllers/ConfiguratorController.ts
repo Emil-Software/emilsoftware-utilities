@@ -1,4 +1,4 @@
-import {
+﻿import {
   BadRequestException,
   Body,
   Controller,
@@ -66,7 +66,7 @@ export class ConfiguratorController {
 
       const canConfigure =
         authenticatedUser.flagSuper ||
-        authenticatedUser.flagAdminConfigurator ||
+        authenticatedUser.flagAdmin ||
         (await this.userService.isAdminConfigurator(authenticatedUser.codiceUtente));
       if (!canConfigure) {
         return RestUtilities.sendErrorMessage(
@@ -120,7 +120,7 @@ export class ConfiguratorController {
 
       const canConfigure =
         authenticatedUser.flagSuper ||
-        authenticatedUser.flagAdminConfigurator ||
+        authenticatedUser.flagAdmin ||
         (await this.userService.isAdminConfigurator(authenticatedUser.codiceUtente));
       if (!canConfigure) {
         return RestUtilities.sendErrorMessage(

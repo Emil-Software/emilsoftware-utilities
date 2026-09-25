@@ -1,4 +1,4 @@
-import { ApiProperty, ApiPropertyOptional, OmitType } from '@nestjs/swagger';
+﻿import { ApiProperty, ApiPropertyOptional, OmitType } from '@nestjs/swagger';
 import { Transform, Type } from 'class-transformer';
 import {
   ArrayUnique,
@@ -19,7 +19,7 @@ import { FiltriUtente } from './FiltriUtente';
 
 /**
  * Profilo Accessi con dati anagrafici, policy di accesso e filtri legacy.
- * I campi amministrativi (`flagSuper`, `flagAdminConfigurator`, ruoli, grant e policy password) devono essere
+ * I campi amministrativi (`flagSuper`, `flagAdmin`, ruoli, grant e policy password) devono essere
  * accettati soltanto da endpoint e flussi backend esplicitamente privilegiati.
  */
 export class UserDto extends OmitType(FiltriUtente, ['codUte'] as const) {
@@ -117,7 +117,7 @@ export class UserDto extends OmitType(FiltriUtente, ['codUte'] as const) {
   avatar?: string | null;
 
   @ApiPropertyOptional({
-    description: "Flag che indica se l'autenticazione a due fattori è attivata.",
+    description: "Flag che indica se l'autenticazione a due fattori Ã¨ attivata.",
     example: true,
   })
   @IsOptional()
@@ -154,12 +154,12 @@ export class UserDto extends OmitType(FiltriUtente, ['codUte'] as const) {
   flagSuper?: boolean;
 
   @ApiPropertyOptional({
-    description: "Flag che indica se l'utente è configuratore",
+    description: "Flag che indica se l'utente Ã¨ configuratore",
     example: false,
   })
   @IsOptional()
   @IsBoolean({ message: 'Il flag configuratore deve essere booleano.' })
-  flagAdminConfigurator?: boolean;
+  flagAdmin?: boolean;
 
   @ApiPropertyOptional({
     description: 'Abilita il login locale con password. Se false, l utente puo autenticarsi solo tramite identita SSO attive.',
@@ -178,16 +178,6 @@ export class UserDto extends OmitType(FiltriUtente, ['codUte'] as const) {
   paginaDefault?: string;
 
   @ApiPropertyOptional({
-    description: "Numero MAC associato all'utente.",
-    example: 12,
-  })
-  @IsOptional()
-  @Type(() => Number)
-  @IsInt({ message: 'Il numero MAC deve essere un intero.' })
-  @Min(0, { message: 'Il numero MAC non puo essere negativo.' })
-  nummac?: number;
-
-  @ApiPropertyOptional({
     description: 'Metadata JSON personalizzato.',
     example: '{"theme": "dark"}',
   })
@@ -195,81 +185,11 @@ export class UserDto extends OmitType(FiltriUtente, ['codUte'] as const) {
   @IsString({ message: 'I metadata JSON devono essere una stringa.' })
   jsonMetadata?: string;
 
-  @ApiPropertyOptional({ description: 'Ragione sociale cliente.', example: 'ACME Corp SpA' })
-  @IsOptional()
-  @IsString({ message: 'La ragione sociale deve essere una stringa.' })
-  ragSocCli?: string;
-
-  @ApiPropertyOptional({ description: 'Codice causale movimento applicativa.', example: 'VEN' })
-  @IsOptional()
-  @IsString({ message: 'Il codice causale deve essere una stringa.' })
-  caumov?: string;
-
   @ApiPropertyOptional({ description: 'Abilita l\'utente all\'uso dell\'assistente IA.', default: false })
   @IsOptional()
   @IsBoolean({ message: 'Il flag IA deve essere booleano.' })
   @Transform(({ obj, key }) => obj[key])
   enableIa?: boolean;
-
-  @ApiPropertyOptional({ description: 'Abilitazione funzionalita MOP.', default: false })
-  @IsOptional()
-  @IsBoolean({ message: 'Il flag MOP deve essere booleano.' })
-  @Transform(({ obj, key }) => obj[key])
-  flagMop?: boolean;
-
-  @ApiPropertyOptional({ description: 'Abilitazione funzionalita Piana.', default: false })
-  @IsOptional()
-  @IsBoolean({ message: 'Il flag Piana deve essere booleano.' })
-  @Transform(({ obj, key }) => obj[key])
-  flagPiana?: boolean;
-
-  @ApiPropertyOptional({ description: 'Abilitazione funzionalita Addetti.', default: false })
-  @IsOptional()
-  @IsBoolean({ message: 'Il flag Addetti deve essere booleano.' })
-  @Transform(({ obj, key }) => obj[key])
-  flagAddetti?: boolean;
-
-  @ApiPropertyOptional({ description: 'Abilitazione funzionalita Ospiti.', default: false })
-  @IsOptional()
-  @IsBoolean({ message: 'Il flag Ospiti deve essere booleano.' })
-  @Transform(({ obj, key }) => obj[key])
-  flagOspiti?: boolean;
-
-  @ApiPropertyOptional({ description: 'Abilitazione Piana RFID.', default: false })
-  @IsOptional()
-  @IsBoolean({ message: 'Il flag Piana RFID deve essere booleano.' })
-  @Transform(({ obj, key }) => obj[key])
-  flagPianaRfid?: boolean;
-
-  @ApiPropertyOptional({ description: 'Abilitazione funzionalita Contabilita.', default: false })
-  @IsOptional()
-  @IsBoolean({ message: 'Il flag Conta deve essere booleano.' })
-  @Transform(({ obj, key }) => obj[key])
-  flagConta?: boolean;
-
-  @ApiPropertyOptional({ description: 'Abilitazione funzionalita Cubi.', default: false })
-  @IsOptional()
-  @IsBoolean({ message: 'Il flag Cubi deve essere booleano.' })
-  @Transform(({ obj, key }) => obj[key])
-  flagCubi?: boolean;
-
-  @ApiPropertyOptional({ description: 'Abilitazione funzionalita Cicli passivi.', default: false })
-  @IsOptional()
-  @IsBoolean({ message: 'Il flag Cicli passivi deve essere booleano.' })
-  @Transform(({ obj, key }) => obj[key])
-  flagCicliPass?: boolean;
-
-  @ApiPropertyOptional({ description: 'Abilitazione gestione dipendenti.', default: false })
-  @IsOptional()
-  @IsBoolean({ message: 'Il flag Dipendenti deve essere booleano.' })
-  @Transform(({ obj, key }) => obj[key])
-  flagDipendenti?: boolean;
-
-  @ApiPropertyOptional({ description: 'Abilitazione gestione inventari.', default: false })
-  @IsOptional()
-  @IsBoolean({ message: 'Il flag Inventari deve essere booleano.' })
-  @Transform(({ obj, key }) => obj[key])
-  flagInventari?: boolean;
 
   @ApiPropertyOptional({ description: "Ruoli assegnati all'utente.", example: [1, 2] })
   @IsOptional()

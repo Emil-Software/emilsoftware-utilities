@@ -62,7 +62,8 @@ integration('fresh database: generic schema, actual user operations and idempote
   await Updater.run(o);
   assert.deepEqual(await Updater.inspectSchema(o), { compatible: true, issues: [] });
   const columns = await query(o, "SELECT TRIM(RDB$FIELD_NAME) AS NAME FROM RDB$RELATION_FIELDS WHERE RDB$RELATION_NAME IN ('UTENTI', 'UTENTI_CONFIG', 'FILTRI')");
-  for (const name of ['ENABLEIA', 'NUMMAC', 'IDXPOS', 'CODVET', 'NUMREP', 'RAGSOCCLI', 'CAUMOV', 'FLGMOP', 'FLGINVENTARI', 'FLGDIPENDENTI']) assert(columns.some(c => c.NAME === name), `colonna mancante: ${name}`);
+  for (const name of ['ENABLEIA', 'FLGADMIN', 'FLG2FATT', 'FLGPWDLESS', 'FLGPASSWORD', 'IDXPOS', 'CODVET', 'NUMREP']) assert(columns.some(c => c.NAME === name), `colonna mancante: ${name}`);
+  for (const name of ['FLGADMINCONFIG', 'NUMMAC', 'RAGSOCCLI', 'CAUMOV', 'FLGMOP', 'FLGPIANA', 'FLGINVENTARI', 'FLGDIPENDENTI']) assert(!columns.some(c => c.NAME === name), `colonna ibrida non rimossa: ${name}`);
   for (const table of ['UTENTI', 'MENU', 'FILTRI_TIPO', 'SSO_PROVIDER']) assert.equal((await query(o, `SELECT COUNT(*) AS N FROM ${table}`))[0].N, 0);
   const filters = new FiltriService(o);
   const users = new UserService(o, {}, new PermissionService(o), filters);
@@ -71,19 +72,16 @@ integration('fresh database: generic schema, actual user operations and idempote
   assert.equal(user.codiceUtente, id);
   assert.equal(user.flagDueFattori, false);
   assert.equal(user.passwordLoginEnabled, true);
-  assert.equal(user.nummac, null);
   assert.equal((await users.getUsers())[0].utente.codiceUtente, id);
   await filters.upsertFiltriUtente(id, { tipFil: 7 });
   assert.equal((await filters.getFiltriUser(id))[0].tipFil, 7);
-  const privilegedId = await users.register({ email: 'flags@example.test', nummac: 10, caumov: 'VEN', flagMop: true }, { allowPrivilegedFields: true });
+  const privilegedId = await users.register({ email: 'flags@example.test', flagAdmin: true }, { allowPrivilegedFields: true });
   const privilegedUser = await users.getUserByEmail('flags@example.test');
-  assert.equal(privilegedUser.nummac, 10);
-  assert.equal(privilegedUser.caumov, 'VEN');
-  assert.equal(privilegedUser.flagMop, true);
+  assert.equal(privilegedUser.flagAdmin, true);
   assert.equal((await query(o, 'SELECT COUNT(*) AS N FROM UTENTI'))[0].N, 2);
   await filters.upsertFiltriUtente(privilegedId, { codVet: 20 });
   assert.equal((await filters.getFiltriUser(privilegedId))[0].codVet, 20);
-  await users.updateUser(id, { nome: 'Updated', ragSocCli: null, codVet: null });
+  await users.updateUser(id, { nome: 'Updated', codVet: null });
   await users.setGdpr(id);
   assert.equal((await query(o, 'SELECT FLGGDPR FROM UTENTI WHERE CODUTE = ?', [id]))[0].FLGGDPR, 1);
   const ddl = [];
@@ -102,8 +100,8 @@ integration('legacy partial schema: preserve host data/version and advance seque
     "INSERT INTO PARAMETRI VALUES ('VersioneDB', '0.0a')",
     'CREATE TABLE UTENTI (CODUTE INTEGER NOT NULL CONSTRAINT CUSTOM_USER_PK PRIMARY KEY, USRNAME CHAR(120))',
     "INSERT INTO UTENTI VALUES (278, 'legacy@example.test')",
-    'CREATE TABLE UTENTI_CONFIG (CODUTE INTEGER NOT NULL PRIMARY KEY, NUMMAC INTEGER, RAGSOCCLI VARCHAR(100), FLG2FATT SMALLINT DEFAULT 0, FLGPASSWORD SMALLINT)',
-    "INSERT INTO UTENTI_CONFIG VALUES (278, 12, 'Host data', 1, NULL)",
+    'CREATE TABLE UTENTI_CONFIG (CODUTE INTEGER NOT NULL PRIMARY KEY, NUMMAC INTEGER, RAGSOCCLI VARCHAR(100), FLGADMINCONFIG SMALLINT DEFAULT 0, FLG2FATT SMALLINT DEFAULT 0, FLGPASSWORD SMALLINT)',
+    "INSERT INTO UTENTI_CONFIG VALUES (278, 12, 'Host data', 1, 1, NULL)",
     'CREATE TABLE FILTRI (CODUTE INTEGER NOT NULL, PROG INTEGER NOT NULL, CODVET INTEGER, IDXPOS SMALLINT, PRIMARY KEY (CODUTE, PROG))',
     'INSERT INTO FILTRI VALUES (278, 1, 57, 8)',
     'CREATE TABLE ACCESSI_2FA (CHALLENGE_ID VARCHAR(64) CHARACTER SET ASCII NOT NULL)',
@@ -112,15 +110,17 @@ integration('legacy partial schema: preserve host data/version and advance seque
   await Updater.run(o);
   assert((await Updater.inspectSchema(o)).compatible);
   assert.deepEqual((await query(o, "SELECT DESPAR FROM PARAMETRI WHERE CODPAR IN ('DBVERSION', 'VersioneDB') ORDER BY CODPAR")).map(r => r.DESPAR), ['99.2.0', '0.0a']);
-  const config = (await query(o, 'SELECT NUMMAC, RAGSOCCLI, FLG2FATT, FLGPASSWORD, FLGPWDLESS FROM UTENTI_CONFIG'))[0];
-  assert.deepEqual(config, { NUMMAC: 12, RAGSOCCLI: 'Host data', FLG2FATT: 1, FLGPASSWORD: 1, FLGPWDLESS: 0 });
+  const configColumns = (await query(o, "SELECT TRIM(RDB$FIELD_NAME) AS NAME FROM RDB$RELATION_FIELDS WHERE RDB$RELATION_NAME = 'UTENTI_CONFIG'")).map(c => c.NAME);
+  for (const name of ['NUMMAC', 'RAGSOCCLI', 'FLGADMINCONFIG']) assert(!configColumns.includes(name), `colonna ibrida non rimossa: ${name}`);
+  assert(configColumns.includes('FLGADMIN'));
+  const config = (await query(o, 'SELECT FLGADMIN, FLG2FATT, FLGPASSWORD, FLGPWDLESS FROM UTENTI_CONFIG'))[0];
+  assert.deepEqual(config, { FLGADMIN: 1, FLG2FATT: 1, FLGPASSWORD: 1, FLGPWDLESS: 0 });
   await exec(o, "INSERT INTO UTENTI (USRNAME) VALUES ('next@example.test')");
   assert.equal((await query(o, 'SELECT MAX(CODUTE) AS N FROM UTENTI'))[0].N, 279);
   const filters = new FiltriService(o);
   const users = new UserService(o, {}, new PermissionService(o), filters);
   const user = await users.getUserByEmail('legacy@example.test');
-  assert.equal(user.nummac, 12);
-  assert.equal(user.ragSocCli, 'Host data');
+  assert.equal(user.flagAdmin, true);
   assert.equal(user.codVet, 57);
   await filters.upsertFiltriUtente(278, { codVet: 58 });
   assert.equal((await filters.getFiltriUser(278))[0].codVet, 58);

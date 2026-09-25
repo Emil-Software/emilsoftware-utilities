@@ -13,8 +13,6 @@ export interface UserDto {
    * @nullable
    */
   avatar?: string | null;
-  /** Codice causale movimento applicativa. */
-  caumov?: string;
   /**
    * Numero di cellulare.
    * @nullable
@@ -50,32 +48,12 @@ export interface UserDto {
   email: string;
   /** Abilita l'utente all'uso dell'assistente IA. */
   enableIa?: boolean;
-  /** Abilitazione funzionalita Addetti. */
-  flagAddetti?: boolean;
-  /** Flag che indica se l'utente è configuratore */
-  flagAdminConfigurator?: boolean;
-  /** Abilitazione funzionalita Cicli passivi. */
-  flagCicliPass?: boolean;
-  /** Abilitazione funzionalita Contabilita. */
-  flagConta?: boolean;
-  /** Abilitazione funzionalita Cubi. */
-  flagCubi?: boolean;
-  /** Abilitazione gestione dipendenti. */
-  flagDipendenti?: boolean;
-  /** Flag che indica se l'autenticazione a due fattori è attivata. */
+  /** Flag che indica se l'utente Ã¨ configuratore */
+  flagAdmin?: boolean;
+  /** Flag che indica se l'autenticazione a due fattori Ã¨ attivata. */
   flagDueFattori?: boolean;
   /** Flag per l'accettazione del GDPR. */
   flagGdpr?: boolean;
-  /** Abilitazione gestione inventari. */
-  flagInventari?: boolean;
-  /** Abilitazione funzionalita MOP. */
-  flagMop?: boolean;
-  /** Abilitazione funzionalita Ospiti. */
-  flagOspiti?: boolean;
-  /** Abilitazione funzionalita Piana. */
-  flagPiana?: boolean;
-  /** Abilitazione Piana RFID. */
-  flagPianaRfid?: boolean;
   /** Flag superutente. */
   flagSuper?: boolean;
   /** Idx personale */
@@ -88,8 +66,6 @@ export interface UserDto {
   keyRegistrazione?: string;
   /** Nome dell'utente. */
   nome?: string;
-  /** Numero MAC associato all'utente. */
-  nummac?: number;
   /** Numero del reparto associato */
   numRep?: number;
   /** Pagina di default dell'utente all'accesso. */
@@ -102,8 +78,6 @@ export interface UserDto {
   permissions?: Permission[];
   /** Progressivo identificativo del filtro */
   progressivo?: number;
-  /** Ragione sociale cliente. */
-  ragSocCli?: string;
   /** Ruoli assegnati all'utente. */
   roles?: string[];
   /** Stato della registrazione dell'utente. */

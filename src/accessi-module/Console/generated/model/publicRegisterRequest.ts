@@ -37,16 +37,12 @@ export interface PublicRegisterRequest {
   idxPos?: number;
   /** Nome dell'utente. */
   nome?: string;
-  /** Numero MAC associato all'utente. */
-  nummac?: number;
   /** Numero del reparto associato */
   numRep?: number;
   /** Pagina di default dell'utente. */
   paginaDefault?: string;
   /** Progressivo identificativo del filtro */
   progressivo?: number;
-  /** Ragione sociale cliente. */
-  ragSocCli?: string;
   /** Tipo di filtro applicato */
   tipFil?: number;
 }

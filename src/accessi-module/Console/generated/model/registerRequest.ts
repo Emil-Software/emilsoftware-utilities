@@ -30,8 +30,8 @@ export interface RegisterRequest {
   cognome?: string;
   /** Email dell'utente. */
   email: string;
-  /** Flag che indica se l'utente è configuratore */
-  flagAdminConfigurator?: boolean;
+  /** Flag che indica se l'utente Ã¨ configuratore */
+  flagAdmin?: boolean;
   /** Flag autenticazione a due fattori. */
   flagDueFattori?: boolean;
   /** Flag superutente. */
@@ -44,8 +44,6 @@ export interface RegisterRequest {
   idxPos?: number;
   /** Nome dell'utente. */
   nome?: string;
-  /** Numero MAC associato all'utente. */
-  nummac?: number;
   /** Numero del reparto associato */
   numRep?: number;
   /** Pagina di default dell'utente. */
@@ -54,8 +52,6 @@ export interface RegisterRequest {
   permissions?: Permission[];
   /** Progressivo identificativo del filtro */
   progressivo?: number;
-  /** Ragione sociale cliente. */
-  ragSocCli?: string;
   /** Ruoli assegnati all'utente. */
   roles?: string[];
   /** Tipo di filtro applicato */

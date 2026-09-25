@@ -1,4 +1,4 @@
-import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+﻿import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { IsBoolean, IsInt, IsOptional, IsString, Min } from 'class-validator';
 
 export class AuthenticatedUserPayloadDto {
@@ -18,7 +18,7 @@ export class AuthenticatedUserPayloadDto {
 
   @ApiProperty({ example: false })
   @IsBoolean()
-  flagAdminConfigurator!: boolean;
+  flagAdmin!: boolean;
 
   @ApiPropertyOptional({ description: 'Verifica email richiesta per questo utente.', default: false })
   @IsOptional()

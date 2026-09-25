@@ -1,6 +1,6 @@
--- Generic Accessi schema 1.8.0 for an EMPTY, already-created Firebird database (3.0+).
+-- Generic Accessi schema 1.9.0 for an EMPTY, already-created Firebird database (3.0+).
 -- For existing databases use AccessiDatabaseUpdater.run: this snapshot is not an upgrade script.
--- No users, menus, filter catalogs, credentials or grants are provisioned; columns are.
+-- No users, menus, filter catalogs, credentials or grants are provisioned; generic columns are.
 SET SQL DIALECT 3;
 
 CREATE TABLE PARAMETRI (
@@ -37,23 +37,10 @@ CREATE TABLE UTENTI_CONFIG (
     FLGPASSWORD SMALLINT DEFAULT 1 NOT NULL,
     CODLINGUA VARCHAR(2) DEFAULT 'IT',
     FLGSUPER SMALLINT DEFAULT 0,
-    FLGADMINCONFIG SMALLINT DEFAULT 0,
+    FLGADMIN SMALLINT DEFAULT 0,
     CELLULARE VARCHAR(15),
     PAGDEF VARCHAR(50),
-    JSON_METADATA BLOB SUB_TYPE 1,
-    CAUMOV VARCHAR(20),
-    NUMMAC INTEGER,
-    RAGSOCCLI VARCHAR(255),
-    FLGMOP SMALLINT DEFAULT 0,
-    FLGPIANA SMALLINT DEFAULT 0,
-    FLGADDETTI SMALLINT DEFAULT 0,
-    FLGOSPITI SMALLINT DEFAULT 0,
-    FLGPIANARFID SMALLINT DEFAULT 0,
-    FLGCONTA SMALLINT DEFAULT 0,
-    FLGCUBI SMALLINT DEFAULT 0,
-    FLGCICLPASS SMALLINT DEFAULT 0,
-    FLGDIPENDENTI SMALLINT DEFAULT 0,
-    FLGINVENTARI SMALLINT DEFAULT 0
+    JSON_METADATA BLOB SUB_TYPE 1
 );
 
 ALTER TABLE UTENTI_CONFIG ADD CONSTRAINT PK_UTENTI_CONFIG PRIMARY KEY (CODUTE);

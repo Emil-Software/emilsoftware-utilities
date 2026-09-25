@@ -1,11 +1,28 @@
-/** Minimum schema owned by Accessi. Application columns and catalog rows are deliberately absent. */
+﻿/** Minimum schema owned by Accessi. Application columns and catalog rows are deliberately absent. */
 export interface SchemaTable {
   columns: Record<string, string>;
   primaryKey: string[];
 }
 
-export const ACCESSI_SCHEMA_VERSION = '1.8.0';
+export const ACCESSI_SCHEMA_VERSION = '1.9.0';
 export const ACCESSI_VERSION_KEY = 'AccessiVersion';
+
+/**
+ * Colonne storiche/applicative non piu di dominio Accessi. La riconciliazione le copia (se
+ * previsto un rename) e poi le elimina, per evitare campi ibridi in UTENTI_CONFIG.
+ */
+export const accessiRenamedColumns: ReadonlyArray<{ table: string; from: string; to: string }> = [
+  { table: 'UTENTI_CONFIG', from: 'FLGADMINCONFIG', to: 'FLGADMIN' },
+];
+
+/** Colonne application-specific eliminate dallo schema Accessi: i backend devono gestirle altrove. */
+export const accessiObsoleteColumns: Record<string, readonly string[]> = {
+  UTENTI_CONFIG: [
+    'FLGMOP', 'FLGPIANA', 'FLGADDETTI', 'FLGOSPITI', 'FLGPIANARFID',
+    'FLGCONTA', 'FLGCUBI', 'FLGCICLPASS', 'FLGDIPENDENTI', 'FLGINVENTARI',
+    'CAUMOV', 'NUMMAC', 'RAGSOCCLI',
+  ],
+};
 
 export const accessiTables: Record<string, SchemaTable> = {
   PARAMETRI: { columns: { CODPAR: 'VARCHAR(15) NOT NULL', DESPAR: 'VARCHAR(255)', NOTE: 'BLOB SUB_TYPE 1', GRUPPO: 'VARCHAR(20)' }, primaryKey: ['CODPAR'] },
@@ -17,14 +34,8 @@ export const accessiTables: Record<string, SchemaTable> = {
   UTENTI_CONFIG: { columns: {
     CODUTE: 'INTEGER NOT NULL', COGNOME: 'VARCHAR(50)', NOME: 'VARCHAR(50)', AVATAR: 'VARCHAR(30)',
     FLG2FATT: 'SMALLINT DEFAULT 0', FLGPWDLESS: 'SMALLINT DEFAULT 0 NOT NULL', FLGPASSWORD: 'SMALLINT DEFAULT 1 NOT NULL',
-    CODLINGUA: "VARCHAR(2) DEFAULT 'IT'", FLGSUPER: 'SMALLINT DEFAULT 0', FLGADMINCONFIG: 'SMALLINT DEFAULT 0',
+    CODLINGUA: "VARCHAR(2) DEFAULT 'IT'", FLGSUPER: 'SMALLINT DEFAULT 0', FLGADMIN: 'SMALLINT DEFAULT 0',
     CELLULARE: 'VARCHAR(15)', PAGDEF: 'VARCHAR(50)', JSON_METADATA: 'BLOB SUB_TYPE 1',
-    CAUMOV: 'VARCHAR(20)', NUMMAC: 'INTEGER', RAGSOCCLI: 'VARCHAR(255)',
-    // Flag di abilitazione applicativa per gruppi menu (NOMECAMPO in MENU_GRP).
-    FLGMOP: 'SMALLINT DEFAULT 0', FLGPIANA: 'SMALLINT DEFAULT 0', FLGADDETTI: 'SMALLINT DEFAULT 0',
-    FLGOSPITI: 'SMALLINT DEFAULT 0', FLGPIANARFID: 'SMALLINT DEFAULT 0', FLGCONTA: 'SMALLINT DEFAULT 0',
-    FLGCUBI: 'SMALLINT DEFAULT 0', FLGCICLPASS: 'SMALLINT DEFAULT 0', FLGDIPENDENTI: 'SMALLINT DEFAULT 0',
-    FLGINVENTARI: 'SMALLINT DEFAULT 0',
   }, primaryKey: ['CODUTE'] },
   UTENTI_PWD: { columns: { CODUTE: 'INTEGER NOT NULL', PWD: 'VARCHAR(255)' }, primaryKey: ['CODUTE'] },
   UTENTI_OLDPWD: { columns: { CODUTE: 'INTEGER NOT NULL', OLDPWD: 'VARCHAR(255)' }, primaryKey: ['CODUTE'] },

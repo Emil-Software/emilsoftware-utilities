@@ -1,11 +1,10 @@
-import { ApiProperty, ApiPropertyOptional, OmitType } from "@nestjs/swagger";
+﻿import { ApiProperty, ApiPropertyOptional, OmitType } from "@nestjs/swagger";
 import { Transform, Type } from "class-transformer";
 import {
   ArrayUnique,
   IsArray,
   IsBoolean,
   IsInt,
-  Min,
   IsOptional,
   IsString,
   Length,
@@ -56,12 +55,12 @@ export class RegisterRequest extends OmitType(FiltriUtente, ['codUte'] as const)
   flagSuper?: boolean;
 
   @ApiPropertyOptional({
-    description: "Flag che indica se l'utente è configuratore",
+    description: "Flag che indica se l'utente Ã¨ configuratore",
     example: false,
   })
   @IsOptional()
   @IsBoolean({ message: "Il flag configuratore deve essere booleano." })
-  flagAdminConfigurator?: boolean;
+  flagAdmin?: boolean;
 
   @ApiPropertyOptional({
     description: "Ruoli assegnati all'utente.",
@@ -114,24 +113,6 @@ export class RegisterRequest extends OmitType(FiltriUtente, ['codUte'] as const)
   @IsOptional()
   @IsString({ message: "La pagina di default deve essere una stringa." })
   paginaDefault?: string;
-
-  @ApiPropertyOptional({
-    description: "Numero MAC associato all'utente.",
-    example: 12,
-  })
-  @IsOptional()
-  @Type(() => Number)
-  @IsInt({ message: 'Il numero MAC deve essere un intero.' })
-  @Min(0, { message: 'Il numero MAC non puo essere negativo.' })
-  nummac?: number;
-
-  @ApiPropertyOptional({
-    description: "Ragione sociale cliente.",
-    example: "ALIVAL STOCK",
-  })
-  @IsOptional()
-  @IsString({ message: "La ragione sociale deve essere una stringa." })
-  ragSocCli?: string;
 
   @ApiPropertyOptional({
     description: "HTML mail personalizzato",

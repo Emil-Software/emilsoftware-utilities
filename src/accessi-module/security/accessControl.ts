@@ -1,4 +1,4 @@
-import { ForbiddenException, UnauthorizedException } from '@nestjs/common';
+﻿import { ForbiddenException, UnauthorizedException } from '@nestjs/common';
 import { Request } from 'express';
 
 /** Profilo autorizzativo normalizzato estratto dal middleware Accessi. */
@@ -6,7 +6,7 @@ export interface AuthenticatedAccessiUser {
   codiceUtente: number;
   email?: string;
   flagSuper: boolean;
-  flagAdminConfigurator: boolean;
+  flagAdmin: boolean;
 }
 
 function normalizeBooleanFlag(value: unknown): boolean {
@@ -35,7 +35,7 @@ export function getAuthenticatedAccessiUser(req: Request): AuthenticatedAccessiU
     codiceUtente,
     email: typeof utente?.email === 'string' ? utente.email : undefined,
     flagSuper: normalizeBooleanFlag(utente?.flagSuper),
-    flagAdminConfigurator: normalizeBooleanFlag(utente?.flagAdminConfigurator),
+    flagAdmin: normalizeBooleanFlag(utente?.flagAdmin),
   };
 }
 
@@ -66,7 +66,7 @@ export function ensureSelfOrSuperUser(
 export function hasPrivilegedUserChanges(user: {
   statoRegistrazione?: unknown;
   flagSuper?: unknown;
-  flagAdminConfigurator?: unknown;
+  flagAdmin?: unknown;
   passwordLoginEnabled?: unknown;
   passwordlessLoginEnabled?: unknown;
   flagDueFattori?: unknown;
@@ -76,7 +76,7 @@ export function hasPrivilegedUserChanges(user: {
   return (
     user.statoRegistrazione !== undefined ||
     user.flagSuper !== undefined ||
-    user.flagAdminConfigurator !== undefined ||
+    user.flagAdmin !== undefined ||
     user.passwordLoginEnabled !== undefined ||
     user.passwordlessLoginEnabled !== undefined ||
     user.flagDueFattori !== undefined ||
