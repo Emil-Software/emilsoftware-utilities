@@ -1,3 +1,10 @@
+# [2.0.0-dev.34](https://github.com/Emil-Software/emilsoftware-utilities/compare/v2.0.0-dev.33...v2.0.0-dev.34) (2026-09-25)
+
+
+### Features
+
+* **accessi:** ruoli super/admin distinti, accesso console per sezione e changelog ([c3de705](https://github.com/Emil-Software/emilsoftware-utilities/commit/c3de7052c3420e69e48a3da2ffabd8a1792c557c))
+
 # [2.0.0-dev.33](https://github.com/Emil-Software/emilsoftware-utilities/compare/v2.0.0-dev.32...v2.0.0-dev.33) (2026-09-25)
 
 
