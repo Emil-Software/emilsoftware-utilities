@@ -1,3 +1,10 @@
+# [2.0.0-dev.35](https://github.com/Emil-Software/emilsoftware-utilities/compare/v2.0.0-dev.34...v2.0.0-dev.35) (2026-09-25)
+
+
+### Features
+
+* **accessi:** catalog migrations SQL idempotenti con ledger ([89ea516](https://github.com/Emil-Software/emilsoftware-utilities/commit/89ea5163329a7eba04a18526348a8e217052cf07))
+
 # [2.0.0-dev.34](https://github.com/Emil-Software/emilsoftware-utilities/compare/v2.0.0-dev.33...v2.0.0-dev.34) (2026-09-25)
 
 
