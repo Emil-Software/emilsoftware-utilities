@@ -19,6 +19,7 @@ Per una versione compatta da fornire a un'IA che costruisce il backend integrato
 
 - [AccessiOptions (riferimento completo)](#accessioptions-riferimento-completo)
 - [Schema e aggiornamento del database](#schema-e-aggiornamento-del-database)
+- [Catalog migrations SQL](#catalog-migrations-sql)
 
 **Autenticazione**
 
@@ -202,6 +203,7 @@ _Ogni campo di configurazione con tipo, obbligo e note._
 | federatedAuthentication | FederatedAuthenticationOptions | no | Abilita l'SSO generico. |
 | extensionFieldsOptions | ExtensionFieldsOptions\[\] | no | Tabelle esterne allegate al profilo. |
 | serviceTokens | \{ enabled, defaultTtlDays \} | no | Token macchina-a-macchina, abilitati per impostazione predefinita. |
+| catalogScripts | \{ enabled, folder, ... \} | no | Catalog migrations SQL eseguite dopo la riconciliazione dello schema. |
 
 **Esempio corretto — Configurazione tipica**
 
@@ -265,7 +267,7 @@ Accessi possiede lo schema del dominio. Con autoUpdateDatabase true (predefinito
 - RUOLI, MENU\_GRP, MENU\_TIPI, MENU, ABILITAZIONI, RUOLI\_MNU, UTENTI\_RUOLI
 - FILTRI, FILTRI\_TIPO
 - SSO\_PROVIDER, UTENTI\_IDENTITA\_EXT
-- ACCESSI\_2FA, ACCESSI\_SERVICE\_TOKEN
+- ACCESSI\_2FA, ACCESSI\_SERVICE\_TOKEN, ACCESSI\_CATALOG\_SCRIPT
 
 **CLI schema**
 
@@ -277,6 +279,46 @@ npm run db:check:accessi    # verifica senza modificare
 > [!WARNING]
 > **Versioni**
 > La libreria richiede uno schema compatibile con la versione corrente (ACCESSI\_SCHEMA\_VERSION). Se la verifica fallisce, leggi il codice errore ACCESSI\_DATABASE\_SCHEMA\_OUTDATED ed esegui db:update:accessi.
+
+---
+
+## Catalog migrations SQL
+
+_Allinea menu, ruoli e cataloghi su piu database in modo idempotente._
+
+Gli script SQL applicativi (menu, ruoli, tipi, cataloghi) restano nel repository del backend ospitante e Accessi li esegue dopo la riconciliazione dello schema. Ogni script viene tracciato nella tabella ACCESSI\_CATALOG\_SCRIPT (nome + checksum), quindi viene applicato una sola volta per database.
+
+### Configurazione
+
+**Esempio corretto — AccessiOptions**
+
+```ts
+catalogScripts: {
+  enabled: true,
+  folder: './db/accessi-catalog', // versionata nel repo del backend
+  onChecksumMismatch: 'error',     // 'error' (default) | 'warn' | 'reapply'
+  stopOnError: true,
+}
+```
+
+- Gli script sono ordinati per percorso (usa prefissi numerici: 0001\_, 0002\_, ...).
+- Devono essere idempotenti e ripetibili: UPDATE OR INSERT ... MATCHING, MERGE, DELETE+INSERT mirati.
+- Non includere utenti: le catalog migrations allineano solo catalogo e configurazione.
+- Supportati SET TERM, stringhe e commenti; nessuna semantica SQL viene interpretata.
+
+**CLI catalog migrations**
+
+```bash
+# Applica (schema + catalog migrations) su un database
+ACCESSI_CATALOG_FOLDER=./db/accessi-catalog npm run db:catalog:accessi
+
+# Elenca solo quelle da applicare / modificate
+ACCESSI_CATALOG_FOLDER=./db/accessi-catalog npm run db:catalog:accessi:check
+```
+
+> [!NOTE]
+> **Idempotenza**
+> Uno script gia applicato con lo stesso checksum viene saltato. Se il file cambia dopo l'applicazione, con policy error il run si interrompe: non modificare uno script applicato, aggiungine uno nuovo.
 
 ---
 

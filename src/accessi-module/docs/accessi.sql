@@ -1,4 +1,4 @@
--- Generic Accessi schema 1.10.0 for an EMPTY, already-created Firebird database (3.0+).
+-- Generic Accessi schema 1.11.0 for an EMPTY, already-created Firebird database (3.0+).
 -- For existing databases use AccessiDatabaseUpdater.run: this snapshot is not an upgrade script.
 -- No users, menus, filter catalogs, credentials or grants are provisioned; generic columns are.
 SET SQL DIALECT 3;
@@ -235,6 +235,16 @@ CREATE TABLE ACCESSI_SERVICE_TOKEN (
 );
 
 ALTER TABLE ACCESSI_SERVICE_TOKEN ADD CONSTRAINT PK_ACCESSI_SERVICE_TOKEN PRIMARY KEY (TOKEN_ID);
+
+CREATE TABLE ACCESSI_CATALOG_SCRIPT (
+    SCRIPT_NAME VARCHAR(255) CHARACTER SET ASCII NOT NULL,
+    CHECKSUM VARCHAR(64) CHARACTER SET ASCII NOT NULL,
+    APPLIED_AT TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    APPLIED_COUNT INTEGER DEFAULT 1 NOT NULL,
+    NOTE VARCHAR(500) CHARACTER SET UTF8
+);
+
+ALTER TABLE ACCESSI_CATALOG_SCRIPT ADD CONSTRAINT PK_ACCESSI_CATALOG_SCRIPT PRIMARY KEY (SCRIPT_NAME);
 
 CREATE SEQUENCE GEN_UTENTI_ID;
 

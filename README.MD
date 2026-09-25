@@ -7,6 +7,20 @@ Documentazione completa del modulo Accessi, generata da `src/accessi-module/Cons
 
 Rigenera entrambi con `npm run generate:accessi-wiki` (incluso in `npm run build`).
 
+## Catalog migrations SQL
+
+Per allineare menu, ruoli e cataloghi su più database, configura `catalogScripts` in `AccessiOptions`
+(cartella con script `.sql` versionati nel backend) e usa le CLI:
+
+```bash
+ACCESSI_CATALOG_FOLDER=./db/accessi-catalog npm run db:catalog:accessi
+ACCESSI_CATALOG_FOLDER=./db/accessi-catalog npm run db:catalog:accessi:check
+```
+
+Gli script sono applicati dopo la riconciliazione dello schema, una sola volta per database,
+con tracking in `ACCESSI_CATALOG_SCRIPT` (nome + checksum). Dettagli nella Wiki, sezione
+"Catalog migrations SQL".
+
 ---
 
 Convenzioni per i Commit Message

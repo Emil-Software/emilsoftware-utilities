@@ -4,6 +4,7 @@ import { DatabaseUpdater } from '../../DatabaseUpdater';
 import { Orm } from '../../Orm';
 import { Logger } from '../../Logger';
 import { ACCESSI_SCHEMA_VERSION, ACCESSI_VERSION_KEY, accessiTables, accessiForeignKeys, accessiIndexes, accessiTriggers, accessiGenerators, accessiChecks, accessiRenamedColumns, accessiObsoleteColumns, accessiColumnCopies } from './accessiSchema';
+import { applyCatalogScripts } from './AccessiCatalogMigrator';
 
 type Row = Record<string, unknown>;
 export interface AccessiSchemaReport { compatible: boolean; issues: string[]; }
@@ -23,12 +24,29 @@ export class AccessiDatabaseUpdater extends DatabaseUpdater implements OnModuleI
   static initialize(options: AccessiOptions): Promise<void> {
     let pending = this.initialization.get(options);
     if (!pending) {
-      pending = options.autoUpdateDatabase === false ? this.assertCompatible(options) : this.run(options);
+      pending = this.bootstrap(options);
       this.initialization.set(options, pending);
       const cleanup = () => this.initialization.delete(options);
       pending.then(cleanup, cleanup);
     }
     return pending;
+  }
+
+  /**
+   * Prima riconcilia lo schema, poi applica le catalog migrations applicative (menu, ruoli, ...).
+   * Con `autoUpdateDatabase: false` la verifica resta in sola lettura e le catalog migrations
+   * non vengono eseguite automaticamente.
+   */
+  private static async bootstrap(options: AccessiOptions): Promise<void> {
+    if (options.autoUpdateDatabase === false) {
+      await this.assertCompatible(options);
+      return;
+    }
+
+    await this.run(options);
+    if (options.catalogScripts?.enabled) {
+      await applyCatalogScripts(options);
+    }
   }
 
   static getLatestVersion(): string { return ACCESSI_SCHEMA_VERSION; }

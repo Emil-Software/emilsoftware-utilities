@@ -100,6 +100,30 @@ export interface ServiceTokenOptions {
   defaultTtlDays?: number;
 }
 
+/** Cosa fare quando uno script gia applicato presenta un checksum diverso (file modificato). */
+export type CatalogScriptChecksumPolicy = 'error' | 'warn' | 'reapply';
+
+/**
+ * Catalog migrations applicative (menu, ruoli, tipi, cataloghi). Gli script `.sql` vivono nel
+ * backend ospitante (versionati in repository) e vengono eseguiti da Accessi dopo la
+ * riconciliazione dello schema. Ogni script e tracciato nella tabella `ACCESSI_CATALOG_SCRIPT`,
+ * quindi viene applicato una sola volta per database (idempotenza lato DB).
+ */
+export interface CatalogScriptsOptions {
+  /** Abilita l'esecuzione automatica al bootstrap. Default `false`. */
+  enabled?: boolean;
+  /** Cartella contenente gli script `.sql` (assoluta o relativa alla working directory). */
+  folder: string;
+  /** Cosa fare se il checksum di uno script applicato e cambiato. Default `error`. */
+  onChecksumMismatch?: CatalogScriptChecksumPolicy;
+  /** Se `true` (default) un errore interrompe l'esecuzione e non avanza allo script successivo. */
+  stopOnError?: boolean;
+  /** Globi/estensioni inclusi. Default: tutti i `.sql`. */
+  include?: string[];
+  /** Numero massimo di script eseguiti in un singolo run (protezione operativa). Default: illimitato. */
+  maxScriptsPerRun?: number;
+}
+
 /**
  * Enables Accessi's provider-agnostic federated identity capability.
  *
@@ -160,6 +184,8 @@ export interface AccessiOptions {
   extensionFieldsOptions?: ExtensionFieldsOptions[];
   /** Token di servizio per chiamate tecniche macchina-a-macchina. Abilitati di default. */
   serviceTokens?: ServiceTokenOptions;
+  /** Catalog migrations applicative eseguite dopo la riconciliazione dello schema. */
+  catalogScripts?: CatalogScriptsOptions;
 }
 
 @Global()

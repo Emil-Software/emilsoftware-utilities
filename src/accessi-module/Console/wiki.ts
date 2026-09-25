@@ -164,6 +164,7 @@ export const WIKI_SECTIONS: WikiSection[] = [
           ['federatedAuthentication', 'FederatedAuthenticationOptions', 'no', `Abilita l'SSO generico.`],
           ['extensionFieldsOptions', 'ExtensionFieldsOptions[]', 'no', 'Tabelle esterne allegate al profilo.'],
           ['serviceTokens', '{ enabled, defaultTtlDays }', 'no', 'Token macchina-a-macchina, abilitati per impostazione predefinita.'],
+          ['catalogScripts', '{ enabled, folder, ... }', 'no', 'Catalog migrations SQL eseguite dopo la riconciliazione dello schema.'],
         ],
       ),
       good('ts', [
@@ -221,10 +222,37 @@ export const WIKI_SECTIONS: WikiSection[] = [
         `RUOLI, MENU_GRP, MENU_TIPI, MENU, ABILITAZIONI, RUOLI_MNU, UTENTI_RUOLI`,
         `FILTRI, FILTRI_TIPO`,
         `SSO_PROVIDER, UTENTI_IDENTITA_EXT`,
-        `ACCESSI_2FA, ACCESSI_SERVICE_TOKEN`,
+        `ACCESSI_2FA, ACCESSI_SERVICE_TOKEN, ACCESSI_CATALOG_SCRIPT`,
       ]),
       code('bash', `npm run db:update:accessi   # riconcilia lo schema\nnpm run db:check:accessi    # verifica senza modificare`, 'CLI schema'),
       note('warn', `Versioni`, `La libreria richiede uno schema compatibile con la versione corrente (ACCESSI_SCHEMA_VERSION). Se la verifica fallisce, leggi il codice errore ACCESSI_DATABASE_SCHEMA_OUTDATED ed esegui db:update:accessi.`),
+    ],
+  },
+  // -------------------------------------------------------------------------
+  {
+    id: 'catalog-migrations',
+    group: 'Configurazione',
+    title: 'Catalog migrations SQL',
+    summary: 'Allinea menu, ruoli e cataloghi su piu database in modo idempotente.',
+    blocks: [
+      p(`Gli script SQL applicativi (menu, ruoli, tipi, cataloghi) restano nel repository del backend ospitante e Accessi li esegue dopo la riconciliazione dello schema. Ogni script viene tracciato nella tabella ACCESSI_CATALOG_SCRIPT (nome + checksum), quindi viene applicato una sola volta per database.`),
+      h(`Configurazione`),
+      good('ts', [
+        'catalogScripts: {',
+        "  enabled: true,",
+        "  folder: './db/accessi-catalog', // versionata nel repo del backend",
+        "  onChecksumMismatch: 'error',     // 'error' (default) | 'warn' | 'reapply'",
+        "  stopOnError: true,",
+        '}',
+      ].join('\n'), 'AccessiOptions'),
+      list([
+        'Gli script sono ordinati per percorso (usa prefissi numerici: 0001_, 0002_, ...).',
+        'Devono essere idempotenti e ripetibili: UPDATE OR INSERT ... MATCHING, MERGE, DELETE+INSERT mirati.',
+        'Non includere utenti: le catalog migrations allineano solo catalogo e configurazione.',
+        'Supportati SET TERM, stringhe e commenti; nessuna semantica SQL viene interpretata.',
+      ]),
+      code('bash', `# Applica (schema + catalog migrations) su un database\nACCESSI_CATALOG_FOLDER=./db/accessi-catalog npm run db:catalog:accessi\n\n# Elenca solo quelle da applicare / modificate\nACCESSI_CATALOG_FOLDER=./db/accessi-catalog npm run db:catalog:accessi:check`, 'CLI catalog migrations'),
+      note('info', `Idempotenza`, `Uno script gia applicato con lo stesso checksum viene saltato. Se il file cambia dopo l'applicazione, con policy error il run si interrompe: non modificare uno script applicato, aggiungine uno nuovo.`),
     ],
   },
   // -------------------------------------------------------------------------

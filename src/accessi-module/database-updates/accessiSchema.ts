@@ -4,7 +4,7 @@ export interface SchemaTable {
   primaryKey: string[];
 }
 
-export const ACCESSI_SCHEMA_VERSION = '1.10.0';
+export const ACCESSI_SCHEMA_VERSION = '1.11.0';
 export const ACCESSI_VERSION_KEY = 'AccessiVersion';
 
 /**
@@ -94,6 +94,15 @@ export const accessiTables: Record<string, SchemaTable> = {
     CREATED_AT: 'TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL', EXPIRES_AT: 'TIMESTAMP', LAST_USED_AT: 'TIMESTAMP', LAST_USED_IP: 'VARCHAR(45)',
     REVOKED_AT: 'TIMESTAMP', REVOKED_BY: 'INTEGER',
   }, primaryKey: ['TOKEN_ID'] },
+  // Ledger delle catalog migrations applicative (menu, ruoli, cataloghi): garantisce idempotenza
+  // a livello di database. Lo schema e di Accessi, gli script restano nel backend ospitante.
+  ACCESSI_CATALOG_SCRIPT: { columns: {
+    SCRIPT_NAME: 'VARCHAR(255) CHARACTER SET ASCII NOT NULL',
+    CHECKSUM: 'VARCHAR(64) CHARACTER SET ASCII NOT NULL',
+    APPLIED_AT: 'TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL',
+    APPLIED_COUNT: 'INTEGER DEFAULT 1 NOT NULL',
+    NOTE: 'VARCHAR(500) CHARACTER SET UTF8',
+  }, primaryKey: ['SCRIPT_NAME'] },
 };
 
 export const accessiForeignKeys = [

@@ -120,6 +120,16 @@ export { AccessiModule } from "./AccessiModule";
 export { AccessiDatabaseUpdater } from "./database-updates/AccessiDatabaseUpdater";
 export type { AccessiOptions, EmailOptions, JwtOptions, ExtensionFieldsOptions, PublicAuthRateLimitOptions, PublicAuthRateLimitRuleOptions } from "./AccessiModule";
 export type { PublicRegistrationOptions, FederatedAuthenticationOptions, ServiceTokenOptions } from "./AccessiModule";
+export type { CatalogScriptsOptions, CatalogScriptChecksumPolicy } from "./AccessiModule";
+export {
+    AccessiCatalogMigrator,
+    applyCatalogScripts,
+    listPendingCatalogScripts,
+    splitSqlStatements,
+    computeCatalogScriptChecksum,
+    discoverCatalogScripts
+} from "./database-updates/AccessiCatalogMigrator";
+export type { CatalogMigrationReport, CatalogScriptMigration } from "./database-updates/AccessiCatalogMigrator";
 export { ServiceTokenService } from './Services/ServiceTokenService/ServiceTokenService';
 export type {
     ServiceTokenMetadata,

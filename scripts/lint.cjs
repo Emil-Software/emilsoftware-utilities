@@ -7,7 +7,7 @@ const root = path.resolve(__dirname, '..');
 const srcDir = path.join(root, 'src');
 
 /** File in cui l'output su console e intenzionale (logger o CLI). */
-const CONSOLE_ALLOWED = new Set(['Logger.ts', 'runAccessiDbUpdate.ts', 'generateAccessiOpenApi.ts']);
+const CONSOLE_ALLOWED = new Set(['Logger.ts', 'runAccessiDbUpdate.ts', 'runAccessiCatalogMigrations.ts', 'generateAccessiOpenApi.ts']);
 
 const RULES = [
   { id: 'type-any', description: 'Uso di `any` come tipo (usare `unknown` o un tipo specifico)', pattern: /:\s*any\b|<any>|as any\b|any\[\]/ },
