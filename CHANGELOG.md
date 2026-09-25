@@ -1,3 +1,13 @@
+# [2.0.0-dev.32](https://github.com/Emil-Software/emilsoftware-utilities/compare/v2.0.0-dev.31...v2.0.0-dev.32) (2026-09-25)
+
+
+* feat(accessi)!: rimozione flag applicativi ibridi e rename FLGADMINCONFIG in FLGADMIN ([b29788c](https://github.com/Emil-Software/emilsoftware-utilities/commit/b29788ce5feb2b4c3c0bf038f7b334931e8724fa))
+
+
+### BREAKING CHANGES
+
+* i backend che usavano i flag applicativi in UTENTI_CONFIG devono gestirli in tabelle proprie; il campo flagAdminConfigurator e rinominato flagAdmin.
+
 # [2.0.0-dev.31](https://github.com/Emil-Software/emilsoftware-utilities/compare/v2.0.0-dev.30...v2.0.0-dev.31) (2026-09-24)
 
 
