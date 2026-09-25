@@ -1,3 +1,13 @@
+# [2.0.0-dev.33](https://github.com/Emil-Software/emilsoftware-utilities/compare/v2.0.0-dev.32...v2.0.0-dev.33) (2026-09-25)
+
+
+* feat(accessi)!: rimozione logiche applicative residue da schema e servizi ([6ecb1d2](https://github.com/Emil-Software/emilsoftware-utilities/commit/6ecb1d201fe5a24a86be12a3a6df0a12abb9cf6e))
+
+
+### BREAKING CHANGES
+
+* NOMECAMPO, ENABLEIA, PAGDEF, CELLUTE non esistono piu; i backend devono gestire questi dati in tabelle proprie.
+
 # [2.0.0-dev.32](https://github.com/Emil-Software/emilsoftware-utilities/compare/v2.0.0-dev.31...v2.0.0-dev.32) (2026-09-25)
 
 
