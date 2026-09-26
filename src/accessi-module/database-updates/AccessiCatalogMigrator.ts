@@ -18,7 +18,59 @@ export interface CatalogMigrationReport {
   discovered: number;
   applied: string[];
   skipped: string[];
+  invalid: { script: string; violations: string[] }[];
   failed: { script: string; error: string }[];
+}
+
+/**
+ * Le catalog migrations possono modificare SOLO righe (DML). Questa whitelist rende tassativo il
+ * vincolo: qualunque altro statement (DDL, trigger, transazioni, GRANT, ...) viene rifiutato.
+ */
+const ALLOWED_STATEMENT_KEYWORDS: ReadonlySet<string> = new Set([
+  'INSERT', 'UPDATE', 'DELETE', 'MERGE', 'SELECT', 'EXECUTE',
+]);
+
+/** Estrae la prima parola chiave di uno statement, saltando spazi e commenti iniziali. */
+export function leadingStatementKeyword(statement: string): string {
+  let index = 0;
+  while (index < statement.length) {
+    const char = statement[index] as string;
+    if (/\s/.test(char)) { index += 1; continue; }
+    if (char === '-' && statement[index + 1] === '-') {
+      const newline = statement.indexOf('\n', index);
+      if (newline === -1) return '';
+      index = newline + 1;
+      continue;
+    }
+    if (char === '/' && statement[index + 1] === '*') {
+      const end = statement.indexOf('*/', index + 2);
+      if (end === -1) return '';
+      index = end + 2;
+      continue;
+    }
+    break;
+  }
+  const match = /^([A-Za-z]+)/.exec(statement.slice(index));
+  return match ? (match[1] as string).toUpperCase() : '';
+}
+
+/**
+ * Valida gli statement di una catalog migration: ritorna la lista delle violazioni (vuota se conforme).
+ * Regola tassativa: solo DML. Nessuna modifica a colonne/schema/trigger/permessi.
+ */
+export function analyzeCatalogScript(statements: string[]): string[] {
+  const violations: string[] = [];
+  for (const statement of statements) {
+    const keyword = leadingStatementKeyword(statement);
+    if (!keyword) continue;
+    if (!ALLOWED_STATEMENT_KEYWORDS.has(keyword)) {
+      const preview = statement.replace(/\s+/g, ' ').trim().slice(0, 120);
+      violations.push(
+        `Statement non consentito (${keyword}): le catalog migrations possono modificare solo righe (INSERT/UPDATE/DELETE/MERGE). Estratto: "${preview}"`,
+      );
+    }
+  }
+  return violations;
 }
 
 /** Ritorna la policy di checksum effettiva (default `error`). */
@@ -202,26 +254,34 @@ async function upsertLedger(options: AccessiOptions, name: string, checksum: str
 }
 
 /** Elenca gli script non ancora applicati (o con checksum diverso) senza eseguirli. */
-export async function listPendingCatalogScripts(options: AccessiOptions): Promise<{ applied: string[]; pending: string[]; changed: string[] }> {
+export async function listPendingCatalogScripts(options: AccessiOptions): Promise<{ applied: string[]; pending: string[]; changed: string[]; invalid: { script: string; violations: string[] }[] }> {
   const config = options.catalogScripts;
   if (!config?.folder) throw new Error('AccessiCatalogMigrator: catalogScripts.folder non configurato.');
   if (!(await isLedgerPresent(options))) {
     throw new Error('AccessiCatalogMigrator: tabella ACCESSI_CATALOG_SCRIPT assente. Eseguire prima AccessiDatabaseUpdater.run (db:update:accessi).');
   }
 
+  const allowDdl = config.allowDdl === true;
   const ledger = await readLedger(options);
   const discovered = discoverCatalogScripts(config);
   const pending: string[] = [];
   const changed: string[] = [];
+  const invalid: { script: string; violations: string[] }[] = [];
 
   for (const script of discovered) {
-    const checksum = computeCatalogScriptChecksum(readFileSync(script.path, 'utf8'));
+    const content = readFileSync(script.path, 'utf8');
+    const checksum = computeCatalogScriptChecksum(content);
+    const violations = allowDdl ? [] : analyzeCatalogScript(splitSqlStatements(content));
+    if (violations.length > 0) {
+      invalid.push({ script: script.name, violations });
+      continue;
+    }
     const appliedChecksum = ledger.get(script.name);
     if (appliedChecksum === undefined) pending.push(script.name);
     else if (appliedChecksum !== checksum) changed.push(script.name);
   }
 
-  return { applied: [...ledger.keys()].sort(), pending, changed };
+  return { applied: [...ledger.keys()].sort(), pending, changed, invalid };
 }
 
 /**
@@ -247,8 +307,9 @@ export async function applyCatalogScripts(options: AccessiOptions): Promise<Cata
   const discovered = discoverCatalogScripts(config);
   const ledger = await readLedger(options);
   const stopOnError = config.stopOnError !== false;
+  const allowDdl = config.allowDdl === true;
   const maxScripts = Number.isInteger(config.maxScriptsPerRun) && (config.maxScriptsPerRun ?? 0) > 0 ? config.maxScriptsPerRun : undefined;
-  const report: CatalogMigrationReport = { folder, discovered: discovered.length, applied: [], skipped: [], failed: [] };
+  const report: CatalogMigrationReport = { folder, discovered: discovered.length, applied: [], skipped: [], invalid: [], failed: [] };
 
   logger.info(`Catalog migrations: ${discovered.length} script trovati in ${folder}.`);
 
@@ -287,6 +348,15 @@ export async function applyCatalogScripts(options: AccessiOptions): Promise<Cata
 
     try {
       const statements = splitSqlStatements(content);
+      const violations = allowDdl ? [] : analyzeCatalogScript(statements);
+      if (violations.length > 0) {
+        report.invalid.push({ script: script.name, violations });
+        for (const violation of violations) {
+          logger.error(`Catalog migration non conforme: ${script.name}. ${violation}`);
+        }
+        // Il file non viene applicato ne registrato nel ledger; il run prosegue con gli altri.
+        continue;
+      }
       for (const statement of statements) {
         await Orm.execute(options.databaseOptions, statement, [], false);
       }
@@ -313,7 +383,7 @@ export class AccessiCatalogMigrator {
     return applyCatalogScripts(options);
   }
 
-  static listPending(options: AccessiOptions): Promise<{ applied: string[]; pending: string[]; changed: string[] }> {
+  static listPending(options: AccessiOptions): Promise<{ applied: string[]; pending: string[]; changed: string[]; invalid: { script: string; violations: string[] }[] }> {
     return listPendingCatalogScripts(options);
   }
 }

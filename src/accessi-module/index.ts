@@ -126,6 +126,8 @@ export {
     applyCatalogScripts,
     listPendingCatalogScripts,
     splitSqlStatements,
+    analyzeCatalogScript,
+    leadingStatementKeyword,
     computeCatalogScriptChecksum,
     discoverCatalogScripts
 } from "./database-updates/AccessiCatalogMigrator";

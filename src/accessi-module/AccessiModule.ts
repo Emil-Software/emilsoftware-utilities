@@ -122,6 +122,11 @@ export interface CatalogScriptsOptions {
   include?: string[];
   /** Numero massimo di script eseguiti in un singolo run (protezione operativa). Default: illimitato. */
   maxScriptsPerRun?: number;
+  /**
+   * Permette statement DDL/schema negli script. Default `false`: le catalog migrations possono
+   * modificare solo righe. Sconsigliato: lo schema e di competenza di `db:update:accessi`.
+   */
+  allowDdl?: boolean;
 }
 
 /**

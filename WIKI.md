@@ -304,7 +304,19 @@ catalogScripts: {
 - Gli script sono ordinati per percorso (usa prefissi numerici: 0001\_, 0002\_, ...).
 - Devono essere idempotenti e ripetibili: UPDATE OR INSERT ... MATCHING, MERGE, DELETE+INSERT mirati.
 - Non includere utenti: le catalog migrations allineano solo catalogo e configurazione.
-- Supportati SET TERM, stringhe e commenti; nessuna semantica SQL viene interpretata.
+- Supportati stringhe, commenti e statement multipli; SET TERM non serve perché gli script sono solo DML.
+
+> [!CAUTION]
+> **Solo righe (DML)**
+> Vincolo tassativo: uno script puo eseguire solo INSERT, UPDATE, DELETE, MERGE, SELECT, EXECUTE. Qualunque DDL (CREATE/ALTER/DROP, trigger, procedure, GRANT, transazioni) viene rifiutato. Lo schema si aggiorna solo con db:update:accessi.
+
+> [!NOTE]
+> **File non conformi**
+> Un file con statement non consentiti non viene applicato ne registrato nel ledger; il run prosegue con gli altri e il report riporta una voce per ogni file con i relativi messaggi di errore (visibili anche con db:catalog:accessi:check).
+
+> [!NOTE]
+> **allowDdl**
+> Disattivato di default. Impostarlo a true disabilita la validazione e permette DDL: usarlo solo consapevolmente e mai come sostituto dell'updater dello schema.
 
 **CLI catalog migrations**
 

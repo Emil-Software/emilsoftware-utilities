@@ -24,16 +24,24 @@ async function main(): Promise<void> {
     console.log(`[Accessi Catalog] Gia applicati: ${pending.applied.length}`);
     console.log(`[Accessi Catalog] Da applicare: ${pending.pending.length}${pending.pending.length ? ` -> ${pending.pending.join(', ')}` : ''}`);
     console.log(`[Accessi Catalog] Modificati (checksum diverso): ${pending.changed.length}${pending.changed.length ? ` -> ${pending.changed.join(', ')}` : ''}`);
+    console.log(`[Accessi Catalog] Non conformi (solo DML): ${pending.invalid.length}`);
+    for (const entry of pending.invalid) {
+      for (const violation of entry.violations) console.error(`[Accessi Catalog] Non conforme: ${entry.script} -> ${violation}`);
+    }
+    if (pending.invalid.length) process.exitCode = 1;
     return;
   }
 
   const report = await applyCatalogScripts(options);
-  console.log(`[Accessi Catalog] Scoperti: ${report.discovered} | Applicati: ${report.applied.length} | Saltati: ${report.skipped.length} | Falliti: ${report.failed.length}`);
+  console.log(`[Accessi Catalog] Scoperti: ${report.discovered} | Applicati: ${report.applied.length} | Saltati: ${report.skipped.length} | Non conformi: ${report.invalid.length} | Falliti: ${report.failed.length}`);
   if (report.applied.length) console.log(`[Accessi Catalog] Applicati: ${report.applied.join(', ')}`);
+  for (const entry of report.invalid) {
+    for (const violation of entry.violations) console.error(`[Accessi Catalog] Non conforme: ${entry.script} -> ${violation}`);
+  }
   if (report.failed.length) {
     for (const failure of report.failed) console.error(`[Accessi Catalog] Fallito: ${failure.script} -> ${failure.error}`);
-    process.exitCode = 1;
   }
+  if (report.failed.length || report.invalid.length) process.exitCode = 1;
 }
 
 main()
