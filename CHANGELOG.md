@@ -1,3 +1,10 @@
+# [2.0.0-dev.36](https://github.com/Emil-Software/emilsoftware-utilities/compare/v2.0.0-dev.35...v2.0.0-dev.36) (2026-09-26)
+
+
+### Features
+
+* **accessi:** catalog migrations solo DML con validazione e report per file ([35aab36](https://github.com/Emil-Software/emilsoftware-utilities/commit/35aab362c1f2834f210b0a88fc6155c292edcbaa))
+
 # [2.0.0-dev.35](https://github.com/Emil-Software/emilsoftware-utilities/compare/v2.0.0-dev.34...v2.0.0-dev.35) (2026-09-25)
 
 
