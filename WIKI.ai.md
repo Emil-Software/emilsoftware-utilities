@@ -504,6 +504,7 @@ La console è servita dal modulo su /api/accessi/console. Non ha stato proprio: 
 - Token di servizio: creazione, rotazione, revoca.
 - SSO: provider e identità.
 - Wiki e Changelog: documentazione e novità della libreria.
+- SQL: esporta il DDL delle entità Accessi (tabelle, generatori, FK, indici, check, trigger) per replicare il database.
 [INFO] Superutente (FLGSUPER): Riceve TUTTE le abilitazioni al livello massimo (30) dopo il login. In console vede solo la sezione Utenti e gestisce utenti, ruoli e grant.
 [INFO] Admin (FLGADMIN): Accede a tutta la console (catalogo, token, SSO, utenti) ma NON conferisce abilitazioni: i menu restano quelli assegnati via ABILITAZIONI/RUOLI_MNU.
 [INFO] Accesso: Apri /api/accessi/console e accedi con un utente con FLGSUPER o FLGADMIN. Le sezioni sono raggiungibili anche tramite deep link (per esempio /api/accessi/console/menu-e-gruppi/menu).
@@ -549,6 +550,7 @@ Tutte le rotte /api/accessi/* in una tabella.
 | Filtri | GET filtri/tipi, POST/PUT/DELETE filtri/tipi[/:tipFil], GET/POST filtri/utente |
 | SSO | GET/POST federated-auth/providers, PATCH/DELETE providers/:provider, GET/POST users/:codiceUtente/identities, POST users, PATCH users/:codiceUtente/password-login |
 | Token | POST/GET service-token, DELETE service-token/:tokenId, POST service-token/:tokenId/rotate |
+| Schema | GET schema (DDL completo + entità presenti, solo admin) |
 | Console | GET console, console/:view, console/:view/:sub, console/assets/:file |
 
 ### Antipattern e checklist

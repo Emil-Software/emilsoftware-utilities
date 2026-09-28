@@ -17,6 +17,7 @@ export * from "./LoginResponse";
 export * from "./Permission";
 export * from "./PublicRegisterRequest";
 export * from "./Role";
+export * from "./SchemaDtos";
 export * from "./SendResetPasswordEmailRequest";
 export * from "./StatoRegistrazione";
 export * from "./TipoAbilitazione";

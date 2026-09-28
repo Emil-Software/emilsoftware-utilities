@@ -12,6 +12,7 @@ const { PermissionService } = require('../src/accessi-module/Services/Permission
 const { UserService } = require('../src/accessi-module/Services/UserService/UserService');
 const { buildAuthenticatedTokenPayload, resolveCodiceUtenteFromTokenPayload, extractAccessiBearerToken } = require('../src/accessi-module/security/authenticatedToken');
 const { ensureSuperUser, ensureAdmin, ensureUserManagement, ensureConsoleAccess, ensureSelfOrSuperUser } = require('../src/accessi-module/security/accessControl');
+const { SchemaExportService } = require('../src/accessi-module/Services/SchemaExportService/SchemaExportService');
 
 test('daily logs append across restart and rotate at local midnight even when idle', async t => {
   const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'accessi-logs-'));
@@ -148,4 +149,21 @@ test('super and admin responsibilities stay separate', () => {
   assert.doesNotThrow(() => ensureSelfOrSuperUser(admin, 999));
   assert.doesNotThrow(() => ensureSelfOrSuperUser(plain, 3));
   assert.throws(() => ensureSelfOrSuperUser(plain, 999));
+});
+
+test('schema export generates the complete DDL from the canonical schema', () => {
+  const service = new SchemaExportService({});
+  const ddl = service.buildDdl();
+  assert.deepEqual(ddl.sections.map((section) => section.id), ['tables', 'generators', 'foreignKeys', 'indexes', 'checks', 'triggers']);
+  assert.match(ddl.script, /CREATE TABLE MENU \(/);
+  assert.match(ddl.script, /ALTER TABLE MENU ADD CONSTRAINT PK_MENU PRIMARY KEY \(CODMNU\);/);
+  assert.match(ddl.script, /CREATE SEQUENCE GEN_UTENTI_ID;/);
+  assert.match(ddl.script, /ADD CONSTRAINT FK_MENU_1 FOREIGN KEY \(CODGRP\) REFERENCES MENU_GRP \(CODGRP\);/);
+  assert.match(ddl.script, /CREATE TRIGGER UTENTI_BI FOR UTENTI ACTIVE BEFORE INSERT/);
+  assert.match(ddl.script, /SET TERM \^ ;/);
+  // Ogni tabella ha CREATE TABLE e PRIMARY KEY.
+  for (const table of ['UTENTI', 'UTENTI_CONFIG', 'MENU', 'ABILITAZIONI', 'ACCESSI_CATALOG_SCRIPT']) {
+    assert.match(ddl.script, new RegExp(`CREATE TABLE ${table} \\(`));
+    assert.match(ddl.script, new RegExp(`PK_${table} PRIMARY KEY`));
+  }
 });

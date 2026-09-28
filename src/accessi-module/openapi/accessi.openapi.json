@@ -3288,6 +3288,44 @@
           "ServiceToken"
         ]
       }
+    },
+    "/api/accessi/schema": {
+      "get": {
+        "description": "Riservato agli admin. Genera il DDL delle entita Accessi e segnala le tabelle presenti fuori schema.",
+        "operationId": "getSchema",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GetSchemaResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Esporta lo schema DDL e le entita presenti",
+        "tags": [
+          "Schema"
+        ]
+      }
     }
   },
   "info": {
@@ -5655,6 +5693,97 @@
             "items": {
               "$ref": "#/components/schemas/ServiceTokenDto"
             }
+          }
+        },
+        "required": [
+          "Status",
+          "Result"
+        ]
+      },
+      "SchemaDdlSection": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "example": "tables"
+          },
+          "title": {
+            "type": "string",
+            "example": "Tabelle (18)"
+          },
+          "sql": {
+            "type": "string",
+            "description": "DDL della sezione."
+          }
+        },
+        "required": [
+          "id",
+          "title",
+          "sql"
+        ]
+      },
+      "SchemaDdlResult": {
+        "type": "object",
+        "properties": {
+          "version": {
+            "type": "string",
+            "description": "Versione schema Accessi.",
+            "example": "1.11.0"
+          },
+          "sections": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SchemaDdlSection"
+            }
+          },
+          "script": {
+            "type": "string",
+            "description": "Script completo concatenato."
+          },
+          "presentTables": {
+            "description": "Tabelle presenti nel database.",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "extraTables": {
+            "description": "Tabelle presenti ma non di dominio Accessi.",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "presentGenerators": {
+            "description": "Generatori presenti nel database.",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "version",
+          "sections",
+          "script",
+          "presentTables",
+          "extraTables",
+          "presentGenerators"
+        ]
+      },
+      "GetSchemaResponse": {
+        "type": "object",
+        "properties": {
+          "Status": {
+            "$ref": "#/components/schemas/Status"
+          },
+          "Message": {
+            "type": "string",
+            "example": "Dati recuperati con successo.",
+            "description": "Messaggio informativo restituito dalla libreria quando presente."
+          },
+          "Result": {
+            "$ref": "#/components/schemas/SchemaDdlResult"
           }
         },
         "required": [

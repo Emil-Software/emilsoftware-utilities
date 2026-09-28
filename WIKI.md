@@ -799,6 +799,7 @@ La console è servita dal modulo su /api/accessi/console. Non ha stato proprio: 
 - Token di servizio: creazione, rotazione, revoca.
 - SSO: provider e identità.
 - Wiki e Changelog: documentazione e novità della libreria.
+- SQL: esporta il DDL delle entità Accessi (tabelle, generatori, FK, indici, check, trigger) per replicare il database.
 
 > [!NOTE]
 > **Superutente (FLGSUPER)**
@@ -864,6 +865,7 @@ _Tutte le rotte /api/accessi/\* in una tabella._
 | Filtri | GET filtri/tipi, POST/PUT/DELETE filtri/tipi\[/:tipFil\], GET/POST filtri/utente |
 | SSO | GET/POST federated-auth/providers, PATCH/DELETE providers/:provider, GET/POST users/:codiceUtente/identities, POST users, PATCH users/:codiceUtente/password-login |
 | Token | POST/GET service-token, DELETE service-token/:tokenId, POST service-token/:tokenId/rotate |
+| Schema | GET schema (DDL completo + entità presenti, solo admin) |
 | Console | GET console, console/:view, console/:view/:sub, console/assets/:file |
 
 ---

@@ -28,6 +28,8 @@ import { AccessiConsoleController } from './Controllers/AccessiConsoleController
 import { ServiceTokenController } from './Controllers/ServiceTokenController';
 import { ServiceTokenService } from './Services/ServiceTokenService/ServiceTokenService';
 import { ServiceTokenGuard } from './security/serviceTokenGuard';
+import { SchemaController } from './Controllers/SchemaController';
+import { SchemaExportService } from './Services/SchemaExportService/SchemaExportService';
 import { assertEmailConfigured } from './security/emailConfiguration';
 
 /** JWT emesso da Accessi dopo un login locale o SSO. Non riutilizzare il segreto del provider SSO. */
@@ -205,9 +207,10 @@ export interface AccessiOptions {
     FederatedAuthController,
     AccessiConsoleController,
     ServiceTokenController,
+    SchemaController,
   ],
-  providers: [AuthService, TwoFactorService, UserService, EmailService, PermissionService, FiltriService, ConfiguratorService, JwtSimpleGuard, AuthenticateGenService, AccessiDatabaseUpdater, FederatedAuthService, ServiceTokenService, ServiceTokenGuard],
-  exports: [AuthService, UserService, EmailService, PermissionService, FiltriService, ConfiguratorService, JwtSimpleGuard, AuthenticateGenService, FederatedAuthService, ServiceTokenService, ServiceTokenGuard],
+  providers: [AuthService, TwoFactorService, UserService, EmailService, PermissionService, FiltriService, ConfiguratorService, JwtSimpleGuard, AuthenticateGenService, AccessiDatabaseUpdater, FederatedAuthService, ServiceTokenService, ServiceTokenGuard, SchemaExportService],
+  exports: [AuthService, UserService, EmailService, PermissionService, FiltriService, ConfiguratorService, JwtSimpleGuard, AuthenticateGenService, FederatedAuthService, ServiceTokenService, ServiceTokenGuard, SchemaExportService],
 })
 export class AccessiModule {
   /**
@@ -239,7 +242,8 @@ export class AccessiModule {
         AccessiDatabaseUpdater,
         FederatedAuthService,
         ServiceTokenService,
-        ServiceTokenGuard
+        ServiceTokenGuard,
+        SchemaExportService
       ],
       exports: [
         'ACCESSI_OPTIONS',
@@ -253,7 +257,8 @@ export class AccessiModule {
         AuthenticateGenService,
         FederatedAuthService,
         ServiceTokenService,
-        ServiceTokenGuard
+        ServiceTokenGuard,
+        SchemaExportService
       ],
     };
   }

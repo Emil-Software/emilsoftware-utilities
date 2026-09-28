@@ -24,6 +24,7 @@
   getGroupsWithMenus,
   getMenuTypes,
   getRoles,
+  getSchema,
   getServiceTokens,
   getTipiFiltro,
   getUserByToken,
@@ -66,6 +67,7 @@ import type {
   Permission,
   RegisterRequest,
   Role,
+  SchemaDdlResult,
   ServiceTokenDto,
   IssuedServiceTokenDto,
   TipoFiltro,
@@ -90,7 +92,8 @@ type ConsoleView =
   | 'ssoUsers'
   | 'tokens'
   | 'wiki'
-  | 'changelog';
+  | 'changelog'
+  | 'sql';
 
 const routeSegment: Record<ConsoleView, string> = {
   users: 'utenti',
@@ -105,6 +108,7 @@ const routeSegment: Record<ConsoleView, string> = {
   tokens: 'token-di-servizio',
   wiki: 'wiki',
   changelog: 'changelog',
+  sql: 'sql',
 };
 const routeView = Object.fromEntries(Object.entries(routeSegment).map(([view, segment]) => [segment, view])) as Record<string, ConsoleView>;
 // I padri dei sottomenu hanno un URL proprio: senza figlio selezionato si apre la prima voce.
@@ -1451,6 +1455,45 @@ async function showChangelog(): Promise<void> {
   </article></div>`);
 }
 
+function downloadTextFile(fileName: string, content: string): void {
+  const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement('a');
+  anchor.href = url;
+  anchor.download = fileName;
+  document.body.appendChild(anchor);
+  anchor.click();
+  anchor.remove();
+  URL.revokeObjectURL(url);
+}
+
+async function showSql(): Promise<void> {
+  const schema = result<SchemaDdlResult>(await getSchema());
+  const copy = (text: string, notice: string) => () => handleAction(async () => {
+    await navigator.clipboard.writeText(text);
+    showNotice(notice);
+  });
+
+  render(`<div class="toolbar"><button id="sql-copy-all">Copia tutto</button><button id="sql-download" class="secondary">Scarica .sql</button><button id="sql-reload" class="secondary">Aggiorna</button></div>
+    <h2>SQL dello schema</h2>
+    <p class="form-help">DDL generato dallo schema Accessi <strong>${escapeHtml(schema.version)}</strong>. Usalo per creare le entita su una nuova installazione (database vuoto).</p>
+    <div class="entity-summary">
+      <span><strong>${schema.presentTables.length}</strong> tabelle presenti</span>
+      <span><strong>${schema.presentGenerators.length}</strong> generatori</span>
+      <span><strong>${schema.extraTables.length}</strong> tabelle extra fuori schema Accessi</span>
+    </div>
+    ${schema.extraTables.length ? `<p class="form-help">Tabelle presenti non gestite da Accessi: <code>${schema.extraTables.map((name) => escapeHtml(name)).join(', ')}</code></p>` : ''}
+    ${schema.sections.map((section) => `<section class="sql-section"><div class="sql-section-head"><h3>${escapeHtml(section.title)}</h3><button type="button" class="secondary" data-sql-copy="${escapeHtml(section.id)}">Copia sezione</button></div><pre class="markdown-code"><code>${escapeHtml(section.sql)}</code></pre></section>`).join('')}`);
+
+  byId('sql-copy-all').onclick = copy(schema.script, 'Script SQL completo copiato.');
+  byId('sql-download').onclick = () => downloadTextFile(`accessi-schema-${schema.version}.sql`, schema.script);
+  byId('sql-reload').onclick = () => handleAction(showSql);
+  document.querySelectorAll<HTMLButtonElement>('[data-sql-copy]').forEach((button) => {
+    const section = schema.sections.find((entry) => entry.id === button.dataset.sqlCopy);
+    if (section) button.onclick = copy(section.sql, `Sezione "${section.title}" copiata.`);
+  });
+}
+
 async function show(view: ConsoleView): Promise<void> {
   try {
     showNotice('');
@@ -1467,6 +1510,7 @@ async function show(view: ConsoleView): Promise<void> {
       tokens: showServiceTokens,
       wiki: showWiki,
       changelog: showChangelog,
+      sql: showSql,
     };
     setActiveNavigation(view);
     const renderView = views[view];

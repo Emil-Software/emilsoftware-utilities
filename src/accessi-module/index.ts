@@ -139,6 +139,8 @@ export type {
     VerifiedServiceToken,
     IssueServiceTokenInput
 } from './Services/ServiceTokenService/ServiceTokenService';
+export { SchemaExportService } from './Services/SchemaExportService/SchemaExportService';
+export type { SchemaDdlResult, SchemaDdlSection, SchemaEntitiesResult } from './Services/SchemaExportService/SchemaExportService';
 export { ServiceTokenGuard, RequireServiceTokenScopes, getAccessiServiceToken } from './security/serviceTokenGuard';
 export { assertEmailConfigured, isEmailConfigured, AccessiEmailNotConfiguredError, ACCESSI_EMAIL_NOT_CONFIGURED } from './security/emailConfiguration';
 export { FederatedAuthService } from './federated-auth/FederatedAuthService';

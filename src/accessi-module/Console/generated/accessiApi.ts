@@ -32,6 +32,7 @@ import type {
   GetMenuTypesResponse,
   GetMenusResponse,
   GetRolesResponse,
+  GetSchemaResponse,
   GetServiceTokensParams,
   GetServiceTokensResponse,
   GetUserByTokenRequest,
@@ -1594,6 +1595,31 @@ return accessiFetch<Promise<rotateServiceTokenResponse>>(getRotateServiceTokenUr
   {      
     ...options,
     method: 'POST'
+    
+  }
+);}
+
+
+/**
+ * Riservato agli admin. Genera il DDL delle entita Accessi e segnala le tabelle presenti fuori schema.
+ * @summary Esporta lo schema DDL e le entita presenti
+ */
+export type getSchemaResponse = {
+  data: GetSchemaResponse;
+  status: number;
+}
+
+export const getGetSchemaUrl = () => {
+
+
+  return `/api/accessi/schema`
+}
+
+export const getSchema = async ( options?: RequestInit): Promise<getSchemaResponse> => {
+return accessiFetch<Promise<getSchemaResponse>>(getGetSchemaUrl(),
+  {      
+    ...options,
+    method: 'GET'
     
   }
 );}
