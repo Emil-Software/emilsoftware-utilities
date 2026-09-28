@@ -1,3 +1,10 @@
+# [2.0.0-dev.37](https://github.com/Emil-Software/emilsoftware-utilities/compare/v2.0.0-dev.36...v2.0.0-dev.37) (2026-09-28)
+
+
+### Features
+
+* **accessi:** sezione console SQL ed export DDL dello schema ([1392441](https://github.com/Emil-Software/emilsoftware-utilities/commit/1392441f201fffef3767d9f1fc53a8c690fed72a))
+
 # [2.0.0-dev.36](https://github.com/Emil-Software/emilsoftware-utilities/compare/v2.0.0-dev.35...v2.0.0-dev.36) (2026-09-26)
 
 
