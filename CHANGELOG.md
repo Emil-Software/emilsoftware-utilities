@@ -1,3 +1,10 @@
+# [2.0.0-dev.39](https://github.com/Emil-Software/emilsoftware-utilities/compare/v2.0.0-dev.38...v2.0.0-dev.39) (2026-09-29)
+
+
+### Bug Fixes
+
+* **accessi:** tooltip 'i' della console piu robusti e accessibili ([cb42650](https://github.com/Emil-Software/emilsoftware-utilities/commit/cb42650a1fbc0d0340cea49511e18d8ecb6391a1))
+
 # [2.0.0-dev.38](https://github.com/Emil-Software/emilsoftware-utilities/compare/v2.0.0-dev.37...v2.0.0-dev.38) (2026-09-29)
 
 
