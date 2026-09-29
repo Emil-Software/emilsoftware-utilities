@@ -310,7 +310,7 @@ function handleAction(action: () => Promise<void>): void {
 }
 
 function render(markup: string): void {
-  closeHelp();
+  closeHelp(false);
   byId('view').innerHTML = markup;
 }
 
@@ -1325,9 +1325,10 @@ function bindCopyButtons(root: ParentNode): void {
   });
 }
 
-/** Icona "i" che apre la miniguida contestuale del campo. */
+/** Icona "i" che apre la miniguida contestuale del campo (trigger di popover non-modale). */
 function helpDot(key: string): string {
-  return `<button type="button" class="help-dot" data-help="${escapeHtml(key)}" aria-label="Aiuto: ${escapeHtml(HELP[key]?.title ?? key)}">i</button>`;
+  const title = HELP[key]?.title ?? key;
+  return `<button type="button" class="help-dot" data-help="${escapeHtml(key)}" aria-haspopup="dialog" aria-expanded="false" aria-controls="accessi-help-popover" aria-label="Informazioni: ${escapeHtml(title)}" title="Informazioni">i</button>`;
 }
 
 let helpPopover: HTMLElement | null = null;
@@ -1337,16 +1338,25 @@ function ensureHelpPopover(): HTMLElement {
   if (!helpPopover) {
     helpPopover = document.createElement('div');
     helpPopover.className = 'help-popover';
+    helpPopover.id = 'accessi-help-popover';
     helpPopover.hidden = true;
     helpPopover.setAttribute('role', 'dialog');
+    helpPopover.setAttribute('aria-modal', 'false');
+    helpPopover.tabIndex = -1;
     document.body.appendChild(helpPopover);
   }
   return helpPopover;
 }
 
-function closeHelp(): void {
-  if (helpPopover) helpPopover.hidden = true;
+/** Chiude il popover; `restoreFocus` riporta il focus al trigger quando la chiusura e esplicita. */
+function closeHelp(restoreFocus = true): void {
+  if (!helpPopover) return;
+  const wasOpen = !helpPopover.hidden;
+  helpPopover.hidden = true;
+  const anchor = helpAnchor;
+  if (anchor) anchor.setAttribute('aria-expanded', 'false');
   helpAnchor = null;
+  if (restoreFocus && wasOpen && anchor && document.contains(anchor)) anchor.focus();
 }
 
 /** Posiziona il popover sotto l'icona, correggendo i bordi dello schermo. */
@@ -1355,9 +1365,13 @@ function positionHelp(): void {
   const rect = helpAnchor.getBoundingClientRect();
   const width = helpPopover.offsetWidth;
   const height = helpPopover.offsetHeight;
-  const left = Math.max(8, Math.min(rect.right - width, window.innerWidth - width - 8));
+  const margin = 8;
+  const left = Math.max(margin, Math.min(rect.right - width, window.innerWidth - width - margin));
   let top = rect.bottom + 6;
-  if (top + height > window.innerHeight - 8) top = Math.max(8, rect.top - height - 6);
+  if (top + height > window.innerHeight - margin) {
+    const above = rect.top - height - 6;
+    top = above >= margin ? above : Math.max(margin, window.innerHeight - height - margin);
+  }
   helpPopover.style.left = `${left}px`;
   helpPopover.style.top = `${top}px`;
 }
@@ -1366,11 +1380,15 @@ function openHelp(anchor: HTMLElement): void {
   const entry = HELP[anchor.dataset.help ?? ''];
   if (!entry) return;
   const popover = ensureHelpPopover();
-  popover.innerHTML = `<div class="help-popover-head"><h4>${escapeHtml(entry.title)}</h4><button type="button" class="help-close" data-help-close aria-label="Chiudi">&times;</button></div><div class="help-popover-body">${entry.blocks.map(renderWikiBlock).join('')}</div>`;
+  if (helpAnchor && helpAnchor !== anchor) helpAnchor.setAttribute('aria-expanded', 'false');
+  popover.innerHTML = `<div class="help-popover-head"><h4 id="accessi-help-title">${escapeHtml(entry.title)}</h4><button type="button" class="help-close" data-help-close aria-label="Chiudi">&times;</button></div><div class="help-popover-body">${entry.blocks.map(renderWikiBlock).join('')}</div>`;
+  popover.setAttribute('aria-labelledby', 'accessi-help-title');
   popover.hidden = false;
   helpAnchor = anchor;
+  anchor.setAttribute('aria-expanded', 'true');
   bindCopyButtons(popover);
   positionHelp();
+  (popover.querySelector<HTMLElement>('.help-close') ?? popover).focus();
 }
 
 /** Indice laterale della wiki, raggruppato per area. */
@@ -1593,13 +1611,17 @@ window.addEventListener('popstate', () => {
 window.addEventListener('accessi-console-network', (event: Event) => {
   updateLoadingState((event as CustomEvent<{ active: boolean }>).detail.active);
 });
-// Tooltip di aiuto: apertura dall'icona "i", chiusura su click esterno o Esc.
+// Tooltip di aiuto: apertura/chiusura dall'icona "i", chiusura su click esterno o Esc.
 document.addEventListener('click', (event) => {
   const target = event.target as HTMLElement;
   const dot = target.closest<HTMLElement>('[data-help]');
   if (dot) {
     event.preventDefault();
-    openHelp(dot);
+    if (helpAnchor === dot && helpPopover && !helpPopover.hidden) {
+      closeHelp();
+    } else {
+      openHelp(dot);
+    }
     return;
   }
   if (target.closest('[data-help-close]')) {

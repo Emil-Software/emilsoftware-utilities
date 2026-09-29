@@ -102,7 +102,7 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
 .card h1 { margin: 0 0 var(--s2); }
 .card > p { margin: 0 0 var(--s5); color: var(--muted); }
 .card form { gap: var(--s4); }
-.card form button, .card > button { width: 100%; }
+.card form > button, .card > button { width: 100%; }
 .card > button { margin-top: var(--s3); }
 
 #console { display: grid; grid-template-columns: var(--sidebar-w) minmax(0, 1fr); gap: var(--gutter); align-items: start; }
@@ -555,12 +555,48 @@ article h3 { margin-bottom: var(--s2); }
 }
 
 /* Aiuto contestuale: icona "i" e popover con la miniguida del campo */
-.help-dot { display: inline-flex; align-items: center; justify-content: center; width: 18px; height: 18px; min-height: 0; margin-left: var(--s1); padding: 0; border: 1px solid var(--line-strong); border-radius: 50%; color: var(--muted); font-size: 11px; font-weight: 700; line-height: 1; background: var(--surface); vertical-align: middle; cursor: pointer; }
-.help-dot:hover, .help-dot:focus-visible { color: var(--brand-strong); border-color: var(--brand-line); background: var(--brand-soft); }
-.help-popover { position: fixed; z-index: 3000; width: min(460px, 94vw); max-height: 72vh; overflow: auto; padding: var(--s4); border: 1px solid var(--line); border-radius: var(--r-md); background: var(--surface); box-shadow: var(--shadow-md); }
+/* Trigger "i": auto-contenuto, non eredita la forma dei bottoni applicativi. */
+button.help-dot {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.125rem;
+  min-width: 1.125rem;
+  max-width: 1.125rem;
+  height: 1.125rem;
+  min-height: 1.125rem;
+  max-height: 1.125rem;
+  flex: 0 0 auto;
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  border: 1px solid var(--line-strong);
+  border-radius: 50%;
+  color: var(--muted);
+  font-family: inherit;
+  font-size: .6875rem;
+  font-weight: 700;
+  line-height: 1;
+  background: var(--surface);
+  vertical-align: text-top;
+  cursor: pointer;
+}
+button.help-dot:hover,
+button.help-dot:focus-visible { color: var(--brand-strong); border-color: var(--brand-line); background: var(--brand-soft); }
+button.help-dot:focus-visible { outline: 2px solid var(--brand-line); outline-offset: 1px; }
+
+/* Label "a blocchi" (caption + controllo): icona in alto a destra, senza rompere la griglia. */
+label { position: relative; }
+label:not(.check):not(.inline-field) > .help-dot { position: absolute; top: 0; right: 0; }
+label:not(.check):not(.inline-field):has(> .help-dot) { padding-right: 1.625rem; }
+/* Label flex: icona inline col testo. */
+.check > .help-dot,
+.inline-field > .help-dot { position: static; margin-left: var(--s1); }
+.help-popover { position: fixed; z-index: 3000; width: min(460px, 94vw); max-height: 72vh; overflow: auto; overscroll-behavior: contain; padding: var(--s4); border: 1px solid var(--line); border-radius: var(--r-md); background: var(--surface); box-shadow: var(--shadow-md); }
+.help-popover:focus { outline: none; }
 .help-popover-head { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--s3); margin-bottom: var(--s3); }
 .help-popover-head h4 { margin: 0; color: var(--ink); font-size: var(--fs-md); }
-.help-close { width: 28px; min-height: 28px; padding: 0; font-size: var(--fs-lg); line-height: 1; }
+.help-close { flex: 0 0 auto; width: 28px; min-width: 28px; min-height: 28px; padding: 0; font-size: var(--fs-lg); line-height: 1; }
 .help-popover-body { display: grid; gap: var(--s3); }
 .help-popover-body p { margin: 0; font-size: var(--fs-sm); line-height: 1.55; }
 .help-popover-body ul, .help-popover-body ol { display: grid; gap: var(--s1); margin: 0; padding-left: var(--s4); font-size: var(--fs-sm); }
