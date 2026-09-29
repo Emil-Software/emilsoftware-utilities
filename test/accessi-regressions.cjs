@@ -13,6 +13,8 @@ const { UserService } = require('../src/accessi-module/Services/UserService/User
 const { buildAuthenticatedTokenPayload, resolveCodiceUtenteFromTokenPayload, extractAccessiBearerToken } = require('../src/accessi-module/security/authenticatedToken');
 const { ensureSuperUser, ensureAdmin, ensureUserManagement, ensureConsoleAccess, ensureSelfOrSuperUser } = require('../src/accessi-module/security/accessControl');
 const { SchemaExportService } = require('../src/accessi-module/Services/SchemaExportService/SchemaExportService');
+const { AdminBootstrapService } = require('../src/accessi-module/Services/AdminBootstrapService/AdminBootstrapService');
+const adminBootstrap = require('../src/accessi-module/security/adminBootstrap');
 
 test('daily logs append across restart and rotate at local midnight even when idle', async t => {
   const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'accessi-logs-'));
@@ -166,4 +168,40 @@ test('schema export generates the complete DDL from the canonical schema', () =>
     assert.match(ddl.script, new RegExp(`CREATE TABLE ${table} \\(`));
     assert.match(ddl.script, new RegExp(`PK_${table} PRIMARY KEY`));
   }
+});
+
+test('admin bootstrap token is per-process and constant-time validated', () => {
+  adminBootstrap.clearAdminBootstrapToken();
+  const token = adminBootstrap.getOrCreateAdminBootstrapToken();
+  assert.equal(adminBootstrap.getOrCreateAdminBootstrapToken(), token);
+  assert.equal(adminBootstrap.isValidAdminBootstrapToken(token), true);
+  assert.equal(adminBootstrap.isValidAdminBootstrapToken('nope'), false);
+  assert.equal(adminBootstrap.isValidAdminBootstrapToken(undefined), false);
+  adminBootstrap.clearAdminBootstrapToken();
+  assert.equal(adminBootstrap.isValidAdminBootstrapToken(token), false);
+});
+
+test('admin bootstrap service creates a confirmed admin without email and invalidates the token', async () => {
+  adminBootstrap.clearAdminBootstrapToken();
+  const calls = { register: [], setPassword: [] };
+  const userService = { register: async (data, opts) => { calls.register.push([data, opts]); return 42; } };
+  const authService = { setPassword: async (code, pwd) => { calls.setPassword.push([code, pwd]); } };
+
+  const disabled = new AdminBootstrapService({ adminBootstrap: { enabled: false } }, userService, authService);
+  await assert.rejects(disabled.bootstrap({ token: 'x', email: 'a@b.c' }), /non e abilitato/);
+
+  const enabled = new AdminBootstrapService({ adminBootstrap: { enabled: true } }, userService, authService);
+  const token = adminBootstrap.getOrCreateAdminBootstrapToken();
+  await assert.rejects(enabled.bootstrap({ token: 'wrong', email: 'a@b.c' }), /Token di bootstrap non valido/);
+
+  const result = await enabled.bootstrap({ token, email: 'Admin@Example.com', nome: 'A', cognome: 'B' });
+  assert.equal(result.codiceUtente, 42);
+  assert.equal(result.email, 'admin@example.com');
+  assert.equal(result.passwordGenerated, true);
+  assert.ok(result.password && result.password.length >= 12);
+  assert.equal(calls.register[0][0].flagAdmin, true);
+  assert.equal(calls.register[0][0].flagSuper, true);
+  assert.equal(calls.register[0][1].initialState, 20);
+  assert.deepEqual(calls.setPassword[0], [42, result.password]);
+  await assert.rejects(enabled.bootstrap({ token, email: 'x@y.z' }), /Token di bootstrap non valido/);
 });

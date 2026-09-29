@@ -1,6 +1,7 @@
 ﻿import {
   assignPermissionsToUser,
   assignRolesToUser,
+  bootstrapAdmin,
   createFederatedUser,
   createFederatedProvider,
   createManagedUser,
@@ -58,6 +59,7 @@ import type {
   CreateFederatedUserRequest,
   CreateFederatedProviderRequest,
   AuthenticatedTokenPayloadDto,
+  BootstrapAdminResultDto,
   FiltriUtente,
   FederatedProviderResponseDto,
   GroupWithMenusEntity,
@@ -1525,6 +1527,31 @@ async function show(view: ConsoleView): Promise<void> {
 const loginForm = document.getElementById('login-form') as HTMLFormElement | null;
 if (loginForm) loginForm.onsubmit = loginView;
 byId('restart-login').onclick = resetLogin;
+const bootstrapAdminForm = document.getElementById('bootstrap-admin-form') as HTMLFormElement | null;
+if (bootstrapAdminForm) {
+  bootstrapAdminForm.onsubmit = async (event) => {
+    event.preventDefault();
+    const status = document.getElementById('bootstrap-admin-status');
+    try {
+      if (status) status.textContent = '';
+      const values = formValues(bootstrapAdminForm);
+      const fields = new FormData(bootstrapAdminForm);
+      const created = result<BootstrapAdminResultDto>(await bootstrapAdmin({
+        token: values.token ?? '',
+        email: values.email ?? '',
+        nome: values.nome || undefined,
+        cognome: values.cognome || undefined,
+        password: values.password || undefined,
+        superUser: fields.has('superUser'),
+      }));
+      const generated = created.password ? ` Password generata (copiala ora): ${created.password}` : '';
+      if (status) status.textContent = `Utente admin creato: ${created.email}.${generated} Ora accedi dal form principale.`;
+      bootstrapAdminForm.reset();
+    } catch (error) {
+      if (status) status.textContent = error instanceof Error ? error.message : 'Creazione non riuscita.';
+    }
+  };
+}
 byId<HTMLFormElement>('two-factor-form').onsubmit = async event => {
   event.preventDefault();
   if (!pendingChallenge) return;

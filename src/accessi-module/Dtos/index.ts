@@ -1,4 +1,5 @@
 export * from "./Abilitazione";
+export * from "./AdminBootstrapDtos";
 export * from "./AbilitazioneMenu";
 export * from "./AssignPermissionsToUserRequest";
 export * from "./AssignRolesToUserRequest";

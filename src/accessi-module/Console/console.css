@@ -633,3 +633,8 @@ article h3 { margin-bottom: var(--s2); }
 .sql-section { display: grid; gap: var(--s2); min-width: 0; }
 .sql-section-head { display: flex; align-items: center; justify-content: space-between; gap: var(--s2); }
 .sql-section-head h3 { margin: 0; color: var(--ink); }
+
+/* Bootstrap admin (schermata di login) */
+.bootstrap-admin { margin-top: var(--s4); padding: var(--s3); border: 1px dashed var(--line); border-radius: var(--r-md); background: var(--surface-sunken); }
+.bootstrap-admin summary { cursor: pointer; font-weight: 650; color: var(--ink-2); }
+.bootstrap-admin form { display: grid; gap: var(--s2); margin-top: var(--s3); }

@@ -204,6 +204,8 @@ _Ogni campo di configurazione con tipo, obbligo e note._
 | extensionFieldsOptions | ExtensionFieldsOptions\[\] | no | Tabelle esterne allegate al profilo. |
 | serviceTokens | \{ enabled, defaultTtlDays \} | no | Token macchina-a-macchina, abilitati per impostazione predefinita. |
 | catalogScripts | \{ enabled, folder, ... \} | no | Catalog migrations SQL eseguite dopo la riconciliazione dello schema. |
+| adminBootstrap | \{ enabled, superUser \} | no | Token casuale a ogni avvio per creare il primo admin dalla console. |
+| publicBaseUrl | string | no | Base URL usata solo per loggare console/swagger/API. |
 
 **Esempio corretto — Configurazione tipica**
 
@@ -812,6 +814,10 @@ La console è servita dal modulo su /api/accessi/console. Non ha stato proprio: 
 > [!NOTE]
 > **Accesso**
 > Apri /api/accessi/console e accedi con un utente con FLGSUPER o FLGADMIN. Le sezioni sono raggiungibili anche tramite deep link (per esempio /api/accessi/console/menu-e-gruppi/menu).
+
+> [!NOTE]
+> **Bootstrap admin**
+> Con adminBootstrap.enabled il backend stampa a ogni avvio un token casuale (monouso, valido fino al riavvio). Nella schermata di login della console trovi "Crea utente admin": incolla il token e crea il primo admin senza email di conferma. La password è opzionale: se assente viene generata e mostrata una sola volta.
 
 ---
 

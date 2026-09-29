@@ -11,6 +11,7 @@ import {
     setAccessiAuthService
 } from "./middleware/authenticateGen";
 import { registerAccessiModuleServices } from "./accessiRuntime";
+import { logAccessiStartup } from "./startupLog";
 import { createAccessiValidationPipe } from './security/accessiValidation';
 import { AccessiHttpExceptionFilter } from './security/AccessiHttpExceptionFilter';
 import { assertEmailConfigured } from './security/emailConfiguration';
@@ -101,6 +102,7 @@ export async function initializeAccessiModule(app: Application, options: Accessi
         const accessiServices = registerAccessiModuleServices(app, nestApp);
         app.locals.accessiAuthService = accessiServices.authenticateGenService;
         setAccessiAuthService(accessiServices.authenticateGenService);
+        logAccessiStartup(options);
         const elapsedMs = performance.now() - startedAt;
         logger.info(`Accessi initialized. Tempo totale bootstrap: ${elapsedMs.toFixed(2)} ms`);
 
@@ -141,6 +143,14 @@ export type {
 } from './Services/ServiceTokenService/ServiceTokenService';
 export { SchemaExportService } from './Services/SchemaExportService/SchemaExportService';
 export type { SchemaDdlResult, SchemaDdlSection, SchemaEntitiesResult } from './Services/SchemaExportService/SchemaExportService';
+export { AdminBootstrapService } from './Services/AdminBootstrapService/AdminBootstrapService';
+export type { BootstrapAdminResult } from './Services/AdminBootstrapService/AdminBootstrapService';
+export {
+    getOrCreateAdminBootstrapToken,
+    getAdminBootstrapToken,
+    clearAdminBootstrapToken,
+    isValidAdminBootstrapToken
+} from './security/adminBootstrap';
 export { ServiceTokenGuard, RequireServiceTokenScopes, getAccessiServiceToken } from './security/serviceTokenGuard';
 export { assertEmailConfigured, isEmailConfigured, AccessiEmailNotConfiguredError, ACCESSI_EMAIL_NOT_CONFIGURED } from './security/emailConfiguration';
 export { FederatedAuthService } from './federated-auth/FederatedAuthService';

@@ -328,6 +328,69 @@
         ]
       }
     },
+    "/api/accessi/auth/bootstrap-admin": {
+      "post": {
+        "description": "Endpoint pubblico ma protetto dal token di avvio: attivo solo con adminBootstrap.enabled. Crea un utente in stato confermato senza email, con flag admin (e super opzionale) e password fornita o generata.",
+        "operationId": "bootstrapAdmin",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BootstrapAdminRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BootstrapAdminResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Token di bootstrap non valido",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Bootstrap admin non abilitato",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Troppi tentativi",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Crea il primo utente admin (bootstrap)",
+        "tags": [
+          "Auth"
+        ]
+      }
+    },
     "/api/accessi/permission/roles": {
       "get": {
         "description": "Recupera tutti i ruoli presenti nel sistema con le relative voci di menu.",
@@ -4219,6 +4282,85 @@
         },
         "required": [
           "challengeId"
+        ]
+      },
+      "BootstrapAdminRequest": {
+        "type": "object",
+        "properties": {
+          "token": {
+            "type": "string",
+            "description": "Token di bootstrap stampato nel log di avvio del backend."
+          },
+          "email": {
+            "type": "string",
+            "example": "admin@example.com"
+          },
+          "nome": {
+            "type": "string",
+            "example": "Mario"
+          },
+          "cognome": {
+            "type": "string",
+            "example": "Rossi"
+          },
+          "password": {
+            "type": "string",
+            "description": "Password da impostare. Se assente viene generata e restituita una sola volta."
+          },
+          "superUser": {
+            "type": "boolean",
+            "description": "Crea anche un superutente (tutte le abilitazioni). Default true."
+          }
+        },
+        "required": [
+          "token",
+          "email"
+        ]
+      },
+      "BootstrapAdminResultDto": {
+        "type": "object",
+        "properties": {
+          "codiceUtente": {
+            "type": "number",
+            "example": 1
+          },
+          "email": {
+            "type": "string",
+            "example": "admin@example.com"
+          },
+          "password": {
+            "type": "string",
+            "description": "Password generata: presente solo se non e stata fornita nella richiesta."
+          },
+          "passwordGenerated": {
+            "type": "boolean",
+            "example": true
+          }
+        },
+        "required": [
+          "codiceUtente",
+          "email",
+          "passwordGenerated"
+        ]
+      },
+      "BootstrapAdminResponse": {
+        "type": "object",
+        "properties": {
+          "Status": {
+            "$ref": "#/components/schemas/Status"
+          },
+          "Message": {
+            "type": "string",
+            "example": "Dati recuperati con successo.",
+            "description": "Messaggio informativo restituito dalla libreria quando presente."
+          },
+          "Result": {
+            "$ref": "#/components/schemas/BootstrapAdminResultDto"
+          }
+        },
+        "required": [
+          "Status",
+          "Result"
         ]
       },
       "GetRolesResponse": {

@@ -165,6 +165,8 @@ export const WIKI_SECTIONS: WikiSection[] = [
           ['extensionFieldsOptions', 'ExtensionFieldsOptions[]', 'no', 'Tabelle esterne allegate al profilo.'],
           ['serviceTokens', '{ enabled, defaultTtlDays }', 'no', 'Token macchina-a-macchina, abilitati per impostazione predefinita.'],
           ['catalogScripts', '{ enabled, folder, ... }', 'no', 'Catalog migrations SQL eseguite dopo la riconciliazione dello schema.'],
+          ['adminBootstrap', '{ enabled, superUser }', 'no', 'Token casuale a ogni avvio per creare il primo admin dalla console.'],
+          ['publicBaseUrl', 'string', 'no', 'Base URL usata solo per loggare console/swagger/API.'],
         ],
       ),
       good('ts', [
@@ -631,6 +633,7 @@ export const WIKI_SECTIONS: WikiSection[] = [
       note('info', `Superutente (FLGSUPER)`, `Riceve TUTTE le abilitazioni al livello massimo (30) dopo il login. In console vede solo la sezione Utenti e gestisce utenti, ruoli e grant.`),
       note('info', `Admin (FLGADMIN)`, `Accede a tutta la console (catalogo, token, SSO, utenti) ma NON conferisce abilitazioni: i menu restano quelli assegnati via ABILITAZIONI/RUOLI_MNU.`),
       note('info', `Accesso`, `Apri /api/accessi/console e accedi con un utente con FLGSUPER o FLGADMIN. Le sezioni sono raggiungibili anche tramite deep link (per esempio /api/accessi/console/menu-e-gruppi/menu).`),
+      note('info', `Bootstrap admin`, `Con adminBootstrap.enabled il backend stampa a ogni avvio un token casuale (monouso, valido fino al riavvio). Nella schermata di login della console trovi "Crea utente admin": incolla il token e crea il primo admin senza email di conferma. La password è opzionale: se assente viene generata e mostrata una sola volta.`),
     ],
   },
   // -------------------------------------------------------------------------

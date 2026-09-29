@@ -8,6 +8,8 @@ import type {
   ActionResponse,
   AssignPermissionsToUserRequest,
   AssignRolesToUserRequest,
+  BootstrapAdminRequest,
+  BootstrapAdminResponse,
   ConfirmResetPasswordRequest,
   CreateFederatedIdentityRequest,
   CreateFederatedProviderRequest,
@@ -247,6 +249,32 @@ return accessiFetch<Promise<resendTwoFactorResponse>>(getResendTwoFactorUrl(),
     method: 'POST',
     body: JSON.stringify(
       resendTwoFactorRequest,)
+  }
+);}
+
+
+/**
+ * Endpoint pubblico ma protetto dal token di avvio: attivo solo con adminBootstrap.enabled. Crea un utente in stato confermato senza email, con flag admin (e super opzionale) e password fornita o generata.
+ * @summary Crea il primo utente admin (bootstrap)
+ */
+export type bootstrapAdminResponse = {
+  data: BootstrapAdminResponse;
+  status: number;
+}
+
+export const getBootstrapAdminUrl = () => {
+
+
+  return `/api/accessi/auth/bootstrap-admin`
+}
+
+export const bootstrapAdmin = async (bootstrapAdminRequest: BootstrapAdminRequest, options?: RequestInit): Promise<bootstrapAdminResponse> => {
+return accessiFetch<Promise<bootstrapAdminResponse>>(getBootstrapAdminUrl(),
+  {      
+    ...options,
+    method: 'POST',
+    body: JSON.stringify(
+      bootstrapAdminRequest,)
   }
 );}
 

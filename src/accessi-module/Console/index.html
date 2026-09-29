@@ -37,6 +37,20 @@
       </form>
       <button id="restart-login" type="button" class="secondary" hidden>Ricomincia</button>
       <p id="login-error" class="error" role="alert"></p>
+      <details id="bootstrap-admin-panel" class="bootstrap-admin">
+        <summary>Crea utente admin (bootstrap)</summary>
+        <p class="form-help">Usa il token di avvio stampato nel log del backend. Disponibile solo se <code>adminBootstrap.enabled</code> è attivo. Non richiede conferma email.</p>
+        <form id="bootstrap-admin-form">
+          <label>Token di avvio<input name="token" required autocomplete="off" spellcheck="false"></label>
+          <label>Email<input name="email" type="email" required autocomplete="off"></label>
+          <label>Nome<input name="nome"></label>
+          <label>Cognome<input name="cognome"></label>
+          <label>Password (opzionale)<input name="password" type="password" autocomplete="new-password"></label>
+          <label class="check"><input name="superUser" type="checkbox" checked> Crea anche come superutente</label>
+          <button type="submit">Crea utente admin</button>
+          <p id="bootstrap-admin-status" class="form-help" role="status"></p>
+        </form>
+      </details>
     </section>
 
     <section id="console" hidden>

@@ -7,6 +7,8 @@ import { RestUtilities } from '../../Utilities';
 import type { AccessiOptions } from '../AccessiModule';
 import {
   ActionResponse,
+  BootstrapAdminRequest,
+  BootstrapAdminResponse,
   ConfirmResetPasswordRequest,
   ErrorResponse,
   GetUserByTokenRequest,
@@ -16,6 +18,7 @@ import {
   PasswordExpiredResponse,
 } from '../Dtos';
 import { AuthService, PASSWORD_LOGIN_DISABLED } from '../Services/AuthService/AuthService';
+import { AdminBootstrapService } from '../Services/AdminBootstrapService/AdminBootstrapService';
 import {
   checkPublicAuthRateLimit,
   sendPublicAuthRateLimitExceeded,
@@ -32,6 +35,7 @@ export class AuthController {
 
   constructor(
     private readonly authService: AuthService,
+    private readonly adminBootstrapService: AdminBootstrapService,
     @Inject('ACCESSI_OPTIONS') private readonly options: AccessiOptions,
   ) {}
 
@@ -229,6 +233,29 @@ export class AuthController {
       const limit = checkPublicAuthRateLimit(this.options, 'twoFactorResend', request, [body.challengeId]);
       if (!limit.allowed) return sendPublicAuthRateLimitExceeded(res, limit.retryAfterSeconds);
       return RestUtilities.sendBaseResponse(res, await this.authService.resendTwoFactor(body.challengeId));
+    } catch (error) {
+      return RestUtilities.sendErrorMessage(res, error, AuthController.name, error instanceof HttpException ? error.getStatus() : 500);
+    }
+  }
+
+  @Post('bootstrap-admin')
+  @ApiOperation({
+    summary: 'Crea il primo utente admin (bootstrap)',
+    operationId: 'bootstrapAdmin',
+    description:
+      'Endpoint pubblico ma protetto dal token di avvio: attivo solo con adminBootstrap.enabled. ' +
+      'Crea un utente in stato confermato senza email, con flag admin (e super opzionale) e password fornita o generata.',
+  })
+  @ApiBody({ type: BootstrapAdminRequest })
+  @ApiResponse({ status: 200, type: BootstrapAdminResponse })
+  @ApiResponse({ status: 401, description: 'Token di bootstrap non valido', type: ErrorResponse })
+  @ApiResponse({ status: 403, description: 'Bootstrap admin non abilitato', type: ErrorResponse })
+  @ApiResponse({ status: 429, description: 'Troppi tentativi', type: ErrorResponse })
+  async bootstrapAdmin(@Req() request: Request, @Body() body: BootstrapAdminRequest, @Res() res: Response) {
+    try {
+      const limit = checkPublicAuthRateLimit(this.options, 'adminBootstrap', request);
+      if (!limit.allowed) return sendPublicAuthRateLimitExceeded(res, limit.retryAfterSeconds);
+      return RestUtilities.sendBaseResponse(res, await this.adminBootstrapService.bootstrap(body));
     } catch (error) {
       return RestUtilities.sendErrorMessage(res, error, AuthController.name, error instanceof HttpException ? error.getStatus() : 500);
     }

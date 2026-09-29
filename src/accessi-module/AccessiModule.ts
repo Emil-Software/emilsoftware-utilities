@@ -1,4 +1,4 @@
-import { TwoFactorService } from './Services/TwoFactorService/TwoFactorService';
+﻿import { TwoFactorService } from './Services/TwoFactorService/TwoFactorService';
 /**
  * Modulo che gestisce le operazioni di accesso degli utenti, incluse le rotte, il controller e il modello.
  *
@@ -30,6 +30,7 @@ import { ServiceTokenService } from './Services/ServiceTokenService/ServiceToken
 import { ServiceTokenGuard } from './security/serviceTokenGuard';
 import { SchemaController } from './Controllers/SchemaController';
 import { SchemaExportService } from './Services/SchemaExportService/SchemaExportService';
+import { AdminBootstrapService } from './Services/AdminBootstrapService/AdminBootstrapService';
 import { assertEmailConfigured } from './security/emailConfiguration';
 
 /** JWT emesso da Accessi dopo un login locale o SSO. Non riutilizzare il segreto del provider SSO. */
@@ -86,6 +87,19 @@ export interface PublicAuthRateLimitOptions {
   getUserByToken?: PublicAuthRateLimitRuleOptions;
   twoFactorVerify?: PublicAuthRateLimitRuleOptions;
   twoFactorResend?: PublicAuthRateLimitRuleOptions;
+  adminBootstrap?: PublicAuthRateLimitRuleOptions;
+}
+
+/**
+ * Bootstrap del primo admin. Se abilitato, Accessi genera un token casuale a ogni avvio del
+ * processo, lo stampa nel log e lo accetta sull'endpoint pubblico `POST /accessi/auth/bootstrap-admin`.
+ * Serve a creare il primo utente admin senza email di conferma e senza un admin gia esistente.
+ */
+export interface AdminBootstrapOptions {
+  /** Abilita il bootstrap admin. Default `false`. */
+  enabled?: boolean;
+  /** Crea l'utente come superutente oltre che admin. Default `true`. */
+  superUser?: boolean;
 }
 
 /** Controls the legacy public username/password registration endpoint. Disabled by default. */
@@ -155,7 +169,7 @@ export interface AccessiOptions {
   /** Connessione Firebird alla base dati Accessi. */
   databaseOptions: Options;
   /**
-   * Basepath del sito es: 'http://www.il-mio-sito.it/nome-progetto(se c'è)'
+   * Basepath del sito es: 'http://www.il-mio-sito.it/nome-progetto(se c'Ã¨)'
    */
   confirmationEmailUrl: string;
   /**
@@ -193,6 +207,10 @@ export interface AccessiOptions {
   serviceTokens?: ServiceTokenOptions;
   /** Catalog migrations applicative eseguite dopo la riconciliazione dello schema. */
   catalogScripts?: CatalogScriptsOptions;
+  /** Bootstrap del primo admin tramite token casuale stampato a ogni avvio. */
+  adminBootstrap?: AdminBootstrapOptions;
+  /** Base URL pubblica usata solo per loggare gli indirizzi (console, swagger, API). */
+  publicBaseUrl?: string;
 }
 
 @Global()
@@ -209,8 +227,8 @@ export interface AccessiOptions {
     ServiceTokenController,
     SchemaController,
   ],
-  providers: [AuthService, TwoFactorService, UserService, EmailService, PermissionService, FiltriService, ConfiguratorService, JwtSimpleGuard, AuthenticateGenService, AccessiDatabaseUpdater, FederatedAuthService, ServiceTokenService, ServiceTokenGuard, SchemaExportService],
-  exports: [AuthService, UserService, EmailService, PermissionService, FiltriService, ConfiguratorService, JwtSimpleGuard, AuthenticateGenService, FederatedAuthService, ServiceTokenService, ServiceTokenGuard, SchemaExportService],
+  providers: [AuthService, TwoFactorService, UserService, EmailService, PermissionService, FiltriService, ConfiguratorService, JwtSimpleGuard, AuthenticateGenService, AccessiDatabaseUpdater, FederatedAuthService, ServiceTokenService, ServiceTokenGuard, SchemaExportService, AdminBootstrapService],
+  exports: [AuthService, UserService, EmailService, PermissionService, FiltriService, ConfiguratorService, JwtSimpleGuard, AuthenticateGenService, FederatedAuthService, ServiceTokenService, ServiceTokenGuard, SchemaExportService, AdminBootstrapService],
 })
 export class AccessiModule {
   /**
@@ -242,9 +260,7 @@ export class AccessiModule {
         AccessiDatabaseUpdater,
         FederatedAuthService,
         ServiceTokenService,
-        ServiceTokenGuard,
-        SchemaExportService
-      ],
+        ServiceTokenGuard, SchemaExportService, AdminBootstrapService],
       exports: [
         'ACCESSI_OPTIONS',
         AuthService,
@@ -257,9 +273,7 @@ export class AccessiModule {
         AuthenticateGenService,
         FederatedAuthService,
         ServiceTokenService,
-        ServiceTokenGuard,
-        SchemaExportService
-      ],
+        ServiceTokenGuard, SchemaExportService, AdminBootstrapService],
     };
   }
 }
