@@ -1,3 +1,10 @@
+# [2.0.0-dev.38](https://github.com/Emil-Software/emilsoftware-utilities/compare/v2.0.0-dev.37...v2.0.0-dev.38) (2026-09-29)
+
+
+### Features
+
+* **accessi:** log indirizzi di avvio e bootstrap del primo admin da console ([5c2480c](https://github.com/Emil-Software/emilsoftware-utilities/commit/5c2480c3c0d6cb86a94a5e9253f24c8d2a6708b2))
+
 # [2.0.0-dev.37](https://github.com/Emil-Software/emilsoftware-utilities/compare/v2.0.0-dev.36...v2.0.0-dev.37) (2026-09-28)
 
 
