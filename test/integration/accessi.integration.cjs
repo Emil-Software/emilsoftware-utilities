@@ -112,10 +112,17 @@ test('registrazione, password e login funzionano su DB reale', async (t) => {
 
   const email = uniqueEmail('login');
   const codiceUtente = await services.userService.register(
-    { email, nome: 'Int', cognome: 'Test' },
+    { email, nome: 'Int', cognome: 'Test', paginaDefault: '/dashboard' },
     { initialState: StatoRegistrazione.CONF },
   );
   assert.ok(codiceUtente > 0);
+
+  // PAGDEF: persistito, riletto e aggiornato.
+  const profile = await services.userService.getUserByEmail(email);
+  assert.equal(profile?.paginaDefault, '/dashboard');
+  await services.userService.updateUser(codiceUtente, { paginaDefault: '/report' });
+  const users = await services.userService.getUsers({ codiceUtente });
+  assert.equal(users[0]?.utente?.paginaDefault, '/report');
 
   await services.authService.setPassword(codiceUtente, 'Password-123');
   const login = await services.authService.login({ email, password: 'Password-123' });

@@ -592,7 +592,7 @@ fetch("/api/accessi/user/register", {
 
 > [!NOTE]
 > **Campi di dominio**
-> UTENTI\_CONFIG contiene solo i flag di dominio Accessi: FLGSUPER, FLGADMIN, FLG2FATT (2FA), FLGPWDLESS (passwordless) e FLGPASSWORD (login locale). I flag/colonne applicativi (FLGMOP, FLGPIANA, FLGADDETTI, FLGOSPITI, FLGPIANARFID, FLGCONTA, FLGCUBI, FLGCICLPASS, FLGDIPENDENTI, FLGINVENTARI, CAUMOV, NUMMAC, RAGSOCCLI, PAGDEF, ENABLEIA, CELLUTE e NOMECAMPO) sono stati rimossi: i backend devono gestirli in tabelle proprie. Il telefono canonico e UTENTI\_CONFIG.CELLULARE.
+> UTENTI\_CONFIG contiene i campi di dominio Accessi: FLGSUPER, FLGADMIN, FLG2FATT (2FA), FLGPWDLESS (passwordless), FLGPASSWORD (login locale), CODLINGUA, CELLULARE, PAGDEF (pagina di default) e JSON\_METADATA. I flag/colonne applicativi (FLGMOP, FLGPIANA, FLGADDETTI, FLGOSPITI, FLGPIANARFID, FLGCONTA, FLGCUBI, FLGCICLPASS, FLGDIPENDENTI, FLGINVENTARI, CAUMOV, NUMMAC, RAGSOCCLI, ENABLEIA, CELLUTE e NOMECAMPO) sono stati rimossi: i backend devono gestirli in tabelle proprie. Il telefono canonico e UTENTI\_CONFIG.CELLULARE.
 
 > [!NOTE]
 > **Autorizzazioni**

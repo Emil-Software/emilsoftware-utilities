@@ -3852,6 +3852,13 @@
             "example": "+393401234567",
             "nullable": true
           },
+          "paginaDefault": {
+            "type": "string",
+            "description": "Pagina di default mostrata all'utente dopo il login (percorso o codice pagina).",
+            "example": "/dashboard",
+            "maxLength": 50,
+            "nullable": true
+          },
           "flagSuper": {
             "type": "boolean",
             "description": "Flag superutente.",
@@ -5012,6 +5019,13 @@
             "example": "+393401234567",
             "nullable": true
           },
+          "paginaDefault": {
+            "type": "string",
+            "description": "Pagina di default mostrata all'utente dopo il login (percorso o codice pagina).",
+            "example": "/dashboard",
+            "maxLength": 50,
+            "nullable": true
+          },
           "avatar": {
             "type": "string",
             "description": "Avatar dell'utente.",
@@ -5126,6 +5140,13 @@
             "type": "string",
             "description": "Numero di cellulare.",
             "example": "+393401234567",
+            "nullable": true
+          },
+          "paginaDefault": {
+            "type": "string",
+            "description": "Pagina di default mostrata all'utente dopo il login (percorso o codice pagina).",
+            "example": "/dashboard",
+            "maxLength": 50,
             "nullable": true
           },
           "flagSuper": {

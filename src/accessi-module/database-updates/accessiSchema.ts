@@ -4,7 +4,7 @@ export interface SchemaTable {
   primaryKey: string[];
 }
 
-export const ACCESSI_SCHEMA_VERSION = '1.11.0';
+export const ACCESSI_SCHEMA_VERSION = '1.11.1';
 export const ACCESSI_VERSION_KEY = 'AccessiVersion';
 
 /**
@@ -35,7 +35,7 @@ export const accessiObsoleteColumns: Record<string, readonly string[]> = {
   UTENTI_CONFIG: [
     'FLGMOP', 'FLGPIANA', 'FLGADDETTI', 'FLGOSPITI', 'FLGPIANARFID',
     'FLGCONTA', 'FLGCUBI', 'FLGCICLPASS', 'FLGDIPENDENTI', 'FLGINVENTARI',
-    'CAUMOV', 'NUMMAC', 'RAGSOCCLI', 'PAGDEF',
+    'CAUMOV', 'NUMMAC', 'RAGSOCCLI',
   ],
   MENU_GRP: ['NOMECAMPO'],
 };
@@ -50,7 +50,7 @@ export const accessiTables: Record<string, SchemaTable> = {
     CODUTE: 'INTEGER NOT NULL', COGNOME: 'VARCHAR(50)', NOME: 'VARCHAR(50)', AVATAR: 'VARCHAR(30)',
     FLG2FATT: 'SMALLINT DEFAULT 0', FLGPWDLESS: 'SMALLINT DEFAULT 0 NOT NULL', FLGPASSWORD: 'SMALLINT DEFAULT 1 NOT NULL',
     CODLINGUA: "VARCHAR(2) DEFAULT 'IT'", FLGSUPER: 'SMALLINT DEFAULT 0', FLGADMIN: 'SMALLINT DEFAULT 0',
-    CELLULARE: 'VARCHAR(30)', JSON_METADATA: 'BLOB SUB_TYPE 1',
+    CELLULARE: 'VARCHAR(30)', PAGDEF: 'VARCHAR(50)', JSON_METADATA: 'BLOB SUB_TYPE 1',
   }, primaryKey: ['CODUTE'] },
   UTENTI_PWD: { columns: { CODUTE: 'INTEGER NOT NULL', PWD: 'VARCHAR(255)' }, primaryKey: ['CODUTE'] },
   UTENTI_OLDPWD: { columns: { CODUTE: 'INTEGER NOT NULL', OLDPWD: 'VARCHAR(255)' }, primaryKey: ['CODUTE'] },

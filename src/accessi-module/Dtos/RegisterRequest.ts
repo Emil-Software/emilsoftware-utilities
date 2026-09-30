@@ -49,6 +49,18 @@ export class RegisterRequest extends OmitType(FiltriUtente, ['codUte'] as const)
   @Length(1, 50, { message: "Il cellulare deve essere compreso tra 1 e 50 caratteri." })
   cellulare?: string | null;
 
+  @ApiPropertyOptional({
+    description: "Pagina di default mostrata all'utente dopo il login (percorso o codice pagina).",
+    type: String,
+    example: "/dashboard",
+    maxLength: 50,
+    nullable: true,
+  })
+  @IsOptional()
+  @IsString({ message: "La pagina di default deve essere una stringa." })
+  @Length(1, 50, { message: "La pagina di default non puo superare 50 caratteri." })
+  paginaDefault?: string | null;
+
   @ApiPropertyOptional({ description: "Flag superutente.", example: false })
   @IsOptional()
   @IsBoolean({ message: "Il flag superutente deve essere booleano." })

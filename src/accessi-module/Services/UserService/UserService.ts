@@ -181,6 +181,7 @@ export class UserService {
                 G.FLGPWDLESS as passwordless_login_enabled,
                 G.CODLINGUA as codice_lingua,
                 G.CELLULARE as cellulare,
+                G.PAGDEF as pagina_default,
                 G.FLGSUPER as flag_super, 
                 G.FLGADMIN as flag_admin,
                 COALESCE(G.FLGPASSWORD, 1) as password_login_enabled,
@@ -399,6 +400,7 @@ export class UserService {
                 C.FLGPWDLESS AS passwordless_login_enabled,
                 C.CODLINGUA AS codice_lingua, 
                 C.CELLULARE AS cellulare, 
+                C.PAGDEF AS pagina_default,
                 C.FLGSUPER AS flag_super,
                 C.FLGADMIN AS flag_admin,
                 COALESCE(C.FLGPASSWORD, 1) AS password_login_enabled
@@ -502,6 +504,11 @@ export class UserService {
         {
           key: 'avatar',
           dbField: 'AVATAR',
+          transform: (v) => String(v),
+        },
+        {
+          key: 'paginaDefault',
+          dbField: 'PAGDEF',
           transform: (v) => String(v),
         },
         {
@@ -663,6 +670,10 @@ export class UserService {
       if (user.cellulare !== undefined) {
         utentiConfigUpdates.push('cellulare = ?');
         utentiConfigParams.push(user.cellulare);
+      }
+      if (user.paginaDefault !== undefined) {
+        utentiConfigUpdates.push('PAGDEF = ?');
+        utentiConfigParams.push(user.paginaDefault);
       }
       if (allowPrivilegedChanges && user.flagSuper !== undefined) {
         utentiConfigUpdates.push('flgsuper = ?');

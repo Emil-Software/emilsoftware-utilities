@@ -66,6 +66,12 @@ export interface UserDto {
   nome?: string;
   /** Numero del reparto associato */
   numRep?: number;
+  /**
+   * Pagina di default mostrata all'utente dopo il login (percorso o codice pagina).
+   * @maxLength 50
+   * @nullable
+   */
+  paginaDefault?: string | null;
   /** Consente accesso con il solo codice email. Richiede flagDueFattori e viene gestito dagli amministratori. */
   passwordlessLoginEnabled?: boolean;
   /** Abilita il login locale con password. Se false, l utente puo autenticarsi solo tramite identita SSO attive. */

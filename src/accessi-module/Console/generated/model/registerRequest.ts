@@ -46,6 +46,12 @@ export interface RegisterRequest {
   nome?: string;
   /** Numero del reparto associato */
   numRep?: number;
+  /**
+   * Pagina di default mostrata all'utente dopo il login (percorso o codice pagina).
+   * @maxLength 50
+   * @nullable
+   */
+  paginaDefault?: string | null;
   /** Permessi assegnati all'utente. */
   permissions?: Permission[];
   /** Progressivo identificativo del filtro */

@@ -163,6 +163,13 @@ export const HELP: Record<string, HelpEntry> = {
       note('warn', 'Non sono due fattori', `L'accesso con il solo codice è autenticazione tramite possesso della casella email: un solo fattore.`),
     ],
   },
+  'user-default-page': {
+    title: 'Pagina di default',
+    blocks: [
+      p(`Percorso o codice della pagina verso cui indirizzare l'utente dopo il login. Esempio: /dashboard oppure la chiave di una pagina gestita dal frontend.`),
+      p(`E una stringa libera (massimo 50 caratteri): la libreria la conserva e la restituisce nel profilo; l'instradamento effettivo lo decide il frontend.`),
+    ],
+  },
   'user-state': {
     title: 'Stato di registrazione',
     blocks: [

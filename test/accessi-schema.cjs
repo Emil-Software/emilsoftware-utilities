@@ -62,8 +62,8 @@ integration('fresh database: generic schema, actual user operations and idempote
   await Updater.run(o);
   assert.deepEqual(await Updater.inspectSchema(o), { compatible: true, issues: [] });
   const columns = await query(o, "SELECT TRIM(RDB$FIELD_NAME) AS NAME FROM RDB$RELATION_FIELDS WHERE RDB$RELATION_NAME IN ('UTENTI', 'UTENTI_CONFIG', 'FILTRI', 'MENU_GRP')");
-  for (const name of ['FLGADMIN', 'FLG2FATT', 'FLGPWDLESS', 'FLGPASSWORD', 'CELLULARE', 'IDXPOS', 'CODVET', 'NUMREP']) assert(columns.some(c => c.NAME === name), `colonna mancante: ${name}`);
-  for (const name of ['FLGADMINCONFIG', 'NUMMAC', 'RAGSOCCLI', 'CAUMOV', 'FLGMOP', 'FLGPIANA', 'FLGINVENTARI', 'FLGDIPENDENTI', 'ENABLEIA', 'PAGDEF', 'NOMECAMPO', 'CELLUTE']) assert(!columns.some(c => c.NAME === name), `colonna ibrida non rimossa: ${name}`);
+  for (const name of ['FLGADMIN', 'FLG2FATT', 'FLGPWDLESS', 'FLGPASSWORD', 'CELLULARE', 'PAGDEF', 'IDXPOS', 'CODVET', 'NUMREP']) assert(columns.some(c => c.NAME === name), `colonna mancante: ${name}`);
+  for (const name of ['FLGADMINCONFIG', 'NUMMAC', 'RAGSOCCLI', 'CAUMOV', 'FLGMOP', 'FLGPIANA', 'FLGINVENTARI', 'FLGDIPENDENTI', 'ENABLEIA', 'NOMECAMPO', 'CELLUTE']) assert(!columns.some(c => c.NAME === name), `colonna ibrida non rimossa: ${name}`);
   for (const table of ['UTENTI', 'MENU', 'FILTRI_TIPO', 'SSO_PROVIDER']) assert.equal((await query(o, `SELECT COUNT(*) AS N FROM ${table}`))[0].N, 0);
   const filters = new FiltriService(o);
   const users = new UserService(o, {}, new PermissionService(o), filters);
@@ -102,7 +102,7 @@ integration('legacy partial schema: preserve host data/version and advance seque
     "INSERT INTO UTENTI VALUES (278, 'legacy@example.test')",
     'CREATE TABLE UTENTI_CONFIG (CODUTE INTEGER NOT NULL PRIMARY KEY, NUMMAC INTEGER, RAGSOCCLI VARCHAR(100), FLGADMINCONFIG SMALLINT DEFAULT 0, FLG2FATT SMALLINT DEFAULT 0, FLGPASSWORD SMALLINT)',
     "INSERT INTO UTENTI_CONFIG VALUES (278, 12, 'Host data', 1, 1, NULL)",
-    'CREATE TABLE FILTRI (CODUTE INTEGER NOT NULL, PROG INTEGER NOT NULL, CODVET INTEGER, IDXPOS SMALLINT, PRIMARY KEY (CODUTE, PROG))',
+    'CREATE TABLE FILTRI (CODUTE INTEGER NOT NULL, PROG INTEGER NOT NULL, CODVET INTEGER, IDXPOS INTEGER, PRIMARY KEY (CODUTE, PROG))',
     'INSERT INTO FILTRI VALUES (278, 1, 57, 8)',
     'CREATE TABLE ACCESSI_2FA (CHALLENGE_ID VARCHAR(64) CHARACTER SET ASCII NOT NULL)',
     createGeneratorSql(await engineMajor(o), 'GEN_UTENTI_ID'),
@@ -113,6 +113,7 @@ integration('legacy partial schema: preserve host data/version and advance seque
   const configColumns = (await query(o, "SELECT TRIM(RDB$FIELD_NAME) AS NAME FROM RDB$RELATION_FIELDS WHERE RDB$RELATION_NAME = 'UTENTI_CONFIG'")).map(c => c.NAME);
   for (const name of ['NUMMAC', 'RAGSOCCLI', 'FLGADMINCONFIG']) assert(!configColumns.includes(name), `colonna ibrida non rimossa: ${name}`);
   assert(configColumns.includes('FLGADMIN'));
+  assert(configColumns.includes('PAGDEF'), 'la pagina di default deve essere ricreata se assente');
   const config = (await query(o, 'SELECT FLGADMIN, FLG2FATT, FLGPASSWORD, FLGPWDLESS FROM UTENTI_CONFIG'))[0];
   assert.deepEqual(config, { FLGADMIN: 1, FLG2FATT: 1, FLGPASSWORD: 1, FLGPWDLESS: 0 });
   await exec(o, "INSERT INTO UTENTI (USRNAME) VALUES ('next@example.test')");
