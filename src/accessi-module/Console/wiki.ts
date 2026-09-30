@@ -228,6 +228,7 @@ export const WIKI_SECTIONS: WikiSection[] = [
       ]),
       code('bash', `npm run db:update:accessi   # riconcilia lo schema\nnpm run db:check:accessi    # verifica senza modificare`, 'CLI schema'),
       note('warn', `Versioni`, `La libreria richiede uno schema compatibile con la versione corrente (ACCESSI_SCHEMA_VERSION). Se la verifica fallisce, leggi il codice errore ACCESSI_DATABASE_SCHEMA_OUTDATED ed esegui db:update:accessi.`),
+      note('info', `Schema esatto`, `La riconciliazione allinea le tabelle Accessi a "niente in piu, niente in meno": le colonne non previste vengono segnalate come incompatibili e rimosse automaticamente (dopo rename e copie dei dati legacy). Gli indici, i trigger e i CHECK extra non previsti non vengono tolti, ma un indice non previsto su una tabella Accessi viene riportato come avviso senza bloccare l'avvio.`),
     ],
   },
   // -------------------------------------------------------------------------

@@ -60,7 +60,7 @@ const createGeneratorSql = (major, name) => major >= 3 ? `CREATE SEQUENCE ${name
 integration('fresh database: generic schema, actual user operations and idempotent rerun', async t => {
   const o = await database(t);
   await Updater.run(o);
-  assert.deepEqual(await Updater.inspectSchema(o), { compatible: true, issues: [] });
+  assert.deepEqual(await Updater.inspectSchema(o), { compatible: true, issues: [], warnings: [] });
   const columns = await query(o, "SELECT TRIM(RDB$FIELD_NAME) AS NAME FROM RDB$RELATION_FIELDS WHERE RDB$RELATION_NAME IN ('UTENTI', 'UTENTI_CONFIG', 'FILTRI', 'MENU_GRP')");
   for (const name of ['FLGADMIN', 'FLG2FATT', 'FLGPWDLESS', 'FLGPASSWORD', 'CELLULARE', 'PAGDEF', 'IDXPOS', 'CODVET', 'NUMREP']) assert(columns.some(c => c.NAME === name), `colonna mancante: ${name}`);
   for (const name of ['FLGADMINCONFIG', 'NUMMAC', 'RAGSOCCLI', 'CAUMOV', 'FLGMOP', 'FLGPIANA', 'FLGINVENTARI', 'FLGDIPENDENTI', 'ENABLEIA', 'NOMECAMPO', 'CELLUTE']) assert(!columns.some(c => c.NAME === name), `colonna ibrida non rimossa: ${name}`);
@@ -125,6 +125,29 @@ integration('legacy partial schema: preserve host data/version and advance seque
   assert.equal(user.codVet, 57);
   await filters.upsertFiltriUtente(278, { codVet: 58 });
   assert.equal((await filters.getFiltriUser(278))[0].codVet, 58);
+});
+
+integration('schema esatto: colonne estranee segnalate e rimosse, indici extra solo segnalati', async t => {
+  const o = await database(t);
+  await Updater.run(o);
+  await exec(o, 'ALTER TABLE UTENTI_CONFIG ADD COLONNA_ESTRANEA VARCHAR(20)');
+  await exec(o, 'ALTER TABLE UTENTI ADD CAMPO_X INTEGER');
+  await exec(o, 'CREATE INDEX IDX_ESTRANEO ON UTENTI (USRNAME)');
+  const report = await Updater.inspectSchema(o);
+  assert.equal(report.compatible, false);
+  assert(report.issues.some(i => i.includes('UTENTI_CONFIG.COLONNA_ESTRANEA')), 'colonna estranea UTENTI_CONFIG non segnalata');
+  assert(report.issues.some(i => i.includes('UTENTI.CAMPO_X')), 'colonna estranea UTENTI non segnalata');
+  assert(report.warnings.some(w => w.includes('IDX_ESTRANEO')), 'indice extra non segnalato');
+  await Updater.run(o);
+  const after = await Updater.inspectSchema(o);
+  assert.equal(after.compatible, true);
+  assert.deepEqual(after.issues, []);
+  assert(after.warnings.some(w => w.includes('IDX_ESTRANEO')), 'indice extra deve restare solo come avviso');
+  const configColumns = (await query(o, "SELECT TRIM(RDB$FIELD_NAME) AS NAME FROM RDB$RELATION_FIELDS WHERE RDB$RELATION_NAME = 'UTENTI_CONFIG'")).map(c => c.NAME);
+  assert(!configColumns.includes('COLONNA_ESTRANEA'));
+  const userColumns = (await query(o, "SELECT TRIM(RDB$FIELD_NAME) AS NAME FROM RDB$RELATION_FIELDS WHERE RDB$RELATION_NAME = 'UTENTI'")).map(c => c.NAME);
+  assert(!userColumns.includes('CAMPO_X'));
+  assert.equal((await query(o, "SELECT COUNT(*) AS N FROM RDB$INDICES WHERE RDB$INDEX_NAME = 'IDX_ESTRANEO'"))[0].N, 1);
 });
 
 integration('current version cannot hide missing columns; disabled updater is strictly read-only', async t => {

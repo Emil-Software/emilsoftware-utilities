@@ -7,7 +7,7 @@ import { ACCESSI_SCHEMA_VERSION, ACCESSI_VERSION_KEY, accessiTables, accessiFore
 import { applyCatalogScripts } from './AccessiCatalogMigrator';
 
 type Row = Record<string, unknown>;
-export interface AccessiSchemaReport { compatible: boolean; issues: string[]; }
+export interface AccessiSchemaReport { compatible: boolean; issues: string[]; warnings: string[]; }
 
 /** Reconciles the actual schema; version labels never bypass verification. */
 @Injectable()
@@ -161,7 +161,7 @@ export class AccessiDatabaseUpdater extends DatabaseUpdater implements OnModuleI
 
   private static async constraints(options: AccessiOptions): Promise<Row[]> {
     return this.query(options, `SELECT TRIM(C.RDB$CONSTRAINT_NAME) AS NAME, TRIM(C.RDB$RELATION_NAME) AS TABLE_NAME,
-      TRIM(C.RDB$CONSTRAINT_TYPE) AS KIND, TRIM(S.RDB$FIELD_NAME) AS COLUMN_NAME, S.RDB$FIELD_POSITION AS POS,
+      TRIM(C.RDB$CONSTRAINT_TYPE) AS KIND, TRIM(C.RDB$INDEX_NAME) AS INDEX_NAME, TRIM(S.RDB$FIELD_NAME) AS COLUMN_NAME, S.RDB$FIELD_POSITION AS POS,
       TRIM(T.RDB$RELATION_NAME) AS TARGET_TABLE, TRIM(TS.RDB$FIELD_NAME) AS TARGET_COLUMN,
       TRIM(R.RDB$DELETE_RULE) AS DELETE_RULE
       FROM RDB$RELATION_CONSTRAINTS C
@@ -247,9 +247,10 @@ export class AccessiDatabaseUpdater extends DatabaseUpdater implements OnModuleI
   /** Read-only diagnostics, including when automatic updates are disabled. */
   static async inspectSchema(options: AccessiOptions): Promise<AccessiSchemaReport> {
     const engine = await this.engineIssue(options);
-    if (engine) return { compatible: false, issues: [engine] };
+    if (engine) return { compatible: false, issues: [engine], warnings: [] };
     const { major: engineMajor } = await this.engineInfo(options);
     const issues: string[] = await this.relationIssues(options);
+    const warnings: string[] = [];
     const columns = await this.columns(options);
     const checks = await this.checks(options);
     const future = await this.futureVersionIssue(options, columns);
@@ -257,6 +258,10 @@ export class AccessiDatabaseUpdater extends DatabaseUpdater implements OnModuleI
     for (const [table, schema] of Object.entries(accessiTables)) {
       const present = columns.filter(row => row.TABLE_NAME === table);
       if (!present.length) { issues.push(`Tabella mancante: ${table}`); continue; }
+      // Schema esatto: nessuna colonna estranea nelle tabelle di proprieta Accessi.
+      for (const row of present) {
+        if (!(String(row.COLUMN_NAME) in schema.columns)) issues.push(`Colonna inattesa: ${table}.${row.COLUMN_NAME}`);
+      }
       for (const [name, definition] of Object.entries(schema.columns)) {
         const row = present.find(row => row.COLUMN_NAME === name);
         if (!row) { issues.push(`Colonna mancante: ${table}.${name}`); continue; }
@@ -273,6 +278,7 @@ export class AccessiDatabaseUpdater extends DatabaseUpdater implements OnModuleI
       if (!checks.some(row => row.TABLE_NAME === check.table && this.sameCheck(String(row.CHECK_SOURCE), check.expression))) issues.push(`${check.table}: manca CHECK (${check.expression})`);
     }
     const constraints = this.groups(await this.constraints(options));
+    const constraintIndexes = new Set(constraints.flatMap(rows => rows.map(row => String(row.INDEX_NAME ?? ''))).filter(Boolean));
     for (const [table, schema] of Object.entries(accessiTables)) {
       if (!constraints.some(rows => rows[0].TABLE_NAME === table && rows[0].KIND === 'PRIMARY KEY' && this.sameColumns(rows, schema.primaryKey))) issues.push(`${table}: chiave primaria richiesta (${schema.primaryKey.join(', ')})`);
     }
@@ -282,6 +288,14 @@ export class AccessiDatabaseUpdater extends DatabaseUpdater implements OnModuleI
     const indexes = await this.indexes(options);
     for (const index of accessiIndexes) {
       if (!indexes.some(rows => rows[0].TABLE_NAME === index.table && !Number(rows[0].INACTIVE) && this.sameColumns(rows, index.columns))) issues.push(`${index.name}: indice mancante o inattivo`);
+    }
+    // Indici extra sulle tabelle Accessi: segnalati come avvisi, mai rimossi automaticamente (potrebbero servire).
+    const declaredIndexShapes = new Set(accessiIndexes.map(index => `${index.table}:${index.columns.join(',')}`));
+    for (const rows of indexes) {
+      const table = String(rows[0].TABLE_NAME);
+      if (!accessiTables[table] || Number(rows[0].INACTIVE) || constraintIndexes.has(String(rows[0].NAME))) continue;
+      const shape = `${table}:${rows.map(row => String(row.COLUMN_NAME)).join(',')}`;
+      if (!declaredIndexShapes.has(shape)) warnings.push(`Indice extra su ${table}: ${rows[0].NAME} (${rows.map(row => row.COLUMN_NAME).join(', ')})`);
     }
     const triggers = await this.triggers(options);
     for (const trigger of accessiTriggers) {
@@ -294,12 +308,13 @@ export class AccessiDatabaseUpdater extends DatabaseUpdater implements OnModuleI
         if (Number(rows[0]?.CURRENT_VALUE) < Number(rows[0]?.MAX_VALUE)) issues.push(`${generator.name}: sequence inferiore agli identificativi esistenti`);
       }
     }
-    return { compatible: issues.length === 0, issues };
+    return { compatible: issues.length === 0, issues, warnings };
   }
 
-  static async assertCompatible(options: AccessiOptions): Promise<void> {
+  static async assertCompatible(options: AccessiOptions): Promise<AccessiSchemaReport> {
     const report = await this.inspectSchema(options);
     if (!report.compatible) throw new Error(`Schema database Accessi incompatibile:\n- ${report.issues.join('\n- ')}\nEseguire AccessiDatabaseUpdater.run con un utente autorizzato o correggere lo schema prima dell'avvio.`);
+    return report;
   }
 
   private static normalizeDefault(value: unknown): string {
@@ -389,6 +404,17 @@ export class AccessiDatabaseUpdater extends DatabaseUpdater implements OnModuleI
         }
       }
     }
+    // Schema esatto: elimina ogni colonna estranea rimasta nelle tabelle di proprieta Accessi, cosi
+    // il database converge a "niente in piu, niente in meno". Ricalcola le colonne dopo rename/copie/obsolete.
+    const columnsAfterCleanup = await this.columns(options);
+    for (const [table, schema] of Object.entries(accessiTables)) {
+      for (const row of columnsAfterCleanup.filter(row => row.TABLE_NAME === table)) {
+        const name = String(row.COLUMN_NAME);
+        if (!(name in schema.columns)) {
+          await this.execute(options, `ALTER TABLE ${table} DROP ${name}`);
+        }
+      }
+    }
     const constraints = this.groups(await this.constraints(options));
     for (const [table, schema] of Object.entries(accessiTables)) {
       const primary = constraints.find(rows => rows[0].TABLE_NAME === table && rows[0].KIND === 'PRIMARY KEY');
@@ -446,7 +472,8 @@ export class AccessiDatabaseUpdater extends DatabaseUpdater implements OnModuleI
         await this.execute(options, `CREATE TRIGGER ${trigger.name} FOR ${trigger.table} ACTIVE ${trigger.event} POSITION 0 ${trigger.body}`);
       }
     }
-    await this.assertCompatible(options);
+    const report = await this.assertCompatible(options);
+    if (report.warnings.length) this.logger.warning(`Schema Accessi: ${report.warnings.join('; ')}`);
     // The host's VersioneDB/DBVERSION values belong to the host and are never overwritten.
     await this.execute(options, 'UPDATE OR INSERT INTO PARAMETRI (CODPAR, DESPAR) VALUES (?, ?) MATCHING (CODPAR)', [ACCESSI_VERSION_KEY, ACCESSI_SCHEMA_VERSION]);
     this.logger.info(`Schema Accessi verificato: ${ACCESSI_SCHEMA_VERSION}.`);

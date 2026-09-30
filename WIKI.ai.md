@@ -167,6 +167,7 @@ npm run db:update:accessi   # riconcilia lo schema
 npm run db:check:accessi    # verifica senza modificare
 ```
 [WARN] Versioni: La libreria richiede uno schema compatibile con la versione corrente (ACCESSI_SCHEMA_VERSION). Se la verifica fallisce, leggi il codice errore ACCESSI_DATABASE_SCHEMA_OUTDATED ed esegui db:update:accessi.
+[INFO] Schema esatto: La riconciliazione allinea le tabelle Accessi a "niente in piu, niente in meno": le colonne non previste vengono segnalate come incompatibili e rimosse automaticamente (dopo rename e copie dei dati legacy). Gli indici, i trigger e i CHECK extra non previsti non vengono tolti, ma un indice non previsto su una tabella Accessi viene riportato come avviso senza bloccare l'avvio.
 
 ### Catalog migrations SQL
 Allinea menu, ruoli e cataloghi su piu database in modo idempotente.
