@@ -1,3 +1,10 @@
+# [2.0.0-dev.40](https://github.com/Emil-Software/emilsoftware-utilities/compare/v2.0.0-dev.39...v2.0.0-dev.40) (2026-09-30)
+
+
+### Features
+
+* **accessi:** reintroduzione pagina di default utente (PAGDEF) ([0232bfd](https://github.com/Emil-Software/emilsoftware-utilities/commit/0232bfd5894a545fdb8f6718a95be1f2e59b375e))
+
 # [2.0.0-dev.39](https://github.com/Emil-Software/emilsoftware-utilities/compare/v2.0.0-dev.38...v2.0.0-dev.39) (2026-09-29)
 
 
