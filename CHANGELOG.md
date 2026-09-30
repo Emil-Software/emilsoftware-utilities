@@ -1,3 +1,11 @@
+# [2.0.0-dev.41](https://github.com/Emil-Software/emilsoftware-utilities/compare/v2.0.0-dev.40...v2.0.0-dev.41) (2026-09-30)
+
+
+### Features
+
+* **accessi-console:** feedback esito di ogni operazione con messaggi ([e2e30f6](https://github.com/Emil-Software/emilsoftware-utilities/commit/e2e30f6ca2de3aeb5bdc02bd9b4031820e333d84))
+* **accessi:** schema esatto con rimozione delle colonne estranee ([c7335a3](https://github.com/Emil-Software/emilsoftware-utilities/commit/c7335a399e180e94eeac6fd32e3da096fe8d7cdb))
+
 # [2.0.0-dev.40](https://github.com/Emil-Software/emilsoftware-utilities/compare/v2.0.0-dev.39...v2.0.0-dev.40) (2026-09-30)
 
 
