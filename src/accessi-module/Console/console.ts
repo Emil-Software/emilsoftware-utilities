@@ -50,7 +50,7 @@
   updateTipoFiltro,
   updateUtente,
 } from './generated/accessiApi';
-import { setAccessiConsoleToken } from './accessiFetch';
+import { ACCESSI_UNAUTHORIZED_EVENT, setAccessiConsoleToken } from './accessiFetch';
 import { WIKI_SECTIONS, wikiGroups, buildAiDigest } from './wiki';
 import changelogMarkdown from './changelog.md';
 import type { WikiBlock } from './wiki';
@@ -148,9 +148,30 @@ function result<T>(response: { data: object }): T {
   return body.Result;
 }
 
+let noticeTimer: number | undefined;
+
+/**
+ * Segnala l'esito di un'operazione: verde con spunta per il successo, rosso per l'errore.
+ * Il successo sparisce da solo, l'errore resta finche non viene chiuso o sostituito.
+ */
 function showNotice(message: string, isError = false): void {
+  const container = byId('notice');
+  if (noticeTimer !== undefined) {
+    window.clearTimeout(noticeTimer);
+    noticeTimer = undefined;
+  }
   // Un messaggio vuoto deve azzerare il contenitore, altrimenti resta visibile la barra di avviso.
-  byId('notice').innerHTML = message ? `<span class="${isError ? 'error' : ''}">${escapeHtml(message)}</span>` : '';
+  if (!message) {
+    container.innerHTML = '';
+    return;
+  }
+  const kind = isError ? 'error' : 'success';
+  const icon = isError ? '!' : '\u2713';
+  container.innerHTML = `<div class="notice notice-${kind}${isError ? ' error' : ''}" role="alert"><span class="notice-icon" aria-hidden="true">${icon}</span><span class="notice-text">${escapeHtml(message)}</span><button type="button" class="notice-close" aria-label="Chiudi il messaggio">&times;</button></div>`;
+  container.querySelector<HTMLButtonElement>('.notice-close')?.addEventListener('click', () => showNotice(''));
+  if (!isError) {
+    noticeTimer = window.setTimeout(() => showNotice(''), 6000);
+  }
 }
 
 /** Renders operational menu metadata shared by the permissions and role views. */
@@ -301,7 +322,13 @@ function finishBoot(view: 'login' | 'console'): void {
 }
 
 function errorMessage(error: unknown): string {
-  return error instanceof Error ? error.message : 'Operazione non riuscita.';
+  if (!(error instanceof Error)) return 'Operazione non riuscita.';
+  const extra = error as unknown as { code?: unknown; details?: unknown };
+  const code = typeof extra.code === 'string' ? extra.code : undefined;
+  const details = Array.isArray(extra.details) ? extra.details.map((item) => String(item)) : [];
+  const detailSuffix = details.length ? ` (${details.join('; ')})` : '';
+  const message = code && !error.message.startsWith(`${code}:`) ? `${code}: ${error.message}` : error.message;
+  return `${message}${detailSuffix}`;
 }
 
 /** Evita rejection non gestite dagli eventi del browser e conserva la vista corrente. */
@@ -902,8 +929,8 @@ async function showUser(rawCode: string): Promise<void> {
   if (grantsForm) grantsForm.onsubmit = (event) => { event.preventDefault(); handleAction(async () => { const permissions: Permission[] = []; new FormData(eventForm(event)).forEach((value, key) => { if (key.startsWith('grant:') && value) permissions.push({ codiceMenu: key.slice(6), tipoAbilitazione: Number(value) }); }); await assignPermissionsToUser(codiceUtente, { permissions }); showNotice('Grant aggiornati.'); }); };
   if (federatedAuthenticationAvailable) {
     const linkForm = document.getElementById('link-sso') as HTMLFormElement | null;
-    if (linkForm) linkForm.onsubmit = (event) => { event.preventDefault(); handleAction(async () => { const values = formValues(eventForm(event)); await linkFederatedIdentity(codiceUtente, { provider: values.provider ?? '', subject: values.subject ?? '', note: values.note || undefined }); await showUser(String(codiceUtente)); }); };
-    document.querySelectorAll<HTMLButtonElement>('[data-identity-toggle]').forEach((button) => { button.onclick = () => handleAction(async () => { await updateFederatedIdentity(button.dataset.identityToggle ?? '', { active: button.dataset.active === 'true' }); await showUser(String(codiceUtente)); }); });
+    if (linkForm) linkForm.onsubmit = (event) => { event.preventDefault(); handleAction(async () => { const values = formValues(eventForm(event)); await linkFederatedIdentity(codiceUtente, { provider: values.provider ?? '', subject: values.subject ?? '', note: values.note || undefined }); showNotice('Collegamento SSO registrato.'); await showUser(String(codiceUtente)); }); };
+    document.querySelectorAll<HTMLButtonElement>('[data-identity-toggle]').forEach((button) => { button.onclick = () => handleAction(async () => { await updateFederatedIdentity(button.dataset.identityToggle ?? '', { active: button.dataset.active === 'true' }); showNotice('Collegamento SSO aggiornato.'); await showUser(String(codiceUtente)); }); });
     document.querySelectorAll<HTMLButtonElement>('[data-identity-delete]').forEach((button) => { button.onclick = () => handleAction(async () => { if (!window.confirm('Eliminare definitivamente questo collegamento SSO? Lâ€™utente Accessi non verrÃ  eliminato.')) return; await deleteFederatedIdentityPermanently(codiceUtente, button.dataset.identityDelete ?? ''); showNotice('Collegamento SSO eliminato definitivamente.'); await showUser(String(codiceUtente)); }); });
   }
   byId('save-state').onclick = () => handleAction(async () => {
@@ -932,7 +959,18 @@ async function showRoles(): Promise<void> {
       };
     });
     const roleFormElement = document.getElementById('role-form') as HTMLFormElement | null;
-    if (roleFormElement) roleFormElement.onsubmit = async (event) => { event.preventDefault(); const form = eventForm(event); const data = new FormData(form); const request: Role = { descrizioneRuolo: formValues(form).descrizione ?? '', menu: Array.from(data.getAll('menu'), (codiceMenu) => ({ codiceMenu: String(codiceMenu), tipoAbilitazione: Number(data.get(`menu-level:${codiceMenu}`) ?? 10) as Role['menu'][number]['tipoAbilitazione'] })) }; if (role?.codiceRuolo) await updateRole(role.codiceRuolo, request); else await createRole(request); await show('roles'); };
+    if (roleFormElement) roleFormElement.onsubmit = (event) => {
+      event.preventDefault();
+      handleAction(async () => {
+        const form = eventForm(event);
+        const data = new FormData(form);
+        const request: Role = { descrizioneRuolo: formValues(form).descrizione ?? '', menu: Array.from(data.getAll('menu'), (codiceMenu) => ({ codiceMenu: String(codiceMenu), tipoAbilitazione: Number(data.get(`menu-level:${codiceMenu}`) ?? 10) as Role['menu'][number]['tipoAbilitazione'] })) };
+        if (role?.codiceRuolo) await updateRole(role.codiceRuolo, request);
+        else await createRole(request);
+        showNotice(role?.codiceRuolo ? 'Ruolo aggiornato.' : 'Ruolo creato.');
+        await show('roles');
+      });
+    };
   };
   byId('new-role').onclick = () => roleForm();
   document.querySelectorAll<HTMLButtonElement>('[data-role]').forEach((button) => button.onclick = () => roleForm(roles.find((role) => role.codiceRuolo === Number(button.dataset.role))));
@@ -1166,7 +1204,23 @@ async function showFilters(): Promise<void> {
   const users = await loadUsers();
   render(`<h2>Filtri utente</h2><p class="form-help">Filtri applicativi salvati per singolo utente.</p><form id="filters"><label>Utente ${helpDot('filters-user')}<select name="codUte">${users.map(({ utente }) => `<option value="${utente.codiceUtente}">${escapeHtml(utente.email)}</option>`).join('')}</select><span class="form-help">Salvati per l'utente selezionato.</span></label><label>Filtro JSON ${helpDot('filters-json')}<textarea name="json" rows="12">{}</textarea><span class="form-help">Usa Carica per partire dalla struttura esistente.</span></label><button name="action" value="load">Carica</button><button name="action" value="save">Salva</button></form>`);
   const filtersForm = document.getElementById('filters') as HTMLFormElement | null;
-  if (filtersForm) filtersForm.onsubmit = async (event) => { event.preventDefault(); const form = eventForm(event); const action = (event.submitter as HTMLButtonElement | null)?.value; const code = Number(formValues(form).codUte); if (action === 'load') { const filters = result<FiltriUtente[]>(await getFiltriUtente({ codUte: code })); (form.elements.namedItem('json') as HTMLTextAreaElement).value = JSON.stringify(filters[0] ?? { codUte: code }, null, 2); } else { const parsed = JSON.parse(formValues(form).json ?? '{}') as Omit<FiltriUtente, 'codUte'>; await saveFiltriUtente({ ...parsed, codUte: code }); showNotice('Filtri salvati.'); } };
+  if (filtersForm) filtersForm.onsubmit = (event) => {
+    event.preventDefault();
+    const form = eventForm(event);
+    const action = (event.submitter as HTMLButtonElement | null)?.value;
+    const code = Number(formValues(form).codUte);
+    handleAction(async () => {
+      if (action === 'load') {
+        const filters = result<FiltriUtente[]>(await getFiltriUtente({ codUte: code }));
+        (form.elements.namedItem('json') as HTMLTextAreaElement).value = JSON.stringify(filters[0] ?? { codUte: code }, null, 2);
+        showNotice('Filtri caricati.');
+      } else {
+        const parsed = JSON.parse(formValues(form).json ?? '{}') as Omit<FiltriUtente, 'codUte'>;
+        await saveFiltriUtente({ ...parsed, codUte: code });
+        showNotice('Filtri salvati.');
+      }
+    });
+  };
 }
 
 /** Tipi filtro: catalogo dei tipi con creazione, modifica ed eliminazione. */
@@ -1259,6 +1313,7 @@ async function showServiceTokens(includeRevoked = false): Promise<void> {
   document.querySelectorAll<HTMLButtonElement>('[data-rotate]').forEach((button) => {
     button.onclick = () => handleAction(async () => {
       const issued = result<IssuedServiceTokenDto>(await rotateServiceToken(button.dataset.rotate ?? ''));
+      showNotice('Token di servizio ruotato.');
       showIssuedServiceToken(issued);
     });
   });
@@ -1279,6 +1334,7 @@ function showServiceTokenForm(): void {
         scopes: scopes.length ? scopes : undefined,
         ttlDays: Number.isFinite(ttlDays) ? ttlDays : undefined,
       }));
+      showNotice('Token di servizio creato.');
       showIssuedServiceToken(issued);
     });
   };
@@ -1517,7 +1573,6 @@ async function showSql(): Promise<void> {
 
 async function show(view: ConsoleView): Promise<void> {
   try {
-    showNotice('');
     const views: Record<string, () => Promise<void>> = {
       users: showUsers,
       roles: showRoles,
@@ -1608,6 +1663,17 @@ byId('nav').onclick = (event) => {
 };
 window.addEventListener('popstate', () => {
   if (token && currentUser) handleAction(() => show(viewFromLocation()));
+});
+// Sessione scaduta o token revocato: il trasporto segnala il 401, la console torna al login.
+window.addEventListener(ACCESSI_UNAUTHORIZED_EVENT, () => {
+  if (!token) return;
+  token = null;
+  currentUser = null;
+  setAccessiConsoleToken(null);
+  sessionStorage.removeItem('accessi-console-token');
+  finishBoot('login');
+  resetLogin();
+  byId('login-error').textContent = 'Sessione scaduta o non piu valida. Accedi di nuovo.';
 });
 window.addEventListener('accessi-console-network', (event: Event) => {
   updateLoadingState((event as CustomEvent<{ active: boolean }>).detail.active);
