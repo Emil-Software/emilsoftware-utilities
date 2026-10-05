@@ -1,3 +1,10 @@
+# [2.0.0-dev.42](https://github.com/Emil-Software/emilsoftware-utilities/compare/v2.0.0-dev.41...v2.0.0-dev.42) (2026-10-05)
+
+
+### Features
+
+* **accessi:** gestione utenti completa dalla console ([263e01b](https://github.com/Emil-Software/emilsoftware-utilities/commit/263e01bc5be640b9c95f4b5a13bf18e54050425b))
+
 # [2.0.0-dev.41](https://github.com/Emil-Software/emilsoftware-utilities/compare/v2.0.0-dev.40...v2.0.0-dev.41) (2026-09-30)
 
 
