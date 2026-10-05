@@ -1,3 +1,10 @@
+# [2.0.0-dev.43](https://github.com/Emil-Software/emilsoftware-utilities/compare/v2.0.0-dev.42...v2.0.0-dev.43) (2026-10-05)
+
+
+### Features
+
+* **accessi:** gerarchia ADMIN>SUPER, auto-ingresso console e hardening utenti ([e2ce95c](https://github.com/Emil-Software/emilsoftware-utilities/commit/e2ce95cd9cd3c6b77cc62dd1dbd960cc5c3e801c))
+
 # [2.0.0-dev.42](https://github.com/Emil-Software/emilsoftware-utilities/compare/v2.0.0-dev.41...v2.0.0-dev.42) (2026-10-05)
 
 
