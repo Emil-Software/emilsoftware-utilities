@@ -24,6 +24,46 @@ Documentazione divisa per argomenti, per renderla piu' leggibile e facile da agg
 
 I commenti JSDoc sulle API pubbliche descrivono precondizioni, effetti sul database e compatibilita; Swagger documenta invece il contratto HTTP generato.
 
+## Flag di privilegio e gestione utenti
+
+Due flag in `UTENTI_CONFIG` governano l'accesso alla console:
+
+- `FLGSUPER` (`flagSuper`): riceve tutte le abilitazioni al livello massimo (30) dopo il login; vede solo la sezione Utenti.
+- `FLGADMIN` (`flagAdmin`): accede a tutta la console (catalogo, token, SSO, utenti) ma non conferisce abilitazioni.
+
+Regole di modifica (applicate dalla console e dal backend):
+
+- un admin puo' assegnare o togliere sia `flagSuper` sia `flagAdmin` (checkbox Admin + Superutente);
+- un superutente senza `flagAdmin` puo' gestire solo `flagSuper`;
+- i flag si impostano in creazione (utente locale o SSO) e in modifica profilo; inviare un flag non consentito restituisce 403 (`ensurePrivilegeFlagChanges`).
+
+### Controllo completo del profilo (admin)
+
+Dalla scheda utente della console un admin modifica **tutti i campi Accessi** senza toccare il database:
+
+- anagrafica: `nome`, `cognome`, `email`, `cellulare`, `avatar`, `codiceLingua`, `paginaDefault`, `jsonMetadata`;
+- sicurezza: `flagDueFattori`, `passwordlessLoginEnabled`, `passwordLoginEnabled`, `dataScadenzaPassword` e **password diretta** (`POST /api/accessi/user/set-password/:codiceUtente`, hash + scadenza, nessuna email);
+- privilegi: `flagSuper`, `flagAdmin`; stato: `statoRegistrazione`; GDPR: `flagGdpr`;
+- filtri (`FILTRI`): `numRep`, `idxPers`, `codCliSuper`, `codAge`, `codCliCol`, `codClienti`, `tipFil`, `idxPos`, `codDip`, `codVet`;
+- ruoli e grant diretti (sezioni dedicate).
+
+Le scritture sono idempotenti (`UPDATE OR INSERT ... MATCHING (CODUTE)` su `UTENTI_CONFIG`) e validate dal backend: inviare il valore corrente non produce effetti collaterali. I campi di sistema (`CODUTE`, `DATINS`, `DATLASTLOGIN`, `KEYREG`) restano gestiti dalla libreria.
+
+### Policy password
+
+Quando si **imposta** una password (reset, `set-password` admin, bootstrap) valgono i requisiti moderni:
+
+- almeno 8 caratteri (massimo 100);
+- almeno una maiuscola, una minuscola, una cifra e un carattere speciale;
+- nessuno spazio e non deve essere una password comune.
+
+Se non conforme l'API risponde **400** con `code: ACCESSI_WEAK_PASSWORD` e `details` con i requisiti mancanti (`security/passwordPolicy.ts`). La policy **non** si applica al login: le password preesistenti eventualmente deboli continuano ad autenticare e vengono migrate senza blocco (`setPassword(..., { enforcePolicy: false })` nei flussi legacy).
+
+### Eliminazione utenti
+
+- **Soft delete**: `DELETE /api/accessi/user/delete-user/:codiceUtente` imposta `STAREG = DELETE` (reversibile). Disponibile per admin e superutenti.
+- **Eliminazione definitiva**: `DELETE /api/accessi/user/delete-user-permanent/:codiceUtente` rimuove in transazione l'utente e i record collegati (`UTENTI_CONFIG`, `UTENTI_PWD`, `UTENTI_OLDPWD`, `UTENTI_GDPR`, `UTENTI_RUOLI`, `ABILITAZIONI`, `FILTRI`, `UTENTI_IDENTITA_EXT`, `ACCESSI_2FA`). Solo admin; non e' consentito eliminare definitivamente il proprio utente.
+
 ## Come leggerla
 
 Se devi integrare il modulo, parti da [Panoramica](docs/overview.md) e poi vai alla sezione che ti serve.

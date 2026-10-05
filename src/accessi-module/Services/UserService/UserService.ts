@@ -627,11 +627,19 @@ export class UserService {
       }
       if (user.flagGdpr !== undefined) {
         utentiUpdates.push('flggdpr = ?');
-        utentiParams.push(user.flagGdpr);
+        utentiParams.push(user.flagGdpr ? 1 : 0);
       }
       if (allowPrivilegedChanges && user.statoRegistrazione !== undefined) {
         utentiUpdates.push('stareg = ?');
         utentiParams.push(user.statoRegistrazione);
+      }
+      if (allowPrivilegedChanges && user.keyRegistrazione !== undefined) {
+        utentiUpdates.push('keyreg = ?');
+        utentiParams.push(user.keyRegistrazione);
+      }
+      if (allowPrivilegedChanges && user.dataScadenzaPassword !== undefined) {
+        utentiUpdates.push('DATSCAPWD = CAST(? AS DATE)');
+        utentiParams.push(user.dataScadenzaPassword);
       }
 
       if (utentiUpdates.length > 0) {
@@ -640,68 +648,31 @@ export class UserService {
         await Orm.execute(this.accessiOptions.databaseOptions, queryUtenti, utentiParams);
       }
 
-      const utentiConfigUpdates = [];
-      const utentiConfigParams = [];
+      // UPDATE OR INSERT mantiene la scrittura idempotente anche se la riga UTENTI_CONFIG
+      // non esiste ancora: aggiorna solo le colonne fornite, altrimenti la crea.
+      const utentiConfigAssignments: Array<{ column: string; value: unknown }> = [];
+      const assignConfig = (column: string, value: unknown) => {
+        utentiConfigAssignments.push({ column, value });
+      };
 
-      if (user.cognome !== undefined) {
-        utentiConfigUpdates.push('cognome = ?');
-        utentiConfigParams.push(user.cognome);
-      }
-      if (user.nome !== undefined) {
-        utentiConfigUpdates.push('nome = ?');
-        utentiConfigParams.push(user.nome);
-      }
-      if (user.avatar !== undefined) {
-        utentiConfigUpdates.push('avatar = ?');
-        utentiConfigParams.push(user.avatar);
-      }
-      if (user.flagDueFattori !== undefined) {
-        utentiConfigUpdates.push('flg2fatt = ?');
-        utentiConfigParams.push(user.flagDueFattori ? 1 : 0);
-      }
-      if (user.passwordlessLoginEnabled !== undefined) {
-        utentiConfigUpdates.push('flgpwdless = ?');
-        utentiConfigParams.push(user.passwordlessLoginEnabled ? 1 : 0);
-      }
-      if (user.codiceLingua !== undefined) {
-        utentiConfigUpdates.push('codlingua = ?');
-        utentiConfigParams.push(user.codiceLingua);
-      }
-      if (user.cellulare !== undefined) {
-        utentiConfigUpdates.push('cellulare = ?');
-        utentiConfigParams.push(user.cellulare);
-      }
-      if (user.paginaDefault !== undefined) {
-        utentiConfigUpdates.push('PAGDEF = ?');
-        utentiConfigParams.push(user.paginaDefault);
-      }
-      if (allowPrivilegedChanges && user.flagSuper !== undefined) {
-        utentiConfigUpdates.push('flgsuper = ?');
-        utentiConfigParams.push(user.flagSuper);
-      }
-      if (allowPrivilegedChanges && user.flagAdmin !== undefined) {
-        utentiConfigUpdates.push('FLGADMIN = ?');
-        utentiConfigParams.push(user.flagAdmin);
-      }
-      if (allowPrivilegedChanges && user.passwordLoginEnabled !== undefined) {
-        utentiConfigUpdates.push('flgpassword = ?');
-        utentiConfigParams.push(user.passwordLoginEnabled ? 1 : 0);
-      }
-      if (user.jsonMetadata !== undefined) {
-        utentiConfigUpdates.push('json_metadata = ?');
-        utentiConfigParams.push(user.jsonMetadata);
-      }
+      if (user.cognome !== undefined) assignConfig('cognome', user.cognome);
+      if (user.nome !== undefined) assignConfig('nome', user.nome);
+      if (user.avatar !== undefined) assignConfig('avatar', user.avatar);
+      if (user.flagDueFattori !== undefined) assignConfig('flg2fatt', user.flagDueFattori ? 1 : 0);
+      if (user.passwordlessLoginEnabled !== undefined) assignConfig('flgpwdless', user.passwordlessLoginEnabled ? 1 : 0);
+      if (user.codiceLingua !== undefined) assignConfig('codlingua', user.codiceLingua);
+      if (user.cellulare !== undefined) assignConfig('cellulare', user.cellulare);
+      if (user.paginaDefault !== undefined) assignConfig('PAGDEF', user.paginaDefault);
+      if (allowPrivilegedChanges && user.flagSuper !== undefined) assignConfig('flgsuper', user.flagSuper ? 1 : 0);
+      if (allowPrivilegedChanges && user.flagAdmin !== undefined) assignConfig('FLGADMIN', user.flagAdmin ? 1 : 0);
+      if (allowPrivilegedChanges && user.passwordLoginEnabled !== undefined) assignConfig('flgpassword', user.passwordLoginEnabled ? 1 : 0);
+      if (user.jsonMetadata !== undefined) assignConfig('json_metadata', user.jsonMetadata);
 
-      if (utentiConfigUpdates.length > 0) {
-        const queryUtentiConfig = `UPDATE UTENTI_CONFIG SET ${utentiConfigUpdates.join(
-          ', ',
-        )} WHERE CODUTE = ?`;
-        utentiConfigParams.push(codiceUtente);
-        await Orm.execute(
-          this.accessiOptions.databaseOptions,
-          queryUtentiConfig,
-          utentiConfigParams,
-        );
+      if (utentiConfigAssignments.length > 0) {
+        const columns = ['CODUTE', ...utentiConfigAssignments.map((assignment) => assignment.column)];
+        const values = [codiceUtente, ...utentiConfigAssignments.map((assignment) => assignment.value)];
+        const queryUtentiConfig = `UPDATE OR INSERT INTO UTENTI_CONFIG (${columns.join(', ')}) VALUES (${columns.map(() => '?').join(', ')}) MATCHING (CODUTE)`;
+        await Orm.execute(this.accessiOptions.databaseOptions, queryUtentiConfig, values);
       }
 
       if (allowPrivilegedChanges && Array.isArray(user.roles)) {
@@ -733,6 +704,36 @@ export class UserService {
     } catch (error) {
       throw error;
     }
+  }
+
+  /**
+   * Eliminazione definitiva: rimuove l'utente e tutti i record collegati in un'unica
+   * transazione. Operazione distruttiva riservata agli admin (il superutente usa il soft delete).
+   */
+  async deleteUserPermanently(codiceUtente: number): Promise<void> {
+    if (!codiceUtente) throw new BadRequestException('Impossibile eliminare senza codice utente.');
+
+    const rows = await this.getUsers(
+      { codiceUtente },
+      { includeExtensionFields: false, includeGrants: false },
+    );
+    if (rows.length === 0) {
+      throw new NotFoundException(`Nessun utente con codice ${codiceUtente}.`);
+    }
+
+    const params = [codiceUtente];
+    await Orm.executeMultiple(this.accessiOptions.databaseOptions, [
+      { query: 'DELETE FROM ABILITAZIONI WHERE CODUTE = ?', params },
+      { query: 'DELETE FROM UTENTI_RUOLI WHERE CODUTE = ?', params },
+      { query: 'DELETE FROM UTENTI_IDENTITA_EXT WHERE CODUTE = ?', params },
+      { query: 'DELETE FROM ACCESSI_2FA WHERE CODUTE = ?', params },
+      { query: 'DELETE FROM FILTRI WHERE CODUTE = ?', params },
+      { query: 'DELETE FROM UTENTI_CONFIG WHERE CODUTE = ?', params },
+      { query: 'DELETE FROM UTENTI_PWD WHERE CODUTE = ?', params },
+      { query: 'DELETE FROM UTENTI_OLDPWD WHERE CODUTE = ?', params },
+      { query: 'DELETE FROM UTENTI_GDPR WHERE CODUTE = ?', params },
+      { query: 'DELETE FROM UTENTI WHERE CODUTE = ?', params },
+    ]);
   }
 
   /** Cambia esplicitamente lo stato di registrazione; usare questa API per blocco, conferma o eliminazione logica. */

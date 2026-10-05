@@ -2,6 +2,23 @@
 
 Novità e modifiche rilevanti della libreria `emilsoftware-utilities` (modulo Accessi).
 
+## 2.0.0-dev.42
+
+### Aggiunte
+- Gestione dei flag di privilegio dalla console Accessi:
+  - un admin può assegnare o togliere sia `FLGADMIN` sia `FLGSUPER`;
+  - un superutente senza `FLGADMIN` può gestire solo `FLGSUPER`;
+  - i flag sono impostabili in creazione (utente locale o SSO) e in modifica profilo.
+- Eliminazione utenti con due modalità:
+  - soft delete (`delete-user`, `STAREG=DELETE`) per admin e superutenti;
+  - eliminazione definitiva (`delete-user-permanent`, solo admin) che rimuove in transazione utente e record collegati.
+- Gestione completa dell'utente dalla console (admin): anagrafica estesa (cellulare, lingua, avatar, metadata JSON), GDPR, scadenza password, tutti i filtri (`FILTRI`) e **impostazione diretta della password** (`POST /api/accessi/user/set-password/:codiceUtente`), senza accesso al database.
+- Scritture utente idempotenti: `UTENTI_CONFIG` in `UPDATE OR INSERT ... MATCHING (CODUTE)`; i campi non inviati restano invariati.
+- Policy password moderna quando si imposta una password (reset, set-password admin, bootstrap): minimo 8 caratteri con maiuscola, minuscola, cifra e carattere speciale, senza spazi e non comune. In caso di violazione risposta 400 con `code: ACCESSI_WEAK_PASSWORD` e `details`. La policy **non** si applica al login, così le password preesistenti deboli continuano a funzionare.
+
+### Correzioni
+- Il backend verifica i flag in base al ruolo dell'utente connesso (`ensurePrivilegeFlagChanges`): inviare un flag non consentito restituisce 403.
+
 ## 2.0.0-dev.33
 
 ### Cambiamenti

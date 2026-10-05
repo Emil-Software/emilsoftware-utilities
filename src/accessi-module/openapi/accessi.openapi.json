@@ -1660,6 +1660,85 @@
         ]
       }
     },
+    "/api/accessi/user/delete-user-permanent/{codiceUtente}": {
+      "delete": {
+        "description": "Rimuove l utente e tutti i record collegati. Operazione distruttiva riservata agli admin.",
+        "operationId": "deleteUserPermanently",
+        "parameters": [
+          {
+            "name": "codiceUtente",
+            "required": true,
+            "in": "path",
+            "description": "Codice identificativo dell'utente da eliminare definitivamente",
+            "schema": {
+              "example": 123,
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Utente eliminato definitivamente",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ActionResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Errore nei parametri della richiesta",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Operazione non autorizzata",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Utente non trovato",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Errore interno del server",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Elimina definitivamente un utente",
+        "tags": [
+          "User"
+        ]
+      }
+    },
     "/api/accessi/user/force-password-reset/{codiceUtente}": {
       "post": {
         "description": "Riservato al superutente. Richiede un servizio email configurato; altrimenti risponde con ACCESSI_EMAIL_NOT_CONFIGURED.",
@@ -1752,6 +1831,75 @@
           }
         ],
         "summary": "Forza il reset password per tutti gli utenti con password legacy",
+        "tags": [
+          "User"
+        ]
+      }
+    },
+    "/api/accessi/user/set-password/{codiceUtente}": {
+      "post": {
+        "description": "Riservato agli amministratori. Hasha la password, aggiorna la scadenza secondo la policy e non invia email.",
+        "operationId": "setUserPassword",
+        "parameters": [
+          {
+            "name": "codiceUtente",
+            "required": true,
+            "in": "path",
+            "description": "Codice identificativo dell utente",
+            "schema": {
+              "example": 123,
+              "type": "number"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SetUserPasswordRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Password aggiornata",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ActionResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Password non valida",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Operazione non autorizzata",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Imposta direttamente la password di un utente",
         "tags": [
           "User"
         ]
@@ -3506,7 +3654,7 @@
         "properties": {
           "newPassword": {
             "type": "string",
-            "description": "Nuova password da impostare.",
+            "description": "Nuova password: almeno 8 caratteri con maiuscola, minuscola, cifra e carattere speciale, senza spazi e non comune. Se non conforme l API risponde 400 con codice ACCESSI_WEAK_PASSWORD.",
             "minLength": 8,
             "maxLength": 100,
             "example": "PasswordSicura123!"
@@ -4911,6 +5059,21 @@
         "required": [
           "Status",
           "Result"
+        ]
+      },
+      "SetUserPasswordRequest": {
+        "type": "object",
+        "properties": {
+          "newPassword": {
+            "type": "string",
+            "description": "Nuova password in chiaro: almeno 8 caratteri con maiuscola, minuscola, cifra e carattere speciale, senza spazi e non comune. Viene hashata e non restituita; se non conforme l API risponde 400 con codice ACCESSI_WEAK_PASSWORD.",
+            "minLength": 8,
+            "maxLength": 100,
+            "example": "PasswordSicura123!"
+          }
+        },
+        "required": [
+          "newPassword"
         ]
       },
       "SetStatoRegistrazioneDto": {

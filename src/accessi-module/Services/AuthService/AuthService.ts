@@ -19,6 +19,7 @@ import {
   getAccessiJwtSecret,
   verifyPasswordResetToken,
 } from "../../security/passwordResetToken";
+import { assertStrongPassword } from '../../security/passwordPolicy';
 import { Logger } from "../../../Logger";
 import { TokenResult } from '../../Dtos/TokenResult';
 
@@ -293,8 +294,19 @@ export class AuthService {
     return { challenge: await this.twoFactorService.resend(challengeId) };
   }
 
-  /** Persiste una password hashata e aggiorna la scadenza, se la policy password e attiva. Non invia email. */
-  public async setPassword(codiceUtente: number, nuovaPassword: string) {
+  /**
+   * Persiste una password hashata e aggiorna la scadenza, se la policy password e attiva. Non invia email.
+   * Con `enforcePolicy` (default true) valida la password secondo la policy moderna; i flussi di
+   * migrazione delle password legacy passano `enforcePolicy: false` per non bloccare password storiche.
+   */
+  public async setPassword(
+    codiceUtente: number,
+    nuovaPassword: string,
+    options?: { enforcePolicy?: boolean },
+  ) {
+    if (options?.enforcePolicy !== false) {
+      assertStrongPassword(nuovaPassword);
+    }
     try {
       const query = `UPDATE OR INSERT INTO UTENTI_PWD (CODUTE, PWD) VALUES (?, ?)`;
       const hashedPassword = PasswordUtilities.hashPassword(nuovaPassword);
@@ -398,7 +410,7 @@ export class AuthService {
         );
 
       if (isMigratedLegacyPasswordValid) {
-        await this.setPassword(codiceUtente, plainPassword);
+        await this.setPassword(codiceUtente, plainPassword, { enforcePolicy: false });
       }
 
       return isMigratedLegacyPasswordValid;
@@ -410,7 +422,7 @@ export class AuthService {
     );
 
     if (isLegacyPasswordValid) {
-      await this.setPassword(codiceUtente, plainPassword);
+      await this.setPassword(codiceUtente, plainPassword, { enforcePolicy: false });
     }
 
     return isLegacyPasswordValid;
@@ -483,13 +495,7 @@ export class AuthService {
         throw new Error("Token non valido.");
       }
 
-      if (
-        typeof newPassword !== "string" ||
-        newPassword.length < 8 ||
-        newPassword.length > 100
-      ) {
-        throw new Error("La nuova password deve essere compresa tra 8 e 100 caratteri.");
-      }
+      assertStrongPassword(newPassword);
 
       const secret = getAccessiJwtSecret(this.accessiOptions, 'reset');
       const { codiceUtente, nonce } = verifyPasswordResetToken(token.trim(), secret);

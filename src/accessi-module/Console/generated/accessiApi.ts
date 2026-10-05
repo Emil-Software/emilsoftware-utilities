@@ -52,6 +52,7 @@ import type {
   ServeResetPasswordPageParams,
   SetPasswordLoginPolicyRequest,
   SetStatoRegistrazioneDto,
+  SetUserPasswordRequest,
   UpdateEnabledStatusRequest,
   UpdateFederatedIdentityRequest,
   UpdateFederatedProviderRequest,
@@ -844,6 +845,31 @@ return accessiFetch<Promise<deleteUserResponse>>(getDeleteUserUrl(codiceUtente),
 
 
 /**
+ * Rimuove l utente e tutti i record collegati. Operazione distruttiva riservata agli admin.
+ * @summary Elimina definitivamente un utente
+ */
+export type deleteUserPermanentlyResponse = {
+  data: ActionResponse;
+  status: number;
+}
+
+export const getDeleteUserPermanentlyUrl = (codiceUtente: number,) => {
+
+
+  return `/api/accessi/user/delete-user-permanent/${codiceUtente}`
+}
+
+export const deleteUserPermanently = async (codiceUtente: number, options?: RequestInit): Promise<deleteUserPermanentlyResponse> => {
+return accessiFetch<Promise<deleteUserPermanentlyResponse>>(getDeleteUserPermanentlyUrl(codiceUtente),
+  {      
+    ...options,
+    method: 'DELETE'
+    
+  }
+);}
+
+
+/**
  * Riservato al superutente. Richiede un servizio email configurato; altrimenti risponde con ACCESSI_EMAIL_NOT_CONFIGURED.
  * @summary Forza l invio dell email di reset password a un utente
  */
@@ -889,6 +915,33 @@ return accessiFetch<Promise<forcePasswordResetLegacyResponse>>(getForcePasswordR
     ...options,
     method: 'POST'
     
+  }
+);}
+
+
+/**
+ * Riservato agli amministratori. Hasha la password, aggiorna la scadenza secondo la policy e non invia email.
+ * @summary Imposta direttamente la password di un utente
+ */
+export type setUserPasswordResponse = {
+  data: ActionResponse;
+  status: number;
+}
+
+export const getSetUserPasswordUrl = (codiceUtente: number,) => {
+
+
+  return `/api/accessi/user/set-password/${codiceUtente}`
+}
+
+export const setUserPassword = async (codiceUtente: number,
+    setUserPasswordRequest: SetUserPasswordRequest, options?: RequestInit): Promise<setUserPasswordResponse> => {
+return accessiFetch<Promise<setUserPasswordResponse>>(getSetUserPasswordUrl(codiceUtente),
+  {      
+    ...options,
+    method: 'POST',
+    body: JSON.stringify(
+      setUserPasswordRequest,)
   }
 );}
 

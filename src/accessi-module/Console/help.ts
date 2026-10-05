@@ -170,6 +170,112 @@ export const HELP: Record<string, HelpEntry> = {
       p(`E una stringa libera (massimo 50 caratteri): la libreria la conserva e la restituisce nel profilo; l'instradamento effettivo lo decide il frontend.`),
     ],
   },
+  'user-cellulare': {
+    title: 'Cellulare',
+    blocks: [
+      p(`Numero di cellulare dell'utente (UTENTI_CONFIG.CELLULARE). È il recapito canonico per SMS o notifiche applicative; Accessi non lo invia da solo.`),
+    ],
+  },
+  'user-lingua': {
+    title: 'Codice lingua',
+    blocks: [
+      p(`Lingua preferita dell'utente (UTENTI_CONFIG.CODLINGUA). Stringa breve come it, en, sl; viene restituita nel profilo e il frontend decide come usarla.`),
+    ],
+  },
+  'user-avatar': {
+    title: 'Avatar',
+    blocks: [
+      p(`Riferimento all'avatar (UTENTI_CONFIG.AVATAR, massimo 30 caratteri): tipicamente un nome file o una chiave, non un base64.`),
+    ],
+  },
+  'user-scadenza-password': {
+    title: 'Scadenza password',
+    blocks: [
+      p(`Data di scadenza della password (UTENTI.DATSCAPWD). Lascia vuoto per non forzare una scadenza; usa una data passata per richiedere il cambio al prossimo login, se la policy è attiva.`),
+    ],
+  },
+  'user-gdpr': {
+    title: 'GDPR accettato',
+    blocks: [
+      p(`Imposta il flag di accettazione GDPR (UTENTI.FLGGDPR). Il consenso completo con tracciamento si registra dal flusso dedicato (endpoint set-gdpr).`),
+    ],
+  },
+  'user-json': {
+    title: 'Metadata JSON',
+    blocks: [
+      p(`Campo libero JSON (UTENTI_CONFIG.JSON_METADATA) per dati applicativi del backend. Deve essere JSON valido se il backend lo interpreta.`),
+    ],
+  },
+  'user-set-password': {
+    title: 'Imposta password',
+    blocks: [
+      p(`Imposta direttamente una nuova password locale: viene hashata dal backend e la scadenza segue la policy. Nessuna email viene inviata.`),
+      p(`Requisiti di sicurezza:`),
+      list([
+        `Almeno 8 caratteri (massimo 100).`,
+        `Almeno una lettera maiuscola e una minuscola.`,
+        `Almeno una cifra e un carattere speciale (es. ! ? @ # $ %).`,
+        `Nessuno spazio e non deve essere una password comune.`,
+      ]),
+      note('danger', 'Password non conforme', `Se non rispetta i requisiti l API risponde 400 con codice ACCESSI_WEAK_PASSWORD e l elenco dei requisiti mancanti; la password non viene salvata.`),
+      note('warn', 'Sostituisce la password attuale', `L'utente dovrà usare subito la nuova password. Per fargliela scegliere, usa "Invia reset password".`),
+    ],
+  },
+  'user-filter-numrep': {
+    title: 'Numero reparto (NUMREP)',
+    blocks: [ p(`Reparto associato all'utente nella tabella FILTRI. Vuoto rimuove il valore.`) ],
+  },
+  'user-filter-idxpers': {
+    title: 'Indice personale (IDXPERS)',
+    blocks: [ p(`Indice del personale nella tabella FILTRI. Vuoto rimuove il valore.`) ],
+  },
+  'user-filter-codclisuper': {
+    title: 'Cliente padre (CODCLISUPER)',
+    blocks: [ p(`Codice del cliente padre. Vuoto rimuove il valore.`) ],
+  },
+  'user-filter-codage': {
+    title: 'Agente (CODAGE)',
+    blocks: [ p(`Codice dell'agente associato. Vuoto rimuove il valore.`) ],
+  },
+  'user-filter-codclicol': {
+    title: 'Cliente collegato (CODCLICOL)',
+    blocks: [ p(`Codice del cliente collegato. Vuoto rimuove il valore.`) ],
+  },
+  'user-filter-codclienti': {
+    title: 'Clienti (CODCLIENTI)',
+    blocks: [ p(`Elenco di codici cliente separati da virgola (testo libero). Vuoto rimuove il valore.`) ],
+  },
+  'user-filter-tipfil': {
+    title: 'Tipo filtro (TIPFIL)',
+    blocks: [ p(`Tipo di filtro applicato. Vuoto rimuove il valore.`) ],
+  },
+  'user-filter-idxpos': {
+    title: 'Postazione (IDXPOS)',
+    blocks: [ p(`Indice della postazione nella tabella ANTENNE_POS. Vuoto rimuove il valore.`) ],
+  },
+  'user-filter-coddip': {
+    title: 'Dipendente (CODDIP)',
+    blocks: [ p(`Codice del dipendente collegato. Vuoto rimuove il valore.`) ],
+  },
+  'user-filter-codvet': {
+    title: 'Vettore (CODVET)',
+    blocks: [ p(`Codice del vettore collegato. Vuoto rimuove il valore.`) ],
+  },
+  'user-super': {
+    title: 'Superutente (FLGSUPER)',
+    blocks: [
+      p(`Assegna il flag superutente. Un superutente riceve TUTTE le abilitazioni al livello massimo (30) dopo il login e in console vede solo la sezione Utenti, dove gestisce utenti, ruoli e grant.`),
+      note('warn', 'Non è un ruolo', `Il flag non sostituisce i ruoli o i grant: li amplia assegnando ogni menu attivo al livello massimo. Usalo solo per gli amministratori di Accessi.`),
+      note('info', 'Chi lo modifica', `Un admin può assegnare o togliere sia Admin sia Superutente; un superutente senza Admin può gestire solo il flag Superutente. La verifica è ripetuta dal backend.`),
+    ],
+  },
+  'user-admin': {
+    title: 'Admin (FLGADMIN)',
+    blocks: [
+      p(`Assegna il flag admin. Un admin accede a tutta la console (catalogo, token di servizio, SSO e utenti) ma NON conferisce abilitazioni: i menu restano quelli assegnati via ABILITAZIONI e RUOLI_MNU.`),
+      note('info', 'Può gestire i flag', `Un admin può assegnare o togliere sia il flag Admin sia il flag Superutente. Un superutente senza Admin non può modificare il flag Admin.`),
+    ],
+  },
   'user-state': {
     title: 'Stato di registrazione',
     blocks: [
@@ -353,6 +459,15 @@ export const HELP: Record<string, HelpEntry> = {
     blocks: [
       p(`Esegue un soft delete: imposta lo stato di registrazione a "Eliminato" (50). L'utente non può più accedere, ma i dati restano nel database.`),
       note('info', 'Reversibile', `Non è una cancellazione fisica: puoi ripristinare l'utente cambiando lo stato di registrazione.`),
+      note('info', 'Chi può farlo', `Sia admin sia superutente possono eseguire il soft delete.`),
+    ],
+  },
+  'user-delete-permanent': {
+    title: 'Elimina definitivamente',
+    blocks: [
+      p(`Cancella l'utente e tutti i record collegati (configurazione, password, ruoli, abilitazioni, filtri, identità SSO, challenge 2FA e GDPR). Operazione irreversibile.`),
+      note('danger', 'Non reversibile', `I dati vengono rimossi fisicamente dal database; non è possibile ripristinare l'utente.`),
+      note('info', 'Solo admin', `Il pulsante è mostrato e accettato solo per il flag Admin. Un superutente senza Admin può solo flaggare l'utente come eliminato.`),
     ],
   },
 

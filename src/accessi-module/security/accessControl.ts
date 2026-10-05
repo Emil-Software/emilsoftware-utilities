@@ -72,6 +72,23 @@ export function ensureUserManagement(
   }
 }
 
+/**
+ * Limita la modifica dei flag di privilegio in base al ruolo dell'attore:
+ * un admin gestisce sia `flagAdmin` sia `flagSuper`; un superutente senza
+ * `flagAdmin` gestisce solo `flagSuper`.
+ */
+export function ensurePrivilegeFlagChanges(
+  user: AuthenticatedAccessiUser,
+  changes: { flagSuper?: unknown; flagAdmin?: unknown },
+): void {
+  if (changes.flagAdmin !== undefined && !user.flagAdmin) {
+    throw new ForbiddenException('Solo un admin puo modificare il flag admin.');
+  }
+  if (changes.flagSuper !== undefined && !user.flagSuper && !user.flagAdmin) {
+    throw new ForbiddenException('Solo un superutente o un admin puo modificare il flag superutente.');
+  }
+}
+
 /** Accesso alla console: superutenti e admin. */
 export function ensureConsoleAccess(
   user: AuthenticatedAccessiUser,

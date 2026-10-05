@@ -19,6 +19,7 @@
   deleteRole,
   deleteTipoFiltro,
   deleteUser,
+  deleteUserPermanently,
   getFederatedIdentities,
   getFederatedProviders,
   getFiltriUtente,
@@ -41,6 +42,7 @@
   setGroupEnabled,
   setMenuEnabled,
   setStatoRegistrazione,
+  setUserPassword,
   updateFederatedIdentity,
   updateFederatedProvider,
   updateMenu,
@@ -719,15 +721,156 @@ function authenticationPolicyFields(user: UserDto): string {
     </fieldset>`;
 }
 
+/** Un admin gestisce anche il flag superutente; un superutente senza admin solo il proprio. */
+function canManageSuperFlag(): boolean {
+  return Boolean(currentUser?.flagSuper || currentUser?.flagAdmin);
+}
+
+function canManageAdminFlag(): boolean {
+  return Boolean(currentUser?.flagAdmin);
+}
+
+/**
+ * Checkbox dei privilegi mostrate in base al ruolo dell'utente connesso.
+ * L'ordine e la visibilita rispecchiano le regole imposte anche dal backend.
+ */
+function privilegeFields(user: Pick<UserDto, 'flagSuper' | 'flagAdmin'>): string {
+  const manageSuper = canManageSuperFlag();
+  const manageAdmin = canManageAdminFlag();
+  if (!manageSuper && !manageAdmin) return '';
+  return `<fieldset><legend>Privilegi Accessi (opzionale)</legend>
+    ${manageAdmin ? `<label class="check"><input name="flagAdmin" type="checkbox" ${user.flagAdmin ? 'checked' : ''}> Admin ${helpDot('user-admin')}</label><p class="form-help">Accede a tutta la console (catalogo, token, SSO, utenti) e puo gestire i flag. Non modifica le abilitazioni.</p>` : ''}
+    ${manageSuper ? `<label class="check"><input name="flagSuper" type="checkbox" ${user.flagSuper ? 'checked' : ''}> Superutente ${helpDot('user-super')}</label><p class="form-help">Riceve tutte le abilitazioni al livello massimo e gestisce utenti, ruoli e grant.</p>` : ''}
+    </fieldset>`;
+}
+
+/** Invia solo i flag che l'utente connesso e autorizzato a modificare. */
+function privilegePayload(form: HTMLFormElement): Partial<Pick<UserDto, 'flagSuper' | 'flagAdmin'>> {
+  const fields = new FormData(form);
+  const payload: Partial<Pick<UserDto, 'flagSuper' | 'flagAdmin'>> = {};
+  if (canManageSuperFlag()) payload.flagSuper = fields.has('flagSuper');
+  if (canManageAdminFlag()) payload.flagAdmin = fields.has('flagAdmin');
+  return payload;
+}
+
+/** Campo testuale opzionale: stringa se valorizzato, null se svuotato, undefined se assente. */
+function optionalText(values: Record<string, string>, key: string): string | null | undefined {
+  if (!(key in values)) return undefined;
+  const raw = (values[key] ?? '').trim();
+  return raw === '' ? null : raw;
+}
+
+/** Campo numerico opzionale: numero se valido, null se svuotato, undefined se assente. */
+function optionalNumber(values: Record<string, string>, key: string): number | null | undefined {
+  if (!(key in values)) return undefined;
+  const raw = (values[key] ?? '').trim();
+  if (raw === '') return null;
+  const parsed = Number(raw);
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
+/** Requisiti di sicurezza della password, allineati alla policy del backend. */
+function passwordPolicyViolations(password: string): string[] {
+  const violations: string[] = [];
+  if (password.length < 8) violations.push('almeno 8 caratteri');
+  if (password.length > 100) violations.push('al massimo 100 caratteri');
+  if (/\s/.test(password)) violations.push('nessuno spazio');
+  if (!/[A-Z]/.test(password)) violations.push('una lettera maiuscola');
+  if (!/[a-z]/.test(password)) violations.push('una lettera minuscola');
+  if (!/\d/.test(password)) violations.push('una cifra');
+  if (!/[^A-Za-z0-9]/.test(password)) violations.push('un carattere speciale');
+  return violations;
+}
+
+/** Normalizza una data proveniente dall'API per un input type=date (YYYY-MM-DD). */
+function dateInputValue(value: unknown): string {
+  const text = typeof value === 'string' ? value : '';
+  const match = /^(\d{4}-\d{2}-\d{2})/.exec(text);
+  return match?.[1] ?? '';
+}
+
+/** Campi anagrafici e di sicurezza completi, tutti gestibili dall'admin. */
+function extendedProfileFields(user: UserDto): string {
+  return `<fieldset><legend>Anagrafica estesa</legend>
+    <label>Cellulare ${helpDot('user-cellulare')}<input name="cellulare" maxlength="30" value="${escapeHtml(user.cellulare ?? '')}"></label>
+    <label>Codice lingua ${helpDot('user-lingua')}<input name="codiceLingua" maxlength="2" value="${escapeHtml(user.codiceLingua ?? '')}"></label>
+    <label>Avatar ${helpDot('user-avatar')}<input name="avatar" maxlength="30" value="${escapeHtml(user.avatar ?? '')}"></label>
+    <label>Scadenza password ${helpDot('user-scadenza-password')}<input name="dataScadenzaPassword" type="date" value="${dateInputValue(user.dataScadenzaPassword)}"></label>
+    <label class="check"><input name="flagGdpr" type="checkbox" ${user.flagGdpr ? 'checked' : ''}> GDPR accettato ${helpDot('user-gdpr')}</label>
+    <label>Metadata JSON ${helpDot('user-json')}<textarea name="jsonMetadata" rows="3">${escapeHtml(user.jsonMetadata ?? '')}</textarea></label>
+    </fieldset>`;
+}
+
+/** Campi della tabella FILTRI, storicamente editabili solo via database. */
+function filterFields(user: UserDto): string {
+  return `<fieldset><legend>Filtri utente (FILTRI)</legend>
+    <label>Numero reparto ${helpDot('user-filter-numrep')}<input name="numRep" type="number" value="${escapeHtml(user.numRep ?? '')}"></label>
+    <label>Indice personale ${helpDot('user-filter-idxpers')}<input name="idxPers" type="number" value="${escapeHtml(user.idxPers ?? '')}"></label>
+    <label>Cliente padre ${helpDot('user-filter-codclisuper')}<input name="codCliSuper" type="number" value="${escapeHtml(user.codCliSuper ?? '')}"></label>
+    <label>Agente ${helpDot('user-filter-codage')}<input name="codAge" type="number" value="${escapeHtml(user.codAge ?? '')}"></label>
+    <label>Cliente collegato ${helpDot('user-filter-codclicol')}<input name="codCliCol" type="number" value="${escapeHtml(user.codCliCol ?? '')}"></label>
+    <label>Clienti (separati da virgola) ${helpDot('user-filter-codclienti')}<input name="codClienti" value="${escapeHtml(user.codClienti ?? '')}"></label>
+    <label>Tipo filtro ${helpDot('user-filter-tipfil')}<input name="tipFil" type="number" value="${escapeHtml(user.tipFil ?? '')}"></label>
+    <label>Postazione ${helpDot('user-filter-idxpos')}<input name="idxPos" type="number" value="${escapeHtml(user.idxPos ?? '')}"></label>
+    <label>Dipendente ${helpDot('user-filter-coddip')}<input name="codDip" type="number" value="${escapeHtml(user.codDip ?? '')}"></label>
+    <label>Vettore ${helpDot('user-filter-codvet')}<input name="codVet" type="number" value="${escapeHtml(user.codVet ?? '')}"></label>
+    </fieldset>`;
+}
+
+/** Campi anagrafici, policy e filtri in un unico payload idempotente. */
+function profilePayload(form: HTMLFormElement, codiceUtente: number): Record<string, unknown> {
+  const values = formValues(form);
+  const fields = new FormData(form);
+  const payload: Record<string, unknown> = {
+    codiceUtente,
+    email: values.email ?? '',
+    nome: optionalText(values, 'nome'),
+    cognome: optionalText(values, 'cognome'),
+    cellulare: optionalText(values, 'cellulare'),
+    codiceLingua: optionalText(values, 'codiceLingua'),
+    avatar: optionalText(values, 'avatar'),
+    paginaDefault: optionalText(values, 'paginaDefault'),
+    jsonMetadata: optionalText(values, 'jsonMetadata'),
+    dataScadenzaPassword: optionalText(values, 'dataScadenzaPassword'),
+    flagGdpr: fields.has('flagGdpr'),
+    flagDueFattori: fields.has('flagDueFattori'),
+    passwordlessLoginEnabled: fields.has('passwordlessLoginEnabled'),
+    numRep: optionalNumber(values, 'numRep'),
+    idxPers: optionalNumber(values, 'idxPers'),
+    codCliSuper: optionalNumber(values, 'codCliSuper'),
+    codAge: optionalNumber(values, 'codAge'),
+    codCliCol: optionalNumber(values, 'codCliCol'),
+    codClienti: optionalText(values, 'codClienti'),
+    tipFil: optionalNumber(values, 'tipFil'),
+    idxPos: optionalNumber(values, 'idxPos'),
+    codDip: optionalNumber(values, 'codDip'),
+    codVet: optionalNumber(values, 'codVet'),
+    ...privilegePayload(form),
+  };
+  if (federatedAuthenticationAvailable) {
+    payload.passwordLoginEnabled = fields.has('passwordLoginEnabled');
+  }
+  return payload;
+}
+
+/** Impostazione diretta della password (hash lato backend, nessuna email). */
+function passwordFields(): string {
+  return `<fieldset><legend>Password</legend>
+    <label>Nuova password ${helpDot('user-set-password')}<input name="newPassword" type="password" autocomplete="new-password" minlength="8" maxlength="100"><span class="form-help">Almeno 8 caratteri con maiuscola, minuscola, cifra e carattere speciale; nessuno spazio. Viene salvata come hash e la scadenza segue la policy; nessuna email inviata.</span></label>
+    <button type="button" id="set-password" class="secondary">Imposta password</button>
+    </fieldset>`;
+}
+
 function showLocalUserForm(): void {
   render(`<button id="back">Indietro</button><h2>Nuovo utente locale</h2><p class="muted">Viene inviata l'e-mail per impostare la password.</p>
-    <form id="local-user"><label>Email ${helpDot('user-email')}<input name="email" type="email" required><span class="form-help">Identificativo di accesso; riceverÃ  l'email per la password.</span></label><label>Nome ${helpDot('user-name')}<input name="nome"></label><label>Cognome ${helpDot('user-name')}<input name="cognome"></label><button>Crea utente</button></form>`);
+    <form id="local-user"><label>Email ${helpDot('user-email')}<input name="email" type="email" required><span class="form-help">Identificativo di accesso; riceverÃ  l'email per la password.</span></label><label>Nome ${helpDot('user-name')}<input name="nome"></label><label>Cognome ${helpDot('user-name')}<input name="cognome"></label>${privilegeFields({})}<button>Crea utente</button></form>`);
   byId('back').onclick = () => show('users');
   const localUserForm = document.getElementById('local-user') as HTMLFormElement | null;
   if (localUserForm) localUserForm.onsubmit = (event) => {
     event.preventDefault();
     handleAction(async () => {
-      await createManagedUser(formValues(eventForm(event)) as unknown as RegisterRequest);
+      const form = eventForm(event);
+      await createManagedUser({ ...formValues(form), ...privilegePayload(form) } as unknown as RegisterRequest);
       showNotice('Utente creato; inviata la procedura di impostazione password.');
       await show('users');
     });
@@ -740,7 +883,7 @@ async function showSsoUserForm(): Promise<void> {
     throw new Error('Prima di creare un utente SSO, censisci e abilita almeno un provider SSO.');
   }
   render(`<button id="back">Indietro</button><h2>Nuovo utente SSO</h2><p class="muted">Salva solo collegamenti giÃ  verificati dal backend.</p>
-    <form id="sso-user"><label>Email ${helpDot('user-email')}<input name="email" type="email" required><span class="form-help">Email di contatto e identificativo Accessi dell'utente.</span></label><label>Nome ${helpDot('user-name')}<input name="nome"></label><label>Cognome ${helpDot('user-name')}<input name="cognome"></label>${federatedIdentityFields(providers)}<label class="check"><input name="passwordLoginEnabled" type="checkbox"> Abilita anche la password locale ${helpDot('user-password-login')}</label><span class="form-help">Se disattivato, l'utente accede solo via SSO.</span><button>Crea utente SSO</button></form>`);
+    <form id="sso-user"><label>Email ${helpDot('user-email')}<input name="email" type="email" required><span class="form-help">Email di contatto e identificativo Accessi dell'utente.</span></label><label>Nome ${helpDot('user-name')}<input name="nome"></label><label>Cognome ${helpDot('user-name')}<input name="cognome"></label>${federatedIdentityFields(providers)}<label class="check"><input name="passwordLoginEnabled" type="checkbox"> Abilita anche la password locale ${helpDot('user-password-login')}</label><span class="form-help">Se disattivato, l'utente accede solo via SSO.</span>${privilegeFields({})}<button>Crea utente SSO</button></form>`);
   byId('back').onclick = () => show('ssoUsers');
   const ssoUserForm = document.getElementById('sso-user') as HTMLFormElement | null;
   if (ssoUserForm) ssoUserForm.onsubmit = (event) => {
@@ -753,7 +896,7 @@ async function showSsoUserForm(): Promise<void> {
         subject: values.subject ?? '',
         note: values.note || undefined,
         passwordLoginEnabled: new FormData(form).has('passwordLoginEnabled'),
-        user: { email: values.email ?? '', nome: values.nome || undefined, cognome: values.cognome || undefined },
+        user: { email: values.email ?? '', nome: values.nome || undefined, cognome: values.cognome || undefined, ...privilegePayload(form) },
       };
       await createFederatedUser(request);
       showNotice('Utente SSO creato e collegamento registrato.');
@@ -861,9 +1004,9 @@ async function showUser(rawCode: string): Promise<void> {
     : [];
   const identitySection = federatedAuthenticationAvailable ? federatedIdentitySection(linked, providerList) : '';
   const defaultUserTab: UserDetailTab = federatedAuthenticationAvailable ? 'sso' : 'profile';
-  render(`<div class="user-action-bar"><button id="back" type="button" class="secondary">Indietro</button><label class="inline-field">Stato registrazione ${helpDot('user-state')}<select id="user-state">${registrationStateOptions(user.statoRegistrazione)}</select></label><button id="save-state" type="button" class="secondary">Aggiorna stato</button><button id="disable-user" type="button" class="danger-button">Imposta stato eliminato</button>${helpDot('user-delete')}</div><div class="page-header"><div><p class="eyebrow">Utente ${codiceUtente}</p><h2>${escapeHtml(user.email)}</h2></div><span class="muted">Gestione profilo, ruoli e autorizzazioni</span></div>${userDetailTabs(federatedAuthenticationAvailable)}<div class="user-editor">
+  render(`<div class="user-action-bar"><button id="back" type="button" class="secondary">Indietro</button><label class="inline-field">Stato registrazione ${helpDot('user-state')}<select id="user-state">${registrationStateOptions(user.statoRegistrazione)}</select></label><button id="save-state" type="button" class="secondary">Aggiorna stato</button><button id="disable-user" type="button" class="danger-button">Imposta stato eliminato</button>${helpDot('user-delete')}${currentUser?.flagAdmin ? `<button id="purge-user" type="button" class="danger-button">Elimina definitivamente</button>${helpDot('user-delete-permanent')}` : ''}</div><div class="page-header"><div><p class="eyebrow">Utente ${codiceUtente}</p><h2>${escapeHtml(user.email)}</h2></div><span class="muted">Gestione profilo, ruoli e autorizzazioni</span></div>${userDetailTabs(federatedAuthenticationAvailable)}<div class="user-editor">
     ${identitySection}
-    <form id="profile" data-user-panel="profile" role="tabpanel" aria-labelledby="user-tab-profile"><h3>Profilo e accesso</h3><label>Nome ${helpDot('user-name')}<input name="nome" value="${escapeHtml(user.nome)}"></label><label>Cognome ${helpDot('user-name')}<input name="cognome" value="${escapeHtml(user.cognome)}"></label><label>Email ${helpDot('user-email')}<input name="email" type="email" value="${escapeHtml(user.email)}" required><span class="form-help">Identificativo di accesso e recapito.</span></label><label>Pagina di default ${helpDot('user-default-page')}<input name="paginaDefault" maxlength="50" value="${escapeHtml(user.paginaDefault)}"><span class="form-help">Pagina mostrata dopo il login (percorso o codice pagina).</span></label>${federatedAuthenticationAvailable ? `<label class="check"><input name="passwordLoginEnabled" type="checkbox" ${user.passwordLoginEnabled !== false ? 'checked' : ''}> Login con password ${helpDot('user-password-login')}</label><span class="form-help">Se disabilitato, il login con email e password restituisce un errore esplicito; restano valide le identitÃ  SSO attive.</span>` : ''}${authenticationPolicyFields(user)}<button>Salva</button></form>
+    <form id="profile" data-user-panel="profile" role="tabpanel" aria-labelledby="user-tab-profile"><h3>Profilo e accesso</h3><label>Nome ${helpDot('user-name')}<input name="nome" value="${escapeHtml(user.nome)}"></label><label>Cognome ${helpDot('user-name')}<input name="cognome" value="${escapeHtml(user.cognome)}"></label><label>Email ${helpDot('user-email')}<input name="email" type="email" value="${escapeHtml(user.email)}" required><span class="form-help">Identificativo di accesso e recapito.</span></label><label>Pagina di default ${helpDot('user-default-page')}<input name="paginaDefault" maxlength="50" value="${escapeHtml(user.paginaDefault)}"><span class="form-help">Pagina mostrata dopo il login (percorso o codice pagina).</span></label>${federatedAuthenticationAvailable ? `<label class="check"><input name="passwordLoginEnabled" type="checkbox" ${user.passwordLoginEnabled !== false ? 'checked' : ''}> Login con password ${helpDot('user-password-login')}</label><span class="form-help">Se disabilitato, il login con email e password restituisce un errore esplicito; restano valide le identitÃ  SSO attive.</span>` : ''}${authenticationPolicyFields(user)}${extendedProfileFields(user)}${privilegeFields(user)}${filterFields(user)}${passwordFields()}<button>Salva</button></form>
     ${roleAssignmentEditor(allRoles, userGrants.ruoli, menuGroups)}
     ${directGrantEditor(menuGroups, userGrants.abilitazioni)}
     </div>`);
@@ -895,25 +1038,21 @@ async function showUser(rawCode: string): Promise<void> {
     profileForm.onsubmit = event => {
       event.preventDefault();
       handleAction(async () => {
-        const values = formValues(eventForm(event));
-        const fields = new FormData(eventForm(event));
-        await updateUtente(codiceUtente, {
-          codiceUtente, email: values.email ?? '', nome: values.nome || undefined, cognome: values.cognome || undefined,
-          paginaDefault: values.paginaDefault || undefined,
-          flagDueFattori: fields.has('flagDueFattori'),
-          passwordlessLoginEnabled: fields.has('passwordlessLoginEnabled'),
-          ...(federatedAuthenticationAvailable ? { passwordLoginEnabled: fields.has('passwordLoginEnabled') } : {}),
-        } as UserDto);
+        const form = eventForm(event);
+        const fields = new FormData(form);
+        await updateUtente(codiceUtente, profilePayload(form, codiceUtente) as unknown as UserDto);
         if (codiceUtente === currentUser?.codiceUtente && (
           fields.has('flagDueFattori') !== Boolean(user.flagDueFattori) ||
-          fields.has('passwordlessLoginEnabled') !== Boolean(user.passwordlessLoginEnabled)
+          fields.has('passwordlessLoginEnabled') !== Boolean(user.passwordlessLoginEnabled) ||
+          (canManageSuperFlag() && fields.has('flagSuper') !== Boolean(user.flagSuper)) ||
+          (canManageAdminFlag() && fields.has('flagAdmin') !== Boolean(user.flagAdmin))
         )) {
           token = null;
           sessionStorage.removeItem('accessi-console-token');
           setAccessiConsoleToken(null);
           resetLogin();
           await bootstrap();
-          byId('login-error').textContent = 'Policy aggiornata. Accedi di nuovo con la nuova configurazione.';
+          byId('login-error').textContent = 'Privilegi o policy aggiornati. Accedi di nuovo con la nuova configurazione.';
           return;
         }
         await showUser(String(codiceUtente));
@@ -922,6 +1061,17 @@ async function showUser(rawCode: string): Promise<void> {
       });
     };
   }
+
+  const setPasswordButton = document.getElementById('set-password') as HTMLButtonElement | null;
+  if (setPasswordButton) setPasswordButton.onclick = () => handleAction(async () => {
+    const newPassword = (document.querySelector<HTMLInputElement>('#profile input[name="newPassword"]')?.value ?? '').trim();
+    const violations = passwordPolicyViolations(newPassword);
+    if (violations.length > 0) throw new Error(`La password non rispetta i requisiti: richiede ${violations.join(', ')}.`);
+    if (!window.confirm(`Impostare una nuova password per ${user.email}?`)) return;
+    await setUserPassword(codiceUtente, { newPassword });
+    showNotice('Password aggiornata.');
+    await showUser(String(codiceUtente));
+  });
 
   const rolesForm = document.getElementById('roles') as HTMLFormElement | null;
   if (rolesForm) rolesForm.onsubmit = (event) => { event.preventDefault(); handleAction(async () => { await assignRolesToUser(codiceUtente, { roles: selectedNumbers(eventForm(event), 'role') }); showNotice('Ruoli aggiornati.'); }); };
@@ -941,6 +1091,13 @@ async function showUser(rawCode: string): Promise<void> {
     await showUser(String(codiceUtente));
   });
   byId('disable-user').onclick = () => handleAction(async () => { await deleteUser(codiceUtente); showNotice('Utente impostato come eliminato.'); await show('users'); });
+  const purgeUser = document.getElementById('purge-user') as HTMLButtonElement | null;
+  if (purgeUser) purgeUser.onclick = () => handleAction(async () => {
+    if (!window.confirm(`Eliminare DEFINITIVAMENTE l'utente ${user.email} e tutti i dati collegati? Operazione irreversibile.`)) return;
+    await deleteUserPermanently(codiceUtente);
+    showNotice('Utente eliminato definitivamente.');
+    await show('users');
+  });
 }
 
 async function showRoles(): Promise<void> {

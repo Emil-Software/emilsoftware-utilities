@@ -454,6 +454,10 @@ POST /api/accessi/auth/confirm-reset-password/{token}
 
 L'invio non rivela se l'email esiste (anti-enumerazione). Il token di reset è monouso ed è firmato con una chiave dedicata.
 
+> [!WARNING]
+> **Policy password (solo quando si imposta)**
+> Reset, set-password admin e bootstrap richiedono almeno 8 caratteri con maiuscola, minuscola, cifra e carattere speciale, senza spazi e non comuni. Se non conforme l'API risponde 400 con code ACCESSI\_WEAK\_PASSWORD e l'elenco dei requisiti in details. La policy NON si applica al login: le password preesistenti eventualmente deboli continuano ad autenticare e vengono migrate senza blocco.
+
 > [!NOTE]
 > **Pagina personalizzata**
 > Imposta customResetPage per usare la tua pagina di reset invece di quella inclusa. confirmationEmailReturnUrl e confirmationEmailPrefix controllano il ritorno.
@@ -563,10 +567,20 @@ _Creazione, aggiornamento, stati, GDPR e filtri._
 | GET | /api/accessi/user/get-users | Elenco con paginazione (limit e offset, header X-Total-Count). |
 | POST | /api/accessi/user/create-managed-user | Crea un utente locale e invia il reset password. |
 | PUT | /api/accessi/user/update-user/:codiceUtente | Aggiorna profilo e policy (campi privilegiati solo superutente). |
-| DELETE | /api/accessi/user/delete-user/:codiceUtente | Soft delete: STAREG=DELETE. |
+| DELETE | /api/accessi/user/delete-user/:codiceUtente | Soft delete: STAREG=DELETE. Admin o superutente. |
+| DELETE | /api/accessi/user/delete-user-permanent/:codiceUtente | Eliminazione definitiva: rimuove utente e record collegati. Solo admin. |
+| POST | /api/accessi/user/set-password/:codiceUtente | Imposta direttamente la password: hash lato backend e scadenza secondo policy, nessuna email. |
 | POST | /api/accessi/user/set-stato | Imposta lo stato di registrazione. |
 | PATCH | /api/accessi/user/set-gdpr/:codiceUtente | Registra il consenso GDPR. |
 | POST | /api/accessi/user/register | Registrazione pubblica, solo se publicRegistration.enabled. |
+
+> [!WARNING]
+> **Eliminazione: soft o definitiva**
+> Il soft delete (STAREG=DELETE) è disponibile per admin e superutenti ed è reversibile. L'eliminazione definitiva rimuove utente e record collegati in transazione ed è riservata agli admin; il superutente senza flag Admin può solo flaggare l'utente come eliminato.
+
+> [!TIP]
+> **Admin: controllo completo del profilo**
+> Dalla scheda utente un admin modifica tutti i campi Accessi: anagrafica, cellulare, lingua, avatar, pagina di default, metadata JSON, 2FA/passwordless/login con password, flag, GDPR, stato registrazione, scadenza password e filtri (tabella FILTRI). La password si imposta direttamente con set-password. Le scritture sono idempotenti (UPDATE OR INSERT su UTENTI\_CONFIG) e verificate dal backend; non serve accedere al database.
 
 **Esempio corretto — Creazione di un utente gestito**
 
@@ -816,6 +830,10 @@ La console è servita dal modulo su /api/accessi/console. Non ha stato proprio: 
 > Accede a tutta la console (catalogo, token, SSO, utenti) ma NON conferisce abilitazioni: i menu restano quelli assegnati via ABILITAZIONI/RUOLI\_MNU.
 
 > [!NOTE]
+> **Gestione dei flag**
+> Dalla scheda utente i flag sono mostrati in base al ruolo di chi è connesso: un admin può assegnare o togliere sia il flag Admin sia il flag Superutente; un superutente senza flag Admin può gestire solo il flag Superutente. I flag si impostano anche in creazione (utente locale o SSO). La regola è imposta anche dal backend: inviare un flag non consentito viene rifiutato.
+
+> [!NOTE]
 > **Accesso**
 > Apri /api/accessi/console e accedi con un utente con FLGSUPER o FLGADMIN. Le sezioni sono raggiungibili anche tramite deep link (per esempio /api/accessi/console/menu-e-gruppi/menu).
 
@@ -868,7 +886,7 @@ _Tutte le rotte /api/accessi/\* in una tabella._
 | --- | --- |
 | Auth | POST auth/login, auth/get-user-by-token, auth/confirm-reset-password/:token, auth/two-factor/verify, auth/two-factor/resend |
 | Email | POST email/send-reset-password-email, GET email/reset-password-page/:token |
-| Utenti | GET user/get-users, POST user/create-managed-user, PUT user/update-user/:codiceUtente, DELETE user/delete-user/:codiceUtente, POST user/set-stato, PATCH user/set-gdpr/:codiceUtente, POST user/register |
+| Utenti | GET user/get-users, POST user/create-managed-user, PUT user/update-user/:codiceUtente, DELETE user/delete-user/:codiceUtente, DELETE user/delete-user-permanent/:codiceUtente, POST user/set-password/:codiceUtente, POST user/set-stato, PATCH user/set-gdpr/:codiceUtente, POST user/register |
 | Permessi | GET permission/roles, POST permission/create-role, PUT permission/update-role/:codiceRuolo, DELETE permission/delete-role/:codiceRuolo, POST permission/assign-roles/:codiceUtente, POST permission/assign-permissions/:codiceUtente, GET permission/grants/:codiceUtente, GET permission/menus, GET permission/menu-types, GET permission/groups-with-menus |
 | Catalogo | POST/PUT/DELETE permission/menus\[/:codiceMenu\], permission/menu-groups\[/:codiceGruppo\], permission/menu-types\[/:codiceTipo\] |
 | Configurator | PATCH configurator/menus/:codiceMenu/enabled, PATCH configurator/groups/:codiceGruppo/enabled |

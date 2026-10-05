@@ -11,7 +11,9 @@ const { Orm } = require('../src/Orm');
 const { PermissionService } = require('../src/accessi-module/Services/PermissionService/PermissionService');
 const { UserService } = require('../src/accessi-module/Services/UserService/UserService');
 const { buildAuthenticatedTokenPayload, resolveCodiceUtenteFromTokenPayload, extractAccessiBearerToken } = require('../src/accessi-module/security/authenticatedToken');
-const { ensureSuperUser, ensureAdmin, ensureUserManagement, ensureConsoleAccess, ensureSelfOrSuperUser } = require('../src/accessi-module/security/accessControl');
+const { ensureSuperUser, ensureAdmin, ensureUserManagement, ensureConsoleAccess, ensureSelfOrSuperUser, ensurePrivilegeFlagChanges } = require('../src/accessi-module/security/accessControl');
+const { collectPasswordPolicyViolations, assertStrongPassword } = require('../src/accessi-module/security/passwordPolicy');
+const { AuthService } = require('../src/accessi-module/Services/AuthService/AuthService');
 const { SchemaExportService } = require('../src/accessi-module/Services/SchemaExportService/SchemaExportService');
 const { AdminBootstrapService } = require('../src/accessi-module/Services/AdminBootstrapService/AdminBootstrapService');
 const adminBootstrap = require('../src/accessi-module/security/adminBootstrap');
@@ -85,6 +87,106 @@ test('empty role and permission updates revoke assignments', async () => {
   assert.deepEqual(calls, [[1, []], [1, []]]);
 });
 
+test('password policy rejects weak passwords and reports missing requirements', () => {
+  assert.deepEqual(collectPasswordPolicyViolations('Aa1!aaaa'), []);
+  assert.ok(collectPasswordPolicyViolations('aaaa').length > 0);
+  assert.ok(collectPasswordPolicyViolations('Aaaa1111').some((item) => /speciale/.test(item)));
+  assert.ok(collectPasswordPolicyViolations('Aa1! aaa').some((item) => /spazio/.test(item)));
+  assert.ok(collectPasswordPolicyViolations('Aa1!aa').some((item) => /8 caratteri/.test(item)));
+  assert.ok(collectPasswordPolicyViolations('Passw0rd').some((item) => /comune/.test(item)));
+
+  assert.throws(() => assertStrongPassword('password'), (error) => {
+    assert.equal(error.getStatus(), 400);
+    const response = error.getResponse();
+    assert.equal(response.code, 'ACCESSI_WEAK_PASSWORD');
+    assert.ok(Array.isArray(response.details) && response.details.length > 0);
+    return true;
+  });
+
+  assert.doesNotThrow(() => assertStrongPassword('Aa1!aaaa'));
+});
+
+test('setPassword enforces the policy unless disabled for legacy migration', async t => {
+  t.mock.method(Orm, 'execute', async () => 'OK');
+  const service = new AuthService({}, {}, { databaseOptions: {} }, {});
+  await assert.rejects(() => service.setPassword(1, 'password'), /requisiti di sicurezza/);
+  await service.setPassword(1, 'weakpass', { enforcePolicy: false });
+  await service.setPassword(1, 'Aa1!aaaa');
+});
+
+test('updateUser writes every editable field with idempotent upsert', async t => {
+  const executions = [];
+  t.mock.method(Orm, 'execute', async (_options, query, params) => { executions.push({ query, params }); return 'OK'; });
+  t.mock.method(Orm, 'query', async (_options, sql) => {
+    if (String(sql).includes('C.FLGSUPER')) {
+      return [{ codice_utente: 7, email: 'x@y.z', stato_registrazione: 20, flag_super: 0, flag_admin: 0, flag_due_fattori: 0, passwordless_login_enabled: 0, password_login_enabled: 1 }];
+    }
+    return [];
+  });
+  const service = new UserService(
+    { databaseOptions: {} },
+    {},
+    { assignRolesToUser: async () => {}, assignPermissionsToUser: async () => {} },
+    { upsertFiltriUtente: async () => {} },
+  );
+
+  await service.updateUser(7, {
+    codiceUtente: 7,
+    email: 'x@y.z',
+    nome: 'Mario',
+    cognome: 'Rossi',
+    cellulare: '+393401234567',
+    codiceLingua: 'it',
+    avatar: 'mario.png',
+    paginaDefault: '/dashboard',
+    jsonMetadata: '{"theme":"dark"}',
+    dataScadenzaPassword: '2026-01-01',
+    statoRegistrazione: 20,
+    flagGdpr: true,
+    flagSuper: true,
+    flagAdmin: true,
+    flagDueFattori: true,
+    passwordlessLoginEnabled: false,
+    passwordLoginEnabled: true,
+  }, { allowPrivilegedChanges: true });
+
+  const utentiQuery = executions.find((entry) => entry.query.startsWith('UPDATE UTENTI SET'));
+  assert.ok(utentiQuery, 'manca l update di UTENTI');
+  assert.match(utentiQuery.query, /usrname = \?/);
+  assert.match(utentiQuery.query, /stareg = \?/);
+  assert.match(utentiQuery.query, /flggdpr = \?/);
+  assert.match(utentiQuery.query, /DATSCAPWD = CAST\(\? AS DATE\)/);
+
+  const configQuery = executions.find((entry) => entry.query.includes('UTENTI_CONFIG'));
+  assert.ok(configQuery, 'manca l upsert di UTENTI_CONFIG');
+  assert.match(configQuery.query, /UPDATE OR INSERT INTO UTENTI_CONFIG/);
+  assert.match(configQuery.query, /MATCHING \(CODUTE\)/);
+  for (const column of ['cognome', 'nome', 'avatar', 'cellulare', 'codlingua', 'PAGDEF', 'json_metadata', 'flg2fatt', 'flgpwdless', 'flgsuper', 'FLGADMIN', 'flgpassword']) {
+    assert.ok(configQuery.query.includes(column), `colonna mancante: ${column}`);
+  }
+});
+
+test('permanent delete removes the user and all dependent rows in one transaction', async t => {
+  const calls = [];
+  t.mock.method(Orm, 'executeMultiple', async (_options, queries) => { calls.push(queries); return 'OK'; });
+  const service = new UserService({ databaseOptions: {} }, {}, { assignRolesToUser: async () => {}, assignPermissionsToUser: async () => {} }, { upsertFiltriUtente: async () => {} });
+  t.mock.method(service, 'getUsers', async () => [{ utente: { codiceUtente: 7, email: 'x@y.z' } }]);
+
+  await service.deleteUserPermanently(7);
+
+  const queries = calls[0].map((entry) => entry.query);
+  assert.equal(queries.length, 10);
+  assert.match(queries[0], /DELETE FROM ABILITAZIONI WHERE CODUTE = \?/);
+  assert.match(queries.at(-1), /DELETE FROM UTENTI WHERE CODUTE = \?/);
+  assert.ok(calls[0].every((entry) => entry.params[0] === 7));
+});
+
+test('permanent delete rejects an unknown user', async t => {
+  const service = new UserService({ databaseOptions: {} }, {}, {}, {});
+  t.mock.method(service, 'getUsers', async () => []);
+  await assert.rejects(() => service.deleteUserPermanently(404), /Nessun utente/);
+});
+
 test('batch grants match the historical single-user composition', async t => {
   t.mock.method(Orm, 'query', async (_options, sql) => {
     if (sql.includes('FLGSUPER')) {
@@ -151,6 +253,25 @@ test('super and admin responsibilities stay separate', () => {
   assert.doesNotThrow(() => ensureSelfOrSuperUser(admin, 999));
   assert.doesNotThrow(() => ensureSelfOrSuperUser(plain, 3));
   assert.throws(() => ensureSelfOrSuperUser(plain, 999));
+});
+
+test('privilege flag changes follow the actor role', () => {
+  const superUser = { codiceUtente: 1, flagSuper: true, flagAdmin: false };
+  const admin = { codiceUtente: 2, flagSuper: false, flagAdmin: true };
+  const superAdmin = { codiceUtente: 4, flagSuper: true, flagAdmin: true };
+  const plain = { codiceUtente: 3, flagSuper: false, flagAdmin: false };
+
+  // Superutente: solo il flag super, mai quello admin.
+  assert.doesNotThrow(() => ensurePrivilegeFlagChanges(superUser, { flagSuper: true }));
+  assert.throws(() => ensurePrivilegeFlagChanges(superUser, { flagAdmin: true }), /admin/);
+
+  // Admin (anche non super): entrambi i flag.
+  assert.doesNotThrow(() => ensurePrivilegeFlagChanges(admin, { flagSuper: true, flagAdmin: true }));
+  assert.doesNotThrow(() => ensurePrivilegeFlagChanges(superAdmin, { flagSuper: true, flagAdmin: true }));
+
+  // Utente semplice: nessun flag.
+  assert.throws(() => ensurePrivilegeFlagChanges(plain, { flagSuper: false }));
+  assert.throws(() => ensurePrivilegeFlagChanges(plain, { flagAdmin: false }));
 });
 
 test('schema export generates the complete DDL from the canonical schema', () => {

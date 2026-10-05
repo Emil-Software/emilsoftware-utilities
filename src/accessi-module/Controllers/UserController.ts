@@ -6,6 +6,7 @@
   Get,
   HttpException,
   HttpStatus,
+  NotFoundException,
   Param,
   ParseBoolPipe,
   ParseIntPipe,
@@ -39,7 +40,9 @@ import { PublicRegisterRequest } from '../Dtos/PublicRegisterRequest';
 import { RegisterResponse } from '../Dtos/RegisterResponse';
 import { RegisterRequest } from '../Dtos/RegisterRequest';
 import { SetStatoRegistrazioneDto } from '../Dtos/SetStatoRegistrazione';
+import { SetUserPasswordRequest } from '../Dtos/SetUserPasswordRequest';
 import { UserDto } from '../Dtos/UserDto';
+import { AuthService } from '../Services/AuthService/AuthService';
 import { EmailService } from '../Services/EmailService/EmailService';
 import { UserService } from '../Services/UserService/UserService';
 import { JwtSimpleGuard } from '../jwt/jwt.strategy';
@@ -48,6 +51,8 @@ import {
   sendPublicAuthRateLimitExceeded,
 } from '../security/publicAuthRateLimit';
 import {
+  ensureAdmin,
+  ensurePrivilegeFlagChanges,
   ensureSelfOrSuperUser,
   ensureUserManagement,
   getAuthenticatedAccessiUser,
@@ -67,6 +72,7 @@ export class UserController {
     @Inject('ACCESSI_OPTIONS') private readonly accessiOptions: AccessiOptions,
     private readonly userService: UserService,
     private readonly emailService: EmailService,
+    private readonly authService: AuthService,
   ) {}
 
   private sendControllerError(res: Response, error: unknown) {
@@ -213,6 +219,48 @@ export class UserController {
   }
 
   @ApiOperation({
+    summary: 'Elimina definitivamente un utente',
+    operationId: 'deleteUserPermanently',
+    description: 'Rimuove l utente e tutti i record collegati. Operazione distruttiva riservata agli admin.',
+  })
+  @ApiParam({
+    name: 'codiceUtente',
+    description: "Codice identificativo dell'utente da eliminare definitivamente",
+    required: true,
+    example: 123,
+  })
+  @ApiResponse({ status: 200, description: 'Utente eliminato definitivamente', type: ActionResponse })
+  @ApiResponse({ status: 400, description: 'Errore nei parametri della richiesta', type: ErrorResponse })
+  @ApiResponse({ status: 403, description: 'Operazione non autorizzata', type: ErrorResponse })
+  @ApiResponse({ status: 404, description: 'Utente non trovato', type: ErrorResponse })
+  @ApiResponse({ status: 500, description: 'Errore interno del server', type: ErrorResponse })
+  @ApiBearerAuth()
+  @UseGuards(JwtSimpleGuard)
+  @Delete('delete-user-permanent/:codiceUtente')
+  async deleteUserPermanently(
+    @Req() request: Request,
+    @Param('codiceUtente', ParseIntPipe) codiceUtente: number,
+    @Res() res: Response,
+  ) {
+    try {
+      const authenticatedUser = getAuthenticatedAccessiUser(request);
+      ensureAdmin(
+        authenticatedUser,
+        'Solo gli admin possono eliminare definitivamente un utente.',
+      );
+
+      if (authenticatedUser.codiceUtente === codiceUtente) {
+        throw new BadRequestException('Non puoi eliminare definitivamente il tuo stesso utente.');
+      }
+
+      await this.userService.deleteUserPermanently(codiceUtente);
+      return RestUtilities.sendOKMessage(res, "L'utente e' stato eliminato definitivamente.");
+    } catch (error) {
+      return this.sendControllerError(res, error);
+    }
+  }
+
+  @ApiOperation({
     summary: 'Forza l invio dell email di reset password a un utente',
     operationId: 'forcePasswordReset',
     description: 'Riservato al superutente. Richiede un servizio email configurato; altrimenti risponde con ACCESSI_EMAIL_NOT_CONFIGURED.',
@@ -259,6 +307,46 @@ export class UserController {
       );
       const sent = await this.userService.forcePasswordResetForLegacyPasswords();
       return RestUtilities.sendOKMessage(res, `Email di reset inviata a ${sent} utenti con password legacy.`);
+    } catch (error) {
+      return this.sendControllerError(res, error);
+    }
+  }
+
+  @ApiOperation({
+    summary: 'Imposta direttamente la password di un utente',
+    operationId: 'setUserPassword',
+    description: 'Riservato agli amministratori. Hasha la password, aggiorna la scadenza secondo la policy e non invia email.',
+  })
+  @ApiParam({ name: 'codiceUtente', description: 'Codice identificativo dell utente', required: true, example: 123, type: Number })
+  @ApiBody({ type: SetUserPasswordRequest })
+  @ApiResponse({ status: 200, description: 'Password aggiornata', type: ActionResponse })
+  @ApiResponse({ status: 400, description: 'Password non valida', type: ErrorResponse })
+  @ApiResponse({ status: 403, description: 'Operazione non autorizzata', type: ErrorResponse })
+  @ApiBearerAuth()
+  @UseGuards(JwtSimpleGuard)
+  @Post('set-password/:codiceUtente')
+  async setUserPassword(
+    @Req() request: Request,
+    @Param('codiceUtente', ParseIntPipe) codiceUtente: number,
+    @Body() body: SetUserPasswordRequest,
+    @Res() res: Response,
+  ) {
+    try {
+      ensureUserManagement(
+        getAuthenticatedAccessiUser(request),
+        'Solo gli amministratori possono impostare la password di un utente.',
+      );
+
+      const existing = await this.userService.getUsers(
+        { codiceUtente },
+        { includeExtensionFields: false, includeGrants: false },
+      );
+      if (existing.length === 0) {
+        throw new NotFoundException(`Nessun utente con codice ${codiceUtente}.`);
+      }
+
+      await this.authService.setPassword(codiceUtente, body.newPassword);
+      return RestUtilities.sendOKMessage(res, `Password dell utente ${codiceUtente} aggiornata.`);
     } catch (error) {
       return this.sendControllerError(res, error);
     }
@@ -383,7 +471,9 @@ export class UserController {
   @Post('create-managed-user')
   async createManagedUser(@Req() request: Request, @Body() registrationData: RegisterRequest, @Res() res: Response) {
     try {
-      ensureUserManagement(getAuthenticatedAccessiUser(request), 'Solo gli amministratori possono creare utenti.');
+      const authenticatedUser = getAuthenticatedAccessiUser(request);
+      ensureUserManagement(authenticatedUser, 'Solo gli amministratori possono creare utenti.');
+      ensurePrivilegeFlagChanges(authenticatedUser, registrationData);
       const codiceUtente = await this.userService.register(registrationData, { allowPrivilegedFields: true });
       await this.emailService.sendPasswordResetEmail(registrationData.email, registrationData.htmlMail);
       return RestUtilities.sendBaseResponse(res, codiceUtente, HttpStatus.CREATED);
@@ -432,6 +522,7 @@ export class UserController {
           authenticatedUser,
           'Solo gli amministratori possono modificare ruoli, permessi o flag privilegiati.',
         );
+        ensurePrivilegeFlagChanges(authenticatedUser, user);
       } else {
         ensureSelfOrSuperUser(
           authenticatedUser,

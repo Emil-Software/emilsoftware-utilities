@@ -77,6 +77,7 @@ export * from './serviceTokenDto';
 export * from './setPasswordLoginPolicyRequest';
 export * from './setStatoRegistrazioneDto';
 export * from './setStatoRegistrazioneDtoStatoRegistrazione';
+export * from './setUserPasswordRequest';
 export * from './status';
 export * from './tipoFiltro';
 export * from './tipoFiltroFlgEnabled';
