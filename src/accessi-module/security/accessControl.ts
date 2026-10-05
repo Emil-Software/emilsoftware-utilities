@@ -73,6 +73,31 @@ export function ensureUserManagement(
 }
 
 /**
+ * Rango di un utente Accessi: 0 utente comune, 1 superutente, 2 admin.
+ * La gerarchia e' ADMIN > SUPER: un attore puo' gestire solo utenti di rango
+ * pari o inferiore, quindi un superutente non puo' toccare un admin.
+ */
+export function accessiUserRank(user: { flagSuper?: boolean; flagAdmin?: boolean }): number {
+  if (user.flagAdmin) return 2;
+  if (user.flagSuper) return 1;
+  return 0;
+}
+
+/**
+ * Impone che l'attore possa gestire il target: rango attore >= rango target.
+ * Un superutente (1) gestisce utenti comuni e altri superutenti, ma non admin (2).
+ */
+export function ensureCanManageTargetUser(
+  actor: AuthenticatedAccessiUser,
+  target: { flagSuper?: boolean; flagAdmin?: boolean },
+  message = 'Non puoi gestire un utente di rango superiore al tuo.',
+): void {
+  if (accessiUserRank(actor) < accessiUserRank(target)) {
+    throw new ForbiddenException(message);
+  }
+}
+
+/**
  * Limita la modifica dei flag di privilegio in base al ruolo dell'attore:
  * un admin gestisce sia `flagAdmin` sia `flagSuper`; un superutente senza
  * `flagAdmin` gestisce solo `flagSuper`.

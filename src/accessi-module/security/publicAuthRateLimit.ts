@@ -11,7 +11,8 @@ export type PublicAuthRateLimitScope =
   | 'passwordResetEmail'
   | 'passwordResetConfirm'
   | 'getUserByToken'
-  | 'adminBootstrap';
+  | 'adminBootstrap'
+  | 'consoleEntry';
 
 type RateLimitBucket = {
   count: number;
@@ -36,6 +37,7 @@ const DEFAULT_PUBLIC_AUTH_RATE_LIMITS: Record<
   passwordResetConfirm: { windowMs: 15 * 60 * 1000, maxAttempts: 10 },
   getUserByToken: { windowMs: 5 * 60 * 1000, maxAttempts: 30 },
   adminBootstrap: { windowMs: 15 * 60 * 1000, maxAttempts: 10 },
+  consoleEntry: { windowMs: 5 * 60 * 1000, maxAttempts: 30 },
 };
 
 const RATE_LIMIT_BUCKETS = new Map<string, RateLimitBucket>();

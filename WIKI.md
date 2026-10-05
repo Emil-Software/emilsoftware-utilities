@@ -576,11 +576,19 @@ _Creazione, aggiornamento, stati, GDPR e filtri._
 
 > [!WARNING]
 > **Eliminazione: soft o definitiva**
-> Il soft delete (STAREG=DELETE) è disponibile per admin e superutenti ed è reversibile. L'eliminazione definitiva rimuove utente e record collegati in transazione ed è riservata agli admin; il superutente senza flag Admin può solo flaggare l'utente come eliminato.
+> Il soft delete (STAREG=DELETE) è disponibile per admin e superutenti ed è reversibile. L'eliminazione definitiva rimuove utente e record collegati in transazione ed è riservata agli admin; il superutente senza flag Admin può solo flaggare l'utente come eliminato. Se l'utente ha dati collegati in altre tabelle (per esempio campi estesi del backend) l'eliminazione definitiva fallisce con code ACCESSI\_USER\_DELETE\_HAS\_REFERENCES e messaggio esplicito: usa allora il soft delete.
+
+> [!TIP]
+> **Creazione con invito atomica**
+> La creazione utente con invio email è atomica: se SMTP non è configurato si fallisce prima di scrivere, e se l'invio fallisce l'utente creato viene annullato (codice ACCESSI\_USER\_INVITE\_EMAIL\_FAILED). Non restano utenti senza password. In alternativa un admin crea l'utente e imposta la password dal form dedicato.
 
 > [!TIP]
 > **Admin: controllo completo del profilo**
 > Dalla scheda utente un admin modifica tutti i campi Accessi: anagrafica, cellulare, lingua, avatar, pagina di default, metadata JSON, 2FA/passwordless/login con password, flag, GDPR, stato registrazione, scadenza password e filtri (tabella FILTRI). La password si imposta direttamente con set-password. Le scritture sono idempotenti (UPDATE OR INSERT su UTENTI\_CONFIG) e verificate dal backend; non serve accedere al database.
+
+> [!NOTE]
+> **Consenso GDPR**
+> Il pulsante "Registra consenso GDPR" completa il processo: imposta FLGGDPR e DATGDPR e scrive la riga storica in UTENTI\_GDPR (endpoint set-gdpr). Anche impostare flagGdpr via update-user completa il processo con la stessa riga storica.
 
 **Esempio corretto — Creazione di un utente gestito**
 
@@ -827,11 +835,19 @@ La console è servita dal modulo su /api/accessi/console. Non ha stato proprio: 
 
 > [!NOTE]
 > **Admin (FLGADMIN)**
-> Accede a tutta la console (catalogo, token, SSO, utenti) ma NON conferisce abilitazioni: i menu restano quelli assegnati via ABILITAZIONI/RUOLI\_MNU.
+> Accede a tutta la console (catalogo, token, SSO, utenti) ma NON conferisce abilitazioni: i menu restano quelli assegnati via ABILITAZIONI/RUOLI\_MNU. Gerarchia: ADMIN \> SUPER \> utente.
+
+> [!NOTE]
+> **Gerarchia dei ruoli**
+> Vale ADMIN (2) \> SUPER (1) \> utente comune (0). Un attore può gestire solo utenti di rango pari o inferiore: un superutente può amministrare totalmente utenti comuni e superutenti (profilo, password, flag, ruoli, grant, stato, eliminazione, filtri e identità/utenti SSO) ma NON può toccare un admin. Un admin può gestire chiunque. La regola è imposta dal backend (ensureCanManageTargetUser): un tentativo non consentito restituisce 403.
 
 > [!NOTE]
 > **Gestione dei flag**
-> Dalla scheda utente i flag sono mostrati in base al ruolo di chi è connesso: un admin può assegnare o togliere sia il flag Admin sia il flag Superutente; un superutente senza flag Admin può gestire solo il flag Superutente. I flag si impostano anche in creazione (utente locale o SSO). La regola è imposta anche dal backend: inviare un flag non consentito viene rifiutato.
+> Dalla scheda utente i flag sono mostrati in base al ruolo di chi è connesso: un admin può assegnare o togliere sia il flag Admin sia il flag Superutente; un superutente senza flag Admin può gestire solo il flag Superutente. I flag si impostano anche in creazione (utente locale o SSO).
+
+> [!WARNING]
+> **Ultimo admin**
+> Per non restare chiusi fuori dalla console, l'ultimo admin attivo non può essere disattivato, bloccato, eliminato né privato del flag Admin: l'operazione restituisce 400 finché non viene promosso un altro admin.
 
 > [!NOTE]
 > **Accesso**
@@ -840,6 +856,10 @@ La console è servita dal modulo su /api/accessi/console. Non ha stato proprio: 
 > [!NOTE]
 > **Bootstrap admin**
 > Con adminBootstrap.enabled il backend stampa a ogni avvio un token casuale (monouso, valido fino al riavvio). Nella schermata di login della console trovi "Crea utente admin": incolla il token e crea il primo admin senza email di conferma. La password è opzionale: se assente viene generata e mostrata una sola volta.
+
+> [!TIP]
+> **Auto-ingresso dal frontend**
+> Se un frontend ha già una sessione Accessi valida e l'utente è abilitato alla console, può aprire la console senza rifare il login: \`POST /api/accessi/console/entry\` con \`Authorization: Bearer \<jwt\>\` restituisce un ticket monouso; apri poi \`/api/accessi/console\#entry=\<ticket\>\`. Il JWT non finisce mai nell'URL; il ticket dura 60 secondi ed è utilizzabile una sola volta (endpoint di scambio protetto da rate limit).
 
 ---
 

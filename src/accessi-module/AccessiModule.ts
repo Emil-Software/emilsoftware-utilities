@@ -25,6 +25,7 @@ import { AccessiDatabaseUpdater } from './database-updates/AccessiDatabaseUpdate
 import { FederatedAuthService } from './federated-auth/FederatedAuthService';
 import { FederatedAuthController } from './federated-auth/FederatedAuthController';
 import { AccessiConsoleController } from './Controllers/AccessiConsoleController';
+import { ConsoleEntryController } from './Controllers/ConsoleEntryController';
 import { ServiceTokenController } from './Controllers/ServiceTokenController';
 import { ServiceTokenService } from './Services/ServiceTokenService/ServiceTokenService';
 import { ServiceTokenGuard } from './security/serviceTokenGuard';
@@ -88,6 +89,7 @@ export interface PublicAuthRateLimitOptions {
   twoFactorVerify?: PublicAuthRateLimitRuleOptions;
   twoFactorResend?: PublicAuthRateLimitRuleOptions;
   adminBootstrap?: PublicAuthRateLimitRuleOptions;
+  consoleEntry?: PublicAuthRateLimitRuleOptions;
 }
 
 /**
@@ -224,6 +226,7 @@ export interface AccessiOptions {
     ConfiguratorController,
     FederatedAuthController,
     AccessiConsoleController,
+    ConsoleEntryController,
     ServiceTokenController,
     SchemaController,
   ],

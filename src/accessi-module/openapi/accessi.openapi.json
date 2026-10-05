@@ -3262,6 +3262,112 @@
         ]
       }
     },
+    "/api/accessi/console/entry": {
+      "post": {
+        "description": "Riservato agli utenti abilitati alla console (FLGSUPER/FLGADMIN). Restituisce un ticket monouso legato all utente, valido pochi secondi.",
+        "operationId": "createConsoleEntryTicket",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConsoleEntryTicketResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Token Accessi mancante o non valido.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Utente non abilitato alla console.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Emetti un ticket di ingresso alla console",
+        "tags": [
+          "Console"
+        ]
+      }
+    },
+    "/api/accessi/console/entry/exchange": {
+      "post": {
+        "description": "Endpoint pubblico (il ticket e l unica credenziale) protetto da rate limit; il ticket e monouso e scade in pochi secondi.",
+        "operationId": "exchangeConsoleEntryTicket",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ConsoleEntryExchangeRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConsoleEntrySessionResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Ticket non valido o scaduto.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Troppi tentativi.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Scambia il ticket con la sessione Accessi",
+        "tags": [
+          "Console"
+        ]
+      }
+    },
     "/api/accessi/service-token": {
       "post": {
         "operationId": "createServiceToken",
@@ -5822,6 +5928,108 @@
             "example": "Collegamento verificato dal reparto IT."
           }
         }
+      },
+      "ConsoleEntryTicketResult": {
+        "type": "object",
+        "properties": {
+          "ticket": {
+            "type": "string",
+            "description": "Ticket monouso da usare in /api/accessi/console#entry=<ticket>.",
+            "example": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"
+          },
+          "expiresInSeconds": {
+            "type": "number",
+            "description": "Validita del ticket in secondi.",
+            "example": 60
+          }
+        },
+        "required": [
+          "ticket",
+          "expiresInSeconds"
+        ]
+      },
+      "ConsoleEntryTicketResponse": {
+        "type": "object",
+        "properties": {
+          "Status": {
+            "$ref": "#/components/schemas/Status"
+          },
+          "Message": {
+            "type": "string",
+            "example": "Dati recuperati con successo.",
+            "description": "Messaggio informativo restituito dalla libreria quando presente."
+          },
+          "Result": {
+            "$ref": "#/components/schemas/ConsoleEntryTicketResult"
+          }
+        },
+        "required": [
+          "Status",
+          "Result"
+        ]
+      },
+      "ConsoleEntryExchangeRequest": {
+        "type": "object",
+        "properties": {
+          "ticket": {
+            "type": "string",
+            "description": "Ticket monouso restituito da POST /api/accessi/console/entry.",
+            "example": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"
+          }
+        },
+        "required": [
+          "ticket"
+        ]
+      },
+      "ConsoleEntryTokenResult": {
+        "type": "object",
+        "properties": {
+          "value": {
+            "type": "string",
+            "description": "JWT Accessi.",
+            "example": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+          },
+          "type": {
+            "type": "string",
+            "description": "Schema di autorizzazione.",
+            "example": "Bearer"
+          }
+        },
+        "required": [
+          "value",
+          "type"
+        ]
+      },
+      "ConsoleEntrySessionResult": {
+        "type": "object",
+        "properties": {
+          "token": {
+            "$ref": "#/components/schemas/ConsoleEntryTokenResult"
+          }
+        },
+        "required": [
+          "token"
+        ]
+      },
+      "ConsoleEntrySessionResponse": {
+        "type": "object",
+        "properties": {
+          "Status": {
+            "$ref": "#/components/schemas/Status"
+          },
+          "Message": {
+            "type": "string",
+            "example": "Dati recuperati con successo.",
+            "description": "Messaggio informativo restituito dalla libreria quando presente."
+          },
+          "Result": {
+            "$ref": "#/components/schemas/ConsoleEntrySessionResult"
+          }
+        },
+        "required": [
+          "Status",
+          "Result"
+        ]
       },
       "CreateServiceTokenRequest": {
         "type": "object",

@@ -11,6 +11,9 @@ import type {
   BootstrapAdminRequest,
   BootstrapAdminResponse,
   ConfirmResetPasswordRequest,
+  ConsoleEntryExchangeRequest,
+  ConsoleEntrySessionResponse,
+  ConsoleEntryTicketResponse,
   CreateFederatedIdentityRequest,
   CreateFederatedProviderRequest,
   CreateFederatedUserRequest,
@@ -1571,6 +1574,57 @@ return accessiFetch<Promise<deleteFederatedIdentityPermanentlyResponse>>(getDele
     ...options,
     method: 'DELETE'
     
+  }
+);}
+
+
+/**
+ * Riservato agli utenti abilitati alla console (FLGSUPER/FLGADMIN). Restituisce un ticket monouso legato all utente, valido pochi secondi.
+ * @summary Emetti un ticket di ingresso alla console
+ */
+export type createConsoleEntryTicketResponse = {
+  data: ConsoleEntryTicketResponse;
+  status: number;
+}
+
+export const getCreateConsoleEntryTicketUrl = () => {
+
+
+  return `/api/accessi/console/entry`
+}
+
+export const createConsoleEntryTicket = async ( options?: RequestInit): Promise<createConsoleEntryTicketResponse> => {
+return accessiFetch<Promise<createConsoleEntryTicketResponse>>(getCreateConsoleEntryTicketUrl(),
+  {      
+    ...options,
+    method: 'POST'
+    
+  }
+);}
+
+
+/**
+ * Endpoint pubblico (il ticket e l unica credenziale) protetto da rate limit; il ticket e monouso e scade in pochi secondi.
+ * @summary Scambia il ticket con la sessione Accessi
+ */
+export type exchangeConsoleEntryTicketResponse = {
+  data: ConsoleEntrySessionResponse;
+  status: number;
+}
+
+export const getExchangeConsoleEntryTicketUrl = () => {
+
+
+  return `/api/accessi/console/entry/exchange`
+}
+
+export const exchangeConsoleEntryTicket = async (consoleEntryExchangeRequest: ConsoleEntryExchangeRequest, options?: RequestInit): Promise<exchangeConsoleEntryTicketResponse> => {
+return accessiFetch<Promise<exchangeConsoleEntryTicketResponse>>(getExchangeConsoleEntryTicketUrl(),
+  {      
+    ...options,
+    method: 'POST',
+    body: JSON.stringify(
+      consoleEntryExchangeRequest,)
   }
 );}
 

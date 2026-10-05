@@ -2,6 +2,20 @@
 
 Novità e modifiche rilevanti della libreria `emilsoftware-utilities` (modulo Accessi).
 
+## 2.0.0-dev.43
+
+### Cambiamenti
+- Gerarchia dei ruoli formalizzata **ADMIN > SUPER > utente**: un superutente non puo' gestire un admin su `update-user`, `delete-user` (soft e hard), `set-password`, `force-password-reset`, `set-stato`, `assign-roles` e `assign-permissions` (`ensureCanManageTargetUser`, 403 se violato).
+- Guard **ultimo admin attivo**: non puo' essere disattivato, bloccato, eliminato o privato del flag Admin (400), per evitare il lockout della console.
+- Creazione utente (`create-managed-user` e registrazione pubblica) resa **atomica** rispetto all'invio email: fail-fast se SMTP non configurato e rollback dell'utente creato se l'invio fallisce (`ACCESSI_USER_INVITE_EMAIL_FAILED`).
+- Console: form password separato (Invio imposta la password invece di salvare il profilo), scheda utente in sola lettura per target di rango superiore.
+- SSO: anche il superutente puo' creare utenti SSO e gestirne identita/policy (`federated-auth/users/*`) sugli utenti non-admin; il catalogo dei provider SSO resta riservato agli admin.
+- Coerenza: i filtri utente (`saveFiltriUtente`) rispettano la gerarchia; il flag GDPR impostato dal profilo allinea anche `DATGDPR`; la scheda in sola lettura disabilita anche il collegamento SSO.
+- Eliminazione definitiva: se l'utente ha dati collegati (tabelle esterne/FK) risponde 400 con `code: ACCESSI_USER_DELETE_HAS_REFERENCES` e messaggio esplicito, suggerendo il soft delete (la hard delete resta invariata quando non ci sono vincoli).
+- Consenso GDPR completo: `update-user` con `flagGdpr` scrive anche la riga storica `UTENTI_GDPR`; in console il pulsante "Registra consenso GDPR" usa `set-gdpr`.
+- Console: aggiunto il pulsante "Invia reset password legacy" (super e admin).
+- Console: **auto-ingresso dal frontend** tramite ticket monouso (`POST /api/accessi/console/entry` + apertura di `#entry=<ticket>`), senza JWT nell'URL; il ticket e' legato all'utente, dura 60s, e' monouso e lo scambio e' protetto da rate limit (`publicAuthRateLimit.consoleEntry`).
+
 ## 2.0.0-dev.42
 
 ### Aggiunte

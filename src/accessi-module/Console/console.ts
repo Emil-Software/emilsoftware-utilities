@@ -20,6 +20,7 @@
   deleteTipoFiltro,
   deleteUser,
   deleteUserPermanently,
+  forcePasswordResetLegacy,
   getFederatedIdentities,
   getFederatedProviders,
   getFiltriUtente,
@@ -39,6 +40,7 @@
   revokeServiceToken,
   rotateServiceToken,
   saveFiltriUtente,
+  setGdpr,
   setGroupEnabled,
   setMenuEnabled,
   setStatoRegistrazione,
@@ -682,21 +684,57 @@ async function bootstrap(): Promise<void> {
   }
 }
 
+/**
+ * Auto-ingresso alla console da un frontend gia autenticato: scambia il ticket
+ * monouso (`#entry=<ticket>`) con la sessione Accessi e avvia la console.
+ */
+async function exchangeConsoleEntry(ticket: string): Promise<void> {
+  try {
+    const response = await fetch(`${consoleBasePath}/entry/exchange`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+      body: JSON.stringify({ ticket }),
+    });
+    const payload = (await response.json().catch(() => undefined)) as
+      | { Result?: { token?: { value?: string } }; message?: string }
+      | undefined;
+    const value = payload?.Result?.token?.value;
+    if (!response.ok || typeof value !== 'string' || value === '') {
+      throw new Error(payload?.message ?? 'Apertura automatica della console non riuscita.');
+    }
+    token = value;
+    sessionStorage.setItem('accessi-console-token', value);
+    setAccessiConsoleToken(value);
+    await bootstrap();
+  } catch (error) {
+    token = null;
+    setAccessiConsoleToken(null);
+    sessionStorage.removeItem('accessi-console-token');
+    finishBoot('login');
+    byId('login-error').textContent = error instanceof Error ? error.message : 'Apertura automatica della console non riuscita.';
+  }
+}
+
 async function showUsers(): Promise<void> {
   const { users, total } = await loadUsersPage();
   usersTotal = total;
   const totalPages = Math.max(1, Math.ceil(total / USERS_PAGE_SIZE));
   if (usersPage >= totalPages) usersPage = totalPages - 1;
 
-  render(`<div class="toolbar"><button id="new-local">Nuovo utente locale</button>${federatedAuthenticationAvailable ? '<button id="new-sso">Nuovo utente SSO</button>' : ''}<button id="reload-users" class="secondary">Aggiorna</button></div>
+  render(`<div class="toolbar"><button id="new-local">Nuovo utente locale</button>${federatedAuthenticationAvailable ? '<button id="new-sso">Nuovo utente SSO</button>' : ''}<button id="reload-users" class="secondary">Aggiorna</button><button id="reset-legacy" class="secondary">Invia reset password legacy</button></div>
     <div class="pager-row pager-row-top">${pagerMarkup(totalPages)}</div>
     <table><thead><tr><th>Utente</th><th>Stato</th><th>Accesso</th><th>2FA</th><th>Ruoli</th><th></th></tr></thead><tbody>
-    ${users.map(({ utente, userGrants }) => `<tr><td>${escapeHtml(utente.email)}<br><span class="muted">${escapeHtml(utente.nome)} ${escapeHtml(utente.cognome)}</span></td><td>${escapeHtml(utente.statoRegistrazione)}</td><td>${utente.passwordlessLoginEnabled ? 'codice email' : utente.passwordLoginEnabled === false ? 'solo SSO' : 'password'}</td><td>${utente.flagDueFattori ? 'Attiva' : 'Disattiva'}</td><td class="roles-col">${rolesCell(utente.codiceUtente, userGrants)}</td><td><button data-user="${utente.codiceUtente}">Gestisci</button></td></tr>`).join('') || '<tr><td colspan="6" class="muted">Nessun utente.</td></tr>'}
+    ${users.map(({ utente, userGrants }) => `<tr><td>${escapeHtml(utente.email)}<br><span class="muted">${escapeHtml(utente.nome)} ${escapeHtml(utente.cognome)}</span></td><td>${escapeHtml(utente.statoRegistrazione)}</td><td>${utente.passwordlessLoginEnabled ? 'codice email' : utente.passwordLoginEnabled === false ? 'solo SSO' : 'password'}</td><td>${utente.flagDueFattori ? 'Attiva' : 'Disattiva'}</td><td class="roles-col">${rolesCell(utente.codiceUtente, userGrants)}</td><td><button data-user="${utente.codiceUtente}"${canManageUser(utente) ? '' : ' disabled title="Non puoi gestire un utente di rango superiore" aria-disabled="true"'}>Gestisci</button></td></tr>`).join('') || '<tr><td colspan="6" class="muted">Nessun utente.</td></tr>'}
     </tbody></table><div class="pager-row pager-row-bottom">${pagerMarkup(totalPages)}</div>`);
 
   byId('new-local').onclick = () => showLocalUserForm();
   if (federatedAuthenticationAvailable) byId('new-sso').onclick = () => handleAction(showSsoUserForm);
   byId('reload-users').onclick = () => handleAction(() => show('users'));
+  byId('reset-legacy').onclick = () => handleAction(async () => {
+    if (!window.confirm('Inviare l email di reset a tutti gli utenti con password non ancora migrata? Richiede un servizio email configurato.')) return;
+    await forcePasswordResetLegacy();
+    showNotice('Email di reset inviate agli utenti con password legacy.');
+  });
   document.querySelectorAll<HTMLButtonElement>('[data-goto]').forEach((button) => {
     button.onclick = () => handleAction(async () => {
       const target = button.dataset.goto;
@@ -728,6 +766,38 @@ function canManageSuperFlag(): boolean {
 
 function canManageAdminFlag(): boolean {
   return Boolean(currentUser?.flagAdmin);
+}
+
+/** Rango di un utente console: 0 comune, 1 superutente, 2 admin (ADMIN > SUPER). */
+function consoleUserRank(user: { flagSuper?: boolean; flagAdmin?: boolean } | null | undefined): number {
+  if (user?.flagAdmin) return 2;
+  if (user?.flagSuper) return 1;
+  return 0;
+}
+
+/** L'utente connesso puo' gestire il target? Self sempre, altrimenti rango >= target. */
+function canManageUser(user: { codiceUtente?: number; flagSuper?: boolean; flagAdmin?: boolean }): boolean {
+  if (currentUser && user.codiceUtente === currentUser.codiceUtente) return true;
+  return consoleUserRank(currentUser) >= consoleUserRank(user);
+}
+
+/** Abilita/disabilita i controlli di gestione utente (usato per le schede in sola lettura). */
+function setUserManagementEnabled(enabled: boolean): void {
+  for (const id of ['disable-user', 'purge-user', 'save-state', 'set-password', 'save-profile', 'set-gdpr']) {
+    const element = document.getElementById(id) as HTMLButtonElement | null;
+    if (element) element.disabled = !enabled;
+  }
+  for (const selector of ['#roles button', '#grants button', '#link-sso button']) {
+    document.querySelectorAll<HTMLButtonElement>(selector).forEach((button) => { button.disabled = !enabled; });
+  }
+  for (const selector of ['#profile', '#password-form', '#roles', '#grants', '#link-sso']) {
+    document.querySelectorAll<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>(
+      `${selector} input, ${selector} select, ${selector} textarea`,
+    ).forEach((field) => { field.disabled = !enabled; });
+  }
+  document.querySelectorAll<HTMLButtonElement>('[data-identity-toggle], [data-identity-delete]').forEach((button) => {
+    button.disabled = !enabled;
+  });
 }
 
 /**
@@ -796,7 +866,7 @@ function extendedProfileFields(user: UserDto): string {
     <label>Codice lingua ${helpDot('user-lingua')}<input name="codiceLingua" maxlength="2" value="${escapeHtml(user.codiceLingua ?? '')}"></label>
     <label>Avatar ${helpDot('user-avatar')}<input name="avatar" maxlength="30" value="${escapeHtml(user.avatar ?? '')}"></label>
     <label>Scadenza password ${helpDot('user-scadenza-password')}<input name="dataScadenzaPassword" type="date" value="${dateInputValue(user.dataScadenzaPassword)}"></label>
-    <label class="check"><input name="flagGdpr" type="checkbox" ${user.flagGdpr ? 'checked' : ''}> GDPR accettato ${helpDot('user-gdpr')}</label>
+    <fieldset class="gdpr-status"><legend>GDPR ${helpDot('user-gdpr')}</legend><p class="form-help">${user.flagGdpr ? `Consenso registrato${dateInputValue(user.dataGdpr) ? ` il ${escapeHtml(dateInputValue(user.dataGdpr))}` : ''}.` : 'Consenso non ancora registrato.'}</p><button type="button" id="set-gdpr" class="secondary">Registra consenso GDPR</button></fieldset>
     <label>Metadata JSON ${helpDot('user-json')}<textarea name="jsonMetadata" rows="3">${escapeHtml(user.jsonMetadata ?? '')}</textarea></label>
     </fieldset>`;
 }
@@ -832,7 +902,6 @@ function profilePayload(form: HTMLFormElement, codiceUtente: number): Record<str
     paginaDefault: optionalText(values, 'paginaDefault'),
     jsonMetadata: optionalText(values, 'jsonMetadata'),
     dataScadenzaPassword: optionalText(values, 'dataScadenzaPassword'),
-    flagGdpr: fields.has('flagGdpr'),
     flagDueFattori: fields.has('flagDueFattori'),
     passwordlessLoginEnabled: fields.has('passwordlessLoginEnabled'),
     numRep: optionalNumber(values, 'numRep'),
@@ -853,12 +922,13 @@ function profilePayload(form: HTMLFormElement, codiceUtente: number): Record<str
   return payload;
 }
 
-/** Impostazione diretta della password (hash lato backend, nessuna email). */
+/** Impostazione diretta della password in un form separato: Invio imposta la password, non salva il profilo. */
 function passwordFields(): string {
-  return `<fieldset><legend>Password</legend>
+  return `<form id="password-form" class="user-editor-section" data-user-panel="profile" role="tabpanel" aria-labelledby="user-tab-profile">
+    <h3>Password</h3>
     <label>Nuova password ${helpDot('user-set-password')}<input name="newPassword" type="password" autocomplete="new-password" minlength="8" maxlength="100"><span class="form-help">Almeno 8 caratteri con maiuscola, minuscola, cifra e carattere speciale; nessuno spazio. Viene salvata come hash e la scadenza segue la policy; nessuna email inviata.</span></label>
-    <button type="button" id="set-password" class="secondary">Imposta password</button>
-    </fieldset>`;
+    <button type="submit" id="set-password" class="secondary">Imposta password</button>
+    </form>`;
 }
 
 function showLocalUserForm(): void {
@@ -900,7 +970,7 @@ async function showSsoUserForm(): Promise<void> {
       };
       await createFederatedUser(request);
       showNotice('Utente SSO creato e collegamento registrato.');
-      await show('ssoUsers');
+      await show(currentUser?.flagAdmin ? 'ssoUsers' : 'users');
     });
   };
 }
@@ -1004,9 +1074,11 @@ async function showUser(rawCode: string): Promise<void> {
     : [];
   const identitySection = federatedAuthenticationAvailable ? federatedIdentitySection(linked, providerList) : '';
   const defaultUserTab: UserDetailTab = federatedAuthenticationAvailable ? 'sso' : 'profile';
-  render(`<div class="user-action-bar"><button id="back" type="button" class="secondary">Indietro</button><label class="inline-field">Stato registrazione ${helpDot('user-state')}<select id="user-state">${registrationStateOptions(user.statoRegistrazione)}</select></label><button id="save-state" type="button" class="secondary">Aggiorna stato</button><button id="disable-user" type="button" class="danger-button">Imposta stato eliminato</button>${helpDot('user-delete')}${currentUser?.flagAdmin ? `<button id="purge-user" type="button" class="danger-button">Elimina definitivamente</button>${helpDot('user-delete-permanent')}` : ''}</div><div class="page-header"><div><p class="eyebrow">Utente ${codiceUtente}</p><h2>${escapeHtml(user.email)}</h2></div><span class="muted">Gestione profilo, ruoli e autorizzazioni</span></div>${userDetailTabs(federatedAuthenticationAvailable)}<div class="user-editor">
+  const manageable = canManageUser(user);
+  render(`${manageable ? '' : '<div class="notice notice-error" role="alert"><span class="notice-icon" aria-hidden="true">!</span><span class="notice-text">Stai visualizzando un utente di rango superiore: scheda in sola lettura.</span></div>'}<div class="user-action-bar"><button id="back" type="button" class="secondary">Indietro</button><label class="inline-field">Stato registrazione ${helpDot('user-state')}<select id="user-state">${registrationStateOptions(user.statoRegistrazione)}</select></label><button id="save-state" type="button" class="secondary">Aggiorna stato</button><button id="disable-user" type="button" class="danger-button">Imposta stato eliminato</button>${helpDot('user-delete')}${currentUser?.flagAdmin ? `<button id="purge-user" type="button" class="danger-button">Elimina definitivamente</button>${helpDot('user-delete-permanent')}` : ''}</div><div class="page-header"><div><p class="eyebrow">Utente ${codiceUtente}</p><h2>${escapeHtml(user.email)}</h2></div><span class="muted">Gestione profilo, ruoli e autorizzazioni</span></div>${userDetailTabs(federatedAuthenticationAvailable)}<div class="user-editor">
     ${identitySection}
-    <form id="profile" data-user-panel="profile" role="tabpanel" aria-labelledby="user-tab-profile"><h3>Profilo e accesso</h3><label>Nome ${helpDot('user-name')}<input name="nome" value="${escapeHtml(user.nome)}"></label><label>Cognome ${helpDot('user-name')}<input name="cognome" value="${escapeHtml(user.cognome)}"></label><label>Email ${helpDot('user-email')}<input name="email" type="email" value="${escapeHtml(user.email)}" required><span class="form-help">Identificativo di accesso e recapito.</span></label><label>Pagina di default ${helpDot('user-default-page')}<input name="paginaDefault" maxlength="50" value="${escapeHtml(user.paginaDefault)}"><span class="form-help">Pagina mostrata dopo il login (percorso o codice pagina).</span></label>${federatedAuthenticationAvailable ? `<label class="check"><input name="passwordLoginEnabled" type="checkbox" ${user.passwordLoginEnabled !== false ? 'checked' : ''}> Login con password ${helpDot('user-password-login')}</label><span class="form-help">Se disabilitato, il login con email e password restituisce un errore esplicito; restano valide le identitÃ  SSO attive.</span>` : ''}${authenticationPolicyFields(user)}${extendedProfileFields(user)}${privilegeFields(user)}${filterFields(user)}${passwordFields()}<button>Salva</button></form>
+    <form id="profile" data-user-panel="profile" role="tabpanel" aria-labelledby="user-tab-profile"><h3>Profilo e accesso</h3><label>Nome ${helpDot('user-name')}<input name="nome" value="${escapeHtml(user.nome)}"></label><label>Cognome ${helpDot('user-name')}<input name="cognome" value="${escapeHtml(user.cognome)}"></label><label>Email ${helpDot('user-email')}<input name="email" type="email" value="${escapeHtml(user.email)}" required><span class="form-help">Identificativo di accesso e recapito.</span></label><label>Pagina di default ${helpDot('user-default-page')}<input name="paginaDefault" maxlength="50" value="${escapeHtml(user.paginaDefault)}"><span class="form-help">Pagina mostrata dopo il login (percorso o codice pagina).</span></label>${federatedAuthenticationAvailable ? `<label class="check"><input name="passwordLoginEnabled" type="checkbox" ${user.passwordLoginEnabled !== false ? 'checked' : ''}> Login con password ${helpDot('user-password-login')}</label><span class="form-help">Se disabilitato, il login con email e password restituisce un errore esplicito; restano valide le identitÃ  SSO attive.</span>` : ''}${authenticationPolicyFields(user)}${extendedProfileFields(user)}${privilegeFields(user)}${filterFields(user)}<button id="save-profile" type="submit">Salva</button></form>
+    ${passwordFields()}
     ${roleAssignmentEditor(allRoles, userGrants.ruoli, menuGroups)}
     ${directGrantEditor(menuGroups, userGrants.abilitazioni)}
     </div>`);
@@ -1062,14 +1134,25 @@ async function showUser(rawCode: string): Promise<void> {
     };
   }
 
-  const setPasswordButton = document.getElementById('set-password') as HTMLButtonElement | null;
-  if (setPasswordButton) setPasswordButton.onclick = () => handleAction(async () => {
-    const newPassword = (document.querySelector<HTMLInputElement>('#profile input[name="newPassword"]')?.value ?? '').trim();
-    const violations = passwordPolicyViolations(newPassword);
-    if (violations.length > 0) throw new Error(`La password non rispetta i requisiti: richiede ${violations.join(', ')}.`);
-    if (!window.confirm(`Impostare una nuova password per ${user.email}?`)) return;
-    await setUserPassword(codiceUtente, { newPassword });
-    showNotice('Password aggiornata.');
+  const passwordForm = document.getElementById('password-form') as HTMLFormElement | null;
+  if (passwordForm) passwordForm.onsubmit = (event) => {
+    event.preventDefault();
+    handleAction(async () => {
+      const newPassword = (document.querySelector<HTMLInputElement>('#password-form input[name="newPassword"]')?.value ?? '').trim();
+      const violations = passwordPolicyViolations(newPassword);
+      if (violations.length > 0) throw new Error(`La password non rispetta i requisiti: richiede ${violations.join(', ')}.`);
+      if (!window.confirm(`Impostare una nuova password per ${user.email}?`)) return;
+      await setUserPassword(codiceUtente, { newPassword });
+      showNotice('Password aggiornata.');
+      await showUser(String(codiceUtente));
+    });
+  };
+
+  const setGdprButton = document.getElementById('set-gdpr') as HTMLButtonElement | null;
+  if (setGdprButton) setGdprButton.onclick = () => handleAction(async () => {
+    if (!window.confirm(`Registrare il consenso GDPR per ${user.email}?`)) return;
+    await setGdpr(codiceUtente);
+    showNotice('Consenso GDPR registrato.');
     await showUser(String(codiceUtente));
   });
 
@@ -1098,6 +1181,9 @@ async function showUser(rawCode: string): Promise<void> {
     showNotice('Utente eliminato definitivamente.');
     await show('users');
   });
+
+  // Rango superiore: nessun controllo di modifica attivo (il backend rifiuta comunque con 403).
+  if (!manageable) setUserManagementEnabled(false);
 }
 
 async function showRoles(): Promise<void> {
@@ -1859,10 +1945,16 @@ window.addEventListener('keydown', (event) => {
 });
 window.addEventListener('resize', positionHelp);
 window.addEventListener('scroll', positionHelp, true);
+// Auto-ingresso dal frontend gia autenticato: il fragment contiene solo un ticket
+// monouso, mai il JWT. La console lo scambia con la sessione Accessi.
+const entryTicket = /^#entry=([a-f0-9]{64})$/i.exec(window.location.hash)?.[1];
 // Optional handoff from the hosting backend after its SSO callback. The fragment
 // contains only an opaque challenge id, never an access token or provider token.
 const ssoChallenge = /^#two-factor=([a-f0-9]{64})$/.exec(window.location.hash)?.[1];
-if (ssoChallenge) {
+if (entryTicket) {
+  window.history.replaceState(null, '', window.location.pathname);
+  void exchangeConsoleEntry(entryTicket);
+} else if (ssoChallenge) {
   token = null;
   setAccessiConsoleToken(null);
   sessionStorage.removeItem('accessi-console-token');

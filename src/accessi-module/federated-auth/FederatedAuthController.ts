@@ -1,11 +1,13 @@
-﻿import { Body, Controller, Delete, Get, HttpException, HttpStatus, Param, ParseIntPipe, Patch, Post, Req, Res, UseGuards } from '@nestjs/common';
+﻿import { Body, Controller, Delete, Get, HttpException, HttpStatus, NotFoundException, Param, ParseIntPipe, Patch, Post, Req, Res, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiBody, ApiCreatedResponse, ApiOkResponse, ApiOperation, ApiParam, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { Request, Response } from 'express';
 import { RestUtilities } from '../../Utilities';
 import { ActionResponse, ErrorResponse } from '../Dtos/BaseResponse';
 import { CreateFederatedIdentityRequest, CreateFederatedProviderRequest, CreateFederatedUserRequest, FederatedIdentityListResponse, FederatedIdentityResponse, FederatedProviderListResponse, FederatedProviderResponse, SetPasswordLoginPolicyRequest, UpdateFederatedIdentityRequest, UpdateFederatedProviderRequest } from '../Dtos/FederatedIdentityDtos';
 import { JwtSimpleGuard } from '../jwt/jwt.strategy';
-import { ensureAdmin, getAuthenticatedAccessiUser } from '../security/accessControl';
+import { ensureAdmin, ensureCanManageTargetUser, ensurePrivilegeFlagChanges, ensureUserManagement, getAuthenticatedAccessiUser } from '../security/accessControl';
+import type { AuthenticatedAccessiUser } from '../security/accessControl';
+import { UserService } from '../Services/UserService/UserService';
 import { FederatedAuthService } from './FederatedAuthService';
 
 /**
@@ -18,14 +20,49 @@ import { FederatedAuthService } from './FederatedAuthService';
 @UseGuards(JwtSimpleGuard)
 @Controller('accessi/federated-auth')
 export class FederatedAuthController {
-  constructor(private readonly federatedAuthService: FederatedAuthService) {}
+  constructor(
+    private readonly federatedAuthService: FederatedAuthService,
+    private readonly userService: UserService,
+  ) {}
+
+  /**
+   * Verifica che l'attore possa gestire il target (ADMIN > SUPER > utente):
+   * un superutente non puo' toccare le identita SSO di un admin.
+   */
+  private async ensureManageableTarget(
+    actor: AuthenticatedAccessiUser,
+    codiceUtente: number,
+  ): Promise<void> {
+    const target = await this.userService.getAuthenticatedUserSnapshot(codiceUtente);
+    if (!target) {
+      throw new NotFoundException(`Nessun utente con codice ${codiceUtente}.`);
+    }
+    ensureCanManageTargetUser(actor, target);
+  }
+
+  /** Risolve il proprietario di un'identita SSO e verifica che l'attore possa gestirlo. */
+  private async ensureManageableIdentity(
+    actor: AuthenticatedAccessiUser,
+    identityKey: string,
+  ): Promise<void> {
+    const owner = await this.federatedAuthService.getIdentityOwner(identityKey);
+    if (!owner) {
+      throw new NotFoundException('Collegamento SSO non trovato.');
+    }
+    await this.ensureManageableTarget(actor, owner);
+  }
 
   @ApiOperation({ summary: 'Elenca i provider SSO censiti', operationId: 'getFederatedProviders', description: 'Riservato a superutente. Restituisce solo catalogo e stato Accessi; issuer, secret e configurazioni SSO restano nel backend.' })
   @ApiOkResponse({ type: FederatedProviderListResponse })
   @Get('providers')
   async getProviders(@Req() request: Request, @Res() res: Response) {
     try {
-      ensureAdmin(getAuthenticatedAccessiUser(request));
+      // Lettura del catalogo provider: serve anche al superutente per creare utenti SSO.
+      // La modifica del catalogo resta riservata agli admin.
+      ensureUserManagement(
+        getAuthenticatedAccessiUser(request),
+        'Solo gli amministratori possono leggere i provider SSO.',
+      );
       return RestUtilities.sendBaseResponse(res, await this.federatedAuthService.getProviders());
     } catch (error) {
       return this.sendError(res, error);
@@ -82,7 +119,10 @@ export class FederatedAuthController {
   @Get('users/:codiceUtente/identities')
   async getIdentities(@Req() request: Request, @Param('codiceUtente', ParseIntPipe) codiceUtente: number, @Res() res: Response) {
     try {
-      ensureAdmin(getAuthenticatedAccessiUser(request));
+      ensureUserManagement(
+        getAuthenticatedAccessiUser(request),
+        'Solo gli amministratori possono leggere le identita SSO.',
+      );
       return RestUtilities.sendBaseResponse(res, await this.federatedAuthService.getUserIdentities(codiceUtente));
     } catch (error) {
       return this.sendError(res, error);
@@ -96,7 +136,9 @@ export class FederatedAuthController {
   @Post('users/:codiceUtente/identities')
   async linkIdentity(@Req() request: Request, @Param('codiceUtente', ParseIntPipe) codiceUtente: number, @Body() body: CreateFederatedIdentityRequest, @Res() res: Response) {
     try {
-      ensureAdmin(getAuthenticatedAccessiUser(request));
+      const authenticatedUser = getAuthenticatedAccessiUser(request);
+      ensureUserManagement(authenticatedUser, 'Solo gli amministratori possono collegare identita SSO.');
+      await this.ensureManageableTarget(authenticatedUser, codiceUtente);
       const identity = await this.federatedAuthService.linkIdentity(codiceUtente, body, body.note);
       return RestUtilities.sendBaseResponse(res, identity, HttpStatus.CREATED);
     } catch (error) {
@@ -115,7 +157,9 @@ export class FederatedAuthController {
   @Post('users')
   async createUser(@Req() request: Request, @Body() body: CreateFederatedUserRequest, @Res() res: Response) {
     try {
-      ensureAdmin(getAuthenticatedAccessiUser(request));
+      const authenticatedUser = getAuthenticatedAccessiUser(request);
+      ensureUserManagement(authenticatedUser, 'Solo gli amministratori possono creare utenti SSO.');
+      ensurePrivilegeFlagChanges(authenticatedUser, body.user);
       const identity = await this.federatedAuthService.createManagedFederatedUser(body.user, body, body.passwordLoginEnabled === true, body.note);
       return RestUtilities.sendBaseResponse(res, identity, HttpStatus.CREATED);
     } catch (error) {
@@ -130,7 +174,9 @@ export class FederatedAuthController {
   @Patch('users/:codiceUtente/password-login')
   async setPasswordPolicy(@Req() request: Request, @Param('codiceUtente', ParseIntPipe) codiceUtente: number, @Body() body: SetPasswordLoginPolicyRequest, @Res() res: Response) {
     try {
-      ensureAdmin(getAuthenticatedAccessiUser(request));
+      const authenticatedUser = getAuthenticatedAccessiUser(request);
+      ensureUserManagement(authenticatedUser, 'Solo gli amministratori possono modificare la policy di accesso.');
+      await this.ensureManageableTarget(authenticatedUser, codiceUtente);
       await this.federatedAuthService.setPasswordLoginEnabled(codiceUtente, body.passwordLoginEnabled);
       return RestUtilities.sendOKMessage(res, 'Policy di autenticazione aggiornata.');
     } catch (error) {
@@ -144,7 +190,9 @@ export class FederatedAuthController {
   @Delete('identities/:identityKey')
   async disableIdentity(@Req() request: Request, @Param('identityKey') identityKey: string, @Res() res: Response) {
     try {
-      ensureAdmin(getAuthenticatedAccessiUser(request));
+      const authenticatedUser = getAuthenticatedAccessiUser(request);
+      ensureUserManagement(authenticatedUser, 'Solo gli amministratori possono disabilitare identita SSO.');
+      await this.ensureManageableIdentity(authenticatedUser, identityKey);
       await this.federatedAuthService.disableIdentity(identityKey);
       return RestUtilities.sendOKMessage(res, 'Identita SSO disabilitata.');
     } catch (error) {
@@ -160,7 +208,9 @@ export class FederatedAuthController {
   @Delete('users/:codiceUtente/identities/:identityKey')
   async deleteIdentity(@Req() request: Request, @Param('codiceUtente', ParseIntPipe) codiceUtente: number, @Param('identityKey') identityKey: string, @Res() res: Response) {
     try {
-      ensureAdmin(getAuthenticatedAccessiUser(request));
+      const authenticatedUser = getAuthenticatedAccessiUser(request);
+      ensureUserManagement(authenticatedUser, 'Solo gli amministratori possono eliminare collegamenti SSO.');
+      await this.ensureManageableTarget(authenticatedUser, codiceUtente);
       await this.federatedAuthService.deleteIdentity(codiceUtente, identityKey);
       return RestUtilities.sendOKMessage(res, 'Collegamento SSO eliminato definitivamente.');
     } catch (error) {
@@ -175,7 +225,9 @@ export class FederatedAuthController {
   @Patch('identities/:identityKey')
   async updateIdentity(@Req() request: Request, @Param('identityKey') identityKey: string, @Body() body: UpdateFederatedIdentityRequest, @Res() res: Response) {
     try {
-      ensureAdmin(getAuthenticatedAccessiUser(request));
+      const authenticatedUser = getAuthenticatedAccessiUser(request);
+      ensureUserManagement(authenticatedUser, 'Solo gli amministratori possono aggiornare collegamenti SSO.');
+      await this.ensureManageableIdentity(authenticatedUser, identityKey);
       await this.federatedAuthService.updateIdentity(identityKey, body);
       return RestUtilities.sendOKMessage(res, 'Collegamento SSO aggiornato.');
     } catch (error) {

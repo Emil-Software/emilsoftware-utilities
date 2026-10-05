@@ -195,9 +195,10 @@ export const HELP: Record<string, HelpEntry> = {
     ],
   },
   'user-gdpr': {
-    title: 'GDPR accettato',
+    title: 'Consenso GDPR',
     blocks: [
-      p(`Imposta il flag di accettazione GDPR (UTENTI.FLGGDPR). Il consenso completo con tracciamento si registra dal flusso dedicato (endpoint set-gdpr).`),
+      p(`Lo stato mostra se il consenso è registrato. Il pulsante "Registra consenso GDPR" (endpoint set-gdpr) imposta FLGGDPR e DATGDPR e scrive la riga storica in UTENTI_GDPR.`),
+      note('info', 'Completo e tracciato', `A differenza del flag impostato a mano, il flusso dedicato registra anche la data e lo storico dell'accettazione.`),
     ],
   },
   'user-json': {

@@ -1,6 +1,6 @@
 # Aggiornamento e verifica del database Accessi
 
-La libreria richiede lo schema generico **1.5.0** e Firebird **2.5 o successivo**. Lo schema necessario e dichiarato in `database-updates/accessiSchema.ts`; l'updater confronta questa definizione con i metadati reali del database a ogni avvio.
+La libreria richiede lo schema generico dichiarato da `ACCESSI_SCHEMA_VERSION` in `database-updates/accessiSchema.ts` (oggi `1.11.1`) e Firebird **2.5 o successivo**. Lo schema necessario e dichiarato nello stesso file; l'updater confronta questa definizione con i metadati reali del database a ogni avvio.
 
 Su Firebird 2.5 i generatori sono creati con `CREATE GENERATOR` (in 2.5 non esiste `CREATE SEQUENCE`), mentre da Firebird 3.0 si usa `CREATE SEQUENCE`. Il resto del DDL, le query e la verifica dei metadati sono comuni: l'updater non usa funzionalita introdotte dopo la 2.5 (niente window function, `RDB$RELATION_TYPE` o `NEXT VALUE FOR`).
 
@@ -23,7 +23,7 @@ L'updater:
 2. Crea le tabelle e le colonne generiche mancanti. Ripristina i default richiesti e aggiunge NOT NULL dove necessario, usando il default per eventuali valori nulli. Conserva i valori gia impostati, inclusi i flag 2FA e password.
 3. Verifica chiavi primarie, riferimenti e regole di cancellazione, check SSO, indici attivi, sequence e trigger necessari. Chiavi e indici equivalenti possono avere nomi diversi. Per i trigger riconosce anche i nomi alternativi quando tabella, evento e operazioni previste sono presenti nel sorgente; non riscrive trigger personalizzati.
 4. Porta avanti le sequence degli utenti e dei ruoli se inferiori al massimo identificativo presente, senza azzerarle. Importa nel catalogo SSO soltanto i namespace gia usati dalle identita storiche.
-5. Rilegge e verifica lo schema completo. Solo dopo il successo registra `PARAMETRI.AccessiVersion = 1.5.0` (riga con `CODPAR = 'AccessiVersion'`).
+5. Rilegge e verifica lo schema completo. Solo dopo il successo registra `PARAMETRI.AccessiVersion` con la versione corrente (`ACCESSI_SCHEMA_VERSION`, riga con `CODPAR = 'AccessiVersion'`).
 
 Le vecchie chiavi `VersioneDB` e `DBVERSION` restano inalterate: possono appartenere al software ospitante. Una versione **AccessiVersion** piu recente di quella supportata blocca l'aggiornamento, senza tentare downgrade.
 

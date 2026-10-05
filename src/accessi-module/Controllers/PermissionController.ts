@@ -45,13 +45,16 @@ import { GetRolesResponse } from '../Dtos/GetRolesResponse';
 import { Role } from '../Dtos/Role';
 import { UserGrantsResponse } from '../Dtos/UserGrantsResponse';
 import { PermissionService } from '../Services/PermissionService/PermissionService';
+import { UserService } from '../Services/UserService/UserService';
 import { JwtSimpleGuard } from '../jwt/jwt.strategy';
 import {
   ensureSelfOrSuperUser,
   ensureAdmin,
+  ensureCanManageTargetUser,
   ensureUserManagement,
   getAuthenticatedAccessiUser,
 } from '../security/accessControl';
+import type { AuthenticatedAccessiUser } from '../security/accessControl';
 
 @ApiTags('Permission')
 @ApiBearerAuth()
@@ -62,11 +65,29 @@ import {
  * il client deve inviare l'intera lista desiderata per non rimuovere voci involontariamente.
  */
 export class PermissionController {
-  constructor(private readonly permissionService: PermissionService) {}
+  constructor(
+    private readonly permissionService: PermissionService,
+    private readonly userService: UserService,
+  ) {}
 
   private sendControllerError(res: Response, error: unknown) {
     // Lo status viene derivato centralmente da RestUtilities (HttpException o 500).
     return RestUtilities.sendErrorMessage(res, error, PermissionController.name);
+  }
+
+  /**
+   * Verifica che l'attore possa gestire il target (ADMIN > SUPER > utente):
+   * un superutente non puo' assegnare ruoli o permessi a un admin.
+   */
+  private async ensureManageableTarget(
+    actor: AuthenticatedAccessiUser,
+    codiceUtente: number,
+  ): Promise<void> {
+    const target = await this.userService.getAuthenticatedUserSnapshot(codiceUtente);
+    if (!target) {
+      throw new BadRequestException(`Nessun utente con codice ${codiceUtente}.`);
+    }
+    ensureCanManageTargetUser(actor, target);
   }
 
   @ApiOperation({
@@ -188,10 +209,12 @@ export class PermissionController {
     @Body() assignRolesRequest: AssignRolesToUserRequest,
   ) {
     try {
+      const authenticatedUser = getAuthenticatedAccessiUser(request);
       ensureUserManagement(
-        getAuthenticatedAccessiUser(request),
+        authenticatedUser,
         'Solo gli amministratori possono assegnare ruoli agli utenti.',
       );
+      await this.ensureManageableTarget(authenticatedUser, codiceUtente);
 
       await this.permissionService.assignRolesToUser(codiceUtente, assignRolesRequest.roles);
       const responseMessage =
@@ -232,10 +255,12 @@ export class PermissionController {
     @Body() assignPermissionsRequest: AssignPermissionsToUserRequest,
   ) {
     try {
+      const authenticatedUser = getAuthenticatedAccessiUser(request);
       ensureUserManagement(
-        getAuthenticatedAccessiUser(request),
+        authenticatedUser,
         'Solo gli amministratori possono assegnare permessi agli utenti.',
       );
+      await this.ensureManageableTarget(authenticatedUser, codiceUtente);
 
       await this.permissionService.assignPermissionsToUser(
         codiceUtente,

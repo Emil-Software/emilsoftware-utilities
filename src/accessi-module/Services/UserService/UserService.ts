@@ -135,6 +135,38 @@ export class UserService {
   }
 
   /**
+   * True se l'utente indicato e' un admin attivo e nessun altro admin attivo
+   * esiste: rimuovergli il flag admin, bloccarlo o eliminarlo lascerebbe la
+   * console senza amministratori.
+   */
+  async isLastActiveAdmin(codiceUtente: number): Promise<boolean> {
+    const snapshot = await this.getAuthenticatedUserSnapshot(codiceUtente);
+    if (!snapshot?.flagAdmin) return false;
+
+    const rows = (await Orm.query(
+      this.accessiOptions.databaseOptions,
+      `SELECT COUNT(*) AS TOTAL
+       FROM UTENTI U
+       JOIN UTENTI_CONFIG C ON C.CODUTE = U.CODUTE
+       WHERE COALESCE(C.FLGADMIN, 0) = 1
+         AND COALESCE(U.STAREG, 0) NOT IN (?, ?)`,
+      [StatoRegistrazione.DELETE, StatoRegistrazione.BLOCC],
+      false,
+    )) as Array<Record<string, unknown>>;
+    const total = Number(rows[0]?.TOTAL ?? rows[0]?.total ?? 0) || 0;
+    return total <= 1;
+  }
+
+  /** Impedisce di disattivare/eliminare l'ultimo admin attivo (lockout della console). */
+  async assertNotLastActiveAdmin(codiceUtente: number): Promise<void> {
+    if (await this.isLastActiveAdmin(codiceUtente)) {
+      throw new BadRequestException(
+        'Operazione bloccata: questo e l ultimo admin attivo. Promuovi un altro admin prima di disattivarlo o eliminarlo.',
+      );
+    }
+  }
+
+  /**
    * Elenca gli utenti con filtri opzionali. Grant e campi estesi sono costosi e vengono caricati soltanto
    * quando richiesti esplicitamente nelle opzioni; usare filtri puntuali nei flussi di autenticazione.
    */
@@ -628,6 +660,8 @@ export class UserService {
       if (user.flagGdpr !== undefined) {
         utentiUpdates.push('flggdpr = ?');
         utentiParams.push(user.flagGdpr ? 1 : 0);
+        // Coerenza con set-gdpr: flag e data di accettazione restano allineati.
+        utentiUpdates.push(user.flagGdpr ? 'datgdpr = CURRENT_DATE' : 'datgdpr = NULL');
       }
       if (allowPrivilegedChanges && user.statoRegistrazione !== undefined) {
         utentiUpdates.push('stareg = ?');
@@ -646,6 +680,16 @@ export class UserService {
         const queryUtenti = `UPDATE UTENTI SET ${utentiUpdates.join(', ')} WHERE CODUTE = ?`;
         utentiParams.push(codiceUtente);
         await Orm.execute(this.accessiOptions.databaseOptions, queryUtenti, utentiParams);
+      }
+
+      // Completa il processo GDPR: oltre ai flag, registra la riga storica di accettazione
+      // (stessa semantica di set-gdpr). Il trigger UTENTI_GDPR_BI0 riallinea i flag.
+      if (user.flagGdpr === true) {
+        await Orm.execute(
+          this.accessiOptions.databaseOptions,
+          'INSERT INTO UTENTI_GDPR (CODUTE, GDPR) VALUES (?, ?)',
+          [codiceUtente, 'true'],
+        );
       }
 
       // UPDATE OR INSERT mantiene la scrittura idempotente anche se la riga UTENTI_CONFIG
@@ -722,18 +766,37 @@ export class UserService {
     }
 
     const params = [codiceUtente];
-    await Orm.executeMultiple(this.accessiOptions.databaseOptions, [
-      { query: 'DELETE FROM ABILITAZIONI WHERE CODUTE = ?', params },
-      { query: 'DELETE FROM UTENTI_RUOLI WHERE CODUTE = ?', params },
-      { query: 'DELETE FROM UTENTI_IDENTITA_EXT WHERE CODUTE = ?', params },
-      { query: 'DELETE FROM ACCESSI_2FA WHERE CODUTE = ?', params },
-      { query: 'DELETE FROM FILTRI WHERE CODUTE = ?', params },
-      { query: 'DELETE FROM UTENTI_CONFIG WHERE CODUTE = ?', params },
-      { query: 'DELETE FROM UTENTI_PWD WHERE CODUTE = ?', params },
-      { query: 'DELETE FROM UTENTI_OLDPWD WHERE CODUTE = ?', params },
-      { query: 'DELETE FROM UTENTI_GDPR WHERE CODUTE = ?', params },
-      { query: 'DELETE FROM UTENTI WHERE CODUTE = ?', params },
-    ]);
+    try {
+      await Orm.executeMultiple(this.accessiOptions.databaseOptions, [
+        { query: 'DELETE FROM ABILITAZIONI WHERE CODUTE = ?', params },
+        { query: 'DELETE FROM UTENTI_RUOLI WHERE CODUTE = ?', params },
+        { query: 'DELETE FROM UTENTI_IDENTITA_EXT WHERE CODUTE = ?', params },
+        { query: 'DELETE FROM ACCESSI_2FA WHERE CODUTE = ?', params },
+        { query: 'DELETE FROM FILTRI WHERE CODUTE = ?', params },
+        { query: 'DELETE FROM UTENTI_CONFIG WHERE CODUTE = ?', params },
+        { query: 'DELETE FROM UTENTI_PWD WHERE CODUTE = ?', params },
+        { query: 'DELETE FROM UTENTI_OLDPWD WHERE CODUTE = ?', params },
+        { query: 'DELETE FROM UTENTI_GDPR WHERE CODUTE = ?', params },
+        { query: 'DELETE FROM UTENTI WHERE CODUTE = ?', params },
+      ]);
+    } catch (error) {
+      if (this.isForeignKeyViolation(error)) {
+        throw new BadRequestException({
+          code: 'ACCESSI_USER_DELETE_HAS_REFERENCES',
+          message: 'L utente ha dati collegati in altre tabelle (per esempio campi estesi del backend): non e possibile eliminarlo definitivamente. Usa "Imposta stato eliminato" (soft delete).',
+        });
+      }
+      throw error;
+    }
+  }
+
+  /** Riconosce una violazione di chiave esterna Firebird (SQLCODE -530/-531 o messaggio) senza esporre SQL. */
+  private isForeignKeyViolation(error: unknown): boolean {
+    const record = error as { sqlcode?: unknown; gdscode?: unknown; message?: unknown; code?: unknown } | null;
+    const sqlcode = Number(record?.sqlcode);
+    if (Number.isFinite(sqlcode) && (sqlcode === -530 || sqlcode === -531)) return true;
+    const text = `${typeof record?.message === 'string' ? record.message : ''} ${typeof record?.code === 'string' ? record.code : ''}`;
+    return /foreign key|isc_foreign_key|violation of .*constraint|-530/i.test(text);
   }
 
   /** Cambia esplicitamente lo stato di registrazione; usare questa API per blocco, conferma o eliminazione logica. */

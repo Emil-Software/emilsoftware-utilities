@@ -21,6 +21,7 @@ Documentazione divisa per argomenti, per renderla piu' leggibile e facile da agg
 - **Login SSO**: il backend valida token, issuer, audience e firma del proprio provider; poi passa solo `{ provider, subject }` a `FederatedAuthService.authenticate`. Accessi non riceve token esterni e resta l'unica fonte per ruoli e grant.
 - **Provisioning SSO**: di default lo esegue un superutente tramite le API federate. La self-registration e disabilitata finche `federatedAuthentication.allowSelfRegistration` non viene attivato esplicitamente.
 - **Ruoli e grant**: le API `assignRolesToUser`, `assignPermissionsToUser` e l'aggiornamento ruolo sono sostitutive. Inviare quindi la lista completa desiderata, non solo le differenze.
+- **Auto-ingresso console**: un frontend gia' autenticato apre la console senza re-login via `POST /api/accessi/console/entry` + `/api/accessi/console#entry=<ticket>` (il JWT non passa mai nell'URL). Dettagli in [Autenticazione e autorizzazione](docs/authentication.md).
 
 I commenti JSDoc sulle API pubbliche descrivono precondizioni, effetti sul database e compatibilita; Swagger documenta invece il contratto HTTP generato.
 
@@ -36,6 +37,8 @@ Regole di modifica (applicate dalla console e dal backend):
 - un admin puo' assegnare o togliere sia `flagSuper` sia `flagAdmin` (checkbox Admin + Superutente);
 - un superutente senza `flagAdmin` puo' gestire solo `flagSuper`;
 - i flag si impostano in creazione (utente locale o SSO) e in modifica profilo; inviare un flag non consentito restituisce 403 (`ensurePrivilegeFlagChanges`).
+
+Gerarchia: **ADMIN (2) > SUPER (1) > utente (0)**. Un attore gestisce solo utenti di rango pari o inferiore (`ensureCanManageTargetUser`): un superutente amministra totalmente i non-admin ma non tocca gli admin; l'ultimo admin attivo non puo' essere disattivato/eliminato. Dettagli in [Utenti, ruoli e permessi](docs/users-permissions.md).
 
 ### Controllo completo del profilo (admin)
 
@@ -62,7 +65,7 @@ Se non conforme l'API risponde **400** con `code: ACCESSI_WEAK_PASSWORD` e `deta
 ### Eliminazione utenti
 
 - **Soft delete**: `DELETE /api/accessi/user/delete-user/:codiceUtente` imposta `STAREG = DELETE` (reversibile). Disponibile per admin e superutenti.
-- **Eliminazione definitiva**: `DELETE /api/accessi/user/delete-user-permanent/:codiceUtente` rimuove in transazione l'utente e i record collegati (`UTENTI_CONFIG`, `UTENTI_PWD`, `UTENTI_OLDPWD`, `UTENTI_GDPR`, `UTENTI_RUOLI`, `ABILITAZIONI`, `FILTRI`, `UTENTI_IDENTITA_EXT`, `ACCESSI_2FA`). Solo admin; non e' consentito eliminare definitivamente il proprio utente.
+- **Eliminazione definitiva**: `DELETE /api/accessi/user/delete-user-permanent/:codiceUtente` rimuove in transazione l'utente e i record collegati (`UTENTI_CONFIG`, `UTENTI_PWD`, `UTENTI_OLDPWD`, `UTENTI_GDPR`, `UTENTI_RUOLI`, `ABILITAZIONI`, `FILTRI`, `UTENTI_IDENTITA_EXT`, `ACCESSI_2FA`). Solo admin; non e' consentito eliminare definitivamente il proprio utente. Se l'utente ha dati collegati in altre tabelle (per esempio `extensionFieldsOptions`) l'operazione fallisce con `code: ACCESSI_USER_DELETE_HAS_REFERENCES` e messaggio esplicito: usare il soft delete.
 
 ## Come leggerla
 
@@ -72,6 +75,6 @@ Se stai cercando solo il tema database, leggi direttamente [Aggiornamento databa
 
 ## Autenticazione opzionale con codice email
 
-La 2FA per utente, l'accesso con solo codice e la combinazione con SSO sono descritti in [Codici di accesso, 2FA e SSO](docs/two-factor.md). Le impostazioni sono gestibili dalla console e richiedono lo schema Accessi corrente 1.5.0, verificato a ogni avvio (vedi [migrazioni](docs/database-update.md)). Il flag 2FA resta disattivo per default.
+La 2FA per utente, l'accesso con solo codice e la combinazione con SSO sono descritti in [Codici di accesso, 2FA e SSO](docs/two-factor.md). Le impostazioni sono gestibili dalla console e richiedono lo schema Accessi corrente (`ACCESSI_SCHEMA_VERSION` in `database-updates/accessiSchema.ts`), verificato a ogni avvio (vedi [migrazioni](docs/database-update.md)). Il flag 2FA resta disattivo per default.
 
 Per le correzioni su permessi, reset password e log giornalieri: [revisione Accessi e logging](docs/review-accessi-logging.md).

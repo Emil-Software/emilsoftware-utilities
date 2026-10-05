@@ -4,6 +4,7 @@
   Delete,
   Get,
   HttpStatus,
+  NotFoundException,
   Param,
   ParseIntPipe,
   Post,
@@ -26,12 +27,15 @@ import {
 } from '../Dtos';
 import { GetFiltriResponse } from '../Dtos/TipoFiltro';
 import { FiltriService } from '../Services/FiltriService/FiltriService';
+import { UserService } from '../Services/UserService/UserService';
 import { JwtSimpleGuard } from '../jwt/jwt.strategy';
 import {
   ensureSelfOrSuperUser,
   ensureAdmin,
+  ensureCanManageTargetUser,
   getAuthenticatedAccessiUser,
 } from '../security/accessControl';
+import type { AuthenticatedAccessiUser } from '../security/accessControl';
 
 @ApiTags('Filtri')
 @ApiBearerAuth()
@@ -41,7 +45,21 @@ import {
 export class FiltriController {
   constructor(
     private readonly filtriService: FiltriService,
+    private readonly userService: UserService,
   ) {}
+
+  /**
+   * Verifica che l'attore possa gestire il target (ADMIN > SUPER > utente):
+   * un superutente non puo' modificare i filtri di un admin. Self sempre consentito.
+   */
+  private async ensureManageableTarget(actor: AuthenticatedAccessiUser, codiceUtente: number): Promise<void> {
+    if (actor.codiceUtente === codiceUtente) return;
+    const target = await this.userService.getAuthenticatedUserSnapshot(codiceUtente);
+    if (!target) {
+      throw new NotFoundException(`Nessun utente con codice ${codiceUtente}.`);
+    }
+    ensureCanManageTargetUser(actor, target);
+  }
 
   @Get('tipi')
   @ApiOperation({
@@ -239,6 +257,7 @@ export class FiltriController {
         Number(targetUserCode),
         'Puoi modificare solo i tuoi filtri.',
       );
+      await this.ensureManageableTarget(authenticatedUser, Number(targetUserCode));
 
       await this.filtriService.upsertFiltriUtente(targetUserCode, {
         ...req,

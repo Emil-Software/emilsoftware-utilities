@@ -331,6 +331,19 @@ export class FederatedAuthService implements OnModuleInit {
     );
   }
 
+  /** Restituisce il CODUTE proprietario di un collegamento SSO, o null se assente. */
+  async getIdentityOwner(identityKey: string): Promise<number | null> {
+    this.assertIdentityKey(identityKey);
+    const rows = (await Orm.query(
+      this.options.databaseOptions,
+      'SELECT CODUTE AS codice_utente FROM UTENTI_IDENTITA_EXT WHERE IDNKEY = ?',
+      [identityKey],
+    )) as Array<Record<string, unknown>>;
+    const row = rows.map(RestUtilities.convertKeysToCamelCase)[0] as { codiceUtente?: number } | undefined;
+    const owner = Number(row?.codiceUtente);
+    return Number.isSafeInteger(owner) && owner > 0 ? owner : null;
+  }
+
   /** Permanently removes one identity link from its owning user after administrative confirmation. */
   /**
    * Elimina fisicamente un collegamento SSO soltanto dopo aver verificato che appartenga all'utente indicato.

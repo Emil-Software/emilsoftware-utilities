@@ -52,12 +52,16 @@ import {
 } from '../security/publicAuthRateLimit';
 import {
   ensureAdmin,
+  ensureCanManageTargetUser,
   ensurePrivilegeFlagChanges,
   ensureSelfOrSuperUser,
   ensureUserManagement,
   getAuthenticatedAccessiUser,
   hasPrivilegedUserChanges,
 } from '../security/accessControl';
+import type { AuthenticatedAccessiUser } from '../security/accessControl';
+import { assertEmailConfigured } from '../security/emailConfiguration';
+import { StatoRegistrazione } from '../Dtos/StatoRegistrazione';
 
 @ApiTags('User')
 @Controller('accessi/user')
@@ -78,6 +82,23 @@ export class UserController {
   private sendControllerError(res: Response, error: unknown) {
     // Lo status viene derivato centralmente da RestUtilities (HttpException o 500).
     return RestUtilities.sendErrorMessage(res, error, UserController.name);
+  }
+
+  /**
+   * Verifica che il target esista e che l'attore possa gestirlo (rango attore >=
+   * rango target: ADMIN > SUPER > utente). Restituisce lo snapshot corrente del
+   * target, così i chiamanti possono controllare se e' admin.
+   */
+  private async ensureManageableTarget(
+    actor: AuthenticatedAccessiUser,
+    codiceUtente: number,
+  ) {
+    const target = await this.userService.getAuthenticatedUserSnapshot(codiceUtente);
+    if (!target) {
+      throw new NotFoundException(`Nessun utente con codice ${codiceUtente}.`);
+    }
+    ensureCanManageTargetUser(actor, target);
+    return target;
   }
 
   @ApiOperation({
@@ -206,10 +227,16 @@ export class UserController {
     @Res() res: Response,
   ) {
     try {
+      const authenticatedUser = getAuthenticatedAccessiUser(request);
       ensureUserManagement(
-        getAuthenticatedAccessiUser(request),
+        authenticatedUser,
         'Solo gli amministratori possono eliminare utenti.',
       );
+
+      const target = await this.ensureManageableTarget(authenticatedUser, codiceUtente);
+      if (target.flagAdmin) {
+        await this.userService.assertNotLastActiveAdmin(codiceUtente);
+      }
 
       await this.userService.deleteUser(codiceUtente);
       return RestUtilities.sendOKMessage(res, "L'utente e' stato eliminato con successo.");
@@ -253,6 +280,11 @@ export class UserController {
         throw new BadRequestException('Non puoi eliminare definitivamente il tuo stesso utente.');
       }
 
+      const target = await this.ensureManageableTarget(authenticatedUser, codiceUtente);
+      if (target.flagAdmin) {
+        await this.userService.assertNotLastActiveAdmin(codiceUtente);
+      }
+
       await this.userService.deleteUserPermanently(codiceUtente);
       return RestUtilities.sendOKMessage(res, "L'utente e' stato eliminato definitivamente.");
     } catch (error) {
@@ -278,10 +310,12 @@ export class UserController {
     @Res() res: Response,
   ) {
     try {
+      const authenticatedUser = getAuthenticatedAccessiUser(request);
       ensureUserManagement(
-        getAuthenticatedAccessiUser(request),
+        authenticatedUser,
         'Solo gli amministratori possono forzare il reset password.',
       );
+      await this.ensureManageableTarget(authenticatedUser, codiceUtente);
       await this.userService.forcePasswordReset(codiceUtente);
       return RestUtilities.sendOKMessage(res, `Email di reset inviata all utente ${codiceUtente}.`);
     } catch (error) {
@@ -332,18 +366,12 @@ export class UserController {
     @Res() res: Response,
   ) {
     try {
+      const authenticatedUser = getAuthenticatedAccessiUser(request);
       ensureUserManagement(
-        getAuthenticatedAccessiUser(request),
+        authenticatedUser,
         'Solo gli amministratori possono impostare la password di un utente.',
       );
-
-      const existing = await this.userService.getUsers(
-        { codiceUtente },
-        { includeExtensionFields: false, includeGrants: false },
-      );
-      if (existing.length === 0) {
-        throw new NotFoundException(`Nessun utente con codice ${codiceUtente}.`);
-      }
+      await this.ensureManageableTarget(authenticatedUser, codiceUtente);
 
       await this.authService.setPassword(codiceUtente, body.newPassword);
       return RestUtilities.sendOKMessage(res, `Password dell utente ${codiceUtente} aggiornata.`);
@@ -381,8 +409,9 @@ export class UserController {
     @Res() res: Response,
   ) {
     try {
+      const authenticatedUser = getAuthenticatedAccessiUser(request);
       ensureUserManagement(
-        getAuthenticatedAccessiUser(request),
+        authenticatedUser,
         'Solo gli amministratori possono modificare lo stato di registrazione.',
       );
 
@@ -390,6 +419,13 @@ export class UserController {
       if (!codiceUtente) throw new BadRequestException('Il codice utente e\' obbligatorio.');
       if (statoRegistrazione === undefined) {
         throw new BadRequestException('Lo stato registrazione e\' obbligatorio.');
+      }
+
+      const target = await this.ensureManageableTarget(authenticatedUser, codiceUtente);
+      const disabling = statoRegistrazione === StatoRegistrazione.DELETE
+        || statoRegistrazione === StatoRegistrazione.BLOCC;
+      if (target.flagAdmin && disabling) {
+        await this.userService.assertNotLastActiveAdmin(codiceUtente);
       }
 
       await this.userService.setStato(codiceUtente, statoRegistrazione);
@@ -450,11 +486,25 @@ export class UserController {
         return sendPublicAuthRateLimitExceeded(res, rateLimitDecision.retryAfterSeconds);
       }
 
+      assertEmailConfigured(this.accessiOptions);
+
       const codiceUtente = await this.userService.register(registrationData, {
         allowPrivilegedFields: false,
       });
 
-      await this.emailService.sendPasswordResetEmail(registrationData.email);
+      try {
+        await this.emailService.sendPasswordResetEmail(registrationData.email);
+      } catch (emailError) {
+        try {
+          await this.userService.deleteUserPermanently(codiceUtente);
+        } catch (rollbackError) {
+          this.logger.error(`Rollback registrazione utente ${codiceUtente} non riuscita: ${rollbackError instanceof Error ? rollbackError.message : String(rollbackError)}`);
+        }
+        throw new BadRequestException({
+          code: 'ACCESSI_USER_INVITE_EMAIL_FAILED',
+          message: `Registrazione non completata: invio email non riuscito (${emailError instanceof Error ? emailError.message : String(emailError)}). Riprova piu tardi.`,
+        });
+      }
       return RestUtilities.sendBaseResponse(res, codiceUtente, HttpStatus.CREATED);
     } catch (error) {
       const status =
@@ -474,8 +524,26 @@ export class UserController {
       const authenticatedUser = getAuthenticatedAccessiUser(request);
       ensureUserManagement(authenticatedUser, 'Solo gli amministratori possono creare utenti.');
       ensurePrivilegeFlagChanges(authenticatedUser, registrationData);
+
+      // Fail-fast prima di scrivere: senza SMTP non si crea un utente orfano.
+      assertEmailConfigured(this.accessiOptions);
+
       const codiceUtente = await this.userService.register(registrationData, { allowPrivilegedFields: true });
-      await this.emailService.sendPasswordResetEmail(registrationData.email, registrationData.htmlMail);
+      try {
+        await this.emailService.sendPasswordResetEmail(registrationData.email, registrationData.htmlMail);
+      } catch (emailError) {
+        // L'invio e' esterno: se fallisce annulliamo la creazione per non lasciare un utente
+        // senza password e senza email di invito (rollback best-effort).
+        try {
+          await this.userService.deleteUserPermanently(codiceUtente);
+        } catch (rollbackError) {
+          this.logger.error(`Rollback creazione utente ${codiceUtente} non riuscita: ${rollbackError instanceof Error ? rollbackError.message : String(rollbackError)}`);
+        }
+        throw new BadRequestException({
+          code: 'ACCESSI_USER_INVITE_EMAIL_FAILED',
+          message: `Utente non creato: invio email di invito non riuscito (${emailError instanceof Error ? emailError.message : String(emailError)}). Riprova oppure crea l utente e imposta la password manualmente.`,
+        });
+      }
       return RestUtilities.sendBaseResponse(res, codiceUtente, HttpStatus.CREATED);
     } catch (error) {
       return this.sendControllerError(res, error);
@@ -516,6 +584,12 @@ export class UserController {
     try {
       const authenticatedUser = getAuthenticatedAccessiUser(request);
       const isPrivilegedUpdate = hasPrivilegedUserChanges(user);
+      const isSelf = authenticatedUser.codiceUtente === codiceUtente;
+
+      // ADMIN > SUPER: un superutente non puo' toccare un admin. Self sempre consentito.
+      if (!isSelf) {
+        await this.ensureManageableTarget(authenticatedUser, codiceUtente);
+      }
 
       if (isPrivilegedUpdate) {
         ensureUserManagement(
@@ -523,6 +597,9 @@ export class UserController {
           'Solo gli amministratori possono modificare ruoli, permessi o flag privilegiati.',
         );
         ensurePrivilegeFlagChanges(authenticatedUser, user);
+        if (user.flagAdmin === false) {
+          await this.userService.assertNotLastActiveAdmin(codiceUtente);
+        }
       } else {
         ensureSelfOrSuperUser(
           authenticatedUser,
@@ -574,11 +651,15 @@ export class UserController {
     @Res() res: Response,
   ) {
     try {
+      const authenticatedUser = getAuthenticatedAccessiUser(request);
       ensureSelfOrSuperUser(
-        getAuthenticatedAccessiUser(request),
+        authenticatedUser,
         codiceUtente,
         'Puoi impostare il GDPR solo sul tuo utente.',
       );
+      if (authenticatedUser.codiceUtente !== codiceUtente) {
+        await this.ensureManageableTarget(authenticatedUser, codiceUtente);
+      }
 
       await this.userService.setGdpr(codiceUtente);
       return RestUtilities.sendOKMessage(res, `L'utente ${codiceUtente} ha accettato il GDPR.`);

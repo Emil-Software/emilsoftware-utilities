@@ -11,9 +11,11 @@ const { Orm } = require('../src/Orm');
 const { PermissionService } = require('../src/accessi-module/Services/PermissionService/PermissionService');
 const { UserService } = require('../src/accessi-module/Services/UserService/UserService');
 const { buildAuthenticatedTokenPayload, resolveCodiceUtenteFromTokenPayload, extractAccessiBearerToken } = require('../src/accessi-module/security/authenticatedToken');
-const { ensureSuperUser, ensureAdmin, ensureUserManagement, ensureConsoleAccess, ensureSelfOrSuperUser, ensurePrivilegeFlagChanges } = require('../src/accessi-module/security/accessControl');
+const { ensureSuperUser, ensureAdmin, ensureUserManagement, ensureConsoleAccess, ensureSelfOrSuperUser, ensurePrivilegeFlagChanges, accessiUserRank, ensureCanManageTargetUser } = require('../src/accessi-module/security/accessControl');
 const { collectPasswordPolicyViolations, assertStrongPassword } = require('../src/accessi-module/security/passwordPolicy');
 const { AuthService } = require('../src/accessi-module/Services/AuthService/AuthService');
+const { FederatedAuthService } = require('../src/accessi-module/federated-auth/FederatedAuthService');
+const { issueConsoleEntryTicket, consumeConsoleEntryTicket, clearConsoleEntryTickets } = require('../src/accessi-module/security/consoleEntry');
 const { SchemaExportService } = require('../src/accessi-module/Services/SchemaExportService/SchemaExportService');
 const { AdminBootstrapService } = require('../src/accessi-module/Services/AdminBootstrapService/AdminBootstrapService');
 const adminBootstrap = require('../src/accessi-module/security/adminBootstrap');
@@ -85,6 +87,70 @@ test('empty role and permission updates revoke assignments', async () => {
   const service = new UserService({}, {}, permissions, { upsertFiltriUtente: async () => {} });
   await service.updateUser(1, { roles: [], permissions: [] }, { allowPrivilegedChanges: true });
   assert.deepEqual(calls, [[1, []], [1, []]]);
+});
+
+test('ADMIN > SUPER hierarchy prevents a superuser from managing an admin', () => {
+  const superUser = { codiceUtente: 1, flagSuper: true, flagAdmin: false };
+  const admin = { codiceUtente: 2, flagSuper: false, flagAdmin: true };
+  const plain = { codiceUtente: 3, flagSuper: false, flagAdmin: false };
+
+  assert.equal(accessiUserRank(admin), 2);
+  assert.equal(accessiUserRank(superUser), 1);
+  assert.equal(accessiUserRank(plain), 0);
+
+  assert.doesNotThrow(() => ensureCanManageTargetUser(superUser, plain));
+  assert.doesNotThrow(() => ensureCanManageTargetUser(superUser, superUser));
+  assert.throws(() => ensureCanManageTargetUser(superUser, admin), /rango superiore/);
+
+  assert.doesNotThrow(() => ensureCanManageTargetUser(admin, admin));
+  assert.doesNotThrow(() => ensureCanManageTargetUser(admin, superUser));
+  assert.throws(() => ensureCanManageTargetUser(plain, superUser));
+});
+
+test('federated identity owner resolution supports rank checks', async t => {
+  const service = new FederatedAuthService({ databaseOptions: {} }, {}, {});
+  let rows = [{ codice_utente: 9 }];
+  t.mock.method(Orm, 'query', async () => rows);
+  assert.equal(await service.getIdentityOwner('a'.repeat(64)), 9);
+  rows = [];
+  assert.equal(await service.getIdentityOwner('b'.repeat(64)), null);
+  await assert.rejects(() => service.getIdentityOwner('nope'), /non valida/);
+});
+
+test('console entry ticket is single-use, user-bound and expiring', () => {
+  clearConsoleEntryTickets();
+  const { ticket, expiresInSeconds } = issueConsoleEntryTicket({ token: 'jwt-value', codiceUtente: 11 });
+  assert.match(ticket, /^[a-f0-9]{64}$/);
+  assert.ok(expiresInSeconds > 0);
+
+  assert.deepEqual(consumeConsoleEntryTicket(ticket), { token: 'jwt-value', codiceUtente: 11 });
+  // Monouso: il secondo tentativo non restituisce nulla.
+  assert.equal(consumeConsoleEntryTicket(ticket), null);
+  // Formato o valore non validi.
+  assert.equal(consumeConsoleEntryTicket('nope'), null);
+  assert.equal(consumeConsoleEntryTicket(undefined), null);
+
+  // Ticket scaduto.
+  const expired = issueConsoleEntryTicket({ token: 'x', codiceUtente: 2 }, -1000);
+  assert.equal(consumeConsoleEntryTicket(expired.ticket), null);
+});
+
+test('the last active admin cannot be disabled or removed', async t => {
+  const service = new UserService({ databaseOptions: {} }, {}, {}, {});
+  let snapshot = { codiceUtente: 5, flagSuper: false, flagAdmin: true };
+  let total = 1;
+  t.mock.method(service, 'getAuthenticatedUserSnapshot', async () => snapshot);
+  t.mock.method(Orm, 'query', async () => [{ TOTAL: total }]);
+
+  await assert.rejects(() => service.assertNotLastActiveAdmin(5), /ultimo admin/);
+  assert.equal(await service.isLastActiveAdmin(5), true);
+
+  total = 2;
+  await assert.doesNotReject(() => service.assertNotLastActiveAdmin(5));
+  assert.equal(await service.isLastActiveAdmin(5), false);
+
+  snapshot = { codiceUtente: 6, flagSuper: true, flagAdmin: false };
+  await service.assertNotLastActiveAdmin(6);
 });
 
 test('password policy rejects weak passwords and reports missing requirements', () => {
@@ -164,6 +230,25 @@ test('updateUser writes every editable field with idempotent upsert', async t =>
   for (const column of ['cognome', 'nome', 'avatar', 'cellulare', 'codlingua', 'PAGDEF', 'json_metadata', 'flg2fatt', 'flgpwdless', 'flgsuper', 'FLGADMIN', 'flgpassword']) {
     assert.ok(configQuery.query.includes(column), `colonna mancante: ${column}`);
   }
+
+  // Il flag GDPR completa il processo con la riga storica.
+  const gdprInsert = executions.find((entry) => entry.query.includes('INSERT INTO UTENTI_GDPR'));
+  assert.ok(gdprInsert, 'manca la riga storica GDPR');
+  assert.equal(gdprInsert.params[0], 7);
+});
+
+test('permanent delete reports an explicit error when the user has linked data', async t => {
+  t.mock.method(Orm, 'executeMultiple', async () => {
+    throw new Error('violation of FOREIGN KEY constraint "FK_EXT" on table "EXT_DATA"');
+  });
+  const service = new UserService({ databaseOptions: {} }, {}, {}, {});
+  t.mock.method(service, 'getUsers', async () => [{ utente: { codiceUtente: 7 } }]);
+
+  await assert.rejects(() => service.deleteUserPermanently(7), (error) => {
+    assert.equal(error.getStatus(), 400);
+    assert.equal(error.getResponse().code, 'ACCESSI_USER_DELETE_HAS_REFERENCES');
+    return true;
+  });
 });
 
 test('permanent delete removes the user and all dependent rows in one transaction', async t => {

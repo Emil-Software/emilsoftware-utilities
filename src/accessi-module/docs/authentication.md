@@ -69,4 +69,17 @@ Il controllo confronta `codiceMenu` e `tipoAbilitazione >= soglia`.
 
 `JwtSimpleGuard` e' una protezione semplice a livello NestJS.
 
-Viene usato dal `ConfiguratorController` per le rotte di configurazione menu e gruppi.
+Viene usato dal `ConfiguratorController` per le rotte di configurazione menu e gruppi. A ogni richiesta ricarica lo stato utente dal database, quindi una revoca (flag, stato, policy) e' immediata.
+
+## Sessione console e auto-ingresso
+
+La console amministrativa (`/api/accessi/console`) usa lo stesso JWT Accessi del frontend. Per entrare senza rifare il login:
+
+1. `POST /api/accessi/console/entry` con `Authorization: Bearer <jwt>` (utente con accesso console) -> `Result.ticket` (monouso, valido 60s).
+2. Apri `/api/accessi/console#entry=<ticket>`: la console scambia il ticket con la sessione e entra.
+
+Il JWT non viene mai messo nell'URL; lo scambio (`POST /api/accessi/console/entry/exchange`) e' pubblico, protetto da rate limit (`publicAuthRateLimit.consoleEntry`) e il ticket e' monouso e legato all'utente. Il ticket vive in memoria del processo: con piu' istanze usare sticky session o far completare lo scambio dall'istanza che lo ha emesso. L'accesso richiede `FLGSUPER` o `FLGADMIN`.
+
+Handoff 2FA: il backend puo' reindirizzare a `/api/accessi/console/#two-factor=<challengeId>` per completare la verifica sulla console (fragment opaco, rimosso subito; vedi [Codici di accesso, 2FA e SSO](two-factor.md)).
+
+La gerarchia ADMIN > SUPER e i permessi di gestione sono descritti in [Utenti, ruoli e permessi](users-permissions.md).
