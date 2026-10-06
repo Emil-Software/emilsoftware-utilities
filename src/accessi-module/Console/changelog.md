@@ -2,6 +2,14 @@
 
 Novità e modifiche rilevanti della libreria `emilsoftware-utilities` (modulo Accessi).
 
+## 2.0.0-dev.44
+
+### Aggiunte
+- Endpoint pubblico `GET /api/accessi/auth/bootstrap-admin/status` (`getAdminBootstrapStatus`): la console mostra la sezione "Crea utente admin" **solo** se `adminBootstrap.enabled` è `true`.
+
+### Correzioni
+- Rimossi i caratteri corrotti (mojibake UTF-8 ↔ Windows-1252) da DTO, servizi, controller, console, OpenAPI e client generato (es. "L'email è già associata a un utente Accessi.").
+
 ## 2.0.0-dev.43
 
 ### Cambiamenti

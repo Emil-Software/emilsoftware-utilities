@@ -50,7 +50,7 @@ export class UserService {
 
   private normalizeEmail(email: string): string {
     if (typeof email !== 'string' || email.trim() === '') {
-      throw new BadRequestException({ code: 'ACCESSI_EMAIL_REQUIRED', message: "L'email Ã¨ obbligatoria." });
+      throw new BadRequestException({ code: 'ACCESSI_EMAIL_REQUIRED', message: "L'email è obbligatoria." });
     }
 
     return email.trim().toLowerCase();
@@ -71,7 +71,7 @@ export class UserService {
       existingUser?.codiceUtente &&
       (!currentUserCode || existingUser.codiceUtente !== currentUserCode)
     ) {
-      throw new ConflictException({ code: 'ACCESSI_EMAIL_ALREADY_EXISTS', message: "L'email Ã¨ giÃ  associata a un utente Accessi." });
+      throw new ConflictException({ code: 'ACCESSI_EMAIL_ALREADY_EXISTS', message: "L'email è già associata a un utente Accessi." });
     }
   }
 
@@ -505,7 +505,7 @@ export class UserService {
       const paramsUtenti = [normalizedEmail, options?.initialState ?? StatoRegistrazione.INVIO];
 
       // Utente e configurazione sono creati in un'unica transazione; filtri e assegnazioni restano
-      // fuori perchÃ© delegati a servizi dedicati.
+      // fuori perché delegati a servizi dedicati.
       const codiceUtente = await Orm.withTransaction(
         this.accessiOptions.databaseOptions,
         async (transaction) => {

@@ -117,7 +117,7 @@ export class UserDto extends OmitType(FiltriUtente, ['codUte'] as const) {
   avatar?: string | null;
 
   @ApiPropertyOptional({
-    description: "Flag che indica se l'autenticazione a due fattori Ã¨ attivata.",
+    description: "Flag che indica se l'autenticazione a due fattori è attivata.",
     example: true,
   })
   @IsOptional()
@@ -166,7 +166,7 @@ export class UserDto extends OmitType(FiltriUtente, ['codUte'] as const) {
   flagSuper?: boolean;
 
   @ApiPropertyOptional({
-    description: "Flag che indica se l'utente Ã¨ configuratore",
+    description: "Flag che indica se l'utente è configuratore",
     example: false,
   })
   @IsOptional()

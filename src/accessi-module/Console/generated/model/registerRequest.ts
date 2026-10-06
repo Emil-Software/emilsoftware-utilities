@@ -30,7 +30,7 @@ export interface RegisterRequest {
   cognome?: string;
   /** Email dell'utente. */
   email: string;
-  /** Flag che indica se l'utente Ã¨ configuratore */
+  /** Flag che indica se l'utente è configuratore */
   flagAdmin?: boolean;
   /** Flag autenticazione a due fattori. */
   flagDueFattori?: boolean;

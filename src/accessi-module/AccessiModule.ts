@@ -171,7 +171,7 @@ export interface AccessiOptions {
   /** Connessione Firebird alla base dati Accessi. */
   databaseOptions: Options;
   /**
-   * Basepath del sito es: 'http://www.il-mio-sito.it/nome-progetto(se c'Ã¨)'
+   * Basepath del sito es: 'http://www.il-mio-sito.it/nome-progetto(se c'è)'
    */
   confirmationEmailUrl: string;
   /**

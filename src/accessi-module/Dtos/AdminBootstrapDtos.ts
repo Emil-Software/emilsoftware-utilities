@@ -54,3 +54,16 @@ export class BootstrapAdminResponse extends BaseResponse {
   @Type(() => BootstrapAdminResultDto)
   Result!: BootstrapAdminResultDto;
 }
+
+/** Stato del bootstrap admin: la console mostra la sezione solo se abilitato. */
+export class AdminBootstrapStatusResult {
+  @ApiProperty({ example: false, description: 'True se adminBootstrap e abilitato in questa istanza.' })
+  enabled!: boolean;
+}
+
+export class AdminBootstrapStatusResponse extends BaseResponse {
+  @ApiProperty({ type: AdminBootstrapStatusResult })
+  @ValidateNested()
+  @Type(() => AdminBootstrapStatusResult)
+  Result!: AdminBootstrapStatusResult;
+}

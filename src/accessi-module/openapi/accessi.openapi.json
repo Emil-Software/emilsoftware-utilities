@@ -391,6 +391,29 @@
         ]
       }
     },
+    "/api/accessi/auth/bootstrap-admin/status": {
+      "get": {
+        "description": "Endpoint pubblico: la console mostra la sezione \"Crea utente admin\" solo quando enabled e true.",
+        "operationId": "getAdminBootstrapStatus",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminBootstrapStatusResponse"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Indica se il bootstrap admin e abilitato",
+        "tags": [
+          "Auth"
+        ]
+      }
+    },
     "/api/accessi/permission/roles": {
       "get": {
         "description": "Recupera tutti i ruoli presenti nel sistema con le relative voci di menu.",
@@ -2787,7 +2810,7 @@
     },
     "/api/accessi/federated-auth/providers/{provider}": {
       "patch": {
-        "description": "Riservato a superutente. La chiave provider Ã¨ immutabile: disabilitarla blocca nuovi login SSO ma conserva i collegamenti storici.",
+        "description": "Riservato a superutente. La chiave provider è immutabile: disabilitarla blocca nuovi login SSO ma conserva i collegamenti storici.",
         "operationId": "updateFederatedProvider",
         "parameters": [
           {
@@ -3032,7 +3055,7 @@
             }
           },
           "409": {
-            "description": "Email o identitÃ  SSO giÃ  associate a un utente.",
+            "description": "Email o identità SSO già associate a un utente.",
             "content": {
               "application/json": {
                 "schema": {
@@ -3207,7 +3230,7 @@
     },
     "/api/accessi/federated-auth/users/{codiceUtente}/identities/{identityKey}": {
       "delete": {
-        "description": "Riservato a superutente. Rimuove il collegamento provider e subject dallâ€™utente, senza eliminare lâ€™utente Accessi.",
+        "description": "Riservato a superutente. Rimuove il collegamento provider e subject dall’utente, senza eliminare l’utente Accessi.",
         "operationId": "deleteFederatedIdentityPermanently",
         "parameters": [
           {
@@ -3241,7 +3264,7 @@
             }
           },
           "404": {
-            "description": "Collegamento assente o non appartenente allâ€™utente.",
+            "description": "Collegamento assente o non appartenente all’utente.",
             "content": {
               "application/json": {
                 "schema": {
@@ -4087,7 +4110,7 @@
           },
           "flagDueFattori": {
             "type": "boolean",
-            "description": "Flag che indica se l'autenticazione a due fattori Ã¨ attivata.",
+            "description": "Flag che indica se l'autenticazione a due fattori è attivata.",
             "example": true
           },
           "passwordlessLoginEnabled": {
@@ -4120,7 +4143,7 @@
           },
           "flagAdmin": {
             "type": "boolean",
-            "description": "Flag che indica se l'utente Ã¨ configuratore",
+            "description": "Flag che indica se l'utente è configuratore",
             "example": false
           },
           "passwordLoginEnabled": {
@@ -4624,6 +4647,39 @@
           "Result"
         ]
       },
+      "AdminBootstrapStatusResult": {
+        "type": "object",
+        "properties": {
+          "enabled": {
+            "type": "boolean",
+            "example": false,
+            "description": "True se adminBootstrap e abilitato in questa istanza."
+          }
+        },
+        "required": [
+          "enabled"
+        ]
+      },
+      "AdminBootstrapStatusResponse": {
+        "type": "object",
+        "properties": {
+          "Status": {
+            "$ref": "#/components/schemas/Status"
+          },
+          "Message": {
+            "type": "string",
+            "example": "Dati recuperati con successo.",
+            "description": "Messaggio informativo restituito dalla libreria quando presente."
+          },
+          "Result": {
+            "$ref": "#/components/schemas/AdminBootstrapStatusResult"
+          }
+        },
+        "required": [
+          "Status",
+          "Result"
+        ]
+      },
       "GetRolesResponse": {
         "type": "object",
         "properties": {
@@ -4810,7 +4866,7 @@
             "example": true
           },
           "menus": {
-            "description": "Lista dei men�� associati al gruppo.",
+            "description": "Lista dei menù associati al gruppo.",
             "type": "array",
             "items": {
               "$ref": "#/components/schemas/MenuEntity"
@@ -5425,7 +5481,7 @@
           },
           "flagAdmin": {
             "type": "boolean",
-            "description": "Flag che indica se l'utente Ã¨ configuratore",
+            "description": "Flag che indica se l'utente è configuratore",
             "example": false
           },
           "roles": {

@@ -855,7 +855,7 @@ La console è servita dal modulo su /api/accessi/console. Non ha stato proprio: 
 
 > [!NOTE]
 > **Bootstrap admin**
-> Con adminBootstrap.enabled il backend stampa a ogni avvio un token casuale (monouso, valido fino al riavvio). Nella schermata di login della console trovi "Crea utente admin": incolla il token e crea il primo admin senza email di conferma. La password è opzionale: se assente viene generata e mostrata una sola volta.
+> Con adminBootstrap.enabled il backend stampa a ogni avvio un token casuale (monouso, valido fino al riavvio). La sezione "Crea utente admin" nella schermata di login compare solo quando adminBootstrap è abilitato (stato esposto da GET /api/accessi/auth/bootstrap-admin/status): incolla il token e crea il primo admin senza email di conferma. La password è opzionale: se assente viene generata e mostrata una sola volta.
 
 > [!TIP]
 > **Auto-ingresso dal frontend**

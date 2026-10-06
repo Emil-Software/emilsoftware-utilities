@@ -1,4 +1,4 @@
-import { Body, Controller, HttpException, HttpStatus, Inject, Param, Post, Req, Res } from '@nestjs/common';
+import { Body, Controller, Get, HttpException, HttpStatus, Inject, Param, Post, Req, Res } from '@nestjs/common';
 import { ResendTwoFactorRequest, VerifyTwoFactorRequest } from '../Dtos/TwoFactorDtos';
 import { ApiBody, ApiOperation, ApiParam, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { Request, Response } from 'express';
@@ -7,6 +7,7 @@ import { RestUtilities } from '../../Utilities';
 import type { AccessiOptions } from '../AccessiModule';
 import {
   ActionResponse,
+  AdminBootstrapStatusResponse,
   BootstrapAdminRequest,
   BootstrapAdminResponse,
   ConfirmResetPasswordRequest,
@@ -259,5 +260,17 @@ export class AuthController {
     } catch (error) {
       return RestUtilities.sendErrorMessage(res, error, AuthController.name, error instanceof HttpException ? error.getStatus() : 500);
     }
+  }
+
+  @Get('bootstrap-admin/status')
+  @ApiOperation({
+    summary: 'Indica se il bootstrap admin e abilitato',
+    operationId: 'getAdminBootstrapStatus',
+    description:
+      'Endpoint pubblico: la console mostra la sezione "Crea utente admin" solo quando enabled e true.',
+  })
+  @ApiResponse({ status: 200, type: AdminBootstrapStatusResponse })
+  async adminBootstrapStatus(@Res() res: Response) {
+    return RestUtilities.sendBaseResponse(res, { enabled: this.adminBootstrapService.isEnabled() });
   }
 }

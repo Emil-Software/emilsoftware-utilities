@@ -36,7 +36,7 @@ export class GroupWithMenusEntity {
     enabled?: boolean;
 
     @ApiProperty({
-        description: "Lista dei men�� associati al gruppo.",
+        description: "Lista dei menù associati al gruppo.",
         type: [MenuEntity]
     })
     @ValidateNested({ each: true })

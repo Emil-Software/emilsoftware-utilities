@@ -46,9 +46,9 @@ export interface UserDto {
   dataScadenzaPassword?: string;
   /** Email dell'utente. */
   email: string;
-  /** Flag che indica se l'utente Ã¨ configuratore */
+  /** Flag che indica se l'utente è configuratore */
   flagAdmin?: boolean;
-  /** Flag che indica se l'autenticazione a due fattori Ã¨ attivata. */
+  /** Flag che indica se l'autenticazione a due fattori è attivata. */
   flagDueFattori?: boolean;
   /** Flag per l'accettazione del GDPR. */
   flagGdpr?: boolean;

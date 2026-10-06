@@ -67,7 +67,7 @@ export class RegisterRequest extends OmitType(FiltriUtente, ['codUte'] as const)
   flagSuper?: boolean;
 
   @ApiPropertyOptional({
-    description: "Flag che indica se l'utente Ã¨ configuratore",
+    description: "Flag che indica se l'utente è configuratore",
     example: false,
   })
   @IsOptional()

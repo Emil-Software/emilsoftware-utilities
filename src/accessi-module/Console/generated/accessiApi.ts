@@ -6,6 +6,7 @@
  */
 import type {
   ActionResponse,
+  AdminBootstrapStatusResponse,
   AssignPermissionsToUserRequest,
   AssignRolesToUserRequest,
   BootstrapAdminRequest,
@@ -279,6 +280,31 @@ return accessiFetch<Promise<bootstrapAdminResponse>>(getBootstrapAdminUrl(),
     method: 'POST',
     body: JSON.stringify(
       bootstrapAdminRequest,)
+  }
+);}
+
+
+/**
+ * Endpoint pubblico: la console mostra la sezione "Crea utente admin" solo quando enabled e true.
+ * @summary Indica se il bootstrap admin e abilitato
+ */
+export type getAdminBootstrapStatusResponse = {
+  data: AdminBootstrapStatusResponse;
+  status: number;
+}
+
+export const getGetAdminBootstrapStatusUrl = () => {
+
+
+  return `/api/accessi/auth/bootstrap-admin/status`
+}
+
+export const getAdminBootstrapStatus = async ( options?: RequestInit): Promise<getAdminBootstrapStatusResponse> => {
+return accessiFetch<Promise<getAdminBootstrapStatusResponse>>(getGetAdminBootstrapStatusUrl(),
+  {      
+    ...options,
+    method: 'GET'
+    
   }
 );}
 
@@ -1343,7 +1369,7 @@ return accessiFetch<Promise<createFederatedProviderResponse>>(getCreateFederated
 
 
 /**
- * Riservato a superutente. La chiave provider Ã¨ immutabile: disabilitarla blocca nuovi login SSO ma conserva i collegamenti storici.
+ * Riservato a superutente. La chiave provider è immutabile: disabilitarla blocca nuovi login SSO ma conserva i collegamenti storici.
  * @summary Aggiorna o disabilita un provider SSO
  */
 export type updateFederatedProviderResponse = {
@@ -1552,7 +1578,7 @@ return accessiFetch<Promise<updateFederatedIdentityResponse>>(getUpdateFederated
 
 
 /**
- * Riservato a superutente. Rimuove il collegamento provider e subject dallâ€™utente, senza eliminare lâ€™utente Accessi.
+ * Riservato a superutente. Rimuove il collegamento provider e subject dall’utente, senza eliminare l’utente Accessi.
  * @summary Elimina definitivamente un collegamento SSO
  */
 export type deleteFederatedIdentityPermanentlyResponse = {

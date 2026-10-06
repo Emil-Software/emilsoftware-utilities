@@ -82,7 +82,7 @@ export class FederatedAuthController {
     }
   }
 
-  @ApiOperation({ summary: 'Aggiorna o disabilita un provider SSO', operationId: 'updateFederatedProvider', description: 'Riservato a superutente. La chiave provider Ã¨ immutabile: disabilitarla blocca nuovi login SSO ma conserva i collegamenti storici.' })
+  @ApiOperation({ summary: 'Aggiorna o disabilita un provider SSO', operationId: 'updateFederatedProvider', description: 'Riservato a superutente. La chiave provider è immutabile: disabilitarla blocca nuovi login SSO ma conserva i collegamenti storici.' })
   @ApiParam({ name: 'provider', example: 'azure-ad-acme-produzione', description: 'Chiave stabile del provider censito.' })
   @ApiBody({ type: UpdateFederatedProviderRequest })
   @ApiOkResponse({ type: FederatedProviderResponse })
@@ -151,7 +151,7 @@ export class FederatedAuthController {
   @ApiCreatedResponse({ type: FederatedIdentityResponse })
   @ApiResponse({ status: 400, type: ErrorResponse, description: 'Provider o subject non validi.' })
   @ApiResponse({ status: 404, type: ErrorResponse, description: 'Provider SSO non censito.' })
-  @ApiResponse({ status: 409, type: ErrorResponse, description: 'Email o identitÃ  SSO giÃ  associate a un utente.' })
+  @ApiResponse({ status: 409, type: ErrorResponse, description: 'Email o identità SSO già associate a un utente.' })
   @ApiResponse({ status: 503, type: ErrorResponse, description: 'Schema Accessi non aggiornato.' })
   @ApiResponse({ status: 500, type: ErrorResponse, description: 'Errore inatteso durante il provisioning; la risposta contiene FEDERATED_USER_PROVISIONING_FAILED.' })
   @Post('users')
@@ -200,11 +200,11 @@ export class FederatedAuthController {
     }
   }
 
-  @ApiOperation({ summary: 'Elimina definitivamente un collegamento SSO', operationId: 'deleteFederatedIdentityPermanently', description: 'Riservato a superutente. Rimuove il collegamento provider e subject dallâ€™utente, senza eliminare lâ€™utente Accessi.' })
+  @ApiOperation({ summary: 'Elimina definitivamente un collegamento SSO', operationId: 'deleteFederatedIdentityPermanently', description: 'Riservato a superutente. Rimuove il collegamento provider e subject dall’utente, senza eliminare l’utente Accessi.' })
   @ApiParam({ name: 'codiceUtente', example: 123 })
   @ApiParam({ name: 'identityKey', description: 'SHA-256 del collegamento da eliminare.' })
   @ApiOkResponse({ type: ActionResponse })
-  @ApiResponse({ status: 404, type: ErrorResponse, description: 'Collegamento assente o non appartenente allâ€™utente.' })
+  @ApiResponse({ status: 404, type: ErrorResponse, description: 'Collegamento assente o non appartenente all’utente.' })
   @Delete('users/:codiceUtente/identities/:identityKey')
   async deleteIdentity(@Req() request: Request, @Param('codiceUtente', ParseIntPipe) codiceUtente: number, @Param('identityKey') identityKey: string, @Res() res: Response) {
     try {

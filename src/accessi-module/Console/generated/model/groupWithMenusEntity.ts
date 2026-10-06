@@ -13,7 +13,7 @@ export interface GroupWithMenusEntity {
   descrizioneGruppo: string;
   /** Flag che indica se il gruppo e abilitato. */
   enabled?: boolean;
-  /** Lista dei men�� associati al gruppo. */
+  /** Lista dei menù associati al gruppo. */
   menus: MenuEntity[];
   /** Ordine del gruppo. */
   ordineGruppo: number;
