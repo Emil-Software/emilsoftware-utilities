@@ -1,3 +1,10 @@
+# [2.0.0-dev.44](https://github.com/Emil-Software/emilsoftware-utilities/compare/v2.0.0-dev.43...v2.0.0-dev.44) (2026-10-06)
+
+
+### Features
+
+* **accessi:** stato bootstrap admin pubblico e fix caratteri corrotti ([8e99d30](https://github.com/Emil-Software/emilsoftware-utilities/commit/8e99d3061b6c44ecca472e9f2200422d98c5fb3e))
+
 # [2.0.0-dev.43](https://github.com/Emil-Software/emilsoftware-utilities/compare/v2.0.0-dev.42...v2.0.0-dev.43) (2026-10-05)
 
 
