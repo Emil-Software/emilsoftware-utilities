@@ -1,3 +1,10 @@
+# [2.0.0-dev.45](https://github.com/Emil-Software/emilsoftware-utilities/compare/v2.0.0-dev.44...v2.0.0-dev.45) (2026-10-12)
+
+
+### Bug Fixes
+
+* **accessi:** set-gdpr idempotente con UPDATE OR INSERT (evita violazione PK/500) ([ab63053](https://github.com/Emil-Software/emilsoftware-utilities/commit/ab63053116ff6529e86dc3e45dfee840094a9d9d))
+
 # [2.0.0-dev.44](https://github.com/Emil-Software/emilsoftware-utilities/compare/v2.0.0-dev.43...v2.0.0-dev.44) (2026-10-06)
 
 
