@@ -1,3 +1,10 @@
+# [2.0.0-dev.46](https://github.com/Emil-Software/emilsoftware-utilities/compare/v2.0.0-dev.45...v2.0.0-dev.46) (2026-10-12)
+
+
+### Bug Fixes
+
+* sendBaseResponse retro-compatibile con tag come 3o argomento e logging errori ([1a9577b](https://github.com/Emil-Software/emilsoftware-utilities/commit/1a9577b484528b090ecc11cebfd99862ffd9a908))
+
 # [2.0.0-dev.45](https://github.com/Emil-Software/emilsoftware-utilities/compare/v2.0.0-dev.44...v2.0.0-dev.45) (2026-10-12)
 
 
