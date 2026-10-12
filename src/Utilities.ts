@@ -121,8 +121,12 @@ export class RestUtilities {
      * @param status - HTTP status code (default: 500).
      * @returns The Response object.
      */
-    static sendErrorMessage(res: Response, error: unknown, _tag: string = "[BASE ERROR]", status: number = 500): Response {
+    static sendErrorMessage(res: Response, error: unknown, tag: string = "[BASE ERROR]", status: number = 500): Response {
         const rawMessage = error instanceof Error ? error.message : String(error ?? "");
+        // Logga SEMPRE l'errore reale lato server: la risposta HTTP resta generica,
+        // ma senza questo log gli errori 5xx risultano impossibili da diagnosticare.
+        const errorStack = error instanceof Error ? error.stack : undefined;
+        new Logger(tag || "[BASE ERROR]").error(rawMessage, ...(errorStack ? [errorStack] : []));
         const errorWithResponse = error as { getResponse?: () => unknown } | null | undefined;
         const exceptionResponse = typeof errorWithResponse?.getResponse === "function"
             ? errorWithResponse.getResponse()
@@ -224,20 +228,29 @@ export class RestUtilities {
      * @param status - HTTP success status. Defaults to 200; pass 201 only after creating a resource.
      * @returns The Response object.
      */
-    static sendBaseResponse(res: Response, payload: unknown, status: number = 200): Response {
+    static sendBaseResponse(res: Response, payload: unknown, statusOrTag?: number | string, status: number = 200): Response {
+        // Retro-compatibilita: molti controller passano un "tag" come terzo
+        // argomento (es. sendBaseResponse(res, dati, 'clienti')). Il tag NON e uno
+        // status HTTP: veniva ignorato nella firma storica e non deve rompere la risposta.
+        const httpStatus = typeof statusOrTag === 'number'
+            ? statusOrTag
+            : (Number.isInteger(status) ? status : 200);
+        const tag = typeof statusOrTag === 'string' ? statusOrTag : "[UTILITIES]";
         try {
-            payload = JSON.parse(JSON.stringify(payload));
+            const normalizedPayload = JSON.parse(JSON.stringify(payload, (_key, value) =>
+                typeof value === 'bigint' ? value.toString() : value
+            ));
             const response = {
                 Status: {
                     errorCode: "0",
                     errorDescription: "",
                 },
-                Result: payload,
+                Result: normalizedPayload,
                 Message: "Dati recuperati con successo.",
             };
-            return res.status(status).send(response);
+            return res.status(httpStatus).send(response);
         } catch (error) {
-            return this.sendErrorMessage(res, `Error sending response: ${error}`, "[UTILITIES]", 500);
+            return this.sendErrorMessage(res, error, tag, 500);
         }
     }
 

@@ -1,6 +1,7 @@
 import { ArgumentsHost, Catch, ExceptionFilter, HttpException, HttpStatus } from '@nestjs/common';
 import { Response } from 'express';
 import { RestUtilities, StatusCode } from '../../Utilities';
+import { Logger } from '../../Logger';
 
 type ExceptionPayload = {
   code?: string;
@@ -55,6 +56,12 @@ export class AccessiHttpExceptionFilter implements ExceptionFilter {
               : status >= HttpStatus.INTERNAL_SERVER_ERROR
                 ? 'Errore interno del modulo Accessi.'
                 : 'Richiesta non valida.');
+
+    const stack = exception instanceof Error ? exception.stack : undefined;
+    new Logger('[ACCESSI-EXCEPTION]').error(
+      `HTTP ${status} ${code}: ${exception instanceof Error ? exception.message : String(exception)}`,
+      ...(stack ? [stack] : [])
+    );
 
     response.status(status).json({
       severity: 'error',
