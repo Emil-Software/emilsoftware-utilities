@@ -687,7 +687,7 @@ export class UserService {
       if (user.flagGdpr === true) {
         await Orm.execute(
           this.accessiOptions.databaseOptions,
-          'INSERT INTO UTENTI_GDPR (CODUTE, GDPR) VALUES (?, ?)',
+          'UPDATE OR INSERT INTO UTENTI_GDPR (CODUTE, DATACC, GDPR) VALUES (?, CURRENT_DATE, ?) MATCHING (CODUTE, DATACC)',
           [codiceUtente, 'true'],
         );
       }
@@ -815,7 +815,7 @@ export class UserService {
   public async setGdpr(codiceUtente: number) {
     try {
       return await Orm.executeMultiple(this.accessiOptions.databaseOptions, [
-        { query: 'INSERT INTO UTENTI_GDPR (CODUTE, GDPR) VALUES (?, ?)', params: [codiceUtente, 'true'] },
+        { query: 'UPDATE OR INSERT INTO UTENTI_GDPR (CODUTE, DATACC, GDPR) VALUES (?, CURRENT_DATE, ?) MATCHING (CODUTE, DATACC)', params: [codiceUtente, 'true'] },
         { query: 'UPDATE UTENTI SET FLGGDPR = 1, DATGDPR = CURRENT_DATE WHERE CODUTE = ?', params: [codiceUtente] },
       ]);
     } catch (error) {
