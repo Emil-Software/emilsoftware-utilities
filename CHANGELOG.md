@@ -1,3 +1,10 @@
+# [2.0.0-dev.47](https://github.com/Emil-Software/emilsoftware-utilities/compare/v2.0.0-dev.46...v2.0.0-dev.47) (2026-10-13)
+
+
+### Bug Fixes
+
+* codice/messaggio errore schema DB generico in sendErrorMessage (non piu Accessi) ([5d390ee](https://github.com/Emil-Software/emilsoftware-utilities/commit/5d390eeef054758d40a05430552d4d0245443c85))
+
 # [2.0.0-dev.46](https://github.com/Emil-Software/emilsoftware-utilities/compare/v2.0.0-dev.45...v2.0.0-dev.46) (2026-10-12)
 
 
