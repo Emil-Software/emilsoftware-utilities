@@ -123,8 +123,7 @@ export class RestUtilities {
      */
     static sendErrorMessage(res: Response, error: unknown, tag: string = "[BASE ERROR]", status: number = 500): Response {
         const rawMessage = error instanceof Error ? error.message : String(error ?? "");
-        // Logga SEMPRE l'errore reale lato server: la risposta HTTP resta generica,
-        // ma senza questo log gli errori 5xx risultano impossibili da diagnosticare.
+        // Logga SEMPRE l'errore reale lato server (con stack) per la diagnosi.
         const errorStack = error instanceof Error ? error.stack : undefined;
         new Logger(tag || "[BASE ERROR]").error(rawMessage, ...(errorStack ? [errorStack] : []));
         const errorWithResponse = error as { getResponse?: () => unknown } | null | undefined;
@@ -145,29 +144,43 @@ export class RestUtilities {
         const exceptionStatus = typeof errorWithResponse?.getResponse === "function"
             ? Number((error as { getStatus?: () => number }).getStatus?.())
             : undefined;
+        const hasExceptionStatus = Number.isInteger(exceptionStatus) && (exceptionStatus as number) >= 400;
+        // Molti controller chiamano `sendErrorMessage(res, err)` anche per errori di input:
+        // riconosciamo i casi di validazione per non rispondere 500.
+        const looksLikeValidation = !hasExceptionStatus && !schemaError
+            && /obbligatorio|obbligatoria|mancante|manca il parametro|non valido|non valida|required|missing|invalid input/i.test(rawMessage);
         const effectiveStatus = schemaError
             ? 503
-            : Number.isInteger(exceptionStatus) && (exceptionStatus as number) >= 400
+            : hasExceptionStatus
                 ? (exceptionStatus as number)
-                : status;
-        const code = schemaError
+                : looksLikeValidation
+                    ? 400
+                    : status;
+        // Codici GENERICI (questo helper non appartiene al modulo Accessi): i codici
+        // ACCESSI_* restano di competenza esclusiva del modulo Accessi.
+        const code = explicitCode ?? (schemaError
             ? "DATABASE_SCHEMA_OUTDATED"
-            : explicitCode ?? (effectiveStatus >= 500
-                ? "ACCESSI_INTERNAL_ERROR"
-                : effectiveStatus === 401
-                    ? "ACCESSI_UNAUTHORIZED"
-                    : effectiveStatus === 403
-                        ? "ACCESSI_FORBIDDEN"
-                        : "ACCESSI_REQUEST_ERROR");
-        const message = schemaError
-            ? "Lo schema del database non e aggiornato. Eseguire la migrazione database e riprovare."
-            : explicitMessage ?? (effectiveStatus >= 500
-                ? "Errore interno del modulo Accessi."
-                : effectiveStatus === 401
-                    ? "Autenticazione non valida o scaduta."
-                    : effectiveStatus === 403
-                        ? "Operazione non autorizzata."
-                        : rawMessage || "Richiesta non valida.");
+            : effectiveStatus === 401
+                ? "UNAUTHORIZED"
+                : effectiveStatus === 403
+                    ? "FORBIDDEN"
+                    : effectiveStatus === 400
+                        ? "VALIDATION_ERROR"
+                        : effectiveStatus >= 500
+                            ? "INTERNAL_ERROR"
+                            : "REQUEST_ERROR");
+        // Messaggio SEMPRE specifico: prima quello esplicito dell'eccezione, altrimenti il
+        // messaggio reale dell'errore. Il generico resta solo se non c'e' alcun testo.
+        const fallbackMessage = schemaError
+            ? "Schema del database non aggiornato; eseguire la migrazione e riprovare."
+            : effectiveStatus === 401
+                ? "Autenticazione non valida o scaduta."
+                : effectiveStatus === 403
+                    ? "Operazione non autorizzata."
+                    : effectiveStatus >= 500
+                        ? "Errore interno del server."
+                        : "Richiesta non valida.";
+        const message = explicitMessage ?? (rawMessage.trim() || fallbackMessage);
 
         return res.status(effectiveStatus).send({
             severity: "error",
