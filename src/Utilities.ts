@@ -151,7 +151,7 @@ export class RestUtilities {
                 ? (exceptionStatus as number)
                 : status;
         const code = schemaError
-            ? "ACCESSI_DATABASE_SCHEMA_OUTDATED"
+            ? "DATABASE_SCHEMA_OUTDATED"
             : explicitCode ?? (effectiveStatus >= 500
                 ? "ACCESSI_INTERNAL_ERROR"
                 : effectiveStatus === 401
@@ -160,7 +160,7 @@ export class RestUtilities {
                         ? "ACCESSI_FORBIDDEN"
                         : "ACCESSI_REQUEST_ERROR");
         const message = schemaError
-            ? "Lo schema del database Accessi non e aggiornato. Eseguire la migrazione database e riprovare."
+            ? "Lo schema del database non e aggiornato. Eseguire la migrazione database e riprovare."
             : explicitMessage ?? (effectiveStatus >= 500
                 ? "Errore interno del modulo Accessi."
                 : effectiveStatus === 401
