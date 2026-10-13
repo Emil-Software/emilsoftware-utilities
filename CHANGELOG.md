@@ -1,3 +1,10 @@
+# [2.0.0-dev.48](https://github.com/Emil-Software/emilsoftware-utilities/compare/v2.0.0-dev.47...v2.0.0-dev.48) (2026-10-13)
+
+
+### Bug Fixes
+
+* errori HTTP specifici e codici generici (niente ACCESSI_* nel business helper) ([aa33523](https://github.com/Emil-Software/emilsoftware-utilities/commit/aa3352370024b381002febf82b78e6508e9c9fdf))
+
 # [2.0.0-dev.47](https://github.com/Emil-Software/emilsoftware-utilities/compare/v2.0.0-dev.46...v2.0.0-dev.47) (2026-10-13)
 
 
