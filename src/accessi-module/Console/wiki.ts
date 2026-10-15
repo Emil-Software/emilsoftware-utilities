@@ -112,7 +112,7 @@ export const WIKI_SECTIONS: WikiSection[] = [
         'await initializeAccessiModule(app, options); // le richieste nel frattempo ricevono 503',
       ].join('\n'), 'Non aprire la porta prima del bootstrap'),
       h(`Rotte montate`),
-      p(`Accessi intercetta solo /api/accessi/*, /accessi/swagger* e /accessi/swagger.json. Tutte le altre rotte passano intatte al tuo stack Express.`),
+      p(`Accessi intercetta solo /api/accessi/*, /accessi/openapi* e /accessi/openapi.json. Tutte le altre rotte passano intatte al tuo stack Express.`),
       note('ok', `req.user`, `authorizeAccessi popola req.user con il payload utente corrente (utente, codiceUtente, flag) e req.data come alias storico. req.userGrants è presente solo se hai richiesto dei requisiti.`),
     ],
   },

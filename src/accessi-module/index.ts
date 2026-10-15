@@ -55,10 +55,10 @@ export async function initializeAccessiModule(app: Application, options: Accessi
         const isNestRoute = (path: string) =>
             path === "/api/accessi" ||
             path.startsWith("/api/accessi/") ||
-            path === "/accessi/swagger" ||
-            path.startsWith("/accessi/swagger/") ||
-            path === "/accessi/swagger.json" ||
-            path === "/accessi/swagger-json";
+            path === "/accessi/openapi" ||
+            path.startsWith("/accessi/openapi/") ||
+            path === "/accessi/openapi.json" ||
+            path === "/accessi/openapi-json";
 
         app.use((req: Request, res, next) => {
             if (!isNestRoute(req.path)) {
@@ -80,12 +80,12 @@ export async function initializeAccessiModule(app: Application, options: Accessi
         nestApp.useGlobalFilters(new AccessiHttpExceptionFilter());
 
         nestApp.setGlobalPrefix('api', {
-            exclude: ['/swagger', '/swagger/(.*)']
+            exclude: ['/accessi/openapi', '/accessi/openapi/(.*)']
         });
 
         setupSwagger(nestApp, {
-            swaggerPath: "accessi/swagger",
-            swaggerJsonPath: "accessi/swagger.json",
+            swaggerPath: "accessi/openapi",
+            swaggerJsonPath: "accessi/openapi.json",
             title: "Accessi API Documentation",
             description: "API del modulo accessi",
         });

@@ -28,13 +28,26 @@ export async function initEmilsoftwareModule(app: Application, options: Emilsoft
     try {
         // Isolate Nest on a dedicated Express instance and dispatch only module routes.
         // This keeps pre-existing routes/middlewares on the host app untouched.
+        // Prefisso OpenAPI configurabile (default `accessi/openapi`), cosi' piu'
+        // documentazioni possono convivere (backend su `/openapi`, moduli sotto
+        // `/<modulo>/openapi`).
+        const swaggerPath = (options?.swagger?.swaggerPath ?? "accessi/openapi").replace(/^\/+|\/+$/g, "");
+        const swaggerJsonPath = (options?.swagger?.swaggerJsonPath ?? `${swaggerPath}.json`).replace(/^\/+/, "");
+        const legacySwaggerJsonPath = `${swaggerPath}-json`;
+        const swaggerRoutePaths = [
+            `/${swaggerPath}`,
+            `/${swaggerPath}/`,
+            `/${swaggerJsonPath}`,
+            `/${legacySwaggerJsonPath}`,
+        ];
+
         const nestHostApp = express();
         const isNestRoute = (path: string) =>
             path === "/api" ||
             path.startsWith("/api/") ||
-            path === "/swagger" ||
-            path.startsWith("/swagger/") ||
-            path === "/swagger-json";
+            swaggerRoutePaths.some(
+                (routePath) => path === routePath || path.startsWith(`${routePath.replace(/\/$/, "")}/`)
+            );
 
         app.use((req: Request, res, next) => {
             if (!isNestRoute(req.path)) {
@@ -56,11 +69,16 @@ export async function initEmilsoftwareModule(app: Application, options: Emilsoft
         }
 
         nestApp.setGlobalPrefix('api', {
-            exclude: ['/swagger', '/swagger/(.*)']
+            exclude: [`/${swaggerPath}`, `/${swaggerPath}/(.*)`]
         });
 
-        // Setup unified Swagger documentation for all modules
-        setupSwagger(nestApp);
+        // Documentazione OpenAPI del modulo unificato (Accessi + Allegati).
+        setupSwagger(nestApp, {
+            swaggerPath,
+            swaggerJsonPath,
+            title: options?.swagger?.title,
+            description: options?.swagger?.description,
+        });
 
         await nestApp.init();
         if (options?.accessiOptions) {

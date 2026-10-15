@@ -13,8 +13,8 @@ export function logAccessiStartup(options: AccessiOptions): void {
 
   logger.info('Accessi pronto. Indirizzi utili:');
   logger.info(`  Console:      ${url('/api/accessi/console')}`);
-  logger.info(`  Swagger UI:   ${url('/accessi/swagger')}`);
-  logger.info(`  Swagger JSON: ${url('/accessi/swagger.json')}`);
+  logger.info(`  OpenAPI UI:   ${url('/accessi/openapi')}`);
+  logger.info(`  OpenAPI JSON: ${url('/accessi/openapi.json')}`);
   logger.info(`  API:          ${url('/api/accessi')}`);
 
   if (options.adminBootstrap?.enabled === true) {

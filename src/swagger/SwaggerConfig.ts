@@ -13,11 +13,12 @@ export type SwaggerSetupOptions = {
 
 export function setupSwagger(app: INestApplication, options?: SwaggerSetupOptions) {
     const logger: Logger = new Logger("SwaggerConfig");
-    const swaggerPath = options?.swaggerPath ?? "swagger";
-    const defaultSwaggerJsonPath = swaggerPath.includes("/")
-        ? `${swaggerPath.substring(0, swaggerPath.lastIndexOf("/") + 1)}swagger.json`
-        : "swagger.json";
-    const swaggerJsonPath = options?.swaggerJsonPath ?? defaultSwaggerJsonPath;
+    // Naming industriale OpenAPI: `/openapi` (UI) e `/openapi.json` (spec).
+    // Il path e' configurabile per consentire piu' documentazioni sotto prefissi
+    // dedicati (es. `accessi/openapi`).
+    const swaggerPath = (options?.swaggerPath ?? "openapi").replace(/^\/+|\/+$/g, "");
+    const swaggerJsonPath = (options?.swaggerJsonPath ?? `${swaggerPath}.json`).replace(/^\/+/, "");
+    // Manteniamo l'alias storico `<path>-json` per non rompere i consumer esistenti.
     const legacySwaggerJsonPath = `${swaggerPath}-json`;
 
     const config = new DocumentBuilder()

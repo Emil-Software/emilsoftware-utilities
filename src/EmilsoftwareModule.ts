@@ -2,6 +2,7 @@ import { DynamicModule, Module } from "@nestjs/common";
 import { AccessiModule, AccessiOptions } from "./accessi-module/AccessiModule";
 import { AllegatiModule, AllegatiOptions } from "./allegati-module/AllegatiModule";
 import { Logger } from "./Logger";
+import type { SwaggerSetupOptions } from "./swagger/SwaggerConfig";
 
 /**
  * Configuration options for the unified module that combines Accessi and Allegati functionality
@@ -9,6 +10,11 @@ import { Logger } from "./Logger";
 export interface EmilsoftwareOptions {
     accessiOptions: AccessiOptions;
     allegatiOptions: AllegatiOptions;
+    /**
+     * Documentazione OpenAPI del modulo unificato. Default: `accessi/openapi`
+     * (UI) e `accessi/openapi.json` (spec).
+     */
+    swagger?: SwaggerSetupOptions;
 }
 
 /**
