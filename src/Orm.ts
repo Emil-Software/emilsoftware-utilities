@@ -9,6 +9,12 @@ import {
     normalizeFirebirdOptions,
 } from "./firebird-compat";
 
+/** Valore scalare di una colonna Firebird (riga flat). */
+export type DbValue = string | number | boolean | Date | Buffer | null | undefined;
+
+/** Riga generica restituita da `Orm.query`/`Orm.execute` quando non si specifica un tipo. */
+export type Row = Record<string, DbValue>;
+
 export class Orm {
     private static logger: Logger = new Logger(Orm.name);
     private static pools: Map<string, ConnectionPool> = new Map();
@@ -213,7 +219,7 @@ export class Orm {
         });
     }
 
-    public static async query<T = Record<string, unknown>>(
+    public static async query<T = Row>(
         options: Options,
         query: string,
         parameters: QueryParams = [],
@@ -270,7 +276,7 @@ export class Orm {
         }
     }
 
-    public static async execute<T = Record<string, unknown>>(
+    public static async execute<T = Row>(
         options: Options,
         query: string,
         parameters: QueryParams = [],
@@ -370,7 +376,7 @@ export class Orm {
     }
 
     /** Esegue una query su una transazione esistente e ne restituisce il risultato. */
-    public static transactionQuery<T = unknown>(
+    public static transactionQuery<T = Row[]>(
         transaction: Transaction,
         query: string,
         parameters: QueryParams = [],
