@@ -1,3 +1,10 @@
+# [2.0.0-dev.50](https://github.com/Emil-Software/emilsoftware-utilities/compare/v2.0.0-dev.49...v2.0.0-dev.50) (2026-10-15)
+
+
+### Features
+
+* **orm:** Row/DbValue come tipo di default di query/execute (niente Record<string, unknown>) ([9e35c79](https://github.com/Emil-Software/emilsoftware-utilities/commit/9e35c79e59d8c98863da5e2e533475b7d9ea5cb7))
+
 # [2.0.0-dev.49](https://github.com/Emil-Software/emilsoftware-utilities/compare/v2.0.0-dev.48...v2.0.0-dev.49) (2026-10-15)
 
 
