@@ -1,3 +1,10 @@
+# [2.0.0-dev.49](https://github.com/Emil-Software/emilsoftware-utilities/compare/v2.0.0-dev.48...v2.0.0-dev.49) (2026-10-15)
+
+
+### Features
+
+* **swagger:** path OpenAPI configurabile e naming /accessi/openapi ([a2878b0](https://github.com/Emil-Software/emilsoftware-utilities/commit/a2878b0bbca1abd54834452c0589d3560310c7de))
+
 # [2.0.0-dev.48](https://github.com/Emil-Software/emilsoftware-utilities/compare/v2.0.0-dev.47...v2.0.0-dev.48) (2026-10-13)
 
 
