@@ -17,3 +17,6 @@
 !/test/service-token-regressions.cjs
 !/test/integration/
 !/test/integration/**
+
+# Contratto OpenAPI generato (npm run generate:accessi-openapi)
+/src/accessi-module/openapi/
