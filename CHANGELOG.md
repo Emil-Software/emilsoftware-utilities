@@ -1,3 +1,10 @@
+# [2.0.0-dev.54](https://github.com/Emil-Software/emilsoftware-utilities/compare/v2.0.0-dev.53...v2.0.0-dev.54) (2026-10-21)
+
+
+### Bug Fixes
+
+* **accessi:** unisce ruoli e grant diretti preservando le rotte ([2f01eb3](https://github.com/Emil-Software/emilsoftware-utilities/commit/2f01eb3d1424a0b0144d53477616163c69e76549))
+
 # [2.0.0-dev.53](https://github.com/Emil-Software/emilsoftware-utilities/compare/v2.0.0-dev.52...v2.0.0-dev.53) (2026-10-21)
 
 
