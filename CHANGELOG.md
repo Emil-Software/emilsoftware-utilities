@@ -1,3 +1,10 @@
+# [2.0.0-dev.55](https://github.com/Emil-Software/emilsoftware-utilities/compare/v2.0.0-dev.54...v2.0.0-dev.55) (2026-10-21)
+
+
+### Bug Fixes
+
+* limita la lettura dei grant al proprietario o a chi puo gestire il target ([44f460b](https://github.com/Emil-Software/emilsoftware-utilities/commit/44f460b84f025ce46d2063d5c19badc2d7a20f43))
+
 # [2.0.0-dev.54](https://github.com/Emil-Software/emilsoftware-utilities/compare/v2.0.0-dev.53...v2.0.0-dev.54) (2026-10-21)
 
 
