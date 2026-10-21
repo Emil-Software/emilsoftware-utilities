@@ -22,6 +22,15 @@ interface OptionalField<T> {
   transform?: (value: unknown) => T;
 }
 
+/**
+ * I filtri sono deprecati: tocca la tabella FILTRI solo quando il chiamante invia
+ * esplicitamente almeno uno dei campi legacy. La console non li invia più.
+ */
+function hasFilterPayload(dto: Partial<FiltriUtente>): boolean {
+  const values = dto as Record<string, unknown>;
+  return Object.keys(FILTRI_UTENTE_DB_MAPPING).some((key) => values[key] !== undefined);
+}
+
 @autobind
 @Injectable()
 export class UserService {
@@ -583,7 +592,9 @@ export class UserService {
         },
       );
 
-      await this.filtriService.upsertFiltriUtente(codiceUtente, registrationData);
+      if (hasFilterPayload(registrationData)) {
+        await this.filtriService.upsertFiltriUtente(codiceUtente, registrationData);
+      }
 
       if (allowPrivilegedFields && !!registrationData.roles && registrationData.roles.length > 0) {
         await this.permissionService.assignRolesToUser(codiceUtente, registrationData.roles);
@@ -727,7 +738,9 @@ export class UserService {
         await this.permissionService.assignPermissionsToUser(codiceUtente, user.permissions);
       }
 
-      await this.filtriService.upsertFiltriUtente(codiceUtente, user);
+      if (hasFilterPayload(user)) {
+        await this.filtriService.upsertFiltriUtente(codiceUtente, user);
+      }
     } catch (error) {
       throw error;
     }

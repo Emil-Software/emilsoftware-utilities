@@ -17,7 +17,7 @@ Modulo NestJS/Express + Firebird per autenticazione JWT, autorizzazione per menu
 Che cosa fa Accessi, come si incastra nel backend e come scorre una richiesta.
 Accessi è un modulo Node/NestJS che aggiunge a un backend già esistente: autenticazione JWT, autorizzazione per ruoli e menu, gestione utenti, reset password, codici email (2FA e passwordless), SSO generico, token macchina-a-macchina e una console amministrativa. Il database è Firebird/InterBase.
 **Che cosa possiede il modulo**
-- Le rotte sotto /api/accessi/* (login, utenti, ruoli, menu, filtri, SSO, token, console).
+- Le rotte sotto /api/accessi/* (login, utenti, ruoli, menu, SSO, token, console).
 - Lo schema database del dominio Accessi, riconciliato automaticamente al bootstrap.
 - Il middleware di autorizzazione authorizeAccessi per le rotte della tua applicazione.
 - La console web su /api/accessi/console.
@@ -70,7 +70,7 @@ app.listen(3000); // porta aperta prima del bootstrap
 await initializeAccessiModule(app, options); // le richieste nel frattempo ricevono 503
 ```
 **Rotte montate**
-Accessi intercetta solo /api/accessi/*, /accessi/swagger* e /accessi/swagger.json. Tutte le altre rotte passano intatte al tuo stack Express.
+Accessi intercetta solo /api/accessi/*, /accessi/openapi* e /accessi/openapi.json. Tutte le altre rotte passano intatte al tuo stack Express.
 [OK] req.user: authorizeAccessi popola req.user con il payload utente corrente (utente, codiceUtente, flag) e req.data come alias storico. req.userGrants è presente solo se hai richiesto dei requisiti.
 
 ### Bootstrap su NestJS esistente
@@ -206,7 +206,7 @@ Content-Type: application/json
 
 { "email": "utente@example.com", "password": "Segreta123!" }
 ```
-La risposta include Result.token (il JWT) e il profilo utente con ruoli, permessi e filtri. Se l'account è passwordless, ometti la password: il server risponde con un challenge via email (vedi la sezione su 2FA e passwordless).
+La risposta include Result.token (il JWT) e il profilo utente con ruoli e permessi. Se l'account è passwordless, ometti la password: il server risponde con un challenge via email (vedi la sezione su 2FA e passwordless).
 ```ts
 const res = await fetch('/api/accessi/auth/login', {
   method: 'POST',
@@ -332,7 +332,7 @@ const empty = r.and();
 
 ## Dominio
 ### Utenti
-Creazione, aggiornamento, stati, GDPR e filtri.
+Creazione, aggiornamento, stati e GDPR.
 **Stati di registrazione (STAREG)**
 | Valore | Nome | Effetto sul login |
 | --- | --- | --- |
@@ -356,7 +356,7 @@ Creazione, aggiornamento, stati, GDPR e filtri.
 | POST | /api/accessi/user/register | Registrazione pubblica, solo se publicRegistration.enabled. |
 [WARN] Eliminazione: soft o definitiva: Il soft delete (STAREG=DELETE) è disponibile per admin e superutenti ed è reversibile. L'eliminazione definitiva rimuove utente e record collegati in transazione ed è riservata agli admin; il superutente senza flag Admin può solo flaggare l'utente come eliminato. Se l'utente ha dati collegati in altre tabelle (per esempio campi estesi del backend) l'eliminazione definitiva fallisce con code ACCESSI_USER_DELETE_HAS_REFERENCES e messaggio esplicito: usa allora il soft delete.
 [OK] Creazione con invito atomica: La creazione utente con invio email è atomica: se SMTP non è configurato si fallisce prima di scrivere, e se l'invio fallisce l'utente creato viene annullato (codice ACCESSI_USER_INVITE_EMAIL_FAILED). Non restano utenti senza password. In alternativa un admin crea l'utente e imposta la password dal form dedicato.
-[OK] Admin: controllo completo del profilo: Dalla scheda utente un admin modifica tutti i campi Accessi: anagrafica, cellulare, lingua, avatar, pagina di default, metadata JSON, 2FA/passwordless/login con password, flag, GDPR, stato registrazione, scadenza password e filtri (tabella FILTRI). La password si imposta direttamente con set-password. Le scritture sono idempotenti (UPDATE OR INSERT su UTENTI_CONFIG) e verificate dal backend; non serve accedere al database.
+[OK] Admin: controllo completo del profilo: Dalla scheda utente un admin modifica tutti i campi Accessi: anagrafica, cellulare, lingua, avatar, pagina di default, metadata JSON, 2FA/passwordless/login con password, flag, GDPR, stato registrazione e scadenza password. La password si imposta direttamente con set-password. Le scritture sono idempotenti (UPDATE OR INSERT su UTENTI_CONFIG) e verificate dal backend; non serve accedere al database.
 [INFO] Consenso GDPR: Il pulsante "Registra consenso GDPR" completa il processo: imposta FLGGDPR e DATGDPR e scrive la riga storica in UTENTI_GDPR (endpoint set-gdpr). Anche impostare flagGdpr via update-user completa il processo con la stessa riga storica.
 ```ts
 await fetch('/api/accessi/user/create-managed-user', {
@@ -439,18 +439,6 @@ await createMenu({ codiceMenu: 'ORDINI', descrizioneMenu: 'Ordini', codiceGruppo
 await deleteMenuGroup('A'); // contiene N menu
 ```
 
-### Filtri applicativi
-Filtri per utente e catalogo dei tipi filtro.
-| Metodo | Percorso | Descrizione |
-| --- | --- | --- |
-| GET | /api/accessi/filtri/tipi | Catalogo dei tipi filtro. |
-| POST | /api/accessi/filtri/tipi | Crea un tipo filtro (superutente). |
-| PUT | /api/accessi/filtri/tipi/:tipFil | Aggiorna un tipo filtro. |
-| DELETE | /api/accessi/filtri/tipi/:tipFil | Elimina un tipo filtro (se non è usato). |
-| GET | /api/accessi/filtri/utente?codUte=123 | Filtri di un utente (self o superutente). |
-| POST | /api/accessi/filtri/utente | Upsert dei filtri (self o superutente). |
-[INFO] Mapping delle colonne: I campi filtro sono mappati su colonne FILTRI in whitelist (FILTRI_UTENTE_DB_MAPPING). I campi non configurati nello schema vengono rifiutati.
-
 ## SSO
 ### SSO generico (federated authentication)
 Il backend valida il provider, Accessi gestisce identità e sessioni.
@@ -510,14 +498,13 @@ La console è servita dal modulo su /api/accessi/console. Non ha stato proprio: 
 - Utenti: elenco, creazione locale o SSO, profilo, ruoli, grant diretti, stato, 2FA.
 - Ruoli e grant: CRUD dei ruoli con l'albero delle abilitazioni.
 - Menu e gruppi: CRUD di gruppi, menu e tipi menu.
-- Filtri: filtri utente e tipi filtro.
 - Token di servizio: creazione, rotazione, revoca.
 - SSO: provider e identità.
 - Wiki e Changelog: documentazione e novità della libreria.
 - SQL: esporta il DDL delle entità Accessi (tabelle, generatori, FK, indici, check, trigger) per replicare il database.
 [INFO] Superutente (FLGSUPER): Riceve TUTTE le abilitazioni al livello massimo (30) dopo il login. In console vede solo la sezione Utenti e gestisce utenti, ruoli e grant.
 [INFO] Admin (FLGADMIN): Accede a tutta la console (catalogo, token, SSO, utenti) ma NON conferisce abilitazioni: i menu restano quelli assegnati via ABILITAZIONI/RUOLI_MNU. Gerarchia: ADMIN > SUPER > utente.
-[INFO] Gerarchia dei ruoli: Vale ADMIN (2) > SUPER (1) > utente comune (0). Un attore può gestire solo utenti di rango pari o inferiore: un superutente può amministrare totalmente utenti comuni e superutenti (profilo, password, flag, ruoli, grant, stato, eliminazione, filtri e identità/utenti SSO) ma NON può toccare un admin. Un admin può gestire chiunque. La regola è imposta dal backend (ensureCanManageTargetUser): un tentativo non consentito restituisce 403.
+[INFO] Gerarchia dei ruoli: Vale ADMIN (2) > SUPER (1) > utente comune (0). Un attore può gestire solo utenti di rango pari o inferiore: un superutente può amministrare totalmente utenti comuni e superutenti (profilo, password, flag, ruoli, grant, stato, eliminazione e identità/utenti SSO) ma NON può toccare un admin. Un admin può gestire chiunque. La regola è imposta dal backend (ensureCanManageTargetUser): un tentativo non consentito restituisce 403.
 [INFO] Gestione dei flag: Dalla scheda utente i flag sono mostrati in base al ruolo di chi è connesso: un admin può assegnare o togliere sia il flag Admin sia il flag Superutente; un superutente senza flag Admin può gestire solo il flag Superutente. I flag si impostano anche in creazione (utente locale o SSO).
 [WARN] Ultimo admin: Per non restare chiusi fuori dalla console, l'ultimo admin attivo non può essere disattivato, bloccato, eliminato né privato del flag Admin: l'operazione restituisce 400 finché non viene promosso un altro admin.
 [INFO] Accesso: Apri /api/accessi/console e accedi con un utente con FLGSUPER o FLGADMIN. Le sezioni sono raggiungibili anche tramite deep link (per esempio /api/accessi/console/menu-e-gruppi/menu).
@@ -562,7 +549,6 @@ Tutte le rotte /api/accessi/* in una tabella.
 | Permessi | GET permission/roles, POST permission/create-role, PUT permission/update-role/:codiceRuolo, DELETE permission/delete-role/:codiceRuolo, POST permission/assign-roles/:codiceUtente, POST permission/assign-permissions/:codiceUtente, GET permission/grants/:codiceUtente, GET permission/menus, GET permission/menu-types, GET permission/groups-with-menus |
 | Catalogo | POST/PUT/DELETE permission/menus[/:codiceMenu], permission/menu-groups[/:codiceGruppo], permission/menu-types[/:codiceTipo] |
 | Configurator | PATCH configurator/menus/:codiceMenu/enabled, PATCH configurator/groups/:codiceGruppo/enabled |
-| Filtri | GET filtri/tipi, POST/PUT/DELETE filtri/tipi[/:tipFil], GET/POST filtri/utente |
 | SSO | GET/POST federated-auth/providers, PATCH/DELETE providers/:provider, GET/POST users/:codiceUtente/identities, POST users, PATCH users/:codiceUtente/password-login |
 | Token | POST/GET service-token, DELETE service-token/:tokenId, POST service-token/:tokenId/rotate |
 | Schema | GET schema (DDL completo + entità presenti, solo admin) |

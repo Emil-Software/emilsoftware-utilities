@@ -262,15 +262,31 @@ legend { padding: 0 var(--s2); color: var(--ink-2); font-weight: 650; font-size:
 .muted { color: var(--muted); font-size: var(--fs-sm); }
 .error { color: var(--danger); }
 
-#notice { min-height: 0; }
-#notice:not(:empty) { margin: 0 0 var(--s4); }
+#notice {
+  position: fixed;
+  z-index: 1100;
+  top: var(--gutter);
+  right: var(--gutter);
+  display: grid;
+  gap: var(--s2);
+  width: min(380px, calc(100vw - 2 * var(--gutter)));
+  pointer-events: none;
+}
 .notice { display: flex; align-items: flex-start; gap: var(--s3); padding: var(--s3) var(--s4); border: 1px solid var(--brand-line); border-radius: var(--r-md); color: var(--brand-strong); background: var(--brand-soft); }
+#notice .notice { pointer-events: auto; box-shadow: var(--shadow-md); animation: notice-in .18s ease-out; }
 .notice-error { border-color: var(--danger-line); color: var(--danger); background: var(--danger-soft); }
 .notice-icon { flex: 0 0 auto; display: inline-flex; align-items: center; justify-content: center; width: 1.3rem; height: 1.3rem; border-radius: 50%; color: #fff; background: var(--brand-strong); font-weight: 700; font-size: .82rem; }
 .notice-error .notice-icon { background: var(--danger); }
 .notice-text { flex: 1 1 auto; min-width: 0; overflow-wrap: anywhere; }
 .notice-close { flex: 0 0 auto; padding: 0 .2rem; border: 0; background: none; color: inherit; font-size: 1.15rem; line-height: 1; cursor: pointer; opacity: .7; }
 .notice-close:hover, .notice-close:focus-visible { opacity: 1; }
+@keyframes notice-in { from { opacity: 0; transform: translateY(-6px) scale(.98); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) {
+  #notice .notice { animation: none; }
+}
+@media (max-width: 640px) {
+  #notice { left: var(--gutter); width: auto; }
+}
 
 .page-header { display: flex; align-items: end; justify-content: space-between; gap: var(--s4); margin: 0 0 var(--s5); padding-bottom: var(--s4); border-bottom: 1px solid var(--line); }
 .page-header h2 { margin: 0; }
@@ -324,6 +340,24 @@ table code, .entity-metadata dd, .brand small, .role-code { font-variant-numeric
 .user-editor-section > h3 { margin-bottom: var(--s2); }
 .user-action-bar { display: flex; align-items: center; justify-content: space-between; gap: var(--s3); margin-bottom: var(--s4); }
 .user-action-bar #back { margin: 0; }
+
+/* Gestione stato account: form separato dal profilo, con azioni distruttive isolate. */
+.account-panel { margin: 0 0 var(--s5); padding: var(--s4); border: 1px solid var(--line); border-radius: var(--r-md); background: var(--surface-sunken); }
+.account-panel-head { display: flex; justify-content: space-between; gap: var(--s3); margin-bottom: var(--s3); }
+.account-panel-head h3 { margin: 0 0 var(--s1); }
+.account-panel-head .eyebrow { margin-bottom: var(--s1); }
+.account-panel-head .form-help { margin: 0; }
+.account-state-row { display: flex; flex-wrap: wrap; align-items: end; gap: var(--s3); }
+.account-state-field { flex: 1 1 280px; max-width: 420px; }
+.account-state-field select { min-height: 38px; }
+.account-state-row > button { flex: 0 0 auto; }
+.account-danger-zone { display: grid; gap: var(--s2); margin-top: var(--s4); padding-top: var(--s3); border-top: 1px solid var(--line); }
+.account-danger-head { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: var(--s2); }
+.account-danger-head strong { color: var(--danger); font-size: var(--fs-sm); }
+.account-danger-head .form-help { margin: 0; }
+.account-danger-actions { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s2); }
+.action-with-help { display: inline-flex; align-items: center; gap: var(--s2); }
+.button-icon { width: 16px; height: 16px; flex: 0 0 16px; }
 .user-tabs { display: flex; gap: var(--s1); margin: 0 0 var(--s4); padding: var(--s1); overflow-x: auto; border: 1px solid var(--line); border-radius: var(--r-md); background: var(--surface-sunken); }
 .user-tabs button { flex: 0 0 auto; min-height: 34px; border: 0; color: var(--ink-2); background: transparent; }
 .user-tabs button:hover { color: var(--ink); background: var(--surface); }
@@ -659,6 +693,26 @@ label:not(.check):not(.inline-field):has(> .help-dot) { padding-right: 1.625rem;
 }
 
 /* Changelog / markdown body */
+.changelog-page { width: 100%; }
+.changelog-page > .wiki-section-head { margin-bottom: var(--s4); }
+.changelog-page h2 {
+  margin: var(--s5) 0 var(--s3);
+  padding: var(--s2) var(--s3);
+  border: 1px solid var(--brand-line);
+  border-radius: var(--r-md);
+  color: var(--brand-strong);
+  font-size: var(--fs-md);
+  background: var(--brand-soft);
+}
+.changelog-page h3 {
+  margin: var(--s4) 0 var(--s2);
+  color: var(--muted);
+  font-size: var(--fs-sm);
+  font-weight: 700;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+}
+.changelog-page ul { margin: 0 0 var(--s4); }
 .markdown-body h1 { margin: 0 0 var(--s3); font-size: 1.55rem; color: var(--ink); }
 .markdown-body h2 { margin: var(--s5) 0 var(--s2); padding-top: var(--s3); border-top: 1px solid var(--line); font-size: 1.2rem; color: var(--ink); }
 .markdown-body h3 { margin: var(--s4) 0 var(--s2); font-size: 1rem; color: var(--ink-2); }

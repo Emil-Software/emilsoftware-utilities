@@ -1104,6 +1104,7 @@ return accessiFetch<Promise<setGdprResponse>>(getSetGdprUrl(codiceUtente),
 
 /**
  * Ritorna tutti i tipi di filtri disponibili nel sistema
+ * @deprecated
  * @summary Recupera la lista dei tipi di filtri
  */
 export type getTipiFiltroResponse = {
@@ -1129,6 +1130,7 @@ return accessiFetch<Promise<getTipiFiltroResponse>>(getGetTipiFiltroUrl(),
 
 /**
  * Inserisce una nuova voce nel catalogo dei tipi di filtro. Operazione riservata al superutente.
+ * @deprecated
  * @summary Crea un tipo di filtro
  */
 export type createTipoFiltroResponse = {
@@ -1155,6 +1157,7 @@ return accessiFetch<Promise<createTipoFiltroResponse>>(getCreateTipoFiltroUrl(),
 
 /**
  * Aggiorna descrizione, campo o stato di un tipo di filtro esistente.
+ * @deprecated
  * @summary Aggiorna un tipo di filtro
  */
 export type updateTipoFiltroResponse = {
@@ -1182,6 +1185,7 @@ return accessiFetch<Promise<updateTipoFiltroResponse>>(getUpdateTipoFiltroUrl(ti
 
 /**
  * Elimina un tipo di filtro solo se nessun filtro utente lo utilizza.
+ * @deprecated
  * @summary Elimina un tipo di filtro
  */
 export type deleteTipoFiltroResponse = {
@@ -1207,6 +1211,7 @@ return accessiFetch<Promise<deleteTipoFiltroResponse>>(getDeleteTipoFiltroUrl(ti
 
 /**
  * Ritorna tutti i filtri associati ad un utente specifico
+ * @deprecated
  * @summary Recupera i filtri di un utente
  */
 export type getFiltriUtenteResponse = {
@@ -1241,6 +1246,7 @@ return accessiFetch<Promise<getFiltriUtenteResponse>>(getGetFiltriUtenteUrl(para
 
 /**
  * Permette di salvare i filtri associati ad un utente specifico
+ * @deprecated
  * @summary Inserisce o aggiorna i filtri di un utente
  */
 export type saveFiltriUtenteResponse = {

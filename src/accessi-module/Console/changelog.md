@@ -2,6 +2,57 @@
 
 Novità e modifiche rilevanti della libreria `emilsoftware-utilities` (modulo Accessi).
 
+## Non rilasciato
+
+### Cambiamenti
+- Console: rimosse le sezioni **Filtri utente** e **Tipi filtro**. I filtri applicativi sono deprecati e non vengono più letti né scritti dalla console; le tabelle restano invariate e la gestione torna manuale sul database.
+- Console: le conferme operative (es. "Ruoli aggiornati") ora compaiono come notifiche in alto a destra e scompaiono automaticamente.
+- Console: il salvataggio del profilo non invia più i campi della tabella `FILTRI`, evitando payload rifiutati dal backend. `UserService` tocca `FILTRI` solo se il chiamante invia esplicitamente almeno un campo legacy.
+- Console: scheda utente riorganizzata. "Indietro" resta nella barra superiore; stato registrazione, disattivazione ed eliminazione definitiva sono in un form coerente "Stato e sicurezza", con icone e tooltip allineati.
+- Console: pagina Changelog a larghezza piena, con intestazioni di versione evidenziate e sezioni orizzontali leggibili.
+- Seed `npm run accessi:seed-admin`: crea o aggiorna un admin completo (`FLGSUPER = 1` e `FLGADMIN = 1`) e corregge il nome colonna usato in precedenza (`FLGADMIN`).
+
+## 2.0.0-dev.50 (2026-10-15)
+
+### Cambiamenti
+- ORM: `Row` e `DbValue` sono i tipi predefiniti di `Orm.query` e `Orm.execute`; `transactionQuery` usa `Row[]`. Gli usi generici non devono più dichiarare `Record<string, unknown>`.
+- Build: il contratto OpenAPI generato (`src/accessi-module/openapi/`) è ignorato da Git e viene rigenerato da `npm run generate:accessi-openapi`.
+
+## 2.0.0-dev.49 (2026-10-15)
+
+### Cambiamenti
+- Documentazione HTTP rinominata da Swagger a **OpenAPI**: il modulo unificato espone `/accessi/openapi` e `/accessi/openapi.json`; `setupSwagger` usa `/openapi` come default.
+- Il path è configurabile tramite `EmilsoftwareOptions.swagger` (utile per far convivere più documentazioni).
+- Allineati log di avvio, Wiki e dispatch delle rotte del modulo.
+- L'alias storico `<path>-json` resta supportato.
+
+### Note
+- I consumer che aprivano `/swagger` o `/accessi/swagger` devono aggiornare l'URL alla nuova documentazione OpenAPI.
+
+## 2.0.0-dev.48 (2026-10-13)
+
+### Correzioni
+- `RestUtilities.sendErrorMessage` restituisce status HTTP specifici (400/401/403/4xx/5xx) e codici generici (`VALIDATION_ERROR`, `UNAUTHORIZED`, `FORBIDDEN`, `INTERNAL_ERROR`, `REQUEST_ERROR`), senza usare codici `ACCESSI_*` nel business helper.
+- Il messaggio restituito è quello reale dell'eccezione; gli errori testuali di validazione vengono riconosciuti come 400.
+
+## 2.0.0-dev.47 (2026-10-13)
+
+### Correzioni
+- Errore schema database reso generico: codice `DATABASE_SCHEMA_OUTDATED` e messaggio senza riferimenti specifici ad Accessi.
+
+## 2.0.0-dev.46 (2026-10-12)
+
+### Correzioni
+- `sendBaseResponse` resta retro-compatibile quando il terzo argomento è un tag stringa invece dello status HTTP.
+- Gestita la serializzazione dei `bigint`; gli errori di risposta vengono registrati con stack tramite `sendErrorMessage`.
+- `AccessiHttpExceptionFilter` registra gli errori con stack per facilitare la diagnosi.
+
+## 2.0.0-dev.45 (2026-10-12)
+
+### Correzioni
+- `set-gdpr` e l'aggiornamento di `flagGdpr` sono idempotenti: `UPDATE OR INSERT` su `UTENTI_GDPR` con `MATCHING (CODUTE, DATACC)`.
+- Evitate violazioni di chiave primaria e risposte 500 quando il consenso GDPR viene registrato più volte nello stesso giorno.
+
 ## 2.0.0-dev.44
 
 ### Aggiunte

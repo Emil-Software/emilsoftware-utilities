@@ -41,7 +41,10 @@ import type { AuthenticatedAccessiUser } from '../security/accessControl';
 @ApiBearerAuth()
 @Controller('accessi/filtri')
 @UseGuards(JwtSimpleGuard)
-/** API per lettura e persistenza dei filtri applicativi collegati a un utente Accessi. */
+/**
+ * API legacy per lettura e persistenza dei filtri applicativi collegati a un utente Accessi.
+ * @deprecated I filtri sono deprecati e non sono più gestiti dalla console; le tabelle restano invariate.
+ */
 export class FiltriController {
   constructor(
     private readonly filtriService: FiltriService,
@@ -64,6 +67,7 @@ export class FiltriController {
   @Get('tipi')
   @ApiOperation({
     operationId: 'getTipiFiltro',
+    deprecated: true,
     summary: 'Recupera la lista dei tipi di filtri',
     description: 'Ritorna tutti i tipi di filtri disponibili nel sistema',
   })
@@ -89,6 +93,7 @@ export class FiltriController {
   @Post('tipi')
   @ApiOperation({
     operationId: 'createTipoFiltro',
+    deprecated: true,
     summary: 'Crea un tipo di filtro',
     description: 'Inserisce una nuova voce nel catalogo dei tipi di filtro. Operazione riservata al superutente.',
   })
@@ -116,6 +121,7 @@ export class FiltriController {
   @Put('tipi/:tipFil')
   @ApiOperation({
     operationId: 'updateTipoFiltro',
+    deprecated: true,
     summary: 'Aggiorna un tipo di filtro',
     description: 'Aggiorna descrizione, campo o stato di un tipo di filtro esistente.',
   })
@@ -141,6 +147,7 @@ export class FiltriController {
   @Delete('tipi/:tipFil')
   @ApiOperation({
     operationId: 'deleteTipoFiltro',
+    deprecated: true,
     summary: 'Elimina un tipo di filtro',
     description: 'Elimina un tipo di filtro solo se nessun filtro utente lo utilizza.',
   })
@@ -165,6 +172,7 @@ export class FiltriController {
   @Get('utente')
   @ApiOperation({
     operationId: 'getFiltriUtente',
+    deprecated: true,
     summary: 'Recupera i filtri di un utente',
     description: 'Ritorna tutti i filtri associati ad un utente specifico',
   })
@@ -220,6 +228,7 @@ export class FiltriController {
   @Post('utente')
   @ApiOperation({
     operationId: 'saveFiltriUtente',
+    deprecated: true,
     summary: 'Inserisce o aggiorna i filtri di un utente',
     description: 'Permette di salvare i filtri associati ad un utente specifico',
   })

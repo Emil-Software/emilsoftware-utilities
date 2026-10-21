@@ -37,7 +37,6 @@ Per una versione compatta da fornire a un'IA che costruisce il backend integrato
 - [Utenti](#utenti)
 - [Ruoli e permessi](#ruoli-e-permessi)
 - [Menu, gruppi e tipi menu](#menu-gruppi-e-tipi-menu)
-- [Filtri applicativi](#filtri-applicativi)
 
 **SSO**
 
@@ -67,7 +66,7 @@ Accessi è un modulo Node/NestJS che aggiunge a un backend già esistente: auten
 
 ### Che cosa possiede il modulo
 
-- Le rotte sotto /api/accessi/\* (login, utenti, ruoli, menu, filtri, SSO, token, console).
+- Le rotte sotto /api/accessi/\* (login, utenti, ruoli, menu, SSO, token, console).
 - Lo schema database del dominio Accessi, riconciliato automaticamente al bootstrap.
 - Il middleware di autorizzazione authorizeAccessi per le rotte della tua applicazione.
 - La console web su /api/accessi/console.
@@ -149,7 +148,7 @@ await initializeAccessiModule(app, options); // le richieste nel frattempo ricev
 
 ### Rotte montate
 
-Accessi intercetta solo /api/accessi/\*, /accessi/swagger\* e /accessi/swagger.json. Tutte le altre rotte passano intatte al tuo stack Express.
+Accessi intercetta solo /api/accessi/\*, /accessi/openapi\* e /accessi/openapi.json. Tutte le altre rotte passano intatte al tuo stack Express.
 
 > [!TIP]
 > **req.user**
@@ -353,7 +352,7 @@ Content-Type: application/json
 { "email": "utente@example.com", "password": "Segreta123!" }
 ```
 
-La risposta include Result.token (il JWT) e il profilo utente con ruoli, permessi e filtri. Se l'account è passwordless, ometti la password: il server risponde con un challenge via email (vedi la sezione su 2FA e passwordless).
+La risposta include Result.token (il JWT) e il profilo utente con ruoli e permessi. Se l'account è passwordless, ometti la password: il server risponde con un challenge via email (vedi la sezione su 2FA e passwordless).
 
 **Esempio corretto — Chiamata dal frontend**
 
@@ -547,7 +546,7 @@ const empty = r.and();
 
 ## Utenti
 
-_Creazione, aggiornamento, stati, GDPR e filtri._
+_Creazione, aggiornamento, stati e GDPR._
 
 ### Stati di registrazione (STAREG)
 
@@ -584,7 +583,7 @@ _Creazione, aggiornamento, stati, GDPR e filtri._
 
 > [!TIP]
 > **Admin: controllo completo del profilo**
-> Dalla scheda utente un admin modifica tutti i campi Accessi: anagrafica, cellulare, lingua, avatar, pagina di default, metadata JSON, 2FA/passwordless/login con password, flag, GDPR, stato registrazione, scadenza password e filtri (tabella FILTRI). La password si imposta direttamente con set-password. Le scritture sono idempotenti (UPDATE OR INSERT su UTENTI\_CONFIG) e verificate dal backend; non serve accedere al database.
+> Dalla scheda utente un admin modifica tutti i campi Accessi: anagrafica, cellulare, lingua, avatar, pagina di default, metadata JSON, 2FA/passwordless/login con password, flag, GDPR, stato registrazione e scadenza password. La password si imposta direttamente con set-password. Le scritture sono idempotenti (UPDATE OR INSERT su UTENTI\_CONFIG) e verificate dal backend; non serve accedere al database.
 
 > [!NOTE]
 > **Consenso GDPR**
@@ -712,25 +711,6 @@ await deleteMenuGroup('A'); // contiene N menu
 
 ---
 
-## Filtri applicativi
-
-_Filtri per utente e catalogo dei tipi filtro._
-
-| Metodo | Percorso | Descrizione |
-| --- | --- | --- |
-| GET | /api/accessi/filtri/tipi | Catalogo dei tipi filtro. |
-| POST | /api/accessi/filtri/tipi | Crea un tipo filtro (superutente). |
-| PUT | /api/accessi/filtri/tipi/:tipFil | Aggiorna un tipo filtro. |
-| DELETE | /api/accessi/filtri/tipi/:tipFil | Elimina un tipo filtro (se non è usato). |
-| GET | /api/accessi/filtri/utente?codUte=123 | Filtri di un utente (self o superutente). |
-| POST | /api/accessi/filtri/utente | Upsert dei filtri (self o superutente). |
-
-> [!NOTE]
-> **Mapping delle colonne**
-> I campi filtro sono mappati su colonne FILTRI in whitelist (FILTRI\_UTENTE\_DB\_MAPPING). I campi non configurati nello schema vengono rifiutati.
-
----
-
 ## SSO generico (federated authentication)
 
 _Il backend valida il provider, Accessi gestisce identità e sessioni._
@@ -823,7 +803,6 @@ La console è servita dal modulo su /api/accessi/console. Non ha stato proprio: 
 - Utenti: elenco, creazione locale o SSO, profilo, ruoli, grant diretti, stato, 2FA.
 - Ruoli e grant: CRUD dei ruoli con l'albero delle abilitazioni.
 - Menu e gruppi: CRUD di gruppi, menu e tipi menu.
-- Filtri: filtri utente e tipi filtro.
 - Token di servizio: creazione, rotazione, revoca.
 - SSO: provider e identità.
 - Wiki e Changelog: documentazione e novità della libreria.
@@ -839,7 +818,7 @@ La console è servita dal modulo su /api/accessi/console. Non ha stato proprio: 
 
 > [!NOTE]
 > **Gerarchia dei ruoli**
-> Vale ADMIN (2) \> SUPER (1) \> utente comune (0). Un attore può gestire solo utenti di rango pari o inferiore: un superutente può amministrare totalmente utenti comuni e superutenti (profilo, password, flag, ruoli, grant, stato, eliminazione, filtri e identità/utenti SSO) ma NON può toccare un admin. Un admin può gestire chiunque. La regola è imposta dal backend (ensureCanManageTargetUser): un tentativo non consentito restituisce 403.
+> Vale ADMIN (2) \> SUPER (1) \> utente comune (0). Un attore può gestire solo utenti di rango pari o inferiore: un superutente può amministrare totalmente utenti comuni e superutenti (profilo, password, flag, ruoli, grant, stato, eliminazione e identità/utenti SSO) ma NON può toccare un admin. Un admin può gestire chiunque. La regola è imposta dal backend (ensureCanManageTargetUser): un tentativo non consentito restituisce 403.
 
 > [!NOTE]
 > **Gestione dei flag**
@@ -910,7 +889,6 @@ _Tutte le rotte /api/accessi/\* in una tabella._
 | Permessi | GET permission/roles, POST permission/create-role, PUT permission/update-role/:codiceRuolo, DELETE permission/delete-role/:codiceRuolo, POST permission/assign-roles/:codiceUtente, POST permission/assign-permissions/:codiceUtente, GET permission/grants/:codiceUtente, GET permission/menus, GET permission/menu-types, GET permission/groups-with-menus |
 | Catalogo | POST/PUT/DELETE permission/menus\[/:codiceMenu\], permission/menu-groups\[/:codiceGruppo\], permission/menu-types\[/:codiceTipo\] |
 | Configurator | PATCH configurator/menus/:codiceMenu/enabled, PATCH configurator/groups/:codiceGruppo/enabled |
-| Filtri | GET filtri/tipi, POST/PUT/DELETE filtri/tipi\[/:tipFil\], GET/POST filtri/utente |
 | SSO | GET/POST federated-auth/providers, PATCH/DELETE providers/:provider, GET/POST users/:codiceUtente/identities, POST users, PATCH users/:codiceUtente/password-login |
 | Token | POST/GET service-token, DELETE service-token/:tokenId, POST service-token/:tokenId/rotate |
 | Schema | GET schema (DDL completo + entità presenti, solo admin) |

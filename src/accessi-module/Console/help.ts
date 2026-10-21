@@ -222,46 +222,6 @@ export const HELP: Record<string, HelpEntry> = {
       note('warn', 'Sostituisce la password attuale', `L'utente dovrà usare subito la nuova password. Per fargliela scegliere, usa "Invia reset password".`),
     ],
   },
-  'user-filter-numrep': {
-    title: 'Numero reparto (NUMREP)',
-    blocks: [ p(`Reparto associato all'utente nella tabella FILTRI. Vuoto rimuove il valore.`) ],
-  },
-  'user-filter-idxpers': {
-    title: 'Indice personale (IDXPERS)',
-    blocks: [ p(`Indice del personale nella tabella FILTRI. Vuoto rimuove il valore.`) ],
-  },
-  'user-filter-codclisuper': {
-    title: 'Cliente padre (CODCLISUPER)',
-    blocks: [ p(`Codice del cliente padre. Vuoto rimuove il valore.`) ],
-  },
-  'user-filter-codage': {
-    title: 'Agente (CODAGE)',
-    blocks: [ p(`Codice dell'agente associato. Vuoto rimuove il valore.`) ],
-  },
-  'user-filter-codclicol': {
-    title: 'Cliente collegato (CODCLICOL)',
-    blocks: [ p(`Codice del cliente collegato. Vuoto rimuove il valore.`) ],
-  },
-  'user-filter-codclienti': {
-    title: 'Clienti (CODCLIENTI)',
-    blocks: [ p(`Elenco di codici cliente separati da virgola (testo libero). Vuoto rimuove il valore.`) ],
-  },
-  'user-filter-tipfil': {
-    title: 'Tipo filtro (TIPFIL)',
-    blocks: [ p(`Tipo di filtro applicato. Vuoto rimuove il valore.`) ],
-  },
-  'user-filter-idxpos': {
-    title: 'Postazione (IDXPOS)',
-    blocks: [ p(`Indice della postazione nella tabella ANTENNE_POS. Vuoto rimuove il valore.`) ],
-  },
-  'user-filter-coddip': {
-    title: 'Dipendente (CODDIP)',
-    blocks: [ p(`Codice del dipendente collegato. Vuoto rimuove il valore.`) ],
-  },
-  'user-filter-codvet': {
-    title: 'Vettore (CODVET)',
-    blocks: [ p(`Codice del vettore collegato. Vuoto rimuove il valore.`) ],
-  },
   'user-super': {
     title: 'Superutente (FLGSUPER)',
     blocks: [
@@ -384,39 +344,6 @@ export const HELP: Record<string, HelpEntry> = {
     ],
   },
 
-  // ----------------------------------------------------------------- filtri
-  'filter-type-code': {
-    title: 'Codice tipo filtro',
-    blocks: [
-      p(`Numero identificativo del tipo filtro. È la chiave primaria: non si modifica dopo la creazione.`),
-    ],
-  },
-  'filter-type-field': {
-    title: 'Campo',
-    blocks: [
-      p(`Nome della colonna applicativa della tabella FILTRI a cui il tipo è associato (per esempio CODCLI). Deve esistere nello schema, altrimenti i filtri che lo usano vengono rifiutati.`),
-    ],
-  },
-  'filter-type-enabled': {
-    title: 'Tipo filtro abilitato',
-    blocks: [
-      p(`Se disattivato, il tipo non è proposto ai client, ma i filtri già salvati restano nel database.`),
-    ],
-  },
-  'filters-json': {
-    title: 'Filtro JSON',
-    blocks: [
-      p(`Rappresentazione JSON dei filtri applicativi dell'utente. Usa "Carica" per partire dalla struttura esistente, modifica i valori e poi "Salva".`),
-      note('info', 'Campi ammessi', `Sono accettati solo i campi mappati nello schema (FILTRI_UTENTE_DB_MAPPING). Un campo non configurato viene rifiutato con un errore esplicito.`),
-    ],
-  },
-  'filters-user': {
-    title: 'Utente',
-    blocks: [
-      p(`Utente a cui appartengono i filtri. Selezionalo prima di caricare o salvare: i filtri sono sempre per singolo utente.`),
-    ],
-  },
-
   // ------------------------------------------------------------ assegnazioni
   'role-assignment': {
     title: 'Assegnazione dei ruoli',
@@ -466,7 +393,7 @@ export const HELP: Record<string, HelpEntry> = {
   'user-delete-permanent': {
     title: 'Elimina definitivamente',
     blocks: [
-      p(`Cancella l'utente e tutti i record collegati (configurazione, password, ruoli, abilitazioni, filtri, identità SSO, challenge 2FA e GDPR). Operazione irreversibile.`),
+      p(`Cancella l'utente e tutti i record collegati (configurazione, password, ruoli, abilitazioni, identità SSO, challenge 2FA e GDPR). Operazione irreversibile.`),
       note('danger', 'Non reversibile', `I dati vengono rimossi fisicamente dal database; non è possibile ripristinare l'utente.`),
       note('info', 'Solo admin', `Il pulsante è mostrato e accettato solo per il flag Admin. Un superutente senza Admin può solo flaggare l'utente come eliminato.`),
     ],

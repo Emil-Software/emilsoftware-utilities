@@ -10,27 +10,24 @@
   createMenuType,
   createRole,
   createServiceToken,
-  createTipoFiltro,
   deleteFederatedIdentityPermanently,
   deleteFederatedProvider,
   deleteMenu,
   deleteMenuGroup,
   deleteMenuType,
   deleteRole,
-  deleteTipoFiltro,
   deleteUser,
   deleteUserPermanently,
+  exchangeConsoleEntryTicket,
   forcePasswordResetLegacy,
   getAdminBootstrapStatus,
   getFederatedIdentities,
   getFederatedProviders,
-  getFiltriUtente,
   getGroupsWithMenus,
   getMenuTypes,
   getRoles,
   getSchema,
   getServiceTokens,
-  getTipiFiltro,
   getUserByToken,
   getUserRolesAndGrants,
   getUsers,
@@ -40,7 +37,6 @@
   resendTwoFactor,
   revokeServiceToken,
   rotateServiceToken,
-  saveFiltriUtente,
   setGdpr,
   setGroupEnabled,
   setMenuEnabled,
@@ -52,7 +48,6 @@
   updateMenuGroup,
   updateMenuType,
   updateRole,
-  updateTipoFiltro,
   updateUtente,
 } from './generated/accessiApi';
 import { ACCESSI_UNAUTHORIZED_EVENT, setAccessiConsoleToken } from './accessiFetch';
@@ -65,7 +60,7 @@ import type {
   CreateFederatedProviderRequest,
   AuthenticatedTokenPayloadDto,
   BootstrapAdminResultDto,
-  FiltriUtente,
+  ConsoleEntrySessionResult,
   FederatedProviderResponseDto,
   GroupWithMenusEntity,
   LoginResult,
@@ -77,7 +72,6 @@ import type {
   SchemaDdlResult,
   ServiceTokenDto,
   IssuedServiceTokenDto,
-  TipoFiltro,
   UserDto,
   UpdateFederatedProviderRequest,
 } from './generated/model';
@@ -93,8 +87,6 @@ type ConsoleView =
   | 'menuGroups'
   | 'menuItems'
   | 'menuTypes'
-  | 'filterUser'
-  | 'filterTypes'
   | 'ssoProviders'
   | 'ssoUsers'
   | 'tokens'
@@ -108,8 +100,6 @@ const routeSegment: Record<ConsoleView, string> = {
   menuGroups: 'menu-e-gruppi/gruppi',
   menuItems: 'menu-e-gruppi/menu',
   menuTypes: 'menu-e-gruppi/tipi-menu',
-  filterUser: 'filtri/utente',
-  filterTypes: 'filtri/tipi',
   ssoProviders: 'sso/provider',
   ssoUsers: 'sso/utenti',
   tokens: 'token-di-servizio',
@@ -121,7 +111,6 @@ const routeView = Object.fromEntries(Object.entries(routeSegment).map(([view, se
 // I padri dei sottomenu hanno un URL proprio: senza figlio selezionato si apre la prima voce.
 const parentDefaultView: Record<string, ConsoleView> = {
   'menu-e-gruppi': 'menuGroups',
-  filtri: 'filterUser',
   sso: 'ssoProviders',
 };
 const consoleMarker = '/accessi/console';
@@ -147,36 +136,55 @@ const byId = <T extends HTMLElement>(id: string) => document.getElementById(id) 
 const escapeHtml = (value: unknown) => String(value ?? '').replace(/[&<>"']/g, (char) => ({
   '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
 }[char] as string));
+/** Icona SVG inline per i pulsanti azione, coerente con la sidebar. */
+function actionIcon(paths: string): string {
+  return `<svg class="button-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${paths}</svg>`;
+}
 function result<T>(response: { data: object }): T {
   const body = response.data as { Result?: T; message?: string };
   if (body.Result === undefined) throw new Error(body.message ?? 'Risposta Accessi priva di dati.');
   return body.Result;
 }
 
-let noticeTimer: number | undefined;
+const noticeTimers = new Set<number>();
 
 /**
- * Segnala l'esito di un'operazione: verde con spunta per il successo, rosso per l'errore.
- * Il successo sparisce da solo, l'errore resta finche non viene chiuso o sostituito.
+ * Mostra una notifica non bloccante in alto a destra. Successi ed errori si
+ * rimuovono da soli; il pulsante di chiusura consente di anticipare la chiusura.
  */
 function showNotice(message: string, isError = false): void {
   const container = byId('notice');
-  if (noticeTimer !== undefined) {
-    window.clearTimeout(noticeTimer);
-    noticeTimer = undefined;
-  }
-  // Un messaggio vuoto deve azzerare il contenitore, altrimenti resta visibile la barra di avviso.
+  // Un messaggio vuoto azzera tutte le notifiche (usato al logout e al cambio vista).
   if (!message) {
+    noticeTimers.forEach((timer) => window.clearTimeout(timer));
+    noticeTimers.clear();
     container.innerHTML = '';
     return;
   }
+
+  const toast = document.createElement('div');
   const kind = isError ? 'error' : 'success';
   const icon = isError ? '!' : '\u2713';
-  container.innerHTML = `<div class="notice notice-${kind}${isError ? ' error' : ''}" role="alert"><span class="notice-icon" aria-hidden="true">${icon}</span><span class="notice-text">${escapeHtml(message)}</span><button type="button" class="notice-close" aria-label="Chiudi il messaggio">&times;</button></div>`;
-  container.querySelector<HTMLButtonElement>('.notice-close')?.addEventListener('click', () => showNotice(''));
-  if (!isError) {
-    noticeTimer = window.setTimeout(() => showNotice(''), 6000);
-  }
+  toast.className = `notice notice-${kind}`;
+  toast.setAttribute('role', isError ? 'alert' : 'status');
+  toast.innerHTML = `<span class="notice-icon" aria-hidden="true">${icon}</span><span class="notice-text">${escapeHtml(message)}</span><button type="button" class="notice-close" aria-label="Chiudi il messaggio">&times;</button>`;
+  container.appendChild(toast);
+
+  let timer: number | undefined;
+  const dismiss = () => {
+    if (timer !== undefined) {
+      window.clearTimeout(timer);
+      noticeTimers.delete(timer);
+      timer = undefined;
+    }
+    toast.remove();
+  };
+  toast.querySelector<HTMLButtonElement>('.notice-close')?.addEventListener('click', dismiss);
+  timer = window.setTimeout(dismiss, isError ? 9000 : 5000);
+  noticeTimers.add(timer);
+
+  // Evita che una raffica di errori renda il contenitore illimitato.
+  while (container.childElementCount > 4) container.firstElementChild?.remove();
 }
 
 /** Renders operational menu metadata shared by the permissions and role views. */
@@ -467,7 +475,7 @@ function selectedNumbers(form: HTMLFormElement, name: string): number[] {
   return Array.from(new FormData(form).getAll(name), (value) => Number(value));
 }
 
-/** Carica tutti gli utenti (usato da SSO e filtri, che popolano selettori completi). */
+/** Carica tutti gli utenti (usato dalla sezione SSO, che popola un selettore completo). */
 async function loadUsers(): Promise<UserRow[]> {
   return result(await getUsers({ includeGrants: true })) as UserRow[];
 }
@@ -706,17 +714,10 @@ async function bootstrap(): Promise<void> {
  */
 async function exchangeConsoleEntry(ticket: string): Promise<void> {
   try {
-    const response = await fetch(`${consoleBasePath}/entry/exchange`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
-      body: JSON.stringify({ ticket }),
-    });
-    const payload = (await response.json().catch(() => undefined)) as
-      | { Result?: { token?: { value?: string } }; message?: string }
-      | undefined;
-    const value = payload?.Result?.token?.value;
-    if (!response.ok || typeof value !== 'string' || value === '') {
-      throw new Error(payload?.message ?? 'Apertura automatica della console non riuscita.');
+    const session = result<ConsoleEntrySessionResult>(await exchangeConsoleEntryTicket({ ticket }));
+    const value = session.token?.value;
+    if (typeof value !== 'string' || value === '') {
+      throw new Error('Apertura automatica della console non riuscita.');
     }
     token = value;
     sessionStorage.setItem('accessi-console-token', value);
@@ -846,15 +847,6 @@ function optionalText(values: Record<string, string>, key: string): string | nul
   return raw === '' ? null : raw;
 }
 
-/** Campo numerico opzionale: numero se valido, null se svuotato, undefined se assente. */
-function optionalNumber(values: Record<string, string>, key: string): number | null | undefined {
-  if (!(key in values)) return undefined;
-  const raw = (values[key] ?? '').trim();
-  if (raw === '') return null;
-  const parsed = Number(raw);
-  return Number.isFinite(parsed) ? parsed : null;
-}
-
 /** Requisiti di sicurezza della password, allineati alla policy del backend. */
 function passwordPolicyViolations(password: string): string[] {
   const violations: string[] = [];
@@ -887,23 +879,7 @@ function extendedProfileFields(user: UserDto): string {
     </fieldset>`;
 }
 
-/** Campi della tabella FILTRI, storicamente editabili solo via database. */
-function filterFields(user: UserDto): string {
-  return `<fieldset><legend>Filtri utente (FILTRI)</legend>
-    <label>Numero reparto ${helpDot('user-filter-numrep')}<input name="numRep" type="number" value="${escapeHtml(user.numRep ?? '')}"></label>
-    <label>Indice personale ${helpDot('user-filter-idxpers')}<input name="idxPers" type="number" value="${escapeHtml(user.idxPers ?? '')}"></label>
-    <label>Cliente padre ${helpDot('user-filter-codclisuper')}<input name="codCliSuper" type="number" value="${escapeHtml(user.codCliSuper ?? '')}"></label>
-    <label>Agente ${helpDot('user-filter-codage')}<input name="codAge" type="number" value="${escapeHtml(user.codAge ?? '')}"></label>
-    <label>Cliente collegato ${helpDot('user-filter-codclicol')}<input name="codCliCol" type="number" value="${escapeHtml(user.codCliCol ?? '')}"></label>
-    <label>Clienti (separati da virgola) ${helpDot('user-filter-codclienti')}<input name="codClienti" value="${escapeHtml(user.codClienti ?? '')}"></label>
-    <label>Tipo filtro ${helpDot('user-filter-tipfil')}<input name="tipFil" type="number" value="${escapeHtml(user.tipFil ?? '')}"></label>
-    <label>Postazione ${helpDot('user-filter-idxpos')}<input name="idxPos" type="number" value="${escapeHtml(user.idxPos ?? '')}"></label>
-    <label>Dipendente ${helpDot('user-filter-coddip')}<input name="codDip" type="number" value="${escapeHtml(user.codDip ?? '')}"></label>
-    <label>Vettore ${helpDot('user-filter-codvet')}<input name="codVet" type="number" value="${escapeHtml(user.codVet ?? '')}"></label>
-    </fieldset>`;
-}
-
-/** Campi anagrafici, policy e filtri in un unico payload idempotente. */
+/** Campi anagrafici e policy in un unico payload idempotente. */
 function profilePayload(form: HTMLFormElement, codiceUtente: number): Record<string, unknown> {
   const values = formValues(form);
   const fields = new FormData(form);
@@ -920,16 +896,6 @@ function profilePayload(form: HTMLFormElement, codiceUtente: number): Record<str
     dataScadenzaPassword: optionalText(values, 'dataScadenzaPassword'),
     flagDueFattori: fields.has('flagDueFattori'),
     passwordlessLoginEnabled: fields.has('passwordlessLoginEnabled'),
-    numRep: optionalNumber(values, 'numRep'),
-    idxPers: optionalNumber(values, 'idxPers'),
-    codCliSuper: optionalNumber(values, 'codCliSuper'),
-    codAge: optionalNumber(values, 'codAge'),
-    codCliCol: optionalNumber(values, 'codCliCol'),
-    codClienti: optionalText(values, 'codClienti'),
-    tipFil: optionalNumber(values, 'tipFil'),
-    idxPos: optionalNumber(values, 'idxPos'),
-    codDip: optionalNumber(values, 'codDip'),
-    codVet: optionalNumber(values, 'codVet'),
     ...privilegePayload(form),
   };
   if (federatedAuthenticationAvailable) {
@@ -1091,9 +1057,24 @@ async function showUser(rawCode: string): Promise<void> {
   const identitySection = federatedAuthenticationAvailable ? federatedIdentitySection(linked, providerList) : '';
   const defaultUserTab: UserDetailTab = federatedAuthenticationAvailable ? 'sso' : 'profile';
   const manageable = canManageUser(user);
-  render(`${manageable ? '' : '<div class="notice notice-error" role="alert"><span class="notice-icon" aria-hidden="true">!</span><span class="notice-text">Stai visualizzando un utente di rango superiore: scheda in sola lettura.</span></div>'}<div class="user-action-bar"><button id="back" type="button" class="secondary">Indietro</button><label class="inline-field">Stato registrazione ${helpDot('user-state')}<select id="user-state">${registrationStateOptions(user.statoRegistrazione)}</select></label><button id="save-state" type="button" class="secondary">Aggiorna stato</button><button id="disable-user" type="button" class="danger-button">Imposta stato eliminato</button>${helpDot('user-delete')}${currentUser?.flagAdmin ? `<button id="purge-user" type="button" class="danger-button">Elimina definitivamente</button>${helpDot('user-delete-permanent')}` : ''}</div><div class="page-header"><div><p class="eyebrow">Utente ${codiceUtente}</p><h2>${escapeHtml(user.email)}</h2></div><span class="muted">Gestione profilo, ruoli e autorizzazioni</span></div>${userDetailTabs(federatedAuthenticationAvailable)}<div class="user-editor">
+  render(`${manageable ? '' : '<div class="notice notice-error" role="alert"><span class="notice-icon" aria-hidden="true">!</span><span class="notice-text">Stai visualizzando un utente di rango superiore: scheda in sola lettura.</span></div>'}<div class="user-action-bar"><button id="back" type="button" class="secondary">Indietro</button></div><div class="page-header"><div><p class="eyebrow">Utente ${codiceUtente}</p><h2>${escapeHtml(user.email)}</h2></div><span class="muted">Gestione profilo, ruoli e autorizzazioni</span></div>
+    <form id="user-state-form" class="account-panel">
+      <div class="account-panel-head"><div><p class="eyebrow">Amministrazione account</p><h3>Stato e sicurezza</h3><p class="form-help">Aggiorna lo stato di registrazione o disattiva l'account. Le azioni distruttive sono raccolte qui, separate dal profilo.</p></div></div>
+      <div class="account-state-row">
+        <label class="account-state-field">Stato registrazione ${helpDot('user-state')}<select id="user-state">${registrationStateOptions(user.statoRegistrazione)}</select></label>
+        <button id="save-state" type="submit" class="secondary">${actionIcon('<path d="M20 6 9 17l-5-5"/>')}<span>Aggiorna stato</span></button>
+      </div>
+      <div class="account-danger-zone">
+        <div class="account-danger-head"><strong>Azioni distruttive</strong><span class="form-help">La disattivazione conserva i dati; l'eliminazione definitiva è irreversibile.</span></div>
+        <div class="account-danger-actions">
+          <span class="action-with-help"><button id="disable-user" type="button" class="danger-button">${actionIcon('<path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/>')}<span>Imposta stato eliminato</span></button>${helpDot('user-delete')}</span>
+          ${currentUser?.flagAdmin ? `<span class="action-with-help"><button id="purge-user" type="button" class="danger-button">${actionIcon('<path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><path d="M12 9v4"/><path d="M12 17h.01"/>')}<span>Elimina definitivamente</span></button>${helpDot('user-delete-permanent')}</span>` : ''}
+        </div>
+      </div>
+    </form>
+    ${userDetailTabs(federatedAuthenticationAvailable)}<div class="user-editor">
     ${identitySection}
-    <form id="profile" data-user-panel="profile" role="tabpanel" aria-labelledby="user-tab-profile"><h3>Profilo e accesso</h3><label>Nome ${helpDot('user-name')}<input name="nome" value="${escapeHtml(user.nome)}"></label><label>Cognome ${helpDot('user-name')}<input name="cognome" value="${escapeHtml(user.cognome)}"></label><label>Email ${helpDot('user-email')}<input name="email" type="email" value="${escapeHtml(user.email)}" required><span class="form-help">Identificativo di accesso e recapito.</span></label><label>Pagina di default ${helpDot('user-default-page')}<input name="paginaDefault" maxlength="50" value="${escapeHtml(user.paginaDefault)}"><span class="form-help">Pagina mostrata dopo il login (percorso o codice pagina).</span></label>${federatedAuthenticationAvailable ? `<label class="check"><input name="passwordLoginEnabled" type="checkbox" ${user.passwordLoginEnabled !== false ? 'checked' : ''}> Login con password ${helpDot('user-password-login')}</label><span class="form-help">Se disabilitato, il login con email e password restituisce un errore esplicito; restano valide le identità SSO attive.</span>` : ''}${authenticationPolicyFields(user)}${extendedProfileFields(user)}${privilegeFields(user)}${filterFields(user)}<button id="save-profile" type="submit">Salva</button></form>
+    <form id="profile" data-user-panel="profile" role="tabpanel" aria-labelledby="user-tab-profile"><h3>Profilo e accesso</h3><label>Nome ${helpDot('user-name')}<input name="nome" value="${escapeHtml(user.nome)}"></label><label>Cognome ${helpDot('user-name')}<input name="cognome" value="${escapeHtml(user.cognome)}"></label><label>Email ${helpDot('user-email')}<input name="email" type="email" value="${escapeHtml(user.email)}" required><span class="form-help">Identificativo di accesso e recapito.</span></label><label>Pagina di default ${helpDot('user-default-page')}<input name="paginaDefault" maxlength="50" value="${escapeHtml(user.paginaDefault)}"><span class="form-help">Pagina mostrata dopo il login (percorso o codice pagina).</span></label>${federatedAuthenticationAvailable ? `<label class="check"><input name="passwordLoginEnabled" type="checkbox" ${user.passwordLoginEnabled !== false ? 'checked' : ''}> Login con password ${helpDot('user-password-login')}</label><span class="form-help">Se disabilitato, il login con email e password restituisce un errore esplicito; restano valide le identità SSO attive.</span>` : ''}${authenticationPolicyFields(user)}${extendedProfileFields(user)}${privilegeFields(user)}<button id="save-profile" type="submit">Salva</button></form>
     ${passwordFields()}
     ${roleAssignmentEditor(allRoles, userGrants.ruoli, menuGroups)}
     ${directGrantEditor(menuGroups, userGrants.abilitazioni)}
@@ -1182,13 +1163,17 @@ async function showUser(rawCode: string): Promise<void> {
     document.querySelectorAll<HTMLButtonElement>('[data-identity-toggle]').forEach((button) => { button.onclick = () => handleAction(async () => { await updateFederatedIdentity(button.dataset.identityToggle ?? '', { active: button.dataset.active === 'true' }); showNotice('Collegamento SSO aggiornato.'); await showUser(String(codiceUtente)); }); });
     document.querySelectorAll<HTMLButtonElement>('[data-identity-delete]').forEach((button) => { button.onclick = () => handleAction(async () => { if (!window.confirm('Eliminare definitivamente questo collegamento SSO? L’utente Accessi non verrà eliminato.')) return; await deleteFederatedIdentityPermanently(codiceUtente, button.dataset.identityDelete ?? ''); showNotice('Collegamento SSO eliminato definitivamente.'); await showUser(String(codiceUtente)); }); });
   }
-  byId('save-state').onclick = () => handleAction(async () => {
-    const stateSelect = document.getElementById('user-state') as HTMLSelectElement | null;
-    const statoRegistrazione = Number(stateSelect?.value ?? 0) as 0 | 5 | 10 | 20 | 50 | 99;
-    await setStatoRegistrazione({ codiceUtente, statoRegistrazione });
-    showNotice('Stato registrazione aggiornato.');
-    await showUser(String(codiceUtente));
-  });
+  const userStateForm = document.getElementById('user-state-form') as HTMLFormElement | null;
+  if (userStateForm) userStateForm.onsubmit = (event) => {
+    event.preventDefault();
+    handleAction(async () => {
+      const stateSelect = document.getElementById('user-state') as HTMLSelectElement | null;
+      const statoRegistrazione = Number(stateSelect?.value ?? 0) as 0 | 5 | 10 | 20 | 50 | 99;
+      await setStatoRegistrazione({ codiceUtente, statoRegistrazione });
+      showNotice('Stato registrazione aggiornato.');
+      await showUser(String(codiceUtente));
+    });
+  };
   byId('disable-user').onclick = () => handleAction(async () => { await deleteUser(codiceUtente); showNotice('Utente impostato come eliminato.'); await show('users'); });
   const purgeUser = document.getElementById('purge-user') as HTMLButtonElement | null;
   if (purgeUser) purgeUser.onclick = () => handleAction(async () => {
@@ -1223,7 +1208,9 @@ async function showRoles(): Promise<void> {
       handleAction(async () => {
         const form = eventForm(event);
         const data = new FormData(form);
-        const request: Role = { descrizioneRuolo: formValues(form).descrizione ?? '', menu: Array.from(data.getAll('menu'), (codiceMenu) => ({ codiceMenu: String(codiceMenu), tipoAbilitazione: Number(data.get(`menu-level:${codiceMenu}`) ?? 10) as Role['menu'][number]['tipoAbilitazione'] })) };
+        const menu = Array.from(data.getAll('menu'), (codiceMenu) => ({ codiceMenu: String(codiceMenu), tipoAbilitazione: Number(data.get(`menu-level:${codiceMenu}`) ?? 10) as Role['menu'][number]['tipoAbilitazione'] }));
+        if (menu.length === 0) throw new Error('Seleziona almeno un menu per il ruolo.');
+        const request: Role = { descrizioneRuolo: formValues(form).descrizione ?? '', menu };
         if (role?.codiceRuolo) await updateRole(role.codiceRuolo, request);
         else await createRole(request);
         showNotice(role?.codiceRuolo ? 'Ruolo aggiornato.' : 'Ruolo creato.');
@@ -1448,84 +1435,6 @@ function showMenuTypeForm(type?: MenuTypeEntity): void {
         else await createMenuType({ codiceTipo: values.codiceTipo ?? '', descrizioneTipo: values.descrizioneTipo || undefined });
         showNotice(isExisting ? 'Tipo menu aggiornato.' : 'Tipo menu creato.');
         await showMenuTypes();
-      });
-    };
-  }
-}
-
-/** Tabella del catalogo tipi filtro con azioni di modifica ed eliminazione. */
-function filterTypeRows(types: TipoFiltro[]): string {
-  return `<div class="menu-table-wrap"><table><thead><tr><th>Codice</th><th>Descrizione</th><th>Campo</th><th>Abilitato</th><th></th></tr></thead><tbody>${types.map((type) => `<tr class="${type.flgEnabled === 0 ? 'is-disabled' : ''}"><td><code>${escapeHtml(type.tipFil)}</code></td><td>${escapeHtml(type.desFil || '\u2014')}</td><td>${escapeHtml(type.fldFil || '\u2014')}</td><td>${type.flgEnabled === 0 ? 'No' : 'Si'}</td><td class="row-actions"><button type="button" data-filter-type-edit="${escapeHtml(type.tipFil)}">Modifica</button><button type="button" class="danger-button" data-filter-type-delete="${escapeHtml(type.tipFil)}">Elimina</button></td></tr>`).join('') || '<tr><td colspan="5" class="muted">Nessun tipo filtro.</td></tr>'}</tbody></table></div>`;
-}
-
-/** Filtri utente: lettura e salvataggio dei filtri applicativi per singolo utente. */
-async function showFilters(): Promise<void> {
-  const users = await loadUsers();
-  render(`<h2>Filtri utente</h2><p class="form-help">Filtri applicativi salvati per singolo utente.</p><form id="filters"><label>Utente ${helpDot('filters-user')}<select name="codUte">${users.map(({ utente }) => `<option value="${utente.codiceUtente}">${escapeHtml(utente.email)}</option>`).join('')}</select><span class="form-help">Salvati per l'utente selezionato.</span></label><label>Filtro JSON ${helpDot('filters-json')}<textarea name="json" rows="12">{}</textarea><span class="form-help">Usa Carica per partire dalla struttura esistente.</span></label><button name="action" value="load">Carica</button><button name="action" value="save">Salva</button></form>`);
-  const filtersForm = document.getElementById('filters') as HTMLFormElement | null;
-  if (filtersForm) filtersForm.onsubmit = (event) => {
-    event.preventDefault();
-    const form = eventForm(event);
-    const action = (event.submitter as HTMLButtonElement | null)?.value;
-    const code = Number(formValues(form).codUte);
-    handleAction(async () => {
-      if (action === 'load') {
-        const filters = result<FiltriUtente[]>(await getFiltriUtente({ codUte: code }));
-        (form.elements.namedItem('json') as HTMLTextAreaElement).value = JSON.stringify(filters[0] ?? { codUte: code }, null, 2);
-        showNotice('Filtri caricati.');
-      } else {
-        const parsed = JSON.parse(formValues(form).json ?? '{}') as Omit<FiltriUtente, 'codUte'>;
-        await saveFiltriUtente({ ...parsed, codUte: code });
-        showNotice('Filtri salvati.');
-      }
-    });
-  };
-}
-
-/** Tipi filtro: catalogo dei tipi con creazione, modifica ed eliminazione. */
-async function showFilterTypes(): Promise<void> {
-  const filterTypes = result(await getTipiFiltro()) as TipoFiltro[];
-  render(`<div class="toolbar"><button id="new-filter-type">Nuovo tipo filtro</button><button id="reload-filter-types" class="secondary">Aggiorna</button></div>
-    <h2>Tipi filtro</h2><p class="form-help">Catalogo dei tipi usati dai filtri utente. Un tipo si elimina solo se nessun filtro lo utilizza.</p>
-    ${filterTypeRows(filterTypes)}`);
-  byId('new-filter-type').onclick = () => showFilterTypeForm();
-  byId('reload-filter-types').onclick = () => handleAction(showFilterTypes);
-  document.querySelectorAll<HTMLButtonElement>('[data-filter-type-edit]').forEach((button) => button.onclick = () => showFilterTypeForm(filterTypes.find((type) => String(type.tipFil) === button.dataset.filterTypeEdit)));
-  document.querySelectorAll<HTMLButtonElement>('[data-filter-type-delete]').forEach((button) => button.onclick = () => handleAction(async () => {
-    if (!window.confirm(`Eliminare il tipo filtro ${button.dataset.filterTypeDelete}? Operazione possibile solo se nessun filtro lo utilizza.`)) return;
-    await deleteTipoFiltro(Number(button.dataset.filterTypeDelete));
-    showNotice('Tipo filtro eliminato.');
-    await showFilterTypes();
-  }));
-}
-
-/** Form di creazione/modifica di un tipo filtro. */
-function showFilterTypeForm(type?: TipoFiltro): void {
-  const isExisting = type !== undefined;
-  render(`<button id="back" type="button">Indietro</button><h2>${isExisting ? 'Modifica' : 'Nuovo'} tipo filtro</h2>
-    <form id="filter-type-form">
-      <label>Codice ${helpDot('filter-type-code')}<input name="tipFil" type="number" value="${escapeHtml(type?.tipFil)}" ${isExisting ? 'readonly' : ''} required><span class="form-help">Identificativo numerico. Immutabile dopo la creazione.</span></label>
-      <label>Descrizione<input name="desFil" maxlength="20" value="${escapeHtml(type?.desFil)}"></label>
-      <label>Campo ${helpDot('filter-type-field')}<input name="fldFil" maxlength="20" value="${escapeHtml(type?.fldFil)}"><span class="form-help">Nome del campo applicativo associato al filtro.</span></label>
-      <label class="check"><input name="flgEnabled" type="checkbox" ${type?.flgEnabled !== 0 ? 'checked' : ''}> Abilitato ${helpDot('filter-type-enabled')}</label>
-      <button>${isExisting ? 'Salva tipo' : 'Crea tipo'}</button>
-    </form>`);
-  byId('back').onclick = () => handleAction(showFilterTypes);
-  const form = document.getElementById('filter-type-form') as HTMLFormElement | null;
-  if (form) {
-    form.onsubmit = (event) => {
-      event.preventDefault();
-      handleAction(async () => {
-        const values = formValues(eventForm(event));
-        const payload = {
-          desFil: values.desFil || undefined,
-          fldFil: values.fldFil || undefined,
-          flgEnabled: (new FormData(eventForm(event)).has('flgEnabled') ? 1 : 0) as 0 | 1,
-        };
-        if (isExisting) await updateTipoFiltro(type!.tipFil, payload);
-        else await createTipoFiltro({ tipFil: Number(values.tipFil), ...payload });
-        showNotice(isExisting ? 'Tipo filtro aggiornato.' : 'Tipo filtro creato.');
-        await showFilterTypes();
       });
     };
   }
@@ -1785,10 +1694,10 @@ function renderMarkdown(markdown: string): string {
 }
 
 async function showChangelog(): Promise<void> {
-  render(`<div class="wiki"><article class="wiki-content markdown-body">
+  render(`<article class="wiki-content markdown-body changelog-page">
     <header class="wiki-section-head"><h2>Changelog</h2><p>Novita e modifiche rilevanti del modulo Accessi.</p></header>
     ${renderMarkdown(changelogMarkdown)}
-  </article></div>`);
+  </article>`);
 }
 
 function downloadTextFile(fileName: string, content: string): void {
@@ -1838,8 +1747,6 @@ async function show(view: ConsoleView): Promise<void> {
       menuGroups: showMenuGroups,
       menuItems: showMenuItems,
       menuTypes: showMenuTypes,
-      filterUser: showFilters,
-      filterTypes: showFilterTypes,
       ssoProviders: showSsoProviders,
       ssoUsers: showSsoUsers,
       tokens: showServiceTokens,
