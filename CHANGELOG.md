@@ -1,3 +1,10 @@
+# [2.0.0-dev.53](https://github.com/Emil-Software/emilsoftware-utilities/compare/v2.0.0-dev.52...v2.0.0-dev.53) (2026-10-21)
+
+
+### Features
+
+* **accessi-console:** autocomplete per la pagina di default ([d8af4fb](https://github.com/Emil-Software/emilsoftware-utilities/commit/d8af4fb2689cc2363214804a704ce5fd25c4f728))
+
 # [2.0.0-dev.52](https://github.com/Emil-Software/emilsoftware-utilities/compare/v2.0.0-dev.51...v2.0.0-dev.52) (2026-10-21)
 
 
