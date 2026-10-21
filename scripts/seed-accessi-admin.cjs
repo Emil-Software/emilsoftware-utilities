@@ -42,20 +42,20 @@ async function main() {
   let codiceUtente;
   try {
     codiceUtente = await userService.register(
-      { email, nome: 'Admin', cognome: 'Console', flagSuper: true },
+      { email, nome: 'Admin', cognome: 'Console', flagSuper: true, flagAdmin: true },
       { allowPrivilegedFields: true, initialState: StatoRegistrazione.CONF },
     );
-    console.log('Superuser creato.');
+    console.log('Admin creato.');
   } catch (error) {
     const existing = await userService.getCodiceUtenteByEmail(email).catch(() => undefined);
     codiceUtente = existing?.codiceUtente;
     if (!codiceUtente) {
-      console.error('Impossibile creare o trovare il superuser:', error instanceof Error ? error.message : String(error));
+      console.error('Impossibile creare o trovare l admin:', error instanceof Error ? error.message : String(error));
       process.exit(1);
     }
-    await Orm.execute(options.databaseOptions, 'UPDATE UTENTI_CONFIG SET FLGSUPER = 1, FLGADMINCONFIG = 1 WHERE CODUTE = ?', [codiceUtente]);
+    await Orm.execute(options.databaseOptions, 'UPDATE OR INSERT INTO UTENTI_CONFIG (CODUTE, FLGSUPER, FLGADMIN) VALUES (?, 1, 1) MATCHING (CODUTE)', [codiceUtente]);
     await Orm.execute(options.databaseOptions, 'UPDATE UTENTI SET STAREG = ? WHERE CODUTE = ?', [StatoRegistrazione.CONF, codiceUtente]);
-    console.log('Superuser esistente aggiornato.');
+    console.log('Admin esistente aggiornato.');
   }
 
   await authService.setPassword(codiceUtente, password);
