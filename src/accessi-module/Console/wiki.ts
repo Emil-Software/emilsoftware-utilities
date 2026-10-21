@@ -270,6 +270,7 @@ export const WIKI_SECTIONS: WikiSection[] = [
     blocks: [
       code('http', `POST /api/accessi/auth/login\nContent-Type: application/json\n\n{ "email": "utente@example.com", "password": "Segreta123!" }`, 'Login con password'),
       p(`La risposta include Result.token (il JWT) e il profilo utente con ruoli e permessi. Se l'account è passwordless, ometti la password: il server risponde con un challenge via email (vedi la sezione su 2FA e passwordless).`),
+      note('info', `Autorizzazioni lato client`, `La fonte autorevole è Result.userGrants.grants: contiene i grant effettivi (ruoli + permessi diretti, livello massimo). Non leggere i permessi dal JWT e non usare Result.utente.permissions: non sono popolati. Per i superutenti grants contiene tutti i menu attivi al livello 30.`),
       good('ts', [
         "const res = await fetch('/api/accessi/auth/login', {",
         "  method: 'POST',",
@@ -465,7 +466,7 @@ export const WIKI_SECTIONS: WikiSection[] = [
     title: 'Ruoli e permessi',
     summary: 'Assegnazioni sostitutive e composizione dei grant.',
     blocks: [
-      p(`I ruoli contengono una lista di menu con livello. Le assegnazioni (ruoli e permessi diretti) sono SOSTITUTIVE: invia sempre la lista completa desiderata. I grant diretti prevalgono su quelli dei ruoli; i superutenti vedono tutti i menu attivi.`),
+      p(`I ruoli contengono una lista di menu con livello. Le assegnazioni (ruoli e permessi diretti) sono SOSTITUTIVE: invia sempre la lista completa desiderata. I grant effettivi sommano ruoli e permessi diretti prendendo il livello massimo per menu; un livello 0 non annulla un grant del ruolo. I superutenti ricevono tutti i menu attivi al livello massimo.`),
       table(
         ['Metodo', 'Percorso', 'Descrizione'],
         [

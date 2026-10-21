@@ -68,17 +68,59 @@ test('strict Bearer and current privileges replace legacy top-level claims', () 
   assert.equal(payload.userData.utente.flagSuper, false);
 });
 
-test('role grants use maximum level and direct denials retain precedence', async t => {
+test('role grants and direct grants are merged by maximum level', async t => {
   t.mock.method(Orm, 'query', async () => [{ FLAG_SUPER: '0' }]);
   const service = new PermissionService({ databaseOptions: {} });
-  t.mock.method(service, 'getUserDirectPermissions', async () => [{ codiceMenu: 'denied', tipoAbilitazione: 0 }]);
+  t.mock.method(service, 'getUserDirectPermissions', async () => [
+    { codiceMenu: 'shared', tipoAbilitazione: 10 },
+    { codiceMenu: 'denied', tipoAbilitazione: 0 },
+  ]);
   t.mock.method(service, 'getUserRoles', async () => [
     { menu: [{ codiceMenu: 'shared', tipoAbilitazione: 10 }, { codiceMenu: 'denied', tipoAbilitazione: 30 }] },
     { menu: [{ codiceMenu: 'shared', tipoAbilitazione: 30 }] },
   ]);
   const result = await service.getUserRolesAndGrants(1);
   assert.equal(result.grants.find(g => g.codiceMenu === 'shared').tipoAbilitazione, 30);
-  assert.equal(result.grants.find(g => g.codiceMenu === 'denied').tipoAbilitazione, 0);
+  assert.equal(result.grants.find(g => g.codiceMenu === 'denied').tipoAbilitazione, 30);
+});
+
+test('legacy role menus survive missing description and default to read level', async t => {
+  t.mock.method(Orm, 'query', async (_options, sql) => {
+    if (sql.includes('FLGSUPER')) return [{ FLAG_SUPER: '0' }];
+    if (sql.includes('FROM ABILITAZIONI')) return [];
+    if (sql.includes('FROM UTENTI_RUOLI')) {
+      return [
+        {
+          codice_ruolo: 5,
+          descrizione_ruolo: 'Legacy',
+          codice_menu: 'LEGACY',
+          descrizione_menu: null,
+          tipo_abilitazione: null,
+        },
+      ];
+    }
+    if (sql.includes('FROM MENU M')) {
+      return [
+        {
+          codice_menu: 'LEGACY',
+          tipo_abilitazione: 30,
+          descrizione_menu: 'Legacy',
+          pagina: '/legacy',
+          codice_gruppo: 'A',
+          descrizione_gruppo: 'Gruppo',
+        },
+      ];
+    }
+    return [];
+  });
+  const service = new PermissionService({ databaseOptions: {} });
+  const result = await service.getUserRolesAndGrants(1);
+  assert.equal(result.ruoli.length, 1);
+  assert.equal(result.ruoli[0].menu[0].codiceMenu, 'LEGACY');
+  const legacyGrant = result.grants.find(g => g.codiceMenu === 'LEGACY');
+  assert.equal(legacyGrant.tipoAbilitazione, 10);
+  assert.equal(legacyGrant.pagina, '/legacy');
+  assert.equal(legacyGrant.descrizioneGruppo, 'Gruppo');
 });
 
 test('empty role and permission updates revoke assignments', async () => {
@@ -272,7 +314,7 @@ test('permanent delete rejects an unknown user', async t => {
   await assert.rejects(() => service.deleteUserPermanently(404), /Nessun utente/);
 });
 
-test('batch grants match the historical single-user composition', async t => {
+test('batch grants merge roles and direct permissions by maximum level', async t => {
   t.mock.method(Orm, 'query', async (_options, sql) => {
     if (sql.includes('FLGSUPER')) {
       return [
@@ -304,7 +346,7 @@ test('batch grants match the historical single-user composition', async t => {
   assert.equal(result.size, 2);
 
   const user1 = result.get(1);
-  assert.equal(user1.grants.find(g => g.codiceMenu === 'shared').tipoAbilitazione, 10);
+  assert.equal(user1.grants.find(g => g.codiceMenu === 'shared').tipoAbilitazione, 30);
   assert.equal(user1.grants.find(g => g.codiceMenu === 'denied').tipoAbilitazione, 30);
   assert.equal(user1.ruoli.length, 1);
 

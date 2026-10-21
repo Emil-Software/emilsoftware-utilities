@@ -354,6 +354,10 @@ Content-Type: application/json
 
 La risposta include Result.token (il JWT) e il profilo utente con ruoli e permessi. Se l'account è passwordless, ometti la password: il server risponde con un challenge via email (vedi la sezione su 2FA e passwordless).
 
+> [!NOTE]
+> **Autorizzazioni lato client**
+> La fonte autorevole è Result.userGrants.grants: contiene i grant effettivi (ruoli + permessi diretti, livello massimo). Non leggere i permessi dal JWT e non usare Result.utente.permissions: non sono popolati. Per i superutenti grants contiene tutti i menu attivi al livello 30.
+
 **Esempio corretto — Chiamata dal frontend**
 
 ```ts
@@ -633,7 +637,7 @@ fetch("/api/accessi/user/register", {
 
 _Assegnazioni sostitutive e composizione dei grant._
 
-I ruoli contengono una lista di menu con livello. Le assegnazioni (ruoli e permessi diretti) sono SOSTITUTIVE: invia sempre la lista completa desiderata. I grant diretti prevalgono su quelli dei ruoli; i superutenti vedono tutti i menu attivi.
+I ruoli contengono una lista di menu con livello. Le assegnazioni (ruoli e permessi diretti) sono SOSTITUTIVE: invia sempre la lista completa desiderata. I grant effettivi sommano ruoli e permessi diretti prendendo il livello massimo per menu; un livello 0 non annulla un grant del ruolo. I superutenti ricevono tutti i menu attivi al livello massimo.
 
 | Metodo | Percorso | Descrizione |
 | --- | --- | --- |

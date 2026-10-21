@@ -121,8 +121,15 @@ export class PermissionService {
             const codiceRuolo = Number(row.codiceRuolo);
             const descrizioneRuolo = typeof row.descrizioneRuolo === 'string' ? row.descrizioneRuolo.trim() : '';
             const codiceMenu = typeof row.codiceMenu === 'string' ? row.codiceMenu : undefined;
-            const descrizioneMenu = typeof row.descrizioneMenu === 'string' ? row.descrizioneMenu : undefined;
-            const tipoAbilitazione = Number(row.tipoAbilitazione) as TipoAbilitazione;
+            // RUOLI_MNU.TIPABI e MENU.DESMNU sono nullable nello schema storico: un livello
+            // mancante non deve far sparire il menu dal ruolo. Default prudente: lettura.
+            const rawTipoAbilitazione = row.tipoAbilitazione;
+            const parsedTipoAbilitazione = rawTipoAbilitazione === undefined || rawTipoAbilitazione === null || rawTipoAbilitazione === ''
+                ? TipoAbilitazione.LETTURA
+                : Number(rawTipoAbilitazione);
+            const tipoAbilitazione = (Number.isFinite(parsedTipoAbilitazione)
+                ? parsedTipoAbilitazione
+                : TipoAbilitazione.LETTURA) as TipoAbilitazione;
 
             if (!ruoliMap.has(codiceRuolo)) {
                 ruoliMap.set(codiceRuolo, {
@@ -132,7 +139,7 @@ export class PermissionService {
                 });
             }
 
-            if (codiceMenu && descrizioneMenu) {
+            if (codiceMenu) {
                 ruoliMap.get(codiceRuolo)!.menu.push({
                     codiceRuolo,
                     codiceMenu,
@@ -144,31 +151,45 @@ export class PermissionService {
         return Array.from(ruoliMap.values());
     }
 
-    /** Regola di composizione storica: grant diretti prevalgono, i ruoli si sommano per livello massimo. */
+    /**
+     * Compone i grant effettivi: permessi diretti e ruoli si sommano per codice menu
+     * prendendo il livello massimo. Un livello 0/non valido non rimuove un grant del ruolo.
+     * I superutenti ricevono tutti i menu attivi al livello massimo.
+     */
     private composeGrants(
         abilitazioni: AbilitazioneMenu[],
         ruoli: Role[],
         isSuperAdmin: boolean,
         allActiveMenus: AbilitazioneMenu[],
     ): AbilitazioneMenu[] {
+        if (isSuperAdmin) return allActiveMenus;
+
+        const catalog = new Map(allActiveMenus.map((menu) => [menu.codiceMenu, menu]));
         const grantsMap = new Map<string, AbilitazioneMenu>();
-
-        for (const abilitazione of abilitazioni) {
-            grantsMap.set(abilitazione.codiceMenu, abilitazione);
-        }
-
-        const directMenuCodes = new Set(abilitazioni.map(grant => grant.codiceMenu));
-        for (const ruolo of ruoli) {
-            for (const menu of ruolo.menu) {
-                const existing = grantsMap.get(menu.codiceMenu);
-                if (!directMenuCodes.has(menu.codiceMenu) &&
-                    (!existing || Number(menu.tipoAbilitazione) > Number(existing.tipoAbilitazione))) {
-                    grantsMap.set(menu.codiceMenu, menu);
-                }
+        const addGrant = (grant: AbilitazioneMenu | { codiceMenu?: string; tipoAbilitazione?: unknown }) => {
+            const codiceMenu = typeof grant.codiceMenu === 'string' ? grant.codiceMenu.trim() : '';
+            const livello = Number(grant.tipoAbilitazione ?? 0);
+            if (!codiceMenu || !Number.isFinite(livello) || livello <= 0) return;
+            const existing = grantsMap.get(codiceMenu);
+            if (!existing || livello > Number(existing.tipoAbilitazione ?? 0)) {
+                // I ruoli salvano solo codice e livello: completa i metadati di navigazione
+                // (pagina, icona, gruppo, tipo) dal catalogo dei menu attivi.
+                const metadata = catalog.get(codiceMenu);
+                grantsMap.set(codiceMenu, {
+                    ...(metadata ?? {}),
+                    ...(grant as AbilitazioneMenu),
+                    codiceMenu,
+                    tipoAbilitazione: livello as TipoAbilitazione,
+                });
             }
+        };
+
+        for (const abilitazione of abilitazioni) addGrant(abilitazione);
+        for (const ruolo of ruoli) {
+            for (const menu of ruolo.menu) addGrant(menu);
         }
 
-        return isSuperAdmin ? allActiveMenus : Array.from(grantsMap.values());
+        return Array.from(grantsMap.values());
     }
 
 
@@ -367,7 +388,7 @@ export class PermissionService {
 
     /**
      * Sostituisce tutti i grant diretti dell'utente. I ruoli rimangono invariati e i loro grant sono aggiunti
-     * solo nel risultato effettivo; un grant diretto dello stesso menu ha precedenza nella composizione.
+     * solo nel risultato effettivo; per lo stesso menu vale il livello massimo tra diretto e ruoli.
      */
     public async assignPermissionsToUser(codiceUtente: number, permissions: Permission[]): Promise<void> {
 
@@ -786,8 +807,8 @@ export class PermissionService {
 
 
     /**
-     * Calcola l'autorizzazione effettiva: grant diretti e grant dei ruoli sono uniti per codice menu.
-     * Per compatibilita storica un grant diretto prevale su quello del ruolo; i superutenti ricevono tutti i menu attivi.
+     * Calcola l'autorizzazione effettiva: grant diretti e grant dei ruoli sono uniti per codice menu
+     * prendendo il livello massimo. I superutenti ricevono tutti i menu attivi.
      */
     public async getUserRolesAndGrants(codiceUtente: number): Promise<{
         abilitazioni: AbilitazioneMenu[],
@@ -808,7 +829,7 @@ export class PermissionService {
             abilitazioni,
             ruoli,
             isSuperAdmin,
-            isSuperAdmin ? await this.getAllActiveMenusAsGrants() : [],
+            await this.getAllActiveMenusAsGrants(),
         );
 
         return { abilitazioni, ruoli, grants };
@@ -887,7 +908,7 @@ export class PermissionService {
             ids,
         )).map(RestUtilities.convertKeysToCamelCase) as Array<Record<string, unknown>>;
 
-        const allActiveMenus = superUsers.size > 0 ? await this.getAllActiveMenusAsGrants() : [];
+        const allActiveMenus = await this.getAllActiveMenusAsGrants();
 
         const permissionsByUser = new Map<number, AbilitazioneMenu[]>();
         for (const row of permissionRows) {
@@ -920,7 +941,7 @@ export class PermissionService {
             result.set(id, {
                 abilitazioni,
                 ruoli,
-                grants: this.composeGrants(abilitazioni, ruoli, isSuperAdmin, isSuperAdmin ? allActiveMenus : []),
+                grants: this.composeGrants(abilitazioni, ruoli, isSuperAdmin, allActiveMenus),
             });
         }
 

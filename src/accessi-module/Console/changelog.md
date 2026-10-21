@@ -12,6 +12,9 @@ Novità e modifiche rilevanti della libreria `emilsoftware-utilities` (modulo Ac
 - Console: pagina Changelog a larghezza piena, con intestazioni di versione evidenziate e sezioni orizzontali leggibili.
 - Seed `npm run accessi:seed-admin`: crea o aggiorna un admin completo (`FLGSUPER = 1` e `FLGADMIN = 1`) e corregge il nome colonna usato in precedenza (`FLGADMIN`).
 - Console: la pagina di default nella scheda utente è ora un autocomplete con ricerca. Propone tutte le rotte del catalogo menu, si filtra scrivendo ed è ancora possibile inserire un valore libero.
+- Autorizzazioni: i grant effettivi sommano ruoli e permessi diretti prendendo il livello massimo per menu. Un permesso diretto con livello inferiore (o 0) non annulla più il grant del ruolo.
+- Ruoli legacy: un menu senza descrizione non viene più scartato e un `TIPABI` mancante viene letto come livello 10, evitando utenti con ruolo ma senza accesso.
+- Grant dei ruoli arricchiti con i metadati di navigazione del catalogo menu (`pagina`, icona, gruppo, tipo): il frontend riceve gli stessi campi dei grant diretti e può costruire correttamente menu e rotte.
 
 ## 2.0.0-dev.50 (2026-10-15)
 
