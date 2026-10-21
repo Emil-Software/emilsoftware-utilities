@@ -1,3 +1,10 @@
+# [2.0.0-dev.52](https://github.com/Emil-Software/emilsoftware-utilities/compare/v2.0.0-dev.51...v2.0.0-dev.52) (2026-10-21)
+
+
+### Bug Fixes
+
+* trigger release pipeline ([ae1471d](https://github.com/Emil-Software/emilsoftware-utilities/commit/ae1471d06eca2414407b3c2e4b1df9c9352aa376))
+
 # [2.0.0-dev.51](https://github.com/Emil-Software/emilsoftware-utilities/compare/v2.0.0-dev.50...v2.0.0-dev.51) (2026-10-21)
 
 
