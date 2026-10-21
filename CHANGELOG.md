@@ -1,3 +1,15 @@
+# [2.0.0-dev.51](https://github.com/Emil-Software/emilsoftware-utilities/compare/v2.0.0-dev.50...v2.0.0-dev.51) (2026-10-21)
+
+
+### Bug Fixes
+
+* **scripts:** crea il seed admin con FLGADMIN corretto ([3b32d10](https://github.com/Emil-Software/emilsoftware-utilities/commit/3b32d10e848d8d06ccdb0f72d2c10395643851fd))
+
+
+### Features
+
+* **accessi-console:** rimuove i filtri e rinnova notifiche, scheda utente e changelog ([c58b4db](https://github.com/Emil-Software/emilsoftware-utilities/commit/c58b4dba9a26e91a0d148a87ef7ee4c6020bdee7))
+
 # [2.0.0-dev.50](https://github.com/Emil-Software/emilsoftware-utilities/compare/v2.0.0-dev.49...v2.0.0-dev.50) (2026-10-15)
 
 
