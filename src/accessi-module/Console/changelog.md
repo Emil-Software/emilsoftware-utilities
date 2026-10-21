@@ -11,6 +11,7 @@ Novità e modifiche rilevanti della libreria `emilsoftware-utilities` (modulo Ac
 - Console: scheda utente riorganizzata. "Indietro" resta nella barra superiore; stato registrazione, disattivazione ed eliminazione definitiva sono in un form coerente "Stato e sicurezza", con icone e tooltip allineati.
 - Console: pagina Changelog a larghezza piena, con intestazioni di versione evidenziate e sezioni orizzontali leggibili.
 - Seed `npm run accessi:seed-admin`: crea o aggiorna un admin completo (`FLGSUPER = 1` e `FLGADMIN = 1`) e corregge il nome colonna usato in precedenza (`FLGADMIN`).
+- Console: la pagina di default nella scheda utente è ora un autocomplete con ricerca. Propone tutte le rotte del catalogo menu, si filtra scrivendo ed è ancora possibile inserire un valore libero.
 
 ## 2.0.0-dev.50 (2026-10-15)
 

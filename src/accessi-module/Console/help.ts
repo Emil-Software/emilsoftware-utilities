@@ -167,6 +167,7 @@ export const HELP: Record<string, HelpEntry> = {
     title: 'Pagina di default',
     blocks: [
       p(`Percorso o codice della pagina verso cui indirizzare l'utente dopo il login. Esempio: /dashboard oppure la chiave di una pagina gestita dal frontend.`),
+      p(`La console propone in autocomplete tutte le rotte presenti nel catalogo dei menu. Puoi filtrare la lista scrivendo oppure inserire un valore libero.`),
       p(`E una stringa libera (massimo 50 caratteri): la libreria la conserva e la restituisce nel profilo; l'instradamento effettivo lo decide il frontend.`),
     ],
   },

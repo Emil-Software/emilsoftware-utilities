@@ -77,6 +77,7 @@ import type {
 } from './generated/model';
 
 type UserRow = { utente: UserDto; userGrants?: { ruoli?: Array<{ codiceRuolo?: number; descrizioneRuolo?: string }> } };
+type PageRouteSuggestion = { value: string; menu?: string; group?: string; disabled: boolean };
 type ConsoleUser = { codiceUtente: number; email?: string; flagSuper: boolean; flagAdmin: boolean };
 type FederatedProvider = FederatedProviderResponseDto;
 type ConsoleFederatedIdentity = { identityKey: string; provider: string; subject: string; active: boolean; note?: string };
@@ -867,6 +868,170 @@ function dateInputValue(value: unknown): string {
   return match?.[1] ?? '';
 }
 
+/** Rotte suggerite per la pagina di default, ricavate dal catalogo dei menu. */
+function pageRouteSuggestions(groups: GroupWithMenusEntity[]): PageRouteSuggestion[] {
+  const routes = new Map<string, PageRouteSuggestion>();
+  for (const group of groups) {
+    for (const menu of group.menus) {
+      const value = (menu.pagina ?? '').trim();
+      if (!value) continue;
+      const suggestion: PageRouteSuggestion = {
+        value,
+        menu: menu.descrizioneMenu || undefined,
+        group: group.descrizioneGruppo || undefined,
+        disabled: menu.enabled === false,
+      };
+      const current = routes.get(value);
+      if (!current || (current.disabled && !suggestion.disabled)) routes.set(value, suggestion);
+    }
+  }
+  return [...routes.values()].sort((a, b) => a.value.localeCompare(b.value, 'it'));
+}
+
+/** Combobox con ricerca per la pagina di default: suggerisce le rotte note ma accetta testo libero. */
+function pageDefaultField(user: UserDto): string {
+  const value = user.paginaDefault ?? '';
+  return `<label class="page-default-field">Pagina di default ${helpDot('user-default-page')}
+    <div class="page-combobox" data-page-combobox>
+      <div class="page-combobox-control">
+        ${actionIcon('<circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/>')}
+        <input id="pagina-default" name="paginaDefault" type="text" maxlength="50" value="${escapeHtml(value)}" autocomplete="off" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="pagina-default-listbox" placeholder="Cerca una rotta o scrivi una pagina">
+        <button type="button" class="page-combobox-clear" aria-label="Pulisci la pagina di default" ${value ? '' : 'hidden'}>&times;</button>
+        <button type="button" class="page-combobox-toggle" aria-label="Mostra le pagine disponibili" aria-haspopup="listbox">${actionIcon('<path d="m6 9 6 6 6-6"/>')}</button>
+      </div>
+      <ul id="pagina-default-listbox" class="page-combobox-list" role="listbox" aria-label="Pagine disponibili" hidden></ul>
+    </div>
+    <span class="form-help">Scegli una rotta dal catalogo dei menu oppure scrivi un valore libero.</span>
+  </label>`;
+}
+
+/** Collega il combobox della pagina di default: filtro live, tastiera, selezione e valore libero. */
+function bindPageDefaultCombobox(routes: PageRouteSuggestion[]): void {
+  const root = document.querySelector<HTMLElement>('[data-page-combobox]');
+  if (!root) return;
+  const input = root.querySelector<HTMLInputElement>('input[name="paginaDefault"]');
+  const list = root.querySelector<HTMLUListElement>('.page-combobox-list');
+  const clear = root.querySelector<HTMLButtonElement>('.page-combobox-clear');
+  const toggle = root.querySelector<HTMLButtonElement>('.page-combobox-toggle');
+  if (!input || !list) return;
+
+  let matches: PageRouteSuggestion[] = [];
+  let activeIndex = -1;
+
+  const optionId = (index: number) => `pagina-default-option-${index}`;
+  const setOpen = (open: boolean) => {
+    list.hidden = !open;
+    input.setAttribute('aria-expanded', String(open));
+    if (!open) {
+      activeIndex = -1;
+      input.removeAttribute('aria-activedescendant');
+    }
+  };
+  const renderMatches = (query: string) => {
+    const needle = query.trim().toLocaleLowerCase('it');
+    matches = needle === ''
+      ? routes
+      : routes.filter((route) => [route.value, route.menu ?? '', route.group ?? ''].join(' ').toLocaleLowerCase('it').includes(needle));
+    list.innerHTML = matches.map((route, index) => `<li id="${optionId(index)}" class="page-combobox-option${route.disabled ? ' is-disabled' : ''}" role="option" aria-selected="${route.value === input.value ? 'true' : 'false'}" data-index="${index}"><code>${escapeHtml(route.value)}</code><small>${escapeHtml([route.menu, route.group].filter(Boolean).join(' \u00b7 ') || 'Rotta del catalogo menu')}${route.disabled ? ' \u00b7 menu disabilitato' : ''}</small></li>`).join('')
+      || '<li class="page-combobox-empty" role="presentation">Nessuna rotta corrisponde. Puoi comunque lasciare il valore scritto.</li>';
+    activeIndex = -1;
+    input.removeAttribute('aria-activedescendant');
+  };
+  const highlight = () => {
+    list.querySelectorAll<HTMLElement>('.page-combobox-option').forEach((option, index) => {
+      option.classList.toggle('is-active', index === activeIndex);
+    });
+    const current = activeIndex >= 0 ? list.querySelector<HTMLElement>(`#${optionId(activeIndex)}`) : null;
+    if (current) {
+      input.setAttribute('aria-activedescendant', optionId(activeIndex));
+      current.scrollIntoView({ block: 'nearest' });
+    } else {
+      input.removeAttribute('aria-activedescendant');
+    }
+  };
+  const openList = () => {
+    renderMatches('');
+    setOpen(true);
+    highlight();
+  };
+  const refresh = (query: string) => {
+    renderMatches(query);
+    setOpen(true);
+    highlight();
+  };
+  const choose = (route: PageRouteSuggestion) => {
+    input.value = route.value;
+    if (clear) clear.hidden = false;
+    input.focus();
+    setOpen(false);
+  };
+
+  input.addEventListener('focus', openList);
+  input.addEventListener('input', () => {
+    if (clear) clear.hidden = input.value.length === 0;
+    refresh(input.value);
+  });
+  input.addEventListener('blur', () => {
+    window.setTimeout(() => {
+      if (!root.contains(document.activeElement)) setOpen(false);
+    }, 0);
+  });
+  input.addEventListener('keydown', (event) => {
+    if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+      event.preventDefault();
+      if (list.hidden) refresh(input.value);
+      if (matches.length === 0) return;
+      activeIndex = event.key === 'ArrowDown'
+        ? (activeIndex + 1) % matches.length
+        : (activeIndex <= 0 ? matches.length - 1 : activeIndex - 1);
+      highlight();
+      return;
+    }
+    if (event.key === 'Enter' && !list.hidden && activeIndex >= 0) {
+      const route = matches[activeIndex];
+      if (route) {
+        event.preventDefault();
+        choose(route);
+      }
+      return;
+    }
+    if (event.key === 'Escape' && !list.hidden) {
+      event.preventDefault();
+      setOpen(false);
+      return;
+    }
+    if (event.key === 'Tab') setOpen(false);
+  });
+
+  list.addEventListener('mousedown', (event) => {
+    if ((event.target as HTMLElement).closest('[data-index]')) event.preventDefault();
+  });
+  list.addEventListener('click', (event) => {
+    const option = (event.target as HTMLElement).closest<HTMLElement>('[data-index]');
+    if (!option) return;
+    const route = matches[Number(option.dataset.index)];
+    if (route) choose(route);
+  });
+  if (clear) {
+    clear.addEventListener('click', () => {
+      input.value = '';
+      clear.hidden = true;
+      input.focus();
+      openList();
+    });
+  }
+  if (toggle) {
+    toggle.addEventListener('click', () => {
+      if (list.hidden) {
+        input.focus();
+        openList();
+      } else {
+        setOpen(false);
+      }
+    });
+  }
+}
+
 /** Campi anagrafici e di sicurezza completi, tutti gestibili dall'admin. */
 function extendedProfileFields(user: UserDto): string {
   return `<fieldset><legend>Anagrafica estesa</legend>
@@ -1074,11 +1239,12 @@ async function showUser(rawCode: string): Promise<void> {
     </form>
     ${userDetailTabs(federatedAuthenticationAvailable)}<div class="user-editor">
     ${identitySection}
-    <form id="profile" data-user-panel="profile" role="tabpanel" aria-labelledby="user-tab-profile"><h3>Profilo e accesso</h3><label>Nome ${helpDot('user-name')}<input name="nome" value="${escapeHtml(user.nome)}"></label><label>Cognome ${helpDot('user-name')}<input name="cognome" value="${escapeHtml(user.cognome)}"></label><label>Email ${helpDot('user-email')}<input name="email" type="email" value="${escapeHtml(user.email)}" required><span class="form-help">Identificativo di accesso e recapito.</span></label><label>Pagina di default ${helpDot('user-default-page')}<input name="paginaDefault" maxlength="50" value="${escapeHtml(user.paginaDefault)}"><span class="form-help">Pagina mostrata dopo il login (percorso o codice pagina).</span></label>${federatedAuthenticationAvailable ? `<label class="check"><input name="passwordLoginEnabled" type="checkbox" ${user.passwordLoginEnabled !== false ? 'checked' : ''}> Login con password ${helpDot('user-password-login')}</label><span class="form-help">Se disabilitato, il login con email e password restituisce un errore esplicito; restano valide le identità SSO attive.</span>` : ''}${authenticationPolicyFields(user)}${extendedProfileFields(user)}${privilegeFields(user)}<button id="save-profile" type="submit">Salva</button></form>
+    <form id="profile" data-user-panel="profile" role="tabpanel" aria-labelledby="user-tab-profile"><h3>Profilo e accesso</h3><label>Nome ${helpDot('user-name')}<input name="nome" value="${escapeHtml(user.nome)}"></label><label>Cognome ${helpDot('user-name')}<input name="cognome" value="${escapeHtml(user.cognome)}"></label><label>Email ${helpDot('user-email')}<input name="email" type="email" value="${escapeHtml(user.email)}" required><span class="form-help">Identificativo di accesso e recapito.</span></label>${pageDefaultField(user)}${federatedAuthenticationAvailable ? `<label class="check"><input name="passwordLoginEnabled" type="checkbox" ${user.passwordLoginEnabled !== false ? 'checked' : ''}> Login con password ${helpDot('user-password-login')}</label><span class="form-help">Se disabilitato, il login con email e password restituisce un errore esplicito; restano valide le identità SSO attive.</span>` : ''}${authenticationPolicyFields(user)}${extendedProfileFields(user)}${privilegeFields(user)}<button id="save-profile" type="submit">Salva</button></form>
     ${passwordFields()}
     ${roleAssignmentEditor(allRoles, userGrants.ruoli, menuGroups)}
     ${directGrantEditor(menuGroups, userGrants.abilitazioni)}
     </div>`);
+  bindPageDefaultCombobox(pageRouteSuggestions(menuGroups));
   byId('back').onclick = () => show('users');
   const userTabButtons = Array.from(document.querySelectorAll<HTMLButtonElement>('[data-user-tab]'));
   userTabButtons.forEach((button, index) => {

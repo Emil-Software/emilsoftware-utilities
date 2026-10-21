@@ -358,6 +358,27 @@ table code, .entity-metadata dd, .brand small, .role-code { font-variant-numeric
 .account-danger-actions { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s2); }
 .action-with-help { display: inline-flex; align-items: center; gap: var(--s2); }
 .button-icon { width: 16px; height: 16px; flex: 0 0 16px; }
+
+/* Autocomplete della pagina di default: select con ricerca e valore libero. */
+.page-default-field { position: relative; }
+.page-combobox { position: relative; }
+.page-combobox-control { display: flex; align-items: center; gap: var(--s2); min-height: 42px; padding: 0 var(--s2) 0 var(--s3); border: 1px solid var(--line-strong); border-radius: var(--r-md); background: var(--surface); }
+.page-combobox-control:focus-within { border-color: var(--brand); box-shadow: 0 0 0 3px var(--brand-soft); }
+.page-combobox-control > .button-icon { color: var(--muted); }
+.page-combobox-control input { flex: 1 1 auto; width: 100%; min-height: 40px; padding: 0; border: 0; border-radius: 0; background: transparent; box-shadow: none; }
+.page-combobox-control input:focus { outline: none; }
+.page-combobox-control input:hover { border-color: transparent; }
+.page-combobox-clear, .page-combobox-toggle { width: 30px; min-width: 30px; min-height: 30px; padding: 0; border: 0; color: var(--muted); background: transparent; }
+.page-combobox-clear:hover, .page-combobox-toggle:hover { color: var(--ink); background: var(--surface-sunken); }
+.page-combobox-clear { font-size: 1.1rem; line-height: 1; }
+.page-combobox-list { position: absolute; z-index: 60; top: calc(100% + var(--s1)); left: 0; right: 0; max-height: 280px; margin: 0; padding: var(--s1); overflow: auto; list-style: none; border: 1px solid var(--line); border-radius: var(--r-md); background: var(--surface); box-shadow: var(--shadow-md); }
+.page-combobox-option { display: grid; gap: 2px; padding: var(--s2) var(--s3); border-radius: var(--r-sm); cursor: pointer; }
+.page-combobox-option:hover, .page-combobox-option.is-active { background: var(--brand-soft); }
+.page-combobox-option[aria-selected="true"] { box-shadow: inset 3px 0 0 var(--brand); }
+.page-combobox-option code { overflow-wrap: anywhere; color: var(--brand-strong); font-family: var(--font-mono); font-size: var(--fs-sm); font-weight: 600; }
+.page-combobox-option small { color: var(--muted); font-size: var(--fs-xs); }
+.page-combobox-option.is-disabled code { color: var(--muted); }
+.page-combobox-empty { padding: var(--s3); color: var(--muted); font-size: var(--fs-sm); }
 .user-tabs { display: flex; gap: var(--s1); margin: 0 0 var(--s4); padding: var(--s1); overflow-x: auto; border: 1px solid var(--line); border-radius: var(--r-md); background: var(--surface-sunken); }
 .user-tabs button { flex: 0 0 auto; min-height: 34px; border: 0; color: var(--ink-2); background: transparent; }
 .user-tabs button:hover { color: var(--ink); background: var(--surface); }
