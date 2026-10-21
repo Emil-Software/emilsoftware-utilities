@@ -15,6 +15,7 @@ Novità e modifiche rilevanti della libreria `emilsoftware-utilities` (modulo Ac
 - Autorizzazioni: i grant effettivi sommano ruoli e permessi diretti prendendo il livello massimo per menu. Un permesso diretto con livello inferiore (o 0) non annulla più il grant del ruolo.
 - Ruoli legacy: un menu senza descrizione non viene più scartato e un `TIPABI` mancante viene letto come livello 10, evitando utenti con ruolo ma senza accesso.
 - Grant dei ruoli arricchiti con i metadati di navigazione del catalogo menu (`pagina`, icona, gruppo, tipo): il frontend riceve gli stessi campi dei grant diretti e può costruire correttamente menu e rotte.
+- Sicurezza: `GET /api/accessi/permission/grants/:codiceUtente` accetta solo un JWT Accessi valido e consente la lettura solo al proprietario o a chi può gestire quel target (gerarchia ADMIN > SUPER). Un superutente non può leggere i grant di un admin.
 
 ## 2.0.0-dev.50 (2026-10-15)
 

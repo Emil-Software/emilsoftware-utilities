@@ -48,7 +48,6 @@ import { PermissionService } from '../Services/PermissionService/PermissionServi
 import { UserService } from '../Services/UserService/UserService';
 import { JwtSimpleGuard } from '../jwt/jwt.strategy';
 import {
-  ensureSelfOrSuperUser,
   ensureAdmin,
   ensureCanManageTargetUser,
   ensureUserManagement,
@@ -562,11 +561,16 @@ export class PermissionController {
     @Res() res: Response,
   ) {
     try {
-      ensureSelfOrSuperUser(
-        getAuthenticatedAccessiUser(request),
-        codiceUtente,
-        'Puoi consultare solo i tuoi grant, salvo privilegi amministrativi.',
-      );
+      const authenticatedUser = getAuthenticatedAccessiUser(request);
+      if (authenticatedUser.codiceUtente !== codiceUtente) {
+        ensureUserManagement(
+          authenticatedUser,
+          'Puoi consultare solo i tuoi grant, salvo privilegi amministrativi.',
+        );
+        // Anche un superutente non puo' leggere i grant di un admin: stessa
+        // gerarchia ADMIN > SUPER applicata alle operazioni di scrittura.
+        await this.ensureManageableTarget(authenticatedUser, codiceUtente);
+      }
 
       const menus = await this.permissionService.getUserRolesAndGrants(codiceUtente);
       return RestUtilities.sendBaseResponse(res, menus);
