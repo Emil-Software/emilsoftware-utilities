@@ -1,3 +1,10 @@
+# [2.0.0-dev.56](https://github.com/Emil-Software/emilsoftware-utilities/compare/v2.0.0-dev.55...v2.0.0-dev.56) (2026-10-22)
+
+
+### Features
+
+* normalizza il contratto dei menu Accessi ([ec10eab](https://github.com/Emil-Software/emilsoftware-utilities/commit/ec10eabe6ac559d495ff7913dec995c8aba94dcc))
+
 # [2.0.0-dev.55](https://github.com/Emil-Software/emilsoftware-utilities/compare/v2.0.0-dev.54...v2.0.0-dev.55) (2026-10-21)
 
 
