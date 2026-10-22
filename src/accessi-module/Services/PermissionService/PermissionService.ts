@@ -479,19 +479,21 @@ export class PermissionService {
     /** Restituisce solo menu abilitati; per il catalogo amministrativo usare `getGroupsWithMenus(true)`. */
     public async getMenus(): Promise<MenuEntity[]> {
         const query = `
-                SELECT 
-                    M.CODMNU AS codiceMenu, 
-                    M.DESMNU AS descrizioneMenu,
-                    M.CODGRP AS codiceGruppo,
-                    G.DESGRP AS descrizioneGruppo,
+                SELECT
+                    M.CODMNU AS codice_menu,
+                    M.DESMNU AS descrizione_menu,
+                    M.CODGRP AS codice_gruppo,
+                    G.DESGRP AS descrizione_gruppo,
                     M.ICON AS icona,
-  M.CODTIP AS tipo,
-  M.PAGINA AS pagina,
-  M.NOTE AS note
-  FROM MENU M
-  LEFT JOIN MENU_GRP G ON M.CODGRP = G.CODGRP
-  WHERE M.FLGENABLED = 1 AND COALESCE(G.FLGENABLED, 1) = 1
-  ORDER BY G.CODGRP, M.CODMNU
+                    M.CODTIP AS tipo,
+                    M.PAGINA AS pagina,
+                    M.NOTE AS note,
+                    G.ORDINE AS ordine_gruppo,
+                    M.ORDINE AS ordine_menu
+                FROM MENU M
+                LEFT JOIN MENU_GRP G ON M.CODGRP = G.CODGRP
+                WHERE M.FLGENABLED = 1 AND COALESCE(G.FLGENABLED, 1) = 1
+                ORDER BY G.CODGRP, M.CODMNU
             `;
 
         const result = await Orm.query(this.accessiOptions.databaseOptions, query, []);

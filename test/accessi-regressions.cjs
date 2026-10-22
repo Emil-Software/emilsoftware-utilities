@@ -84,6 +84,53 @@ test('role grants and direct grants are merged by maximum level', async t => {
   assert.equal(result.grants.find(g => g.codiceMenu === 'denied').tipoAbilitazione, 30);
 });
 
+test('getMenus returns the camelCase menu contract with ordering metadata', async t => {
+  let capturedSql = '';
+  t.mock.method(Orm, 'query', async (_options, sql) => {
+    capturedSql = sql;
+    return [
+      {
+        CODICE_MENU: 'MNUSTXALM',
+        DESCRIZIONE_MENU: 'Allarmi',
+        CODICE_GRUPPO: 'O',
+        DESCRIZIONE_GRUPPO: 'Operativita',
+        ICONA: 'warning-outline',
+        TIPO: 'X',
+        PAGINA: '/allarmi',
+        NOTE: null,
+        ORDINE_GRUPPO: 20,
+        ORDINE_MENU: 50,
+      },
+    ];
+  });
+
+  const service = new PermissionService({ databaseOptions: {} });
+  const menus = await service.getMenus();
+
+  assert.match(capturedSql, /AS codice_menu/i);
+  assert.match(capturedSql, /AS descrizione_menu/i);
+  assert.match(capturedSql, /AS codice_gruppo/i);
+  assert.match(capturedSql, /AS descrizione_gruppo/i);
+  assert.match(capturedSql, /AS ordine_gruppo/i);
+  assert.match(capturedSql, /AS ordine_menu/i);
+  assert.doesNotMatch(capturedSql, /AS codiceMenu/i);
+
+  assert.deepEqual(menus, [
+    {
+      codiceMenu: 'MNUSTXALM',
+      descrizioneMenu: 'Allarmi',
+      codiceGruppo: 'O',
+      descrizioneGruppo: 'Operativita',
+      icona: 'warning-outline',
+      tipo: 'X',
+      pagina: '/allarmi',
+      note: null,
+      ordineGruppo: 20,
+      ordineMenu: 50,
+    },
+  ]);
+});
+
 test('legacy role menus survive missing description and default to read level', async t => {
   t.mock.method(Orm, 'query', async (_options, sql) => {
     if (sql.includes('FLGSUPER')) return [{ FLAG_SUPER: '0' }];
