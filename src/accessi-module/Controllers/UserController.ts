@@ -36,6 +36,7 @@ import { RestUtilities } from '../../Utilities';
 import type { AccessiOptions } from '../AccessiModule';
 import { ActionResponse, ErrorResponse } from '../Dtos/BaseResponse';
 import { GetUsersResponse } from '../Dtos/GetUsersResponse';
+import { LoginAsRequest, LoginAsResponse } from '../Dtos/LoginAsDtos';
 import { PublicRegisterRequest } from '../Dtos/PublicRegisterRequest';
 import { RegisterResponse } from '../Dtos/RegisterResponse';
 import { RegisterRequest } from '../Dtos/RegisterRequest';
@@ -61,6 +62,7 @@ import {
 } from '../security/accessControl';
 import type { AuthenticatedAccessiUser } from '../security/accessControl';
 import { assertEmailConfigured } from '../security/emailConfiguration';
+import { buildLoginAsUrl, LOGIN_AS_TOKEN_TTL_SECONDS } from '../security/loginAs';
 import { StatoRegistrazione } from '../Dtos/StatoRegistrazione';
 
 @ApiTags('User')
@@ -341,6 +343,56 @@ export class UserController {
       );
       const sent = await this.userService.forcePasswordResetForLegacyPasswords();
       return RestUtilities.sendOKMessage(res, `Email di reset inviata a ${sent} utenti con password legacy.`);
+    } catch (error) {
+      return this.sendControllerError(res, error);
+    }
+  }
+
+  @ApiOperation({
+    summary: 'Genera un URL di accesso temporaneo come un altro utente',
+    operationId: 'createLoginAsUrl',
+    description:
+      'Riservato a superutenti e admin (con la gerarchia ADMIN > SUPER). Genera un token per l utente target, valido 5 minuti, e lo allega all URL indicato come query parameter loginAsToken. Il token e una credenziale: non condividerlo e non registrarlo. Da quel momento l applicazione di destinazione decide come consumarlo.',
+  })
+  @ApiParam({ name: 'codiceUtente', description: 'Utente da impersonare', required: true, example: 123, type: Number })
+  @ApiBody({ type: LoginAsRequest })
+  @ApiResponse({ status: 200, description: 'URL di accesso temporaneo generato', type: LoginAsResponse })
+  @ApiResponse({ status: 400, description: 'URL non valido', type: ErrorResponse })
+  @ApiResponse({ status: 403, description: 'Operazione non autorizzata', type: ErrorResponse })
+  @ApiResponse({ status: 404, description: 'Utente non trovato', type: ErrorResponse })
+  @ApiBearerAuth()
+  @UseGuards(JwtSimpleGuard)
+  @Post('login-as/:codiceUtente')
+  async createLoginAsUrl(
+    @Req() request: Request,
+    @Param('codiceUtente', ParseIntPipe) codiceUtente: number,
+    @Body() body: LoginAsRequest,
+    @Res() res: Response,
+  ) {
+    try {
+      const authenticatedUser = getAuthenticatedAccessiUser(request);
+      ensureUserManagement(
+        authenticatedUser,
+        'Solo superutenti e admin possono generare un accesso temporaneo.',
+      );
+      // Stessa gerarchia della gestione utenti: un superutente non impersona un admin.
+      await this.ensureManageableTarget(authenticatedUser, codiceUtente);
+
+      const loginResult = await this.authService.getLoginResultForUser(codiceUtente);
+      const issued = this.authService.createLoginAsToken(loginResult.utente, authenticatedUser);
+      const loginUrl = buildLoginAsUrl(body?.url, issued.value);
+      const expiresAt = new Date(Date.now() + LOGIN_AS_TOKEN_TTL_SECONDS * 1000).toISOString();
+
+      this.logger.info(
+        `Login as generato: attore=${authenticatedUser.codiceUtente}, target=${codiceUtente}, host=${new URL(loginUrl).host}`,
+      );
+
+      return RestUtilities.sendBaseResponse(res, {
+        loginUrl,
+        token: issued.value,
+        expiresInSeconds: LOGIN_AS_TOKEN_TTL_SECONDS,
+        expiresAt,
+      });
     } catch (error) {
       return this.sendControllerError(res, error);
     }

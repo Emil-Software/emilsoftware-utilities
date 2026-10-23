@@ -508,7 +508,16 @@ article h3 { margin-bottom: var(--s2); }
 /* Token di servizio */
 .token-reveal { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s3); margin: var(--s4) 0; padding: var(--s4); border: 1px solid var(--brand-line); border-radius: var(--r-md); background: var(--brand-soft); }
 .token-reveal code { flex: 1 1 100%; word-break: break-all; color: var(--brand-strong); font-family: var(--font-mono); font-size: var(--fs-sm); }
-.token-reveal button { flex: 0 0 auto; }
+.token-reveal button, .token-reveal .button-link { flex: 0 0 auto; }
+.button-link { display: inline-flex; align-items: center; justify-content: center; min-height: 38px; padding: 0 var(--s4); border: 1px solid var(--line-strong); border-radius: var(--r-sm); color: var(--ink-2); background: var(--surface); font-weight: 600; text-decoration: none; }
+.button-link:hover { border-color: #b9c4cc; color: var(--ink); background: var(--surface-sunken); }
+
+/* Login as */
+.login-as-info { margin: var(--s3) 0 var(--s4); padding: var(--s3) var(--s4); border: 1px solid var(--warn-line); border-radius: var(--r-md); color: var(--warn-ink); background: var(--warn-soft); }
+.login-as-info strong { display: block; margin-bottom: var(--s1); }
+.login-as-info ul { margin: 0; padding-left: 1.2em; }
+.login-as-info li + li { margin-top: var(--s1); }
+.login-as-info code { padding: 1px 5px; border-radius: var(--r-sm); background: rgba(255, 255, 255, .55); font-family: var(--font-mono); }
 
 /* Paginatore — contenitore dedicato sopra/sotto la tabella, sempre orizzontale */
 .pager-row { display: flex; justify-content: flex-end; }

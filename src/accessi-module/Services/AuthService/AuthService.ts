@@ -20,11 +20,19 @@ import {
   verifyPasswordResetToken,
 } from "../../security/passwordResetToken";
 import { assertStrongPassword } from '../../security/passwordPolicy';
+import { LOGIN_AS_TOKEN_TTL_SECONDS } from '../../security/loginAs';
 import { Logger } from "../../../Logger";
 import { TokenResult } from '../../Dtos/TokenResult';
 
 /** Error code deliberately returned when a user is configured as SSO-only. */
 export const PASSWORD_LOGIN_DISABLED = 'PASSWORD_LOGIN_DISABLED';
+
+interface AccessiTokenIssueOptions {
+  /** Sovrascrive jwtOptions.expiresIn per token a durata ridotta (es. Login as). */
+  expiresIn?: string | number;
+  /** Claim aggiuntive, per esempio l'attore che ha generato un token di impersonazione. */
+  extraClaims?: Record<string, unknown>;
+}
 
 @Injectable()
 export class AuthService {
@@ -64,22 +72,32 @@ export class AuthService {
   }
 
   /** Creates the normal internal JWT consumed by all existing Accessi guards. */
-  public createAccessiToken(utente: LoginResult['utente'], methods: string[] = []): TokenResult {
+  public createAccessiToken(
+    utente: LoginResult['utente'],
+    methods: string[] = [],
+    tokenOptions: AccessiTokenIssueOptions = {},
+  ): TokenResult {
     if (!utente?.codiceUtente) {
       throw new Error('Impossibile creare un token senza un utente Accessi valido.');
     }
-    if ((utente.flagDueFattori === true || Number(utente.flagDueFattori) === 1) && !methods.includes('otp')) {
+    const loginAs = methods.includes('login_as');
+    if ((utente.flagDueFattori === true || Number(utente.flagDueFattori) === 1) && !methods.includes('otp') && !loginAs) {
       throw new UnauthorizedException('Verifica del codice di accesso richiesta.');
     }
 
-    const expiresIn = this.accessiOptions.jwtOptions.expiresIn;
-    if (typeof expiresIn !== 'string' || expiresIn.trim() === '') {
+    const expiresIn = tokenOptions.expiresIn ?? this.accessiOptions.jwtOptions.expiresIn;
+    const expiresInIsValid = typeof expiresIn === 'number'
+      ? Number.isFinite(expiresIn) && expiresIn > 0
+      : typeof expiresIn === 'string' && expiresIn.trim() !== '';
+    if (!expiresInIsValid) {
       throw new Error('jwtOptions.expiresIn non configurato: impossibile emettere token senza scadenza.');
     }
 
-    const token = jwt.sign({ utente, typ: 'access', amr: methods }, getAccessiJwtSecret(this.accessiOptions), {
-      expiresIn: expiresIn as unknown as jwt.SignOptions['expiresIn'],
-    });
+    const token = jwt.sign(
+      { ...(tokenOptions.extraClaims ?? {}), utente, typ: 'access', amr: methods },
+      getAccessiJwtSecret(this.accessiOptions),
+      { expiresIn: expiresIn as jwt.SignOptions['expiresIn'] },
+    );
 
     // Difesa in profondita: un `expiresIn` malformato farebbe emettere un token permanente.
     const decoded = jwt.decode(token);
@@ -88,10 +106,30 @@ export class AuthService {
     }
 
     return {
-      expiresIn,
+      expiresIn: String(expiresIn),
       value: token,
       type: 'Bearer',
     };
+  }
+
+  /**
+   * Emette un access token breve per l'utente target, con l'attore registrato
+   * nelle claim `act` e `loginAs`. La durata e' fissa a 5 minuti.
+   */
+  public createLoginAsToken(
+    utente: LoginResult['utente'],
+    actor: { codiceUtente: number; email?: string },
+  ): TokenResult {
+    return this.createAccessiToken(utente, ['login_as'], {
+      expiresIn: LOGIN_AS_TOKEN_TTL_SECONDS,
+      extraClaims: {
+        loginAs: true,
+        act: {
+          sub: String(actor.codiceUtente),
+          email: actor.email,
+        },
+      },
+    });
   }
 
   /** Builds the standard login response for a user authenticated by a supported method. */

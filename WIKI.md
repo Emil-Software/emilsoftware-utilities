@@ -49,6 +49,7 @@ Per una versione compatta da fornire a un'IA che costruisce il backend integrato
 **Console**
 
 - [Console amministrativa](#console-amministrativa)
+- [Login as (accesso temporaneo)](#login-as-accesso-temporaneo)
 
 **Riferimenti**
 
@@ -804,7 +805,7 @@ _Accesso, sezioni e che cosa si può fare._
 
 La console è servita dal modulo su /api/accessi/console. Non ha stato proprio: ogni azione chiama le API protette con il JWT dell'utente connesso.
 
-- Utenti: elenco, creazione locale o SSO, profilo, ruoli, grant diretti, stato, 2FA.
+- Utenti: elenco, creazione locale o SSO, profilo, ruoli, grant diretti, stato, 2FA e Login as.
 - Ruoli e grant: CRUD dei ruoli con l'albero delle abilitazioni.
 - Menu e gruppi: CRUD di gruppi, menu e tipi menu.
 - Token di servizio: creazione, rotazione, revoca.
@@ -843,6 +844,51 @@ La console è servita dal modulo su /api/accessi/console. Non ha stato proprio: 
 > [!TIP]
 > **Auto-ingresso dal frontend**
 > Se un frontend ha già una sessione Accessi valida e l'utente è abilitato alla console, può aprire la console senza rifare il login: \`POST /api/accessi/console/entry\` con \`Authorization: Bearer \<jwt\>\` restituisce un ticket monouso; apri poi \`/api/accessi/console\#entry=\<ticket\>\`. Il JWT non finisce mai nell'URL; il ticket dura 60 secondi ed è utilizzabile una sola volta (endpoint di scambio protetto da rate limit).
+
+---
+
+## Login as (accesso temporaneo)
+
+_Superutenti e admin possono generare un URL per entrare in un applicazione come un altro utente._
+
+Dalla lista utenti della console il pulsante Login as apre il pannello dedicato: inserisci l'URL dell'applicazione e premi "Genera URL di accesso". Accessi emette un JWT per l'utente target e lo allega all'URL come query parameter \`loginAsToken\`.
+
+**Richiesta**
+
+```http
+POST /api/accessi/user/login-as/:codiceUtente
+Content-Type: application/json
+Authorization: Bearer <jwt amministratore>
+
+{ "url": "https://app.example.com/dashboard" }
+```
+
+**Risposta**
+
+```json
+{
+  "Result": {
+    "loginUrl": "https://app.example.com/dashboard?loginAsToken=eyJ...",
+    "token": "eyJ...",
+    "expiresInSeconds": 300,
+    "expiresAt": "2026-10-23T14:05:00.000Z"
+  }
+}
+```
+
+> [!CAUTION]
+> **Il token dura 5 minuti**
+> Il token è una credenziale: chiunque abbia l'URL può usarlo fino alla scadenza per entrare nell'applicazione come l'utente target. Non condividerlo, non salvarlo in log o documenti e non usarlo in produzione per operazioni distruttive.
+
+> [!NOTE]
+> **Chi può generarlo**
+> Solo utenti con FLGSUPER o FLGADMIN. Vale la stessa gerarchia della gestione utenti: un superutente non può impersonare un admin; un admin può impersonare chiunque. Il tentativo non consentito restituisce 403.
+
+> [!WARNING]
+> **Responsabilità dell applicazione**
+> Accessi non controlla l'URL di destinazione né consuma il token al posto dell'applicazione. L'app deve leggere \`loginAsToken\`, validarlo (per esempio con \`POST /api/accessi/auth/get-user-by-token\` o \`authorizeAccessi\`) e decidere cosa consentire. Il token è un access token Accessi a tutti gli effetti, con claim \`loginAs: true\`, \`amr: \["login\_as"\]\` e \`act\` valorizzato con l'attore.
+
+Il token viene emesso anche per utenti con 2FA attiva: l'attore ha già completato l'autenticazione amministrativa. Non usare questa funzione per aggirare la 2FA di un utente comune al di fuori di un intervento amministrativo autorizzato.
 
 ---
 
@@ -889,7 +935,7 @@ _Tutte le rotte /api/accessi/\* in una tabella._
 | --- | --- |
 | Auth | POST auth/login, auth/get-user-by-token, auth/confirm-reset-password/:token, auth/two-factor/verify, auth/two-factor/resend |
 | Email | POST email/send-reset-password-email, GET email/reset-password-page/:token |
-| Utenti | GET user/get-users, POST user/create-managed-user, PUT user/update-user/:codiceUtente, DELETE user/delete-user/:codiceUtente, DELETE user/delete-user-permanent/:codiceUtente, POST user/set-password/:codiceUtente, POST user/set-stato, PATCH user/set-gdpr/:codiceUtente, POST user/register |
+| Utenti | GET user/get-users, POST user/create-managed-user, PUT user/update-user/:codiceUtente, DELETE user/delete-user/:codiceUtente, DELETE user/delete-user-permanent/:codiceUtente, POST user/set-password/:codiceUtente, POST user/set-stato, PATCH user/set-gdpr/:codiceUtente, POST user/register, POST user/login-as/:codiceUtente |
 | Permessi | GET permission/roles, POST permission/create-role, PUT permission/update-role/:codiceRuolo, DELETE permission/delete-role/:codiceRuolo, POST permission/assign-roles/:codiceUtente, POST permission/assign-permissions/:codiceUtente, GET permission/grants/:codiceUtente, GET permission/menus, GET permission/menu-types, GET permission/groups-with-menus |
 | Catalogo | POST/PUT/DELETE permission/menus\[/:codiceMenu\], permission/menu-groups\[/:codiceGruppo\], permission/menu-types\[/:codiceTipo\] |
 | Configurator | PATCH configurator/menus/:codiceMenu/enabled, PATCH configurator/groups/:codiceGruppo/enabled |

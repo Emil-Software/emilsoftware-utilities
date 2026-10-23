@@ -86,9 +86,20 @@ export function buildAuthenticatedTokenPayload(
   };
 }
 
+/**
+ * Riconosce i token emessi dalla console per l'accesso temporaneo "Login as".
+ * L'attore ha gia completato l'autenticazione amministrativa, quindi il token
+ * non richiede un ulteriore codice email anche se il target ha la 2FA attiva.
+ */
+export function isLoginAsTokenPayload(decoded: unknown): boolean {
+  if (!isRecord(decoded) || decoded.loginAs !== true) return false;
+  return Array.isArray(decoded.amr) && decoded.amr.includes('login_as');
+}
+
 /** Enabling 2FA invalidates sessions which have not completed the required verification. */
 export function isAccessiTokenAllowedForUser(decoded: unknown, user: AccessiAuthenticatedUserSnapshot): boolean {
   if (!isRecord(decoded)) return false;
+  if (isLoginAsTokenPayload(decoded)) return true;
   const methods = Array.isArray(decoded.amr) ? decoded.amr : [];
   if (user.flagDueFattori && !methods.includes('otp')) return false;
   if (methods.includes('passwordless') && (!user.flagDueFattori || !user.passwordlessLoginEnabled)) return false;

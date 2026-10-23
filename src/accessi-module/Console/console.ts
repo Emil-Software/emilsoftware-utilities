@@ -5,6 +5,7 @@
   createFederatedUser,
   createFederatedProvider,
   createManagedUser,
+  createLoginAsUrl,
   createMenu,
   createMenuGroup,
   createMenuType,
@@ -63,6 +64,7 @@ import type {
   ConsoleEntrySessionResult,
   FederatedProviderResponseDto,
   GroupWithMenusEntity,
+  LoginAsResult,
   LoginResult,
   MenuEntity,
   MenuTypeEntity,
@@ -81,7 +83,7 @@ type PageRouteSuggestion = { value: string; menu?: string; group?: string; disab
 type ConsoleUser = { codiceUtente: number; email?: string; flagSuper: boolean; flagAdmin: boolean };
 type FederatedProvider = FederatedProviderResponseDto;
 type ConsoleFederatedIdentity = { identityKey: string; provider: string; subject: string; active: boolean; note?: string };
-type UserDetailTab = 'sso' | 'profile' | 'roles' | 'grants';
+type UserDetailTab = 'sso' | 'profile' | 'roles' | 'grants' | 'loginAs';
 type ConsoleView =
   | 'users'
   | 'roles'
@@ -445,13 +447,28 @@ function federatedIdentitySection(identities: ConsoleFederatedIdentity[], provid
   return `<section class="user-editor-section sso-identity-section" data-user-panel="sso" role="tabpanel" aria-labelledby="user-tab-sso"><div class="section-heading"><div><p class="eyebrow">Autenticazione esterna</p><h3>Identità SSO</h3></div><span class="muted">Collegamenti verificati dal backend</span></div><p class="form-help">Disabilita conserva lo storico; elimina rimuove il collegamento (l'utente resta).</p><div class="sso-identity-list">${identities.map((identity) => `<article class="sso-identity-item ${identity.active ? '' : 'is-disabled'}"><div class="sso-identity-data"><strong>${escapeHtml(identity.provider)}</strong><dl class="entity-metadata"><div><dt>Subject</dt><dd>${escapeHtml(identity.subject)}</dd></div><div><dt>Stato</dt><dd>${identity.active ? 'Abilitata' : 'Disabilitata'}</dd></div></dl>${identity.note ? `<p class="entity-note"><strong>Nota</strong>${escapeHtml(identity.note)}</p>` : ''}</div><div class="sso-identity-actions"><button type="button" class="secondary" data-identity-toggle="${escapeHtml(identity.identityKey)}" data-active="${String(!identity.active)}">${identity.active ? 'Disabilita' : 'Abilita'}</button><button type="button" class="icon-button danger-button" data-identity-delete="${escapeHtml(identity.identityKey)}" aria-label="Elimina definitivamente il collegamento SSO ${escapeHtml(identity.provider)}" title="Elimina definitivamente il collegamento SSO"><span aria-hidden="true">&#128465;</span></button></div></article>`).join('') || '<p class="muted">Nessun collegamento SSO.</p>'}</div>${providers.some((provider) => provider.active) ? `<form id="link-sso" class="sso-link-form">${federatedIdentityFields(providers)}<button>Collega SSO verificato</button></form>` : '<p class="form-help">Non ci sono provider SSO attivi. Censiscine uno nella sezione SSO prima di creare collegamenti.</p>'}</section>`;
 }
 
+/**
+ * Pannello Login as: genera per l'utente target un token breve da allegare
+ * all'URL dell'applicazione indicata dall'amministratore.
+ */
+function loginAsPanel(user: UserDto): string {
+  return `<form id="login-as" class="user-editor-section" data-user-panel="loginAs" role="tabpanel" aria-labelledby="user-tab-loginAs">
+    <div class="section-heading"><div><p class="eyebrow">Accesso temporaneo</p><h3>Login as ${helpDot('user-login-as')}</h3></div><span class="muted">Solo superutenti e admin</span></div>
+    <div class="login-as-info"><strong>Prima di generare l'URL</strong><ul><li>Il token vale <strong>5 minuti</strong> e permette di entrare nell'applicazione come <strong>${escapeHtml(user.email)}</strong>.</li><li>È una credenziale: chiunque abbia l'URL può usarlo fino alla scadenza. Non condividerlo e non salvarlo.</li><li>Il token viene allegato come <code>?loginAsToken=</code> all'URL indicato. L'applicazione di destinazione decide come consumarlo.</li><li>L'operazione è consentita solo a superutenti e admin, nel rispetto della gerarchia ADMIN &gt; SUPER.</li></ul></div>
+    <label>URL dell'applicazione ${helpDot('login-as-url')}<input name="url" type="url" placeholder="https://app.example.com/" maxlength="2048" required><span class="form-help">URL assoluto http/https. Eventuali query o fragment esistenti vengono conservati.</span></label>
+    <button type="submit">Genera URL di accesso</button>
+    <div id="login-as-result" class="token-reveal" hidden><code id="login-as-url"></code><a id="login-as-open" class="button-link" href="#" target="_blank" rel="noopener noreferrer">Apri</a><button id="login-as-copy" type="button">Copia URL</button></div>
+  </form>`;
+}
+
 /** Builds the tab list for user administration without coupling it to a framework router. */
-function userDetailTabs(hasSso: boolean): string {
+function userDetailTabs(hasSso: boolean, hasLoginAs: boolean): string {
   const tabs: Array<{ id: UserDetailTab; label: string }> = [
     ...(hasSso ? [{ id: 'sso' as const, label: 'Identità SSO' }] : []),
     { id: 'profile', label: 'Profilo e accesso' },
     { id: 'roles', label: 'Ruoli' },
     { id: 'grants', label: 'Grant diretti' },
+    ...(hasLoginAs ? [{ id: 'loginAs' as const, label: 'Login as' }] : []),
   ];
   return `<div class="user-tabs" role="tablist" aria-label="Sezioni utente">${tabs.map((tab) => `<button id="user-tab-${tab.id}" type="button" role="tab" aria-controls="user-panel-${tab.id}" data-user-tab="${tab.id}">${tab.label}</button>`).join('')}</div>`;
 }
@@ -742,7 +759,7 @@ async function showUsers(): Promise<void> {
   render(`<div class="toolbar"><button id="new-local">Nuovo utente locale</button>${federatedAuthenticationAvailable ? '<button id="new-sso">Nuovo utente SSO</button>' : ''}<button id="reload-users" class="secondary">Aggiorna</button><button id="reset-legacy" class="secondary">Invia reset password legacy</button></div>
     <div class="pager-row pager-row-top">${pagerMarkup(totalPages)}</div>
     <table><thead><tr><th>Utente</th><th>Stato</th><th>Accesso</th><th>2FA</th><th>Ruoli</th><th></th></tr></thead><tbody>
-    ${users.map(({ utente, userGrants }) => `<tr><td>${escapeHtml(utente.email)}<br><span class="muted">${escapeHtml(utente.nome)} ${escapeHtml(utente.cognome)}</span></td><td>${escapeHtml(utente.statoRegistrazione)}</td><td>${utente.passwordlessLoginEnabled ? 'codice email' : utente.passwordLoginEnabled === false ? 'solo SSO' : 'password'}</td><td>${utente.flagDueFattori ? 'Attiva' : 'Disattiva'}</td><td class="roles-col">${rolesCell(utente.codiceUtente, userGrants)}</td><td><button data-user="${utente.codiceUtente}"${canManageUser(utente) ? '' : ' disabled title="Non puoi gestire un utente di rango superiore" aria-disabled="true"'}>Gestisci</button></td></tr>`).join('') || '<tr><td colspan="6" class="muted">Nessun utente.</td></tr>'}
+    ${users.map(({ utente, userGrants }) => `<tr><td>${escapeHtml(utente.email)}<br><span class="muted">${escapeHtml(utente.nome)} ${escapeHtml(utente.cognome)}</span></td><td>${escapeHtml(utente.statoRegistrazione)}</td><td>${utente.passwordlessLoginEnabled ? 'codice email' : utente.passwordLoginEnabled === false ? 'solo SSO' : 'password'}</td><td>${utente.flagDueFattori ? 'Attiva' : 'Disattiva'}</td><td class="roles-col">${rolesCell(utente.codiceUtente, userGrants)}</td><td class="row-actions"><button type="button" class="secondary" data-login-as="${utente.codiceUtente}"${canManageUser(utente) ? '' : ' disabled title="Non puoi impersonare un utente di rango superiore" aria-disabled="true"'}>Login as</button><button data-user="${utente.codiceUtente}"${canManageUser(utente) ? '' : ' disabled title="Non puoi gestire un utente di rango superiore" aria-disabled="true"'}>Gestisci</button></td></tr>`).join('') || '<tr><td colspan="6" class="muted">Nessun utente.</td></tr>'}
     </tbody></table><div class="pager-row pager-row-bottom">${pagerMarkup(totalPages)}</div>`);
 
   byId('new-local').onclick = () => showLocalUserForm();
@@ -764,6 +781,12 @@ async function showUsers(): Promise<void> {
   });
   document.querySelectorAll<HTMLButtonElement>('[data-user]').forEach((button) => {
     button.onclick = () => handleAction(() => showUser(button.dataset.user ?? ''));
+  });
+  document.querySelectorAll<HTMLButtonElement>('[data-login-as]').forEach((button) => {
+    button.onclick = () => handleAction(async () => {
+      await showUser(button.dataset.loginAs ?? '');
+      activateUserTab('loginAs');
+    });
   });
   bindRolesToggles();
 }
@@ -1237,12 +1260,13 @@ async function showUser(rawCode: string): Promise<void> {
         </div>
       </div>
     </form>
-    ${userDetailTabs(federatedAuthenticationAvailable)}<div class="user-editor">
+    ${userDetailTabs(federatedAuthenticationAvailable, manageable)}<div class="user-editor">
     ${identitySection}
     <form id="profile" data-user-panel="profile" role="tabpanel" aria-labelledby="user-tab-profile"><h3>Profilo e accesso</h3><label>Nome ${helpDot('user-name')}<input name="nome" value="${escapeHtml(user.nome)}"></label><label>Cognome ${helpDot('user-name')}<input name="cognome" value="${escapeHtml(user.cognome)}"></label><label>Email ${helpDot('user-email')}<input name="email" type="email" value="${escapeHtml(user.email)}" required><span class="form-help">Identificativo di accesso e recapito.</span></label>${pageDefaultField(user)}${federatedAuthenticationAvailable ? `<label class="check"><input name="passwordLoginEnabled" type="checkbox" ${user.passwordLoginEnabled !== false ? 'checked' : ''}> Login con password ${helpDot('user-password-login')}</label><span class="form-help">Se disabilitato, il login con email e password restituisce un errore esplicito; restano valide le identità SSO attive.</span>` : ''}${authenticationPolicyFields(user)}${extendedProfileFields(user)}${privilegeFields(user)}<button id="save-profile" type="submit">Salva</button></form>
     ${passwordFields()}
     ${roleAssignmentEditor(allRoles, userGrants.ruoli, menuGroups)}
     ${directGrantEditor(menuGroups, userGrants.abilitazioni)}
+    ${manageable ? loginAsPanel(user) : ''}
     </div>`);
   bindPageDefaultCombobox(pageRouteSuggestions(menuGroups));
   byId('back').onclick = () => show('users');
@@ -1308,6 +1332,24 @@ async function showUser(rawCode: string): Promise<void> {
       await setUserPassword(codiceUtente, { newPassword });
       showNotice('Password aggiornata.');
       await showUser(String(codiceUtente));
+    });
+  };
+
+  const loginAsForm = document.getElementById('login-as') as HTMLFormElement | null;
+  if (loginAsForm) loginAsForm.onsubmit = (event) => {
+    event.preventDefault();
+    handleAction(async () => {
+      const values = formValues(eventForm(event));
+      const issued = result<LoginAsResult>(await createLoginAsUrl(codiceUtente, { url: values.url ?? '' }));
+      const box = byId('login-as-result');
+      box.hidden = false;
+      byId('login-as-url').textContent = issued.loginUrl;
+      byId<HTMLAnchorElement>('login-as-open').href = issued.loginUrl;
+      byId<HTMLButtonElement>('login-as-copy').onclick = () => handleAction(async () => {
+        await navigator.clipboard.writeText(issued.loginUrl);
+        showNotice('URL di accesso copiato negli appunti.');
+      });
+      showNotice(`URL di accesso generato. Scade alle ${new Date(issued.expiresAt).toLocaleTimeString()}.`);
     });
   };
 

@@ -399,6 +399,23 @@ export const HELP: Record<string, HelpEntry> = {
       note('info', 'Solo admin', `Il pulsante è mostrato e accettato solo per il flag Admin. Un superutente senza Admin può solo flaggare l'utente come eliminato.`),
     ],
   },
+  'user-login-as': {
+    title: 'Login as',
+    blocks: [
+      p(`Genera un accesso temporaneo all'applicazione come l'utente selezionato. Non richiede la password dell'utente e non modifica il suo profilo.`),
+      note('danger', 'Il token scade in 5 minuti', `Il token è una credenziale: chiunque ottenga l'URL può usarlo fino alla scadenza per entrare nell'applicazione come l'utente target. Non condividerlo, non salvarlo in log o chat e non incollarlo in documenti.`),
+      note('info', 'Chi può usarlo', `Solo superutenti e admin. Vale la gerarchia ADMIN > SUPER: un superutente non può impersonare un admin.`),
+      p(`Il token viene aggiunto all'URL scelto come parametro di query loginAsToken. Da quel momento è l'applicazione di destinazione a decidere come validarlo e cosa consentire.`),
+    ],
+  },
+  'login-as-url': {
+    title: 'URL dell applicazione',
+    blocks: [
+      p(`Inserisci l'indirizzo assoluto dell'applicazione in cui vuoi entrare, per esempio https://app.example.com/dashboard.`),
+      p(`Il modulo aggiunge automaticamente ?loginAsToken=<token> conservando le query e il fragment già presenti. Sono ammessi solo URL http e https.`),
+      note('warn', 'Nessun controllo sull applicazione', `Accessi non verifica che l'URL appartenga a un ambiente autorizzato: incollalo con attenzione per non inviare il token a un dominio sbagliato.`),
+    ],
+  },
 
   // ----------------------------------------------------- selezioni di menu
   'menu-group-select': {

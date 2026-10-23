@@ -5,6 +5,7 @@ Il modulo `accessi` gestisce:
 - autenticazione con JWT
 - autorizzazione basata su ruoli e permessi
 - registrazione, reset password e GDPR
+- accesso temporaneo **Login as** per superutenti e admin
 - filtri utente
 - abilitazione e disabilitazione di menu e gruppi
 - aggiornamento automatico del database

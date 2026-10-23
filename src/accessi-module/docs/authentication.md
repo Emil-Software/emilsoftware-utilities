@@ -83,3 +83,37 @@ Il JWT non viene mai messo nell'URL; lo scambio (`POST /api/accessi/console/entr
 Handoff 2FA: il backend puo' reindirizzare a `/api/accessi/console/#two-factor=<challengeId>` per completare la verifica sulla console (fragment opaco, rimosso subito; vedi [Codici di accesso, 2FA e SSO](two-factor.md)).
 
 La gerarchia ADMIN > SUPER e i permessi di gestione sono descritti in [Utenti, ruoli e permessi](users-permissions.md).
+
+## Login as (impersonazione temporanea)
+
+Superutenti e admin possono generare un accesso temporaneo a un utente per entrare in un'altra
+applicazione senza conoscerne la password. Dalla console, nella lista utenti, il pulsante **Login as**
+apre il pannello con il campo URL e il pulsante "Genera URL di accesso".
+
+Endpoint: `POST /api/accessi/user/login-as/:codiceUtente`
+
+```http
+POST /api/accessi/user/login-as/123
+Content-Type: application/json
+Authorization: Bearer <jwt amministratore>
+
+{ "url": "https://app.example.com/dashboard" }
+```
+
+```json
+{
+  "Result": {
+    "loginUrl": "https://app.example.com/dashboard?loginAsToken=eyJ...",
+    "token": "eyJ...",
+    "expiresInSeconds": 300,
+    "expiresAt": "2026-10-23T14:05:00.000Z"
+  }
+}
+```
+
+- Il token dura **5 minuti** ed e' un access token Accessi con `amr: ["login_as"]`, `loginAs: true` e `act` con l'amministratore che lo ha generato.
+- E' accettato da `get-user-by-token` e `authorizeAccessi` anche se l'utente target ha la 2FA attiva: l'attore ha gia' completato l'autenticazione amministrativa.
+- Vale la gerarchia **ADMIN > SUPER**: un admin puo' impersonare chiunque, un superutente non puo' impersonare un admin.
+- `buildLoginAsUrl(url, token)` (esportata dalla libreria) accetta solo URL assoluti `http`/`https` e conserva query e fragment esistenti.
+- Accessi non consuma il token: l'applicazione di destinazione deve leggere `loginAsToken`, validarlo (per esempio con `POST /api/accessi/auth/get-user-by-token` o `authorizeAccessi`) e decidere cosa consentire.
+- Il link e' una credenziale: non condividerlo, non salvarlo e non registrarlo nei log.

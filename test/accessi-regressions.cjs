@@ -10,12 +10,14 @@ const { Logger } = require('../src/Logger');
 const { Orm } = require('../src/Orm');
 const { PermissionService } = require('../src/accessi-module/Services/PermissionService/PermissionService');
 const { UserService } = require('../src/accessi-module/Services/UserService/UserService');
-const { buildAuthenticatedTokenPayload, resolveCodiceUtenteFromTokenPayload, extractAccessiBearerToken } = require('../src/accessi-module/security/authenticatedToken');
+const { buildAuthenticatedTokenPayload, resolveCodiceUtenteFromTokenPayload, extractAccessiBearerToken, isLoginAsTokenPayload, isAccessiTokenAllowedForUser } = require('../src/accessi-module/security/authenticatedToken');
 const { ensureSuperUser, ensureAdmin, ensureUserManagement, ensureConsoleAccess, ensureSelfOrSuperUser, ensurePrivilegeFlagChanges, accessiUserRank, ensureCanManageTargetUser } = require('../src/accessi-module/security/accessControl');
 const { collectPasswordPolicyViolations, assertStrongPassword } = require('../src/accessi-module/security/passwordPolicy');
 const { AuthService } = require('../src/accessi-module/Services/AuthService/AuthService');
 const { FederatedAuthService } = require('../src/accessi-module/federated-auth/FederatedAuthService');
 const { issueConsoleEntryTicket, consumeConsoleEntryTicket, clearConsoleEntryTickets } = require('../src/accessi-module/security/consoleEntry');
+const { buildLoginAsUrl, LOGIN_AS_QUERY_PARAM, LOGIN_AS_TOKEN_TTL_SECONDS } = require('../src/accessi-module/security/loginAs');
+const jwt = require('jsonwebtoken');
 const { SchemaExportService } = require('../src/accessi-module/Services/SchemaExportService/SchemaExportService');
 const { AdminBootstrapService } = require('../src/accessi-module/Services/AdminBootstrapService/AdminBootstrapService');
 const adminBootstrap = require('../src/accessi-module/security/adminBootstrap');
@@ -222,6 +224,48 @@ test('console entry ticket is single-use, user-bound and expiring', () => {
   // Ticket scaduto.
   const expired = issueConsoleEntryTicket({ token: 'x', codiceUtente: 2 }, -1000);
   assert.equal(consumeConsoleEntryTicket(expired.ticket), null);
+});
+
+test('login as URL keeps existing query/hash and rejects unsafe schemes', () => {
+  assert.equal(LOGIN_AS_QUERY_PARAM, 'loginAsToken');
+  assert.equal(
+    buildLoginAsUrl('https://app.example.com/dashboard?x=1#/home', 'token-value'),
+    'https://app.example.com/dashboard?x=1&loginAsToken=token-value#/home',
+  );
+  assert.equal(
+    buildLoginAsUrl('https://app.example.com/?loginAsToken=old', 'new'),
+    'https://app.example.com/?loginAsToken=new',
+  );
+  assert.throws(() => buildLoginAsUrl('javascript:alert(1)', 'token'), /http o https/);
+  assert.throws(() => buildLoginAsUrl('/relative', 'token'), /assoluto/);
+  assert.throws(() => buildLoginAsUrl('', 'token'), /URL dell applicazione/);
+});
+
+test('login as token is short-lived, marks the actor and bypasses target 2FA', () => {
+  const service = new AuthService({}, {}, {
+    jwtOptions: { secret: 'login-as-test-secret', expiresIn: '24h' },
+  }, {});
+  const issued = service.createLoginAsToken(
+    { codiceUtente: 7, email: 'target@example.com', flagDueFattori: true },
+    { codiceUtente: 1, email: 'admin@example.com' },
+  );
+  const decoded = jwt.decode(issued.value);
+
+  assert.equal(issued.expiresIn, String(LOGIN_AS_TOKEN_TTL_SECONDS));
+  assert.equal(decoded.typ, 'access');
+  assert.deepEqual(decoded.amr, ['login_as']);
+  assert.equal(decoded.loginAs, true);
+  assert.equal(decoded.act.sub, '1');
+  assert.equal(decoded.act.email, 'admin@example.com');
+  assert.equal(decoded.exp - decoded.iat, LOGIN_AS_TOKEN_TTL_SECONDS);
+  assert.equal(isLoginAsTokenPayload(decoded), true);
+  assert.equal(isAccessiTokenAllowedForUser(decoded, {
+    codiceUtente: 7,
+    statoRegistrazione: 20,
+    flagSuper: false,
+    flagAdmin: false,
+    flagDueFattori: true,
+  }), true);
 });
 
 test('the last active admin cannot be disabled or removed', async t => {

@@ -153,6 +153,7 @@ export {
 } from './security/adminBootstrap';
 export { ServiceTokenGuard, RequireServiceTokenScopes, getAccessiServiceToken } from './security/serviceTokenGuard';
 export { assertEmailConfigured, isEmailConfigured, AccessiEmailNotConfiguredError, ACCESSI_EMAIL_NOT_CONFIGURED } from './security/emailConfiguration';
+export { buildLoginAsUrl, LOGIN_AS_QUERY_PARAM, LOGIN_AS_TOKEN_TTL_SECONDS } from './security/loginAs';
 export { FederatedAuthService } from './federated-auth/FederatedAuthService';
 export type { FederatedAuthenticationResult, FederatedIdentity, FederatedProvider, VerifiedFederatedIdentity } from './federated-auth/FederatedAuthTypes';
 export * from "./Dtos";

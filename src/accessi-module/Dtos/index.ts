@@ -13,6 +13,7 @@ export * from "./FiltriUtente";
 export * from "./FederatedIdentityDtos";
 export * from "./GetUserByTokenRequest";
 export * from "./GetUserByTokenResponse";
+export * from "./LoginAsDtos";
 export * from "./LoginRequest";
 export * from "./LoginResponse";
 export * from "./Permission";

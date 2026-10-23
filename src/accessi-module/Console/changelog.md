@@ -5,6 +5,7 @@ Novità e modifiche rilevanti della libreria `emilsoftware-utilities` (modulo Ac
 ## Non rilasciato
 
 ### Cambiamenti
+- Console: nuova funzione **Login as** per superutenti e admin. Dalla lista utenti si genera un URL verso l'applicazione scelta con `?loginAsToken=<jwt>`; il token dura 5 minuti, registra l'attore nelle claim `act`/`loginAs` e resta soggetto alla gerarchia ADMIN > SUPER. Endpoint: `POST /api/accessi/user/login-as/:codiceUtente`.
 - Console: rimosse le sezioni **Filtri utente** e **Tipi filtro**. I filtri applicativi sono deprecati e non vengono più letti né scritti dalla console; le tabelle restano invariate e la gestione torna manuale sul database.
 - Console: le conferme operative (es. "Ruoli aggiornati") ora compaiono come notifiche in alto a destra e scompaiono automaticamente.
 - Console: il salvataggio del profilo non invia più i campi della tabella `FILTRI`, evitando payload rifiutati dal backend. `UserService` tocca `FILTRI` solo se il chiamante invia esplicitamente almeno un campo legacy.

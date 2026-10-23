@@ -65,6 +65,19 @@ L'**ultimo admin attivo** non può essere disattivato, bloccato, eliminato o
 privato di `flagAdmin`: l'operazione risponde 400 (`assertNotLastActiveAdmin`)
 finché non viene promosso un altro admin.
 
+## Login as
+
+Dalla lista utenti della console il pulsante **Login as** consente a superutenti
+e admin di generare un URL per entrare in un'altra applicazione come l'utente
+selezionato. Il pannello chiede l'URL dell'applicazione e restituisce un link con
+`?loginAsToken=<jwt>`.
+
+- Endpoint: `POST /api/accessi/user/login-as/:codiceUtente` con body `{ "url": "https://..." }`.
+- Token valido **5 minuti**, con claim `amr: ["login_as"]`, `loginAs: true` e `act` con l'amministratore che lo ha generato.
+- Accettato da `get-user-by-token` e `authorizeAccessi`, anche per utenti con 2FA attiva.
+- Stessa gerarchia della gestione utenti: un admin impersona chiunque, un superutente non impersona un admin.
+- L'app di destinazione è responsabile dell'uso del token. Il link è una credenziale: non va condiviso né registrato.
+
 ## Controllo completo del profilo (admin)
 
 Dalla scheda utente della console un admin modifica **tutti i campi Accessi**

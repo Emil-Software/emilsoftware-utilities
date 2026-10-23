@@ -130,6 +130,20 @@ import { ServiceTokenGuard, RequireServiceTokenScopes } from 'emilsoftware-utili
 export class IaController {}
 ```
 
+## Login as (impersonazione temporanea)
+
+Superutenti e admin possono generare un accesso temporaneo a un utente per entrare in un'altra
+applicazione senza conoscerne la password. Dalla console Accessi il pulsante **Login as** nella
+lista utenti apre un pannello in cui inserire l'URL dell'applicazione e generare il link.
+
+- Endpoint: `POST /api/accessi/user/login-as/:codiceUtente` con body `{ "url": "https://app.example.com/..." }`.
+- Risposta: `Result.loginUrl` con `?loginAsToken=<jwt>`, `token`, `expiresInSeconds` e `expiresAt`.
+- Il token dura **5 minuti** ed e' un normale access token Accessi con `amr: ["login_as"]`, `loginAs: true` e `act` valorizzato con l'amministratore che lo ha generato.
+- E' accettato da `get-user-by-token` e da `authorizeAccessi`, anche se l'utente target ha la 2FA attiva: l'attore ha gia' completato l'autenticazione amministrativa.
+- Gerarchia **ADMIN > SUPER**: un admin puo' impersonare chiunque, un superutente non puo' impersonare un admin.
+- L'URL viene composto con `buildLoginAsUrl` (esportata dalla libreria), che accetta solo URL assoluti `http`/`https` e conserva query e fragment esistenti.
+- Accessi non consuma il token al posto dell'applicazione: da quel momento e' l'app di destinazione a leggere `loginAsToken`, validarlo e decidere cosa consentire. Il token e' una credenziale: non condividerlo e non registrarlo nei log.
+
 ## Hardening e opzioni
 
 - I log delle query **non includono i valori dei parametri** (segreti, credenziali, PII). Per riattivare esplicitamente i valori: `logQueryParameters: true` nelle `databaseOptions`.
