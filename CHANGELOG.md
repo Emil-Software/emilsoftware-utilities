@@ -1,3 +1,10 @@
+# [2.0.0-dev.57](https://github.com/Emil-Software/emilsoftware-utilities/compare/v2.0.0-dev.56...v2.0.0-dev.57) (2026-10-23)
+
+
+### Features
+
+* login as ([b36c975](https://github.com/Emil-Software/emilsoftware-utilities/commit/b36c975e3273ec4f2286c86e8f517e44048b457e))
+
 # [2.0.0-dev.56](https://github.com/Emil-Software/emilsoftware-utilities/compare/v2.0.0-dev.55...v2.0.0-dev.56) (2026-10-22)
 
 
