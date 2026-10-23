@@ -101,12 +101,18 @@ export class AuthService {
 
     // Difesa in profondita: un `expiresIn` malformato farebbe emettere un token permanente.
     const decoded = jwt.decode(token);
-    if (!decoded || typeof decoded !== 'object' || typeof (decoded as jwt.JwtPayload).exp !== 'number') {
+    const decodedPayload = decoded && typeof decoded === 'object' ? decoded as jwt.JwtPayload : undefined;
+    if (typeof decodedPayload?.exp !== 'number') {
       throw new Error('Token emesso senza scadenza: configurazione JWT non valida.');
     }
 
+    // Il contratto TokenResult espone sempre la validita in secondi, anche quando
+    // jwtOptions.expiresIn usa un formato leggibile come '24h'.
+    const issuedAt = typeof decodedPayload.iat === 'number' ? decodedPayload.iat : Math.floor(Date.now() / 1000);
+    const expiresInSeconds = Math.max(0, Math.trunc(decodedPayload.exp - issuedAt));
+
     return {
-      expiresIn: String(expiresIn),
+      expiresIn: String(expiresInSeconds),
       value: token,
       type: 'Bearer',
     };

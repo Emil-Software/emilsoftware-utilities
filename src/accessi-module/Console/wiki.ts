@@ -270,6 +270,7 @@ export const WIKI_SECTIONS: WikiSection[] = [
     blocks: [
       code('http', `POST /api/accessi/auth/login\nContent-Type: application/json\n\n{ "email": "utente@example.com", "password": "Segreta123!" }`, 'Login con password'),
       p(`La risposta include Result.token (il JWT) e il profilo utente con ruoli e permessi. Se l'account è passwordless, ometti la password: il server risponde con un challenge via email (vedi la sezione su 2FA e passwordless).`),
+      note('info', `Scadenza del token`, `Result.token.expiresIn e sempre espresso in secondi (per esempio 86400 per 24h), indipendentemente dal formato usato in jwtOptions.expiresIn.`),
       note('info', `Autorizzazioni lato client`, `La fonte autorevole è Result.userGrants.grants: contiene i grant effettivi (ruoli + permessi diretti, livello massimo). Non leggere i permessi dal JWT e non usare Result.utente.permissions: non sono popolati. Per i superutenti grants contiene tutti i menu attivi al livello 30.`),
       good('ts', [
         "const res = await fetch('/api/accessi/auth/login', {",

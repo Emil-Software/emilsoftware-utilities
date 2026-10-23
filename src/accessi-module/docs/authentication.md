@@ -29,6 +29,10 @@ Il token generato dal login contiene:
 
 Il middleware sa recuperare il `codiceUtente` anche da payload legacy.
 
+La risposta di login espone `Result.token.expiresIn` sempre in **secondi** (per esempio `86400` per
+`24h`), anche quando `jwtOptions.expiresIn` usa un formato leggibile. Il JWT contiene comunque le
+claim standard `iat` ed `exp`.
+
 ## Middleware `authenticateGen`
 
 `authenticateGen`:

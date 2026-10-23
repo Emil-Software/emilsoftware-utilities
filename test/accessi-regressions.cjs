@@ -241,6 +241,14 @@ test('login as URL keeps existing query/hash and rejects unsafe schemes', () => 
   assert.throws(() => buildLoginAsUrl('', 'token'), /URL dell applicazione/);
 });
 
+test('normal access token reports its validity in seconds', () => {
+  const service = new AuthService({}, {}, {
+    jwtOptions: { secret: 'expires-in-test-secret', expiresIn: '24h' },
+  }, {});
+  const issued = service.createAccessiToken({ codiceUtente: 1 }, ['password']);
+  assert.equal(issued.expiresIn, String(24 * 60 * 60));
+});
+
 test('login as token is short-lived, marks the actor and bypasses target 2FA', () => {
   const service = new AuthService({}, {}, {
     jwtOptions: { secret: 'login-as-test-secret', expiresIn: '24h' },

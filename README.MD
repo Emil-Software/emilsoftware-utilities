@@ -148,7 +148,7 @@ lista utenti apre un pannello in cui inserire l'URL dell'applicazione e generare
 
 - I log delle query **non includono i valori dei parametri** (segreti, credenziali, PII). Per riattivare esplicitamente i valori: `logQueryParameters: true` nelle `databaseOptions`.
 - Pool di connessioni **attivo di default** (`poolSize` default `5`); `poolSize: 0` disabilita e torna a una connessione per query. Gli script di breve durata devono chiamare `await Orm.closePools()` prima di uscire.
-- I JWT sono verificati con algoritmo fissato a `HS256` ed e obbligatoria una scadenza (`expiresIn`) valida.
+- I JWT sono verificati con algoritmo fissato a `HS256` ed e obbligatoria una scadenza (`expiresIn`) valida. `TokenResult.expiresIn` e sempre riportato in secondi, anche con configurazioni come `24h`.
 - **Chiavi JWT separate per scopo** (`access`, `reset`, `2fa`), derivate dal segreto configurato; il claim `typ: 'access'` e **obbligatorio** per gli access token.
 - La backdoor mock `admin`/`demo` non e mai attiva quando `NODE_ENV=production`.
 - Gli allegati sono **protetti di default**: senza `allegatiOptions.authorize` le richieste rispondono 403. Per la migrazione da versioni precedenti impostare `requireAuthorization: false` (sconsigliato in produzione).

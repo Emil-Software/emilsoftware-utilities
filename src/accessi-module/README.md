@@ -17,7 +17,7 @@ Documentazione divisa per argomenti, per renderla piu' leggibile e facile da agg
 
 - **Bootstrap Express**: chiamare `initializeAccessiModule(app, options)` prima di aprire la porta HTTP. Il middleware esportato `authorizeAccessi` diventa disponibile al termine del bootstrap.
 - **Rotta protetta**: applicare `authorizeAccessi` con `accessiRequirement` per verificare JWT, stato utente e grant. Il middleware popola `req.user`; con una policy popola anche `req.userGrants`.
-- **Login locale**: usare `POST /api/accessi/auth/login`. Un utente configurato solo SSO riceve `PASSWORD_LOGIN_DISABLED` e il frontend deve avviare il flusso SSO del backend.
+- **Login locale**: usare `POST /api/accessi/auth/login`. Un utente configurato solo SSO riceve `PASSWORD_LOGIN_DISABLED` e il frontend deve avviare il flusso SSO del backend. `Result.token.expiresIn` e sempre espresso in secondi.
 - **Login SSO**: il backend valida token, issuer, audience e firma del proprio provider; poi passa solo `{ provider, subject }` a `FederatedAuthService.authenticate`. Accessi non riceve token esterni e resta l'unica fonte per ruoli e grant.
 - **Provisioning SSO**: di default lo esegue un superutente tramite le API federate. La self-registration e disabilitata finche `federatedAuthentication.allowSelfRegistration` non viene attivato esplicitamente.
 - **Ruoli e grant**: le API `assignRolesToUser`, `assignPermissionsToUser` e l'aggiornamento ruolo sono sostitutive. Inviare quindi la lista completa desiderata, non solo le differenze.
