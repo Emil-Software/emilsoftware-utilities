@@ -1,3 +1,10 @@
+# [2.0.0-dev.58](https://github.com/Emil-Software/emilsoftware-utilities/compare/v2.0.0-dev.57...v2.0.0-dev.58) (2026-10-23)
+
+
+### Bug Fixes
+
+* token time ([b3ee883](https://github.com/Emil-Software/emilsoftware-utilities/commit/b3ee883bd26b90c42d20a71383a75971451bc6b7))
+
 # [2.0.0-dev.57](https://github.com/Emil-Software/emilsoftware-utilities/compare/v2.0.0-dev.56...v2.0.0-dev.57) (2026-10-23)
 
 
