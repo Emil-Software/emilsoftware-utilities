@@ -1,3 +1,10 @@
+# [2.0.0-dev.59](https://github.com/Emil-Software/emilsoftware-utilities/compare/v2.0.0-dev.58...v2.0.0-dev.59) (2026-10-23)
+
+
+### Bug Fixes
+
+* force deploy ([3da239b](https://github.com/Emil-Software/emilsoftware-utilities/commit/3da239bf7eaf2252a063a82f3e7f75ac3d6fac45))
+
 # [2.0.0-dev.58](https://github.com/Emil-Software/emilsoftware-utilities/compare/v2.0.0-dev.57...v2.0.0-dev.58) (2026-10-23)
 
 
