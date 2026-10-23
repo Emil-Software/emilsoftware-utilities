@@ -8,7 +8,7 @@
 export interface LoginAsResult {
   /** Scadenza del token in formato ISO 8601. */
   expiresAt: string;
-  /** Validita del token in secondi. */
+  /** Validita del token in secondi, la stessa della sessione Accessi standard. */
   expiresInSeconds: number;
   /** URL dell applicazione con il token allegato come query parameter loginAsToken. */
   loginUrl: string;

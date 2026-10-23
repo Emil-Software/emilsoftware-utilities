@@ -6,7 +6,7 @@ Novità e modifiche rilevanti della libreria `emilsoftware-utilities` (modulo Ac
 
 ### Cambiamenti
 - Token Accessi: `TokenResult.expiresIn` riporta sempre la validita effettiva in secondi (es. `86400`), anche quando `jwtOptions.expiresIn` usa un formato leggibile come `24h`. I client possono quindi esporre `expires_in` anche per il token di login normale.
-- Console: nuova funzione **Login as** per superutenti e admin. Dalla lista utenti si genera un URL verso l'applicazione scelta con `?loginAsToken=<jwt>`; il token dura 5 minuti, registra l'attore nelle claim `act`/`loginAs` e resta soggetto alla gerarchia ADMIN > SUPER. Endpoint: `POST /api/accessi/user/login-as/:codiceUtente`.
+- Console: nuova funzione **Login as** per superutenti e admin. Dalla lista utenti si genera un URL verso l'applicazione scelta con `?loginAsToken=<jwt>`; il token dura quanto la sessione Accessi standard (`jwtOptions.expiresIn`), registra l'attore nelle claim `act`/`loginAs` e resta soggetto alla gerarchia ADMIN > SUPER. Endpoint: `POST /api/accessi/user/login-as/:codiceUtente`.
 - Console: rimosse le sezioni **Filtri utente** e **Tipi filtro**. I filtri applicativi sono deprecati e non vengono più letti né scritti dalla console; le tabelle restano invariate e la gestione torna manuale sul database.
 - Console: le conferme operative (es. "Ruoli aggiornati") ora compaiono come notifiche in alto a destra e scompaiono automaticamente.
 - Console: il salvataggio del profilo non invia più i campi della tabella `FILTRI`, evitando payload rifiutati dal backend. `UserService` tocca `FILTRI` solo se il chiamante invia esplicitamente almeno un campo legacy.

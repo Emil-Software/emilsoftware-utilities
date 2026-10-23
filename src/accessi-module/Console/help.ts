@@ -403,7 +403,7 @@ export const HELP: Record<string, HelpEntry> = {
     title: 'Login as',
     blocks: [
       p(`Genera un accesso temporaneo all'applicazione come l'utente selezionato. Non richiede la password dell'utente e non modifica il suo profilo.`),
-      note('danger', 'Il token scade in 5 minuti', `Il token è una credenziale: chiunque ottenga l'URL può usarlo fino alla scadenza per entrare nell'applicazione come l'utente target. Non condividerlo, non salvarlo in log o chat e non incollarlo in documenti.`),
+      note('danger', 'La durata è quella standard', `Il token dura quanto la sessione Accessi standard (jwtOptions.expiresIn). È una credenziale: chiunque ottenga l'URL può usarlo fino alla scadenza per entrare nell'applicazione come l'utente target. Non condividerlo, non salvarlo in log o chat e non incollarlo in documenti.`),
       note('info', 'Chi può usarlo', `Solo superutenti e admin. Vale la gerarchia ADMIN > SUPER: un superutente non può impersonare un admin.`),
       p(`Il token viene aggiunto all'URL scelto come parametro di query loginAsToken. Da quel momento è l'applicazione di destinazione a decidere come validarlo e cosa consentire.`),
     ],

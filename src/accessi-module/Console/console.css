@@ -551,6 +551,15 @@ article h3 { margin-bottom: var(--s2); }
 #notice:empty { display: none; }
 
 /* Ruoli in tabella: etichette con espansione "altre N" */
+.users-table { table-layout: fixed; }
+.users-table th:nth-child(1) { width: 26%; }
+.users-table th:nth-child(2) { width: 9%; }
+.users-table th:nth-child(3) { width: 11%; }
+.users-table th:nth-child(4) { width: 7%; }
+.users-table th:last-child { width: 190px; }
+.users-table td:first-child { overflow-wrap: anywhere; }
+.users-table td:last-child { white-space: nowrap; }
+.users-table .row-actions { flex-wrap: nowrap; }
 .roles-col { max-width: 320px; white-space: normal; }
 .roles-cell { display: inline-flex; flex-wrap: wrap; align-items: center; gap: var(--s1) var(--s2); }
 .roles-list { min-width: 0; }

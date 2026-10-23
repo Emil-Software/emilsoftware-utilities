@@ -951,7 +951,7 @@ return accessiFetch<Promise<forcePasswordResetLegacyResponse>>(getForcePasswordR
 
 
 /**
- * Riservato a superutenti e admin (con la gerarchia ADMIN > SUPER). Genera un token per l utente target, valido 5 minuti, e lo allega all URL indicato come query parameter loginAsToken. Il token e una credenziale: non condividerlo e non registrarlo. Da quel momento l applicazione di destinazione decide come consumarlo.
+ * Riservato a superutenti e admin (con la gerarchia ADMIN > SUPER). Genera un token per l utente target, con la stessa durata della sessione Accessi standard (jwtOptions.expiresIn), e lo allega all URL indicato come query parameter loginAsToken. Il token e una credenziale: non condividerlo e non registrarlo. Da quel momento l applicazione di destinazione decide come consumarlo.
  * @summary Genera un URL di accesso temporaneo come un altro utente
  */
 export type createLoginAsUrlResponse = {

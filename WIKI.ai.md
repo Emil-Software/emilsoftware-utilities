@@ -528,12 +528,12 @@ Authorization: Bearer <jwt amministratore>
   "Result": {
     "loginUrl": "https://app.example.com/dashboard?loginAsToken=eyJ...",
     "token": "eyJ...",
-    "expiresInSeconds": 300,
-    "expiresAt": "2026-10-23T14:05:00.000Z"
+    "expiresInSeconds": 86400,
+    "expiresAt": "2026-10-24T14:05:00.000Z"
   }
 }
 ```
-[DANGER] Il token dura 5 minuti: Il token è una credenziale: chiunque abbia l'URL può usarlo fino alla scadenza per entrare nell'applicazione come l'utente target. Non condividerlo, non salvarlo in log o documenti e non usarlo in produzione per operazioni distruttive.
+[DANGER] La durata è quella standard: Il token dura quanto la sessione Accessi standard (jwtOptions.expiresIn). È una credenziale: chiunque abbia l'URL può usarlo fino alla scadenza per entrare nell'applicazione come l'utente target. Non condividerlo, non salvarlo in log o documenti e non usarlo in produzione per operazioni distruttive.
 [INFO] Chi può generarlo: Solo utenti con FLGSUPER o FLGADMIN. Vale la stessa gerarchia della gestione utenti: un superutente non può impersonare un admin; un admin può impersonare chiunque. Il tentativo non consentito restituisce 403.
 [WARN] Responsabilità dell applicazione: Accessi non controlla l'URL di destinazione né consuma il token al posto dell'applicazione. L'app deve leggere `loginAsToken`, validarlo (per esempio con `POST /api/accessi/auth/get-user-by-token` o `authorizeAccessi`) e decidere cosa consentire. Il token è un access token Accessi a tutti gli effetti, con claim `loginAs: true`, `amr: ["login_as"]` e `act` valorizzato con l'attore.
 Il token viene emesso anche per utenti con 2FA attiva: l'attore ha già completato l'autenticazione amministrativa. Non usare questa funzione per aggirare la 2FA di un utente comune al di fuori di un intervento amministrativo autorizzato.

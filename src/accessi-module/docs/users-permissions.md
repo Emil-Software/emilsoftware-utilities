@@ -73,7 +73,7 @@ selezionato. Il pannello chiede l'URL dell'applicazione e restituisce un link co
 `?loginAsToken=<jwt>`.
 
 - Endpoint: `POST /api/accessi/user/login-as/:codiceUtente` con body `{ "url": "https://..." }`.
-- Token valido **5 minuti**, con claim `amr: ["login_as"]`, `loginAs: true` e `act` con l'amministratore che lo ha generato.
+- Token con la **stessa durata della sessione Accessi standard** (`jwtOptions.expiresIn`), con claim `amr: ["login_as"]`, `loginAs: true` e `act` con l'amministratore che lo ha generato.
 - Accettato da `get-user-by-token` e `authorizeAccessi`, anche per utenti con 2FA attiva.
 - Stessa gerarchia della gestione utenti: un admin impersona chiunque, un superutente non impersona un admin.
 - L'app di destinazione è responsabile dell'uso del token. Il link è una credenziale: non va condiviso né registrato.

@@ -109,13 +109,13 @@ Authorization: Bearer <jwt amministratore>
   "Result": {
     "loginUrl": "https://app.example.com/dashboard?loginAsToken=eyJ...",
     "token": "eyJ...",
-    "expiresInSeconds": 300,
-    "expiresAt": "2026-10-23T14:05:00.000Z"
+    "expiresInSeconds": 86400,
+    "expiresAt": "2026-10-24T14:05:00.000Z"
   }
 }
 ```
 
-- Il token dura **5 minuti** ed e' un access token Accessi con `amr: ["login_as"]`, `loginAs: true` e `act` con l'amministratore che lo ha generato.
+- Il token ha la **stessa durata della sessione Accessi standard** (`jwtOptions.expiresIn`) ed e' un access token Accessi con `amr: ["login_as"]`, `loginAs: true` e `act` con l'amministratore che lo ha generato.
 - E' accettato da `get-user-by-token` e `authorizeAccessi` anche se l'utente target ha la 2FA attiva: l'attore ha gia' completato l'autenticazione amministrativa.
 - Vale la gerarchia **ADMIN > SUPER**: un admin puo' impersonare chiunque, un superutente non puo' impersonare un admin.
 - `buildLoginAsUrl(url, token)` (esportata dalla libreria) accetta solo URL assoluti `http`/`https` e conserva query e fragment esistenti.

@@ -16,7 +16,7 @@ const { collectPasswordPolicyViolations, assertStrongPassword } = require('../sr
 const { AuthService } = require('../src/accessi-module/Services/AuthService/AuthService');
 const { FederatedAuthService } = require('../src/accessi-module/federated-auth/FederatedAuthService');
 const { issueConsoleEntryTicket, consumeConsoleEntryTicket, clearConsoleEntryTickets } = require('../src/accessi-module/security/consoleEntry');
-const { buildLoginAsUrl, LOGIN_AS_QUERY_PARAM, LOGIN_AS_TOKEN_TTL_SECONDS } = require('../src/accessi-module/security/loginAs');
+const { buildLoginAsUrl, LOGIN_AS_QUERY_PARAM } = require('../src/accessi-module/security/loginAs');
 const jwt = require('jsonwebtoken');
 const { SchemaExportService } = require('../src/accessi-module/Services/SchemaExportService/SchemaExportService');
 const { AdminBootstrapService } = require('../src/accessi-module/Services/AdminBootstrapService/AdminBootstrapService');
@@ -249,7 +249,7 @@ test('normal access token reports its validity in seconds', () => {
   assert.equal(issued.expiresIn, String(24 * 60 * 60));
 });
 
-test('login as token is short-lived, marks the actor and bypasses target 2FA', () => {
+test('login as token uses the standard validity, marks the actor and bypasses target 2FA', () => {
   const service = new AuthService({}, {}, {
     jwtOptions: { secret: 'login-as-test-secret', expiresIn: '24h' },
   }, {});
@@ -259,13 +259,13 @@ test('login as token is short-lived, marks the actor and bypasses target 2FA', (
   );
   const decoded = jwt.decode(issued.value);
 
-  assert.equal(issued.expiresIn, String(LOGIN_AS_TOKEN_TTL_SECONDS));
+  assert.equal(issued.expiresIn, String(24 * 60 * 60));
   assert.equal(decoded.typ, 'access');
   assert.deepEqual(decoded.amr, ['login_as']);
   assert.equal(decoded.loginAs, true);
   assert.equal(decoded.act.sub, '1');
   assert.equal(decoded.act.email, 'admin@example.com');
-  assert.equal(decoded.exp - decoded.iat, LOGIN_AS_TOKEN_TTL_SECONDS);
+  assert.equal(decoded.exp - decoded.iat, 24 * 60 * 60);
   assert.equal(isLoginAsTokenPayload(decoded), true);
   assert.equal(isAccessiTokenAllowedForUser(decoded, {
     codiceUtente: 7,

@@ -1,8 +1,5 @@
 import { BadRequestException } from '@nestjs/common';
 
-/** Durata massima del token di impersonazione: deve restare molto breve. */
-export const LOGIN_AS_TOKEN_TTL_SECONDS = 5 * 60;
-
 /** Nome del query parameter usato dalle applicazioni per consumare il token. */
 export const LOGIN_AS_QUERY_PARAM = 'loginAsToken';
 

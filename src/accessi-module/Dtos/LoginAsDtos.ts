@@ -27,7 +27,10 @@ export class LoginAsResult {
   })
   token!: string;
 
-  @ApiProperty({ description: 'Validita del token in secondi.', example: 300 })
+  @ApiProperty({
+    description: 'Validita del token in secondi, la stessa della sessione Accessi standard.',
+    example: 86400,
+  })
   expiresInSeconds!: number;
 
   @ApiProperty({

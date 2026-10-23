@@ -22,7 +22,7 @@ Documentazione divisa per argomenti, per renderla piu' leggibile e facile da agg
 - **Provisioning SSO**: di default lo esegue un superutente tramite le API federate. La self-registration e disabilitata finche `federatedAuthentication.allowSelfRegistration` non viene attivato esplicitamente.
 - **Ruoli e grant**: le API `assignRolesToUser`, `assignPermissionsToUser` e l'aggiornamento ruolo sono sostitutive. Inviare quindi la lista completa desiderata, non solo le differenze.
 - **Auto-ingresso console**: un frontend gia' autenticato apre la console senza re-login via `POST /api/accessi/console/entry` + `/api/accessi/console#entry=<ticket>` (il JWT non passa mai nell'URL). Dettagli in [Autenticazione e autorizzazione](docs/authentication.md).
-- **Login as**: superutenti e admin generano dalla console un URL temporaneo con `?loginAsToken=<jwt>` per entrare in un'altra applicazione come un utente. Il token dura 5 minuti e l'app di destinazione decide come consumarlo. Dettagli in [Autenticazione e autorizzazione](docs/authentication.md#login-as-impersonazione-temporanea).
+- **Login as**: superutenti e admin generano dalla console un URL con `?loginAsToken=<jwt>` per entrare in un'altra applicazione come un utente. Il token dura quanto la sessione Accessi standard (`jwtOptions.expiresIn`) e l'app di destinazione decide come consumarlo. Dettagli in [Autenticazione e autorizzazione](docs/authentication.md#login-as-impersonazione-temporanea).
 
 I commenti JSDoc sulle API pubbliche descrivono precondizioni, effetti sul database e compatibilita; Swagger documenta invece il contratto HTTP generato.
 
@@ -54,7 +54,7 @@ Authorization: Bearer <jwt amministratore>
 { "url": "https://app.example.com/dashboard" }
 ```
 
-La risposta contiene `loginUrl` con `?loginAsToken=<jwt>`, `expiresInSeconds` (300) ed `expiresAt`.
+La risposta contiene `loginUrl` con `?loginAsToken=<jwt>`, `expiresInSeconds` (la durata standard di `jwtOptions.expiresIn`, per esempio `86400`) ed `expiresAt`.
 Il token e' un access token Accessi con `amr: ["login_as"]`, `loginAs: true` e `act` con l'attore;
 viene accettato da `get-user-by-token` e `authorizeAccessi` anche per utenti con 2FA attiva. Vale la
 gerarchia **ADMIN > SUPER**. L'app di destinazione e' responsabile della validazione e dell'uso del

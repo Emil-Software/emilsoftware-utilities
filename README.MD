@@ -138,7 +138,7 @@ lista utenti apre un pannello in cui inserire l'URL dell'applicazione e generare
 
 - Endpoint: `POST /api/accessi/user/login-as/:codiceUtente` con body `{ "url": "https://app.example.com/..." }`.
 - Risposta: `Result.loginUrl` con `?loginAsToken=<jwt>`, `token`, `expiresInSeconds` e `expiresAt`.
-- Il token dura **5 minuti** ed e' un normale access token Accessi con `amr: ["login_as"]`, `loginAs: true` e `act` valorizzato con l'amministratore che lo ha generato.
+- Il token ha la **stessa durata della sessione Accessi standard** (`jwtOptions.expiresIn`) ed e' un normale access token Accessi con `amr: ["login_as"]`, `loginAs: true` e `act` valorizzato con l'amministratore che lo ha generato.
 - E' accettato da `get-user-by-token` e da `authorizeAccessi`, anche se l'utente target ha la 2FA attiva: l'attore ha gia' completato l'autenticazione amministrativa.
 - Gerarchia **ADMIN > SUPER**: un admin puo' impersonare chiunque, un superutente non puo' impersonare un admin.
 - L'URL viene composto con `buildLoginAsUrl` (esportata dalla libreria), che accetta solo URL assoluti `http`/`https` e conserva query e fragment esistenti.

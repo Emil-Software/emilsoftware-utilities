@@ -20,7 +20,6 @@ import {
   verifyPasswordResetToken,
 } from "../../security/passwordResetToken";
 import { assertStrongPassword } from '../../security/passwordPolicy';
-import { LOGIN_AS_TOKEN_TTL_SECONDS } from '../../security/loginAs';
 import { Logger } from "../../../Logger";
 import { TokenResult } from '../../Dtos/TokenResult';
 
@@ -119,15 +118,14 @@ export class AuthService {
   }
 
   /**
-   * Emette un access token breve per l'utente target, con l'attore registrato
-   * nelle claim `act` e `loginAs`. La durata e' fissa a 5 minuti.
+   * Emette l'access token per l'utente target, con l'attore registrato nelle
+   * claim `act` e `loginAs`. La durata e' quella standard di jwtOptions.expiresIn.
    */
   public createLoginAsToken(
     utente: LoginResult['utente'],
     actor: { codiceUtente: number; email?: string },
   ): TokenResult {
     return this.createAccessiToken(utente, ['login_as'], {
-      expiresIn: LOGIN_AS_TOKEN_TTL_SECONDS,
       extraClaims: {
         loginAs: true,
         act: {

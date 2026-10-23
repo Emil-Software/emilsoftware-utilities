@@ -874,15 +874,15 @@ Authorization: Bearer <jwt amministratore>
   "Result": {
     "loginUrl": "https://app.example.com/dashboard?loginAsToken=eyJ...",
     "token": "eyJ...",
-    "expiresInSeconds": 300,
-    "expiresAt": "2026-10-23T14:05:00.000Z"
+    "expiresInSeconds": 86400,
+    "expiresAt": "2026-10-24T14:05:00.000Z"
   }
 }
 ```
 
 > [!CAUTION]
-> **Il token dura 5 minuti**
-> Il token è una credenziale: chiunque abbia l'URL può usarlo fino alla scadenza per entrare nell'applicazione come l'utente target. Non condividerlo, non salvarlo in log o documenti e non usarlo in produzione per operazioni distruttive.
+> **La durata è quella standard**
+> Il token dura quanto la sessione Accessi standard (jwtOptions.expiresIn). È una credenziale: chiunque abbia l'URL può usarlo fino alla scadenza per entrare nell'applicazione come l'utente target. Non condividerlo, non salvarlo in log o documenti e non usarlo in produzione per operazioni distruttive.
 
 > [!NOTE]
 > **Chi può generarlo**

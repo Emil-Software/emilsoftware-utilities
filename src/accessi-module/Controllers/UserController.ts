@@ -62,7 +62,7 @@ import {
 } from '../security/accessControl';
 import type { AuthenticatedAccessiUser } from '../security/accessControl';
 import { assertEmailConfigured } from '../security/emailConfiguration';
-import { buildLoginAsUrl, LOGIN_AS_TOKEN_TTL_SECONDS } from '../security/loginAs';
+import { buildLoginAsUrl } from '../security/loginAs';
 import { StatoRegistrazione } from '../Dtos/StatoRegistrazione';
 
 @ApiTags('User')
@@ -352,7 +352,7 @@ export class UserController {
     summary: 'Genera un URL di accesso temporaneo come un altro utente',
     operationId: 'createLoginAsUrl',
     description:
-      'Riservato a superutenti e admin (con la gerarchia ADMIN > SUPER). Genera un token per l utente target, valido 5 minuti, e lo allega all URL indicato come query parameter loginAsToken. Il token e una credenziale: non condividerlo e non registrarlo. Da quel momento l applicazione di destinazione decide come consumarlo.',
+      'Riservato a superutenti e admin (con la gerarchia ADMIN > SUPER). Genera un token per l utente target, con la stessa durata della sessione Accessi standard (jwtOptions.expiresIn), e lo allega all URL indicato come query parameter loginAsToken. Il token e una credenziale: non condividerlo e non registrarlo. Da quel momento l applicazione di destinazione decide come consumarlo.',
   })
   @ApiParam({ name: 'codiceUtente', description: 'Utente da impersonare', required: true, example: 123, type: Number })
   @ApiBody({ type: LoginAsRequest })
@@ -381,7 +381,11 @@ export class UserController {
       const loginResult = await this.authService.getLoginResultForUser(codiceUtente);
       const issued = this.authService.createLoginAsToken(loginResult.utente, authenticatedUser);
       const loginUrl = buildLoginAsUrl(body?.url, issued.value);
-      const expiresAt = new Date(Date.now() + LOGIN_AS_TOKEN_TTL_SECONDS * 1000).toISOString();
+      const expiresInSeconds = Number(issued.expiresIn);
+      if (!Number.isFinite(expiresInSeconds) || expiresInSeconds <= 0) {
+        throw new Error('Token Login as emesso senza una scadenza valida.');
+      }
+      const expiresAt = new Date(Date.now() + expiresInSeconds * 1000).toISOString();
 
       this.logger.info(
         `Login as generato: attore=${authenticatedUser.codiceUtente}, target=${codiceUtente}, host=${new URL(loginUrl).host}`,
@@ -390,7 +394,7 @@ export class UserController {
       return RestUtilities.sendBaseResponse(res, {
         loginUrl,
         token: issued.value,
-        expiresInSeconds: LOGIN_AS_TOKEN_TTL_SECONDS,
+        expiresInSeconds,
         expiresAt,
       });
     } catch (error) {
