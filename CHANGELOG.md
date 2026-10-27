@@ -1,3 +1,10 @@
+# [2.0.0-dev.66](https://github.com/Emil-Software/emilsoftware-utilities/compare/v2.0.0-dev.65...v2.0.0-dev.66) (2026-10-27)
+
+
+### Features
+
+* **firebird:** serve node-firebird 2.19.1 come drop-in di es-node-firebird ([83fe6ba](https://github.com/Emil-Software/emilsoftware-utilities/commit/83fe6baef8d32b4df83c99d76e67ca36ff42310c))
+
 # [2.0.0-dev.65](https://github.com/Emil-Software/emilsoftware-utilities/compare/v2.0.0-dev.64...v2.0.0-dev.65) (2026-10-27)
 
 
