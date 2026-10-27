@@ -1,3 +1,10 @@
+# [2.0.0-dev.62](https://github.com/Emil-Software/emilsoftware-utilities/compare/v2.0.0-dev.61...v2.0.0-dev.62) (2026-10-27)
+
+
+### Features
+
+* **menus:** generate application scopes from menu catalogs ([efee282](https://github.com/Emil-Software/emilsoftware-utilities/commit/efee282c86bb4c6f87f3d3ba5d1cc84e99858c8b))
+
 # [2.0.0-dev.61](https://github.com/Emil-Software/emilsoftware-utilities/compare/v2.0.0-dev.60...v2.0.0-dev.61) (2026-10-27)
 
 
