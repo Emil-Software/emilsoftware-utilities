@@ -1,3 +1,10 @@
+# [2.0.0-dev.60](https://github.com/Emil-Software/emilsoftware-utilities/compare/v2.0.0-dev.59...v2.0.0-dev.60) (2026-10-27)
+
+
+### Features
+
+* **menus:** versioned per-app catalogs with idempotent Accessi sync ([44ece63](https://github.com/Emil-Software/emilsoftware-utilities/commit/44ece633cab2814aa224f587cee6933ae5db5830))
+
 # [2.0.0-dev.59](https://github.com/Emil-Software/emilsoftware-utilities/compare/v2.0.0-dev.58...v2.0.0-dev.59) (2026-10-23)
 
 
