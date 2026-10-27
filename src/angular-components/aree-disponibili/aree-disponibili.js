@@ -177,6 +177,154 @@
     return groups;
   }
 
+  /**
+   * Appiattisce sia i grant Accessi sia le strutture gia raggruppate
+   * (`mnuAbil`, `{ codGrp, desGrp, menu }`) in una lista uniforme.
+   */
+  function flattenGrants(input) {
+    if (!Array.isArray(input)) return [];
+
+    const grouped = input.filter(
+      (item) =>
+        item &&
+        (Array.isArray(item.menu) || Array.isArray(item.menus)),
+    );
+
+    if (grouped.length > 0) {
+      const flat = [];
+      for (const group of grouped) {
+        const menus = group.menu || group.menus || [];
+        for (const menu of menus) {
+          flat.push({
+            codiceMenu: menu.codMnu ?? menu.codiceMenu ?? menu.code,
+            descrizioneMenu:
+              menu.desMnu ?? menu.descrizioneMenu ?? menu.label,
+            codiceGruppo:
+              group.codGrp ?? group.codiceGruppo ?? menu.codiceGruppo,
+            descrizioneGruppo:
+              group.desGrp ??
+              group.descrizioneGruppo ??
+              menu.descrizioneGruppo,
+            icona: menu.icon ?? menu.icona,
+            pagina: menu.pagina ?? menu.page,
+            tipo: menu.tipo ?? 'M',
+          });
+        }
+      }
+      return flat;
+    }
+
+    return input;
+  }
+
+  function asNumberMap(value) {
+    return value && typeof value === 'object' ? value : {};
+  }
+
+  function buildModel(input, options) {
+    const config = options || {};
+    const routeMap = config.routeMap || {};
+    const menuOrder = asNumberMap(config.menuOrder);
+    const groupOrder = asNumberMap(config.groupOrder);
+    const availableRoutes = new Set(
+      Array.isArray(config.availableRoutes)
+        ? config.availableRoutes.map(normalizePage)
+        : [],
+    );
+    const isRouteAvailable =
+      typeof config.isRouteAvailable === 'function'
+        ? config.isRouteAvailable
+        : (path) => availableRoutes.has(normalizePage(path));
+
+    const seen = new Set();
+    const areas = [];
+
+    flattenGrants(input).forEach((grant, index) => {
+      if (!grant || typeof grant !== 'object') return;
+      const type = String(grant.tipo || 'M').toUpperCase();
+      if (type !== 'M') return;
+
+      const code = String(
+        grant.codiceMenu || grant.codMnu || '',
+      )
+        .trim()
+        .toUpperCase();
+      if (!code) return;
+
+      const page = normalizePage(grant.pagina || grant.page);
+      if (!page) return;
+
+      const mappedRoute = String(routeMap[code] || '').trim();
+      const known = Boolean(mappedRoute) || isRouteAvailable(page);
+      const route = mappedRoute || (known ? page : '');
+      const available = Boolean(route);
+
+      const key = available ? `route:${route}` : `menu:${code}`;
+      if (seen.has(key)) return;
+      seen.add(key);
+
+      const groupName = String(
+        grant.descrizioneGruppo ||
+          grant.desGrp ||
+          grant.codiceGruppo ||
+          grant.codGrp ||
+          '',
+      ).trim();
+      const groupKey =
+        String(grant.codiceGruppo || grant.codGrp || '').trim() ||
+        groupName ||
+        'ALTRE';
+
+      areas.push({
+        code,
+        label: String(
+          grant.descrizioneMenu ||
+            grant.desMnu ||
+            grant.label ||
+            code,
+        ),
+        group: groupName,
+        groupKey,
+        groupOrder: Number(groupOrder[groupKey] ?? 999),
+        order: Number(menuOrder[code] ?? index),
+        icon: String(grant.icona || grant.icon || 'grid-outline'),
+        route,
+        page,
+        url: '',
+        available,
+        reason: available
+          ? ''
+          : typeof config.reasonFor === 'function'
+            ? String(config.reasonFor(page) || '')
+            : '',
+      });
+    });
+
+    const grouped = new Map();
+    for (const area of areas) {
+      let group = grouped.get(area.groupKey);
+      if (!group) {
+        group = {
+          name: area.group || 'Altre aree',
+          order: area.groupOrder,
+          areas: [],
+        };
+        grouped.set(area.groupKey, group);
+      }
+      group.areas.push(area);
+    }
+
+    const groups = [...grouped.values()].sort(
+      (a, b) => a.order - b.order || a.name.localeCompare(b.name),
+    );
+    for (const group of groups) {
+      group.areas.sort(
+        (a, b) => a.order - b.order || a.label.localeCompare(b.label),
+      );
+    }
+    return groups;
+  }
+
   const STYLES = `
     :host {
       --es-font: var(--bs-body-font-family, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif);
@@ -298,6 +446,110 @@
     .hero__note {
       color: var(--es-muted) !important;
       font-size: 13px;
+    }
+
+    .default-page {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      margin-top: 16px;
+      padding: 14px 16px;
+      border: 1px solid var(--es-border);
+      border-left: 4px solid var(--es-primary);
+      border-radius: var(--es-radius);
+      background: var(--es-surface);
+      box-shadow: var(--es-shadow);
+      color: inherit;
+      text-decoration: none;
+    }
+
+    .default-page:hover,
+    .default-page:focus-visible {
+      border-color: var(--es-primary);
+      border-left-color: var(--es-primary);
+      box-shadow: var(--es-shadow-hover);
+    }
+
+    .default-page:focus-visible {
+      outline: 2px solid var(--es-primary);
+      outline-offset: 2px;
+    }
+
+    .default-page__icon {
+      display: grid;
+      place-items: center;
+      flex: 0 0 auto;
+      width: 44px;
+      height: 44px;
+      border-radius: 12px;
+      background: var(--es-primary-soft);
+      color: var(--es-primary);
+    }
+
+    .default-page__icon svg {
+      width: 22px;
+      height: 22px;
+    }
+
+    .default-page__copy {
+      display: flex;
+      flex: 1 1 auto;
+      flex-direction: column;
+      gap: 2px;
+      min-width: 0;
+    }
+
+    .default-page__eyebrow {
+      color: var(--es-muted);
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .default-page__label {
+      overflow: hidden;
+      color: var(--es-text);
+      font-size: 15px;
+      font-weight: 600;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .default-page__url {
+      overflow: hidden;
+      color: var(--es-muted);
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      font-size: 11px;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .default-page__action {
+      flex: 0 0 auto;
+      color: var(--es-primary);
+      font-size: 13px;
+      font-weight: 600;
+    }
+
+    .default-page--blocked {
+      border-left-color: var(--es-disabled-text);
+      background: var(--es-disabled-bg);
+      box-shadow: none;
+      cursor: not-allowed;
+      opacity: 0.8;
+    }
+
+    .default-page--blocked .default-page__icon,
+    .default-page--blocked .default-page__label,
+    .default-page--blocked .default-page__action {
+      color: var(--es-disabled-text);
+    }
+
+    .default-page__reason {
+      color: var(--es-muted);
+      font-size: 12px;
+      font-style: italic;
     }
 
     .groups {
@@ -519,10 +771,18 @@
         'empty-text',
         'unavailable-template',
         'href-mode',
+        'default-page',
       ];
     }
 
     #groups = [];
+    #grants = [];
+    #useGrants = false;
+    #routeMap = {};
+    #menuOrder = {};
+    #groupOrder = {};
+    #availableRoutes = [];
+    #isRouteAvailable = null;
     #root;
     #media;
     #observer;
@@ -571,6 +831,92 @@
 
     set groups(value) {
       this.#groups = normalizeGroups(value);
+      this.#useGrants = false;
+      this.render();
+    }
+
+    /**
+     * Grant Accessi (anche raggruppati per `menu`/`menus`). Il componente
+     * costruisce da solo gruppi, rotte e stato disponibile/bloccato.
+     */
+    get grants() {
+      return this.#grants;
+    }
+
+    set grants(value) {
+      this.#grants = Array.isArray(value) ? value : [];
+      this.#useGrants = true;
+      this.#rebuildFromGrants();
+    }
+
+    get routeMap() {
+      return this.#routeMap;
+    }
+
+    set routeMap(value) {
+      this.#routeMap = value && typeof value === 'object' ? value : {};
+      this.#refreshIfGrants();
+    }
+
+    get menuOrder() {
+      return this.#menuOrder;
+    }
+
+    set menuOrder(value) {
+      this.#menuOrder = value && typeof value === 'object' ? value : {};
+      this.#refreshIfGrants();
+    }
+
+    get groupOrder() {
+      return this.#groupOrder;
+    }
+
+    set groupOrder(value) {
+      this.#groupOrder = value && typeof value === 'object' ? value : {};
+      this.#refreshIfGrants();
+    }
+
+    get availableRoutes() {
+      return this.#availableRoutes;
+    }
+
+    set availableRoutes(value) {
+      this.#availableRoutes = Array.isArray(value) ? value : [];
+      this.#refreshIfGrants();
+    }
+
+    get isRouteAvailable() {
+      return this.#isRouteAvailable;
+    }
+
+    set isRouteAvailable(value) {
+      this.#isRouteAvailable = typeof value === 'function' ? value : null;
+      this.#refreshIfGrants();
+    }
+
+    get defaultPage() {
+      return this.getAttribute('default-page') || '';
+    }
+
+    set defaultPage(value) {
+      this.#setOptionalAttribute('default-page', value);
+    }
+
+    #refreshIfGrants() {
+      if (!this.#useGrants) return;
+      this.#rebuildFromGrants();
+    }
+
+    #rebuildFromGrants() {
+      this.#groups = buildModel(this.#grants, {
+        routeMap: this.#routeMap,
+        menuOrder: this.#menuOrder,
+        groupOrder: this.#groupOrder,
+        availableRoutes: this.#availableRoutes,
+        isRouteAvailable: this.#isRouteAvailable,
+        reasonFor: (page) =>
+          this.unavailableTemplate.replace('{page}', page),
+      });
       this.render();
     }
 
@@ -635,7 +981,7 @@
     }
 
     get theme() {
-      return this.getAttribute('theme') || 'auto';
+      return this.getAttribute('theme') || 'light';
     }
 
     set theme(value) {
@@ -672,8 +1018,9 @@
     }
 
     #resolveTheme() {
-      const explicit = String(this.getAttribute('theme') || 'auto').toLowerCase();
+      const explicit = String(this.getAttribute('theme') || 'light').toLowerCase();
       if (explicit === 'light' || explicit === 'dark') return explicit;
+      if (explicit !== 'auto') return 'light';
 
       const root = document.documentElement;
       if (
@@ -799,7 +1146,92 @@
           : '';
 
       this.#root.innerHTML =
-        '<main class="shell">' + header + body + legend + '</main>';
+        '<main class="shell">' +
+        header +
+        this.#renderDefaultPage() +
+        body +
+        legend +
+        '</main>';
+    }
+
+    #renderDefaultPage() {
+      const page = normalizePage(this.defaultPage);
+      if (!page) return '';
+
+      const areas = this.#groups.reduce(
+        (all, group) => all.concat(group.areas),
+        [],
+      );
+      const match = areas.find(
+        (area) => area.route === page || area.page === page,
+      );
+
+      let route = '';
+      if (match) {
+        route = match.available ? match.route : '';
+      } else {
+        const availableRoutes = new Set(
+          this.#availableRoutes.map(normalizePage),
+        );
+        const known = this.#isRouteAvailable
+          ? this.#isRouteAvailable(page)
+          : availableRoutes.has(page);
+        route = known ? page : '';
+      }
+
+      const available = Boolean(route);
+      const href = available
+        ? this.#hrefFor({ available: true, route })
+        : '';
+      const url =
+        (match && match.url) ||
+        (href ? new URL(href, document.baseURI).href : page);
+      const label = match ? match.label : page;
+      const iconName = match ? match.icon : 'home-outline';
+      const reason = available
+        ? ''
+        : (match && match.reason) || this.#defaultReason({ page });
+
+      const content =
+        '<span class="default-page__icon">' +
+        icon(iconName) +
+        '</span>' +
+        '<span class="default-page__copy">' +
+        '<span class="default-page__eyebrow">Pagina di default</span>' +
+        '<span class="default-page__label">' +
+        escapeHtml(label) +
+        '</span>' +
+        (available
+          ? '<span class="default-page__url" title="' +
+            escapeHtml(url) +
+            '">' +
+            escapeHtml(url) +
+            '</span>'
+          : '<span class="default-page__reason">' +
+            escapeHtml(reason) +
+            '</span>') +
+        '</span>';
+
+      if (available) {
+        return (
+          '<a class="default-page" href="' +
+          escapeHtml(href) +
+          '">' +
+          content +
+          '<span class="default-page__action">Apri</span>' +
+          '</a>'
+        );
+      }
+
+      return (
+        '<div class="default-page default-page--blocked" role="link" ' +
+        'aria-disabled="true" tabindex="0" title="' +
+        escapeHtml(reason) +
+        '">' +
+        content +
+        '<span class="default-page__action">Bloccata</span>' +
+        '</div>'
+      );
     }
 
     #renderGroup(group, groupIndex) {
@@ -892,7 +1324,13 @@
     customElements.define(TAG, AreeDisponibiliElement);
   }
 
-  // Esposto per integrazioni che preferiscono costruire l'elemento da codice.
+  // Esposto per integrazioni che preferiscono costruire elemento e modello
+  // da codice, senza duplicare la logica di raggruppamento nelle applicazioni.
   window.EmilSoftware = window.EmilSoftware || {};
   window.EmilSoftware.AreeDisponibiliElement = AreeDisponibiliElement;
+  window.EmilSoftware.AreeDisponibili = {
+    Element: AreeDisponibiliElement,
+    buildModel,
+    version: '1.1.0',
+  };
 })();

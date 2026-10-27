@@ -98,12 +98,63 @@ interface Group {
 
 Sono accettati anche array piatti: le aree vengono raggruppate per `group`.
 
+### Modello condiviso dai grant Accessi
+
+Per non duplicare la logica nelle applicazioni, il componente puo' costruire
+autonomamente gruppi, ordinamento, rotte e stato disponibile/bloccato partendo
+dai grant Accessi (anche nella forma raggruppata `mnuAbil`/`{ menu: [...] }`):
+
+```ts
+element.routeMap = { STEX_ARRIVI_CQ: '/cq-arrivi' };
+element.groupOrder = { P: 4, G: 5, A: 7 };
+element.menuOrder = { MNUMAIN: 1, MNUAVANZA: 2 };
+element.availableRoutes = ['/main', '/lista-profili', '/cq-arrivi'];
+element.defaultPage = user.paginaDefault ?? '';
+element.grants = loginResult.userGrants?.grants ?? [];
+```
+
+La stessa funzione e' disponibile senza componente:
+
+```js
+const groups = EmilSoftware.AreeDisponibili.buildModel(grants, {
+  routeMap,
+  groupOrder,
+  menuOrder,
+  availableRoutes,
+});
+```
+
+Regole:
+
+- solo i grant di tipo `M` con `pagina` valorizzata diventano aree;
+- `routeMap[codiceMenu]` ha priorita' sulla pagina Accessi;
+- senza `routeMap`, la pagina e' disponibile se presente in
+  `availableRoutes` o se `isRouteAvailable(page)` restituisce `true`;
+- le aree disponibili sono deduplicate per rotta, le bloccate per codice menu;
+- gruppi e aree sono ordinati con `groupOrder`, `menuOrder`, poi alfabetico.
+
+## Pagina di default
+
+Se `defaultPage` e' valorizzata, il componente mostra subito sotto l'header una
+card dedicata con etichetta, URL completo e azione **Apri**. Se la pagina non e'
+implementata la card e' bloccata e mostra il motivo. Le aree restano comunque
+tutte visibili sotto, invariate.
+
+La card non compare se `defaultPage` e' vuota.
+
 ## API
 
 | Membro | Tipo | Descrizione |
 |---|---|---|
-| `groups` | `Group[]` | Dati da mostrare. Setter ri-renderizza. |
+| `groups` | `Group[]` | Dati gia' raggruppati. Setter ri-renderizza. |
 | `setGroups(groups)` | metodo | Alias di `groups = ...`. |
+| `grants` | `unknown[]` | Grant Accessi: il componente costruisce i gruppi. |
+| `routeMap` | `Record<string, string>` | Codice menu → rotta Angular. |
+| `menuOrder` | `Record<string, number>` | Codice menu → ordinamento. |
+| `groupOrder` | `Record<string, number>` | Codice gruppo → ordinamento. |
+| `availableRoutes` | `string[]` | Rotte implementate nell'app. |
+| `isRouteAvailable` | `(page) => boolean` | Alternativa dinamica ad `availableRoutes`. |
+| `defaultPage` | `string` | PAGDEF Accessi: mostra la card con URL e azione. |
 | `heading` | `string` | Titolo (default `Aree disponibili`). |
 | `subtitle` | `string` | Sottotitolo. |
 | `note` | `string` | Nota aggiuntiva sotto il sottotitolo. |
@@ -111,7 +162,7 @@ Sono accettati anche array piatti: le aree vengono raggruppate per `group`.
 | `emptyText` | `string` | Testo quando non ci sono aree. |
 | `unavailableTemplate` | `string` | Template motivo; `{page}` viene sostituito. |
 | `hrefMode` | `'hash' \| 'path' \| 'none'` | Come costruire l'`href` (default `hash`). |
-| `theme` | `'auto' \| 'light' \| 'dark'` | Tema (default `auto`). |
+| `theme` | `'auto' \| 'light' \| 'dark'` | Tema (default `light`). |
 | `refresh()` | metodo | Forza il render. |
 
 Attributi equivalenti: `heading`, `subtitle`, `note`, `eyebrow`, `empty-text`,
@@ -145,12 +196,11 @@ lo Shadow DOM, perche' le custom property vengono ereditate):
 | `--es-primary` | `#2563eb` | `#60a5fa` |
 | `--es-border` | `rgba(15,23,42,.08)` | `rgba(148,163,184,.16)` |
 
-`theme="auto"` segue, in ordine:
+Il default e' **light**. `theme="auto"` segue, in ordine:
 
-1. `theme="light|dark"` esplicito;
-2. `data-bs-theme="dark"` su `<html>`;
-3. classe `.dark` o `.ion-palette-dark` su `<html>`;
-4. `prefers-color-scheme`.
+1. `data-bs-theme="dark"` su `<html>`;
+2. classe `.dark` o `.ion-palette-dark` su `<html>`;
+3. `prefers-color-scheme`.
 
 Se l'app usa Bootstrap 5.3, i token `--bs-body-bg`, `--bs-body-color`,
 `--bs-primary`, `--bs-card-bg` e `--bs-border-color` vengono usati come fallback

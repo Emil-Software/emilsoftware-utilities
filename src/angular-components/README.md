@@ -10,7 +10,7 @@ un'applicazione Angular. Bootstrap 5.3 e' supportato tramite i token CSS
 
 | Componente | Descrizione |
 |---|---|
-| [`aree-disponibili`](./aree-disponibili/README.md) | Aree abilitate dell'utente, raggruppate per gruppo menu, con aree bloccate e temi light/dark. |
+| [`aree-disponibili`](./aree-disponibili/README.md) | Aree abilitate dell'utente, raggruppate per gruppo menu, con aree bloccate, pagina di default e temi light/dark. Il modello (`buildModel`) e' condiviso e trasforma direttamente i grant Accessi. |
 
 ## Convenzioni
 
