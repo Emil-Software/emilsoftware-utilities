@@ -1,0 +1,230 @@
+<!doctype html>
+<html lang="it" data-theme="light">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>es-aree-disponibili · demo</title>
+    <style>
+      :root {
+        color-scheme: light;
+        font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+      }
+
+      body {
+        margin: 0;
+        min-height: 100vh;
+        background: #eef2f7;
+        color: #0f172a;
+      }
+
+      .toolbar {
+        position: sticky;
+        top: 0;
+        z-index: 10;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        align-items: center;
+        padding: 12px 20px;
+        border-bottom: 1px solid rgba(15, 23, 42, 0.08);
+        background: rgba(255, 255, 255, 0.92);
+        backdrop-filter: blur(8px);
+      }
+
+      .toolbar strong {
+        margin-right: auto;
+        font-size: 14px;
+      }
+
+      .toolbar button {
+        padding: 7px 12px;
+        border: 1px solid rgba(15, 23, 42, 0.16);
+        border-radius: 999px;
+        background: #fff;
+        color: inherit;
+        font: inherit;
+        font-size: 13px;
+        cursor: pointer;
+      }
+
+      .toolbar button[aria-pressed="true"] {
+        border-color: #2563eb;
+        background: #2563eb;
+        color: #fff;
+      }
+
+      .event-log {
+        max-width: 960px;
+        margin: 0 auto;
+        padding: 0 28px 32px;
+        color: #64748b;
+        font-size: 12px;
+        font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      }
+
+      .event-log p {
+        margin: 4px 0;
+      }
+
+      html[data-theme="dark"] {
+        color-scheme: dark;
+      }
+
+      html[data-theme="dark"] body {
+        background: #0b1220;
+        color: #e2e8f0;
+      }
+
+      html[data-theme="dark"] .toolbar {
+        border-color: rgba(148, 163, 184, 0.16);
+        background: rgba(17, 28, 46, 0.92);
+      }
+
+      html[data-theme="dark"] .toolbar button {
+        border-color: rgba(148, 163, 184, 0.28);
+        background: #111c2e;
+        color: #e2e8f0;
+      }
+
+      html[data-theme="dark"] .toolbar button[aria-pressed="true"] {
+        border-color: #60a5fa;
+        background: #2563eb;
+        color: #fff;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="toolbar">
+      <strong>es-aree-disponibili</strong>
+      <button type="button" data-theme-button="light" aria-pressed="true">Light</button>
+      <button type="button" data-theme-button="dark" aria-pressed="false">Dark</button>
+      <button type="button" data-theme-button="auto" aria-pressed="false">Auto</button>
+    </div>
+
+    <es-aree-disponibili id="aree"></es-aree-disponibili>
+
+    <div class="event-log" id="events" aria-live="polite"></div>
+
+    <script src="./aree-disponibili.js"></script>
+    <script>
+      const element = document.getElementById('aree');
+      const events = document.getElementById('events');
+
+      element.groups = [
+        {
+          name: 'Produzione',
+          order: 4,
+          areas: [
+            {
+              code: 'MNUMAIN',
+              label: 'Home',
+              icon: 'home-outline',
+              route: '/main',
+              url: 'https://example.local/#/main',
+              available: true,
+            },
+            {
+              code: 'MNUAVANZA',
+              label: 'Avanzamento Produzione',
+              icon: 'play-outline',
+              page: '/avanzamento',
+              available: false,
+              reason: "La pagina /avanzamento non esiste nell'app al momento.",
+            },
+            {
+              code: 'MNUJOURNAL',
+              label: 'Giornale Attivita',
+              icon: 'book-outline',
+              page: '/journal',
+              available: false,
+            },
+          ],
+        },
+        {
+          name: 'Amministrazione',
+          order: 7,
+          areas: [
+            {
+              code: 'MNUUTENTI',
+              label: 'Gestione Utenti',
+              icon: 'people-outline',
+              route: '/lista-profili',
+              url: 'https://example.local/#/lista-profili',
+              available: true,
+            },
+          ],
+        },
+        {
+          name: 'Qualita',
+          order: 16,
+          areas: [
+            {
+              code: 'STEX_ARRIVI_CQ',
+              label: 'SteX - Arrivi CQ',
+              icon: 'checkmark-done-outline',
+              route: '/cq-arrivi',
+              url: 'https://example.local/#/cq-arrivi',
+              available: true,
+            },
+            {
+              code: 'STEX_PARTITE_CQ',
+              label: 'SteX - Partite CQ',
+              icon: 'albums-outline',
+              route: '/cq-partite',
+              url: 'https://example.local/#/cq-partite',
+              available: true,
+            },
+            {
+              code: 'MNUVASCATE',
+              label: 'Controllo Vascate',
+              icon: 'analytics-outline',
+              page: '/controllo-vascate',
+              available: false,
+            },
+          ],
+        },
+      ];
+
+      function log(message) {
+        const line = document.createElement('p');
+        line.textContent = new Date().toLocaleTimeString() + ' · ' + message;
+        events.prepend(line);
+        while (events.children.length > 6) {
+          events.lastElementChild.remove();
+        }
+      }
+
+      element.addEventListener('es-area-select', (event) => {
+        log('select: ' + event.detail.area.label + ' → ' + event.detail.area.route);
+      });
+
+      element.addEventListener('es-area-blocked', (event) => {
+        log('blocked: ' + event.detail.area.label + ' · ' + event.detail.reason);
+      });
+
+      function applyTheme(theme) {
+        document.documentElement.setAttribute('data-theme', theme);
+        element.theme = theme;
+        for (const button of document.querySelectorAll('[data-theme-button]')) {
+          button.setAttribute(
+            'aria-pressed',
+            String(button.getAttribute('data-theme-button') === theme),
+          );
+        }
+      }
+
+      for (const button of document.querySelectorAll('[data-theme-button]')) {
+        button.addEventListener('click', () => {
+          const theme = button.getAttribute('data-theme-button');
+          applyTheme(theme);
+          const url = new URL(window.location.href);
+          url.searchParams.set('theme', theme);
+          history.replaceState(null, '', url);
+        });
+      }
+
+      // Permette di aprire la demo direttamente in un tema: ?theme=dark
+      applyTheme(new URLSearchParams(window.location.search).get('theme') || 'light');
+    </script>
+  </body>
+</html>

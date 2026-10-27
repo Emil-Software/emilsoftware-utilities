@@ -1,7 +1,9 @@
 const fs = require("fs-extra");
 const path = require("path");
 
-const SOURCE_EXTENSIONS = new Set([".html", ".css"]);
+// I componenti in src/angular-components sono frameworkless: JS e CSS devono
+// arrivare in dist cosi' come sono, senza passare da tsc.
+const SOURCE_EXTENSIONS = new Set([".html", ".css", ".js", ".mjs"]);
 
 async function collectFiles(directory, baseDirectory = directory) {
     const entries = await fs.readdir(directory, { withFileTypes: true });
@@ -34,7 +36,7 @@ async function copyHtmlFiles() {
             await fs.copy(path.join(srcDir, file), path.join(distDir, file));
         }
     } catch (error) {
-        console.error("Errore nella copia dei file HTML/CSS:", error);
+        console.error("Errore nella copia degli asset HTML/CSS/JS:", error);
         process.exit(1);
     }
 }

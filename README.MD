@@ -62,6 +62,15 @@ git push origin main
 
 La documentazione operativa del modulo accessi si trova in [src/accessi-module/README.md](src/accessi-module/README.md).
 
+## Componenti Angular / Browser
+
+Componenti UI frameworkless (Web Components) pubblicati in
+`dist/angular-components/`. Non richiedono Angular, Ionic o React; supportano
+temi light/dark e i token Bootstrap 5.3.
+
+- [Catalogo componenti](src/angular-components/README.md)
+- [`aree-disponibili`](src/angular-components/aree-disponibili/README.md)
+
 ## Test e qualita
 
 | Comando | Descrizione |
