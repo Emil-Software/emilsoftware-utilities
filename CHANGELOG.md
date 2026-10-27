@@ -1,3 +1,10 @@
+# [2.0.0-dev.65](https://github.com/Emil-Software/emilsoftware-utilities/compare/v2.0.0-dev.64...v2.0.0-dev.65) (2026-10-27)
+
+
+### Features
+
+* share the areas model and add the default page card ([f8be84b](https://github.com/Emil-Software/emilsoftware-utilities/commit/f8be84b09373abb9684f3e054634c95010944643))
+
 # [2.0.0-dev.64](https://github.com/Emil-Software/emilsoftware-utilities/compare/v2.0.0-dev.63...v2.0.0-dev.64) (2026-10-27)
 
 
