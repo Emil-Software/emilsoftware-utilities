@@ -159,9 +159,10 @@ function ruleFor(appName, code) {
   return null;
 }
 
-function rowToEntry(row) {
+function rowToEntry(row, scopeCode) {
   const entry = {
     codiceMenu: normalizeCode(row.codiceMenu),
+    scopes: [scopeCode],
     descrizioneMenu: String(row.descrizioneMenu ?? '').trim(),
     codiceGruppo: normalizeCode(row.codiceGruppo),
     tipo: normalizeCode(row.tipo) || 'M',
@@ -232,7 +233,7 @@ for (const app of apps) {
   for (const code of codes) {
     const row = snapshot.menus.get(code);
     if (row) {
-      entries.push(rowToEntry(row));
+      entries.push(rowToEntry(row, app.scope.codice));
     } else {
       missing.push(code);
     }
@@ -258,6 +259,7 @@ for (const app of apps) {
 
     const entry = {
       codiceMenu: code,
+      scopes: [app.scope.codice],
       descrizioneMenu: explicit?.descrizione ?? humanize(meta?.key ?? code),
       codiceGruppo: group,
       tipo,
@@ -292,7 +294,18 @@ for (const app of apps) {
   }
   groups.sort((a, b) => a.ordineGruppo - b.ordineGruppo || a.codiceGruppo.localeCompare(b.codiceGruppo));
 
-  built.push({ app, catalog: { app: app.app, groups, menuTypes: [], menus: entries }, newCount: missing.length });
+  built.push({
+    app,
+    catalog: {
+      app: app.app,
+      modelsImport: app.modelsImport,
+      scopes: [app.scope],
+      groups,
+      menuTypes: [],
+      menus: entries,
+    },
+    newCount: missing.length,
+  });
 }
 
 // Un codice menu vive una volta sola nel DB: se piu' app lo dichiarano, tutte
@@ -308,7 +321,10 @@ for (const { app, catalog, newCount } of built) {
   const groupDefs = new Map(catalog.groups.map((group) => [group.codiceGruppo, group]));
   const menus = catalog.menus.map((menu) => {
     const source = canonical.get(menu.codiceMenu) ?? menu;
-    const copy = { ...source };
+    const copy = {
+      ...source,
+      scopes: [...new Set([...(source.scopes ?? []), ...(menu.scopes ?? [])])],
+    };
     if (!groupDefs.has(copy.codiceGruppo)) {
       const existing = snapshot.groups.get(copy.codiceGruppo);
       const created = (NEW_GROUPS[app.app] ?? []).find((group) => group.codiceGruppo === copy.codiceGruppo);

@@ -83,6 +83,14 @@ for (const app of apps) {
   const aligned = isAligned(diff);
   console.log(`${app.app}: catalogo ${feCount} voci - ${aligned ? 'allineato' : 'DA ALLINEARE'}`);
 
+  if (diff.missingScopes.length > 0) {
+    console.log(`  + scope mancanti nel DB (${diff.missingScopes.length}): ${diff.missingScopes.map((s) => s.codice).join(', ')}`);
+    problems += diff.missingScopes.length;
+  }
+  if (diff.scopeDrift.length > 0) {
+    console.log(`  ~ scope con nome diverso (${diff.scopeDrift.length}): ${diff.scopeDrift.map((s) => s.code).join(', ')}`);
+    problems += diff.scopeDrift.length;
+  }
   if (diff.missingTypes.length > 0) {
     console.log(`  + tipi mancanti nel DB (${diff.missingTypes.length}): ${diff.missingTypes.map((t) => t.codiceTipo).join(', ')}`);
     problems += diff.missingTypes.length;

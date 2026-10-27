@@ -8,7 +8,13 @@
       "catalog": "menus/menu-catalog.json",
       "generated": "src/app/menus/menu.catalog.ts",
       "modelsImport": "../api/accessi/model",
-      "sources": ["src/app/Service/menu.service.ts"]
+      "sources": [
+        "src/app/Service/menu.service.ts"
+      ],
+      "scope": {
+        "codice": "STEX",
+        "nome": "SteX"
+      }
     },
     {
       "app": "TintemiX",
@@ -16,7 +22,13 @@
       "catalog": "menus/menu-catalog.json",
       "generated": "src/app/menus/menu.catalog.ts",
       "modelsImport": "../api/accessi/model",
-      "sources": ["src/app/Service/menu.service.ts"]
+      "sources": [
+        "src/app/Service/menu.service.ts"
+      ],
+      "scope": {
+        "codice": "TINTEMIX",
+        "nome": "TintemiX"
+      }
     },
     {
       "app": "Magaz-Tint",
@@ -24,7 +36,13 @@
       "catalog": "menus/menu-catalog.json",
       "generated": "src/app/menus/menu.catalog.ts",
       "modelsImport": "../api/accessi/model",
-      "sources": ["src/app/Service/menu.service.ts"]
+      "sources": [
+        "src/app/Service/menu.service.ts"
+      ],
+      "scope": {
+        "codice": "MAGAZTINT",
+        "nome": "Magaz-Tint"
+      }
     },
     {
       "app": "EsGestX",
@@ -32,7 +50,13 @@
       "catalog": "menus/menu-catalog.json",
       "generated": "src/app/menus/menu.catalog.ts",
       "modelsImport": "../Service/orval-esu/models",
-      "sources": ["src/app/Service/menu.service.ts"]
+      "sources": [
+        "src/app/Service/menu.service.ts"
+      ],
+      "scope": {
+        "codice": "ESGESTX",
+        "nome": "EsGestX"
+      }
     },
     {
       "app": "StaffX",
@@ -40,7 +64,13 @@
       "catalog": "menus/menu-catalog.json",
       "generated": "src/app/menus/menu.catalog.ts",
       "modelsImport": "../api/accessi/model",
-      "sources": ["src/app/shared/app-menu.ts"]
+      "sources": [
+        "src/app/shared/app-menu.ts"
+      ],
+      "scope": {
+        "codice": "STAFFX",
+        "nome": "StaffX"
+      }
     },
     {
       "app": "SteriliX",
@@ -50,7 +80,11 @@
       "modelsImport": "../Service/accessi/generated/models",
       "sources": [
         "src/app/Service/accessi/menu-codes.ts"
-      ]
+      ],
+      "scope": {
+        "codice": "STERILIX",
+        "nome": "SteriliX"
+      }
     }
   ]
 }

@@ -96,6 +96,18 @@ export function validateCatalog(catalog, appName) {
   const types = Array.isArray(catalog.menuTypes) ? catalog.menuTypes : [];
   const menus = Array.isArray(catalog.menus) ? catalog.menus : [];
 
+  const scopeCodes = new Set();
+  for (const scope of Array.isArray(catalog.scopes) ? catalog.scopes : []) {
+    const code = normalizeCode(scope.codice);
+    if (!IDENTIFIER_RE.test(code) || code.length > 20) {
+      errors.push(`scope "${scope.codice}": codice non valido`);
+    }
+    if (scopeCodes.has(code)) errors.push(`scope duplicato: ${code}`);
+    scopeCodes.add(code);
+    if (!String(scope.nome ?? '').trim()) errors.push(`scope ${code}: nome mancante`);
+  }
+  if (scopeCodes.size === 0) errors.push('catalog.scopes mancante');
+
   const groupCodes = new Set();
   for (const group of groups) {
     const code = normalizeCode(group.codiceGruppo);
@@ -151,6 +163,11 @@ export function validateCatalog(catalog, appName) {
     }
     if (menu.note && menu.note.length > LIMITS.note) {
       errors.push(`menu ${code}: note oltre ${LIMITS.note} caratteri`);
+    }
+    const menuScopes = Array.isArray(menu.scopes) ? menu.scopes.map(normalizeCode) : [];
+    if (menuScopes.length === 0) errors.push(`menu ${code}: scopes mancanti`);
+    for (const scope of menuScopes) {
+      if (!scopeCodes.has(scope)) errors.push(`menu ${code}: scope "${scope}" non dichiarato`);
     }
   }
 
@@ -260,10 +277,11 @@ export async function connect({ baseUrl, email, password }) {
 
 /** Fotografia del catalogo Accessi: menu, gruppi e tipi. */
 export async function fetchSnapshot(client) {
-  const [menusResponse, groupsResponse, typesResponse] = await Promise.all([
+  const [menusResponse, groupsResponse, typesResponse, scopesResponse] = await Promise.all([
     client.getMenus(),
     client.getGroupsWithMenus({ includeDisabled: true }),
     client.getMenuTypes(),
+    client.getScopes(),
   ]);
 
   const menus = new Map();
@@ -278,7 +296,11 @@ export async function fetchSnapshot(client) {
   for (const type of typesResponse.data.Result ?? []) {
     types.set(normalizeCode(type.codiceTipo), type);
   }
-  return { menus, groups, types };
+  const scopes = new Map();
+  for (const scope of scopesResponse.data.Result ?? []) {
+    scopes.set(normalizeCode(scope.codice), scope);
+  }
+  return { menus, groups, types, scopes };
 }
 
 function text(value) {
@@ -339,6 +361,20 @@ export function diffType(desired, actual) {
 
 /** Confronto completo catalogo/DB per una singola app. */
 export function diffCatalog(catalog, snapshot) {
+  const missingScopes = [];
+  const scopeDrift = [];
+  for (const scope of catalog.scopes ?? []) {
+    const code = normalizeCode(scope.codice);
+    const actual = snapshot.scopes.get(code);
+    if (!actual) {
+      missingScopes.push(scope);
+      continue;
+    }
+    if (text(actual.nome) !== text(scope.nome)) {
+      scopeDrift.push({ code, changes: { nome: scope.nome }, actual });
+    }
+  }
+
   const missingTypes = [];
   const typeDrift = [];
   for (const type of catalog.menuTypes ?? []) {
@@ -392,6 +428,8 @@ export function diffCatalog(catalog, snapshot) {
   }
 
   return {
+    missingScopes,
+    scopeDrift,
     missingTypes,
     typeDrift,
     missingGroups,
@@ -404,6 +442,8 @@ export function diffCatalog(catalog, snapshot) {
 
 export function isAligned(diff) {
   return (
+    diff.missingScopes.length === 0 &&
+    diff.scopeDrift.length === 0 &&
     diff.missingTypes.length === 0 &&
     diff.typeDrift.length === 0 &&
     diff.missingGroups.length === 0 &&
@@ -433,9 +473,40 @@ function menuPayload(menu, groupCode) {
  * Applica il catalogo al DB: crea cio' che manca e aggiorna solo i campi
  * dichiarati che differiscono. Non elimina nulla (nessun --prune implicito).
  */
+async function syncMenuScopes(client, code, desiredScopes, snapshot, actions, dryRun) {
+  if (desiredScopes.length === 0) return;
+  const response = await client.getMenuScopes(code);
+  const existing = new Set((response?.data?.Result ?? []).map(normalizeCode));
+  const missing = desiredScopes.filter((scope) => !existing.has(scope));
+  if (missing.length === 0) return;
+  const merged = [...existing, ...missing];
+  actions.push({ kind: 'update', entity: 'menu-scopes', code, changes: { scopes: merged } });
+  if (dryRun) return;
+  await client.setMenuScopes(code, { scopes: merged });
+}
+
 export async function applyCatalog(client, catalog, snapshot, options = {}) {
   const dryRun = options.dryRun === true;
   const actions = [];
+  for (const scope of catalog.scopes ?? []) {
+    const code = normalizeCode(scope.codice);
+    const actual = snapshot.scopes.get(code);
+    if (!actual) {
+      actions.push({ kind: 'create', entity: 'scope', code });
+      if (!dryRun) {
+        await client.createScope({ codice: code, nome: scope.nome });
+        snapshot.scopes.set(code, { codice: code, nome: scope.nome });
+      }
+      continue;
+    }
+    if (text(actual.nome) !== text(scope.nome)) {
+      actions.push({ kind: 'update', entity: 'scope', code, changes: { nome: scope.nome } });
+      if (!dryRun) {
+        await client.updateScope(code, { nome: scope.nome });
+        snapshot.scopes.set(code, { ...actual, nome: scope.nome });
+      }
+    }
+  }
   const groupCodes = new Map(
     (catalog.groups ?? []).map((group) => [normalizeCode(group.codiceGruppo), normalizeCode(group.codiceGruppo)]),
   );
@@ -525,10 +596,12 @@ export async function applyCatalog(client, catalog, snapshot, options = {}) {
         delete payload.pagina;
       }
       actions.push({ kind: 'create', entity: 'menu', code });
-      if (dryRun) continue;
-      await client.createMenu(payload);
-      snapshot.menus.set(code, payload);
-      if (page) pageOwners.set(page, code);
+      if (!dryRun) {
+        await client.createMenu(payload);
+        snapshot.menus.set(code, payload);
+        if (page) pageOwners.set(page, code);
+      }
+      await syncMenuScopes(client, code, (menu.scopes ?? []).map(normalizeCode), snapshot, actions, dryRun);
       continue;
     }
     const changes = diffMenu(menu, actual);
@@ -551,6 +624,7 @@ export async function applyCatalog(client, catalog, snapshot, options = {}) {
       snapshot.menus.set(code, { ...actual, ...changes });
       if (changes.pagina) pageOwners.set(normalizeCode(changes.pagina), code);
     }
+    await syncMenuScopes(client, code, (menu.scopes ?? []).map(normalizeCode), snapshot, actions, dryRun);
   }
 
   return actions;
@@ -595,7 +669,22 @@ export function buildGeneratedTs(app, catalog) {
   lines.push(' * Le voci sono tipizzate con i modelli Orval di Accessi, quindi `MENU.FOO`');
   lines.push(' * espone direttamente il `MenuEntity` salvato nel database.');
   lines.push(' */');
-  lines.push(`import type { GroupWithMenusEntity, MenuEntity, MenuTypeEntity } from '${app.modelsImport}';`);
+  lines.push(`import type { GroupWithMenusEntity, MenuEntity, MenuTypeEntity, ScopeEntity } from '${app.modelsImport}';`);
+  lines.push('');
+  lines.push('/** Scope applicativi dichiarati da questa app. */');
+  lines.push('export const SCOPES = [');
+  for (const scope of catalog.scopes ?? []) {
+    lines.push('  {');
+    lines.push(`    codice: '${escapeTs(normalizeCode(scope.codice))}',`);
+    lines.push(`    nome: '${escapeTs(scope.nome)}',`);
+    lines.push('  },');
+  }
+  lines.push('] as const satisfies readonly ScopeEntity[];');
+  lines.push('');
+  lines.push("export type ScopeCode = (typeof SCOPES)[number]['codice'];");
+  lines.push('');
+  lines.push("/** Scope predefinito dell'applicazione (primo dichiarato). */");
+  lines.push('export const APP_SCOPE: ScopeCode = SCOPES[0].codice;');
   lines.push('');
   lines.push('/** Gruppi menu dell\'applicazione (senza la lista dei menu, che e in MENU). */');
   lines.push('export const MENU_GROUPS = [');
@@ -650,6 +739,14 @@ export function buildGeneratedTs(app, catalog) {
   lines.push('');
   lines.push('/** Accesso per codice runtime (es. codici che arrivano dal DB). */');
   lines.push('export const MENU_BY_CODE: Readonly<Record<string, MenuEntity>> = MENU;');
+  lines.push('');
+  lines.push("/** Scope di ogni menu: usato dal sync per popolare MENU_SCOPES. */");
+  lines.push('export const MENU_SCOPES = {');
+  for (const menu of menus) {
+    const scopes = (menu.scopes ?? []).map((scope) => `'${escapeTs(normalizeCode(scope))}'`).join(', ');
+    lines.push(`  ${menu.codiceMenu}: [${scopes}],`);
+  }
+  lines.push('} as const satisfies Record<MenuCode, readonly ScopeCode[]>;');
   lines.push('');
 
   return `${lines.join('\n')}\n`;

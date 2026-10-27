@@ -14,13 +14,13 @@ export interface ScopeSeed {
 }
 
 export const SCOPE_SEED: readonly ScopeSeed[] = [
+  { code: 'CENTROCONTROLLO', name: 'CentroControllo' },
   { code: 'ESGESTX', name: 'EsGestX' },
-  { code: 'TINTEMIX', name: 'TintemiX' },
   { code: 'MAGAZTINT', name: 'Magaz-Tint' },
-  { code: 'STEX', name: 'SteX' },
   { code: 'STAFFX', name: 'StaffX' },
   { code: 'STERILIX', name: 'SteriliX' },
-  { code: 'CENTROCONTROLLO', name: 'CentroControllo' },
+  { code: 'STEX', name: 'SteX' },
+  { code: 'TINTEMIX', name: 'TintemiX' },
 ];
 
 /** menu -> scope applicativi */

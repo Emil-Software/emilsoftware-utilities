@@ -50,6 +50,7 @@ inventata, nessun SQL diretto.
 ```json
 {
   "app": "SteX",
+  "scopes": [{ "codice": "STEX", "nome": "SteX" }],
   "groups": [
     {
       "codiceGruppo": "U",
@@ -63,6 +64,7 @@ inventata, nessun SQL diretto.
   "menus": [
     {
       "codiceMenu": "STEX_ARRIVI_CQ",
+      "scopes": ["STEX"],
       "descrizioneMenu": "SteX - Arrivi CQ",
       "codiceGruppo": "U",
       "tipo": "M",
@@ -99,6 +101,18 @@ MENU.STEX_ARRIVI_CQ.pagina;     // 'arrivi'
 `MENU` è tipizzato con `MenuEntity` di Orval: i campi sono gli stessi che
 ritorna il backend. `MENU_CODES` elenca i codici disponibili, `MENU_BY_CODE`
 serve quando il codice arriva a runtime (es. da un grant).
+
+Lo stesso file genera gli scope dell'app:
+
+```ts
+export const SCOPES = [{ codice: 'STEX', nome: 'SteX' }] as const;
+export const APP_SCOPE: ScopeCode = SCOPES[0].codice;
+export const MENU_SCOPES = { STEX_ARRIVI_CQ: ['STEX'], ... } as const;
+```
+
+Gli scope sono **definiti solo** nel catalogo: non esistono costanti duplicate nel
+codice. `sync` crea/aggiorna gli scope e aggiunge le associazioni menu/scope in
+modo add-only: gli scope di altre app sullo stesso menu non vengono mai rimossi.
 
 I `menu.service.ts` delle app derivano le costanti storiche dal catalogo:
 
