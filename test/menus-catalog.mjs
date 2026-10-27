@@ -13,18 +13,23 @@ import {
   humanize,
 } from '../scripts/menus/lib.mjs';
 
-test('cataloghi menu: ogni app ha un catalogo valido', () => {
-  for (const app of loadRegistry().apps) {
+// I cataloghi vivono nei repository delle app: in una clone isolata di
+// emilsoftware-utilities non ci sono e i test sul catalogo vengono saltati.
+const apps = loadRegistry().apps.filter((app) => fs.existsSync(appPaths(app).catalog));
+
+test('cataloghi menu: ogni app ha un catalogo valido', { skip: apps.length === 0 }, () => {
+  for (const app of apps) {
     const catalog = readCatalog(app);
     assert.deepEqual(validateCatalog(catalog, app.app), [], `${app.app} non valido`);
     assert.ok(catalog.menus.length > 0, `${app.app} senza menu`);
   }
 });
 
-test('cataloghi menu: i file TypeScript generati sono aggiornati', () => {
-  for (const app of loadRegistry().apps) {
+test('cataloghi menu: i file TypeScript generati sono aggiornati', { skip: apps.length === 0 }, () => {
+  for (const app of apps) {
     const catalog = readCatalog(app);
     const expected = buildGeneratedTs(app, catalog);
+    assert.ok(fs.existsSync(appPaths(app).generated), `${app.app}: file generato assente`);
     const current = fs.readFileSync(appPaths(app).generated, 'utf8');
     assert.equal(current, expected, `${app.app}: esegui npm run menus:generate`);
   }
