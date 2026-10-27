@@ -319,10 +319,10 @@ export class AuthService {
     }
   }
 
-  public async verifyTwoFactor(challengeId: string, code: string): Promise<LoginResult> {
+  public async verifyTwoFactor(challengeId: string, code: string, scope?: string): Promise<LoginResult> {
     const proof = await this.twoFactorService.consume(challengeId, code);
     await this.validateTwoFactorProof(proof);
-    const result = await this.getLoginResultForUser(proof.codiceUtente);
+    const result = await this.getLoginResultForUser(proof.codiceUtente, scope);
     result.token = this.createAccessiToken(result.utente, [proof.mode, 'otp']);
     await Orm.execute(this.accessiOptions.databaseOptions, 'UPDATE UTENTI SET DATLASTLOGIN = CURRENT_TIMESTAMP WHERE CODUTE = ?', [proof.codiceUtente]);
     if (proof.mode === 'federated') {

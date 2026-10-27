@@ -16,4 +16,6 @@ export interface VerifyTwoFactorRequest {
    * @pattern ^\d{6}$
    */
   code: string;
+  /** Scope applicativi (CSV) con cui filtrare i grant restituiti. Assente = tutti. */
+  scope?: string;
 }

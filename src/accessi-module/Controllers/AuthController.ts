@@ -217,7 +217,7 @@ export class AuthController {
     try {
       const limit = checkPublicAuthRateLimit(this.options, 'twoFactorVerify', request, [body.challengeId]);
       if (!limit.allowed) return sendPublicAuthRateLimitExceeded(res, limit.retryAfterSeconds);
-      return RestUtilities.sendBaseResponse(res, await this.authService.verifyTwoFactor(body.challengeId, body.code));
+      return RestUtilities.sendBaseResponse(res, await this.authService.verifyTwoFactor(body.challengeId, body.code, body.scope));
     } catch (error) {
       return RestUtilities.sendErrorMessage(res, error, AuthController.name, error instanceof HttpException ? error.getStatus() : 500);
     }

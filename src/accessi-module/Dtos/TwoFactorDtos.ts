@@ -1,5 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsString, Matches } from 'class-validator';
+import { IsOptional, IsString, Matches } from 'class-validator';
 
 export class TwoFactorChallengeDto {
   @ApiProperty({ enum: [true], description: 'Il login non e completo: nessun JWT e stato emesso.' })
@@ -30,4 +30,14 @@ export class VerifyTwoFactorRequest extends ResendTwoFactorRequest {
   @IsString()
   @Matches(/^\d{6}$/, { message: 'Il codice deve contenere 6 cifre.' })
   code!: string;
+
+  @ApiProperty({
+    required: false,
+    description: 'Scope applicativi (CSV) con cui filtrare i grant restituiti. Assente = tutti.',
+    example: 'STEX',
+  })
+  @IsOptional()
+  @IsString()
+  @Matches(/^[A-Za-z0-9_,]*$/, { message: 'Scope non valido: usare codici separati da virgola.' })
+  scope?: string;
 }
