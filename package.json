@@ -21,8 +21,8 @@
     "typecheck": "tsc --noEmit",
     "lint": "node scripts/lint.cjs",
     "test": "npm run typecheck && npm run lint && npm run test:unit",
-    "test:unit": "node --test test/accessi-regressions.cjs test/password-reset-regressions.cjs test/two-factor.cjs test/accessi-schema.cjs test/utilities-regressions.cjs test/service-token-regressions.cjs test/accessi-email-config.cjs test/accessi-catalog-scripts.cjs",
-    "test:coverage": "node --experimental-test-coverage --test-coverage-lines=50 --test-coverage-functions=60 --test-coverage-branches=60 --test test/accessi-regressions.cjs test/password-reset-regressions.cjs test/two-factor.cjs test/accessi-schema.cjs test/utilities-regressions.cjs test/service-token-regressions.cjs test/accessi-email-config.cjs test/accessi-catalog-scripts.cjs",
+    "test:unit": "node --test test/menus-catalog.mjs test/accessi-regressions.cjs test/password-reset-regressions.cjs test/two-factor.cjs test/accessi-schema.cjs test/utilities-regressions.cjs test/service-token-regressions.cjs test/accessi-email-config.cjs test/accessi-catalog-scripts.cjs",
+    "test:coverage": "node --experimental-test-coverage --test-coverage-lines=50 --test-coverage-functions=60 --test-coverage-branches=60 --test test/menus-catalog.mjs test/accessi-regressions.cjs test/password-reset-regressions.cjs test/two-factor.cjs test/accessi-schema.cjs test/utilities-regressions.cjs test/service-token-regressions.cjs test/accessi-email-config.cjs test/accessi-catalog-scripts.cjs",
     "test:accessi": "npm run test:unit",
     "test:all": "npm test && npm run test:integration",
     "test:integration": "node test/integration/run-firebird.cjs 5",
@@ -33,7 +33,12 @@
     "accessi:seed-admin": "node scripts/seed-accessi-admin.cjs",
     "accessi:console": "node scripts/run-accessi-console.cjs",
     "test:accessi-schema": "node --test test/accessi-schema.cjs",
-    "db:check:accessi": "ts-node src/accessi-module/database-updates/runAccessiDbUpdate.ts --check"
+    "db:check:accessi": "ts-node src/accessi-module/database-updates/runAccessiDbUpdate.ts --check",
+    "menus:init": "node scripts/menus/init.mjs",
+    "menus:verify": "node scripts/menus/verify.mjs",
+    "menus:generate": "node scripts/menus/generate.mjs",
+    "menus:check": "node scripts/menus/generate.mjs --check",
+    "menus:bootstrap": "node scripts/menus/bootstrap.mjs"
   },
   "publishConfig": {
     "access": "public"

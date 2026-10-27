@@ -1,0 +1,56 @@
+{
+  "$comment": "Registro delle app Angular e dei loro cataloghi menu. I percorsi sono relativi alla root di emilsoftware-utilities.",
+  "defaultBaseUrl": "http://localhost:3011",
+  "apps": [
+    {
+      "app": "SteX",
+      "folder": "../SteX",
+      "catalog": "menus/menu-catalog.json",
+      "generated": "src/app/menus/menu.catalog.ts",
+      "modelsImport": "../api/accessi/model",
+      "sources": ["src/app/Service/menu.service.ts"]
+    },
+    {
+      "app": "TintemiX",
+      "folder": "../TintemiX",
+      "catalog": "menus/menu-catalog.json",
+      "generated": "src/app/menus/menu.catalog.ts",
+      "modelsImport": "../api/accessi/model",
+      "sources": ["src/app/Service/menu.service.ts"]
+    },
+    {
+      "app": "Magaz-Tint",
+      "folder": "../Magaz-Tint",
+      "catalog": "menus/menu-catalog.json",
+      "generated": "src/app/menus/menu.catalog.ts",
+      "modelsImport": "../api/accessi/model",
+      "sources": ["src/app/Service/menu.service.ts"]
+    },
+    {
+      "app": "EsGestX",
+      "folder": "../EsGestX",
+      "catalog": "menus/menu-catalog.json",
+      "generated": "src/app/menus/menu.catalog.ts",
+      "modelsImport": "../Service/orval-esu/models",
+      "sources": ["src/app/Service/menu.service.ts"]
+    },
+    {
+      "app": "StaffX",
+      "folder": "../StaffX",
+      "catalog": "menus/menu-catalog.json",
+      "generated": "src/app/menus/menu.catalog.ts",
+      "modelsImport": "../api/accessi/model",
+      "sources": ["src/app/shared/app-menu.ts"]
+    },
+    {
+      "app": "SteriliX",
+      "folder": "../SteriliX/frontend",
+      "catalog": "menus/menu-catalog.json",
+      "generated": "src/app/menus/menu.catalog.ts",
+      "modelsImport": "../Service/accessi/generated/models",
+      "sources": [
+        "src/app/Service/accessi/menu-codes.ts"
+      ]
+    }
+  ]
+}
