@@ -20,6 +20,7 @@ export * from "./Permission";
 export * from "./PublicRegisterRequest";
 export * from "./Role";
 export * from "./SchemaDtos";
+export * from "./ScopeDtos";
 export * from "./SendResetPasswordEmailRequest";
 export * from "./StatoRegistrazione";
 export * from "./TipoAbilitazione";

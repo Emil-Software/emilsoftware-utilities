@@ -4,7 +4,7 @@ export interface SchemaTable {
   primaryKey: string[];
 }
 
-export const ACCESSI_SCHEMA_VERSION = '1.11.1';
+export const ACCESSI_SCHEMA_VERSION = '1.12.0';
 export const ACCESSI_VERSION_KEY = 'AccessiVersion';
 
 /**
@@ -62,6 +62,12 @@ export const accessiTables: Record<string, SchemaTable> = {
     CODMNU: 'VARCHAR(20) NOT NULL', DESMNU: 'VARCHAR(100)', CODGRP: 'VARCHAR(1) NOT NULL', FLGENABLED: 'INTEGER DEFAULT 0',
     ICON: 'VARCHAR(50)', ORDINE: 'SMALLINT', CODTIP: 'VARCHAR(1)', PAGINA: 'VARCHAR(50)', RIFMENU: 'VARCHAR(20)', NOTE: 'VARCHAR(1000)',
   }, primaryKey: ['CODMNU'] },
+  SCOPES: { columns: {
+    CODICE: 'VARCHAR(20) NOT NULL', NOME: 'VARCHAR(100) NOT NULL',
+  }, primaryKey: ['CODICE'] },
+  MENU_SCOPES: { columns: {
+    CODICE_MENU: 'VARCHAR(20) NOT NULL', CODICE_SCOPE: 'VARCHAR(20) NOT NULL',
+  }, primaryKey: ['CODICE_MENU', 'CODICE_SCOPE'] },
   ABILITAZIONI: { columns: { CODUTE: 'INTEGER NOT NULL', CODMNU: 'VARCHAR(20) NOT NULL', TIPABI: 'SMALLINT DEFAULT 0' }, primaryKey: ['CODUTE', 'CODMNU'] },
   RUOLI_MNU: { columns: { CODRUO: 'INTEGER NOT NULL', CODMNU: 'VARCHAR(20) NOT NULL', TIPABI: 'SMALLINT' }, primaryKey: ['CODRUO', 'CODMNU'] },
   UTENTI_RUOLI: { columns: { CODUTE: 'INTEGER NOT NULL', CODRUO: 'INTEGER NOT NULL' }, primaryKey: ['CODUTE', 'CODRUO'] },
@@ -114,6 +120,8 @@ export const accessiForeignKeys = [
   { name: 'FK_UTEIDEXT_UTENTE', table: 'UTENTI_IDENTITA_EXT', column: 'CODUTE', target: 'UTENTI', targetColumn: 'CODUTE', cascade: true },
   { name: 'FK_UTEIDEXT_PROVIDER', table: 'UTENTI_IDENTITA_EXT', column: 'PROVIDER', target: 'SSO_PROVIDER', targetColumn: 'PROVIDER' },
   { name: 'FK_ACCESSI_2FA_USER', table: 'ACCESSI_2FA', column: 'CODUTE', target: 'UTENTI', targetColumn: 'CODUTE', cascade: true },
+  { name: 'FK_MENU_SCOPES_MENU', table: 'MENU_SCOPES', column: 'CODICE_MENU', target: 'MENU', targetColumn: 'CODMNU', cascade: true },
+  { name: 'FK_MENU_SCOPES_SCOPE', table: 'MENU_SCOPES', column: 'CODICE_SCOPE', target: 'SCOPES', targetColumn: 'CODICE', cascade: true },
 ];
 
 export const accessiIndexes = [
@@ -121,11 +129,14 @@ export const accessiIndexes = [
   { name: 'IDX_UTEIDEXT_PROVIDER', table: 'UTENTI_IDENTITA_EXT', columns: ['PROVIDER'] },
   { name: 'IDX_ACCESSI_2FA_USER', table: 'ACCESSI_2FA', columns: ['CODUTE', 'CREATED_AT'] },
   { name: 'IDX_ACCESSI_2FA_EXP', table: 'ACCESSI_2FA', columns: ['EXPIRES_AT'] },
+  { name: 'IDX_MENU_SCOPES_SCOPE', table: 'MENU_SCOPES', columns: ['CODICE_SCOPE', 'CODICE_MENU'] },
 ];
 
 export const accessiChecks = [
   { name: 'CK_SSO_PROVIDER_ATTIVO', table: 'SSO_PROVIDER', expression: 'FLGATTIVO IN (0, 1)' },
   { name: 'CK_UTEIDEXT_ATTIVO', table: 'UTENTI_IDENTITA_EXT', expression: 'FLGATTIVO IN (0, 1)' },
+  { name: 'CK_SCOPES_CODICE', table: 'SCOPES', expression: 'CHAR_LENGTH(TRIM(CODICE)) > 0' },
+  { name: 'CK_SCOPES_NOME', table: 'SCOPES', expression: 'CHAR_LENGTH(TRIM(NOME)) > 0' },
 ];
 
 export const accessiTriggers = [

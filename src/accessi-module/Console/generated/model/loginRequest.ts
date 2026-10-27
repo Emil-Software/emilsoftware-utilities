@@ -10,4 +10,6 @@ export interface LoginRequest {
   email: string;
   /** Password: omettere soltanto per utenti con accesso tramite solo codice abilitato. */
   password?: string;
+  /** Scope applicativi separati da virgola (es. STEX,TINTEMIX). Assente = nessun filtro. */
+  scope?: string;
 }

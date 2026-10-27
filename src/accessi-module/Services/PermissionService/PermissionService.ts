@@ -16,6 +16,11 @@ import {
     UpdateMenuRequest,
     UpdateMenuTypeRequest,
 } from "../../Dtos/CatalogDtos";
+import {
+    CreateScopeRequest,
+    ScopeEntity,
+    UpdateScopeRequest,
+} from "../../Dtos/ScopeDtos";
 import { BadRequestException, Inject, Injectable } from "@nestjs/common";
 
 /** Struttura storica menu/gruppi accettata dall'API legacy `addAbilitazioni`. */
@@ -46,7 +51,8 @@ export class PermissionService {
         );
     }
 
-    private async getAllActiveMenusAsGrants(): Promise<AbilitazioneMenu[]> {
+    private async getAllActiveMenusAsGrants(scopeCodes: string[] = []): Promise<AbilitazioneMenu[]> {
+        const scopeFilter = this.scopeFilter('M', scopeCodes);
         const query = `
                 SELECT
                     M.CODMNU AS codice_menu,
@@ -60,14 +66,57 @@ export class PermissionService {
                     M.NOTE AS note
                 FROM MENU M
                 LEFT JOIN MENU_GRP G ON G.CODGRP = M.CODGRP
-                WHERE M.FLGENABLED = 1 AND COALESCE(G.FLGENABLED, 1) = 1
+                WHERE M.FLGENABLED = 1 AND COALESCE(G.FLGENABLED, 1) = 1${scopeFilter.sql}
             `;
 
-        return await Orm.query(this.accessiOptions.databaseOptions, query, [])
+        return await Orm.query(this.accessiOptions.databaseOptions, query, scopeFilter.params)
             .then(results => results.map(RestUtilities.convertKeysToCamelCase)) as AbilitazioneMenu[];
     }
 
-    private async getUserDirectPermissions(codiceUtente: number): Promise<AbilitazioneMenu[]> {
+    /**
+     * Normalizza e valida il filtro `scope` (CSV). Restituisce i codici in
+     * maiuscolo; lista vuota significa "nessun filtro" (comportamento storico).
+     */
+    private async resolveScopeCodes(scope?: string | null): Promise<string[]> {
+        const codes = Array.from(
+            new Set(
+                String(scope ?? '')
+                    .split(',')
+                    .map((value) => value.trim().toUpperCase())
+                    .filter((value) => value.length > 0),
+            ),
+        );
+        if (codes.length === 0) {
+            return [];
+        }
+        const placeholders = codes.map(() => '?').join(', ');
+        const rows = (await Orm.query(
+            this.accessiOptions.databaseOptions,
+            `SELECT CODICE FROM SCOPES WHERE CODICE IN (${placeholders})`,
+            codes,
+        )) as Array<Record<string, unknown>>;
+        const known = new Set(rows.map((row) => String(row.CODICE ?? row.codice ?? '').trim().toUpperCase()));
+        const missing = codes.filter((code) => !known.has(code));
+        if (missing.length > 0) {
+            throw new BadRequestException(`Scope non validi: ${missing.join(', ')}.`);
+        }
+        return codes;
+    }
+
+    /** Clausola SQL EXISTS per filtrare i menu sugli scope richiesti. */
+    private scopeFilter(alias: string, scopeCodes: string[]): { sql: string; params: string[] } {
+        if (scopeCodes.length === 0) {
+            return { sql: '', params: [] };
+        }
+        const placeholders = scopeCodes.map(() => '?').join(', ');
+        return {
+            sql: ` AND EXISTS (SELECT 1 FROM MENU_SCOPES MS WHERE MS.CODICE_MENU = ${alias}.CODMNU AND MS.CODICE_SCOPE IN (${placeholders}))`,
+            params: [...scopeCodes],
+        };
+    }
+
+    private async getUserDirectPermissions(codiceUtente: number, scopeCodes: string[] = []): Promise<AbilitazioneMenu[]> {
+        const scopeFilter = this.scopeFilter('M', scopeCodes);
         const queryAbilitazioni = `
                 SELECT
                     A.CODMNU AS codice_menu,
@@ -82,14 +131,15 @@ export class PermissionService {
                 FROM ABILITAZIONI A
                 INNER JOIN MENU M ON A.CODMNU = M.CODMNU
                 LEFT JOIN MENU_GRP G ON G.CODGRP = M.CODGRP
-                WHERE A.CODUTE = ? AND M.FLGENABLED = 1 AND COALESCE(G.FLGENABLED, 1) = 1
+                WHERE A.CODUTE = ? AND M.FLGENABLED = 1 AND COALESCE(G.FLGENABLED, 1) = 1${scopeFilter.sql}
             `;
 
-        return await Orm.query(this.accessiOptions.databaseOptions, queryAbilitazioni, [codiceUtente])
+        return await Orm.query(this.accessiOptions.databaseOptions, queryAbilitazioni, [codiceUtente, ...scopeFilter.params])
             .then(results => results.map(RestUtilities.convertKeysToCamelCase)) as AbilitazioneMenu[];
     }
 
-    private async getUserRoles(codiceUtente: number): Promise<Role[]> {
+    private async getUserRoles(codiceUtente: number, scopeCodes: string[] = []): Promise<Role[]> {
+        const scopeFilter = this.scopeFilter('M', scopeCodes);
         const queryRuoli = `
                 SELECT
                     R.CODRUO AS codice_ruolo,
@@ -106,9 +156,9 @@ export class PermissionService {
                     AND M.FLGENABLED = 1
                 LEFT JOIN MENU_GRP G
                     ON G.CODGRP = M.CODGRP
-                WHERE RU.CODUTE = ?
+                WHERE RU.CODUTE = ?${scopeFilter.sql}
             `;
-        const ruoliResult = (await Orm.query(this.accessiOptions.databaseOptions, queryRuoli, [codiceUtente]))
+        const ruoliResult = (await Orm.query(this.accessiOptions.databaseOptions, queryRuoli, [codiceUtente, ...scopeFilter.params]))
             .map(RestUtilities.convertKeysToCamelCase) as Array<Record<string, unknown>>;
 
         return this.assembleRoles(ruoliResult);
@@ -477,7 +527,9 @@ export class PermissionService {
 
 
     /** Restituisce solo menu abilitati; per il catalogo amministrativo usare `getGroupsWithMenus(true)`. */
-    public async getMenus(): Promise<MenuEntity[]> {
+    public async getMenus(scope?: string): Promise<MenuEntity[]> {
+        const scopeCodes = await this.resolveScopeCodes(scope);
+        const scopeFilter = this.scopeFilter('M', scopeCodes);
         const query = `
                 SELECT
                     M.CODMNU AS codice_menu,
@@ -492,11 +544,11 @@ export class PermissionService {
                     M.ORDINE AS ordine_menu
                 FROM MENU M
                 LEFT JOIN MENU_GRP G ON M.CODGRP = G.CODGRP
-                WHERE M.FLGENABLED = 1 AND COALESCE(G.FLGENABLED, 1) = 1
+                WHERE M.FLGENABLED = 1 AND COALESCE(G.FLGENABLED, 1) = 1${scopeFilter.sql}
                 ORDER BY G.CODGRP, M.CODMNU
             `;
 
-        const result = await Orm.query(this.accessiOptions.databaseOptions, query, []);
+        const result = await Orm.query(this.accessiOptions.databaseOptions, query, scopeFilter.params);
         return result.map(RestUtilities.convertKeysToCamelCase) as unknown as MenuEntity[];
     }
 
@@ -505,10 +557,15 @@ export class PermissionService {
      * Restituisce il catalogo ordinato per gruppo e menu. `includeDisabled` e riservato a console e amministrazione:
      * i flussi applicativi di autorizzazione devono usare il comportamento predefinito, che nasconde voci disabilitate.
      */
-    public async getGroupsWithMenus(includeDisabled = false): Promise<GroupWithMenusEntity[]> {
-        const filtersClause = includeDisabled
+    public async getGroupsWithMenus(includeDisabled = false, scope?: string): Promise<GroupWithMenusEntity[]> {
+        const scopeCodes = await this.resolveScopeCodes(scope);
+        const scopeFilter = this.scopeFilter('M', scopeCodes);
+        let filtersClause = includeDisabled
             ? ''
             : 'WHERE M.FLGENABLED = 1 AND (G.FLGENABLED IS NULL OR G.FLGENABLED = 1)';
+        if (scopeFilter.sql) {
+            filtersClause = filtersClause ? `${filtersClause}${scopeFilter.sql}` : `WHERE 1 = 1${scopeFilter.sql}`;
+        }
 
         const query = `
                 SELECT
@@ -530,7 +587,7 @@ export class PermissionService {
                 ORDER BY G.CODGRP, M.CODMNU
             `;
 
-        const result = await Orm.query(this.accessiOptions.databaseOptions, query, []);
+        const result = await Orm.query(this.accessiOptions.databaseOptions, query, scopeFilter.params);
 
         const groupMap = new Map<
             string,
@@ -812,11 +869,12 @@ export class PermissionService {
      * Calcola l'autorizzazione effettiva: grant diretti e grant dei ruoli sono uniti per codice menu
      * prendendo il livello massimo. I superutenti ricevono tutti i menu attivi.
      */
-    public async getUserRolesAndGrants(codiceUtente: number): Promise<{
+    public async getUserRolesAndGrants(codiceUtente: number, scope?: string): Promise<{
         abilitazioni: AbilitazioneMenu[],
         ruoli: Role[],
         grants: AbilitazioneMenu[]
     }> {
+        const scopeCodes = await this.resolveScopeCodes(scope);
         const codiceUtenteQuery = "SELECT FLGSUPER as flag_super FROM UTENTI_CONFIG WHERE CODUTE = ?";
         const result = await Orm.query(this.accessiOptions.databaseOptions, codiceUtenteQuery, [codiceUtente]);
         if (!result || result.length == 0) throw new Error("Nessun utente trovato con il codice utente " + codiceUtente);
@@ -825,13 +883,13 @@ export class PermissionService {
             (result.map(RestUtilities.convertKeysToCamelCase)[0] as { flagSuper?: unknown } | undefined)?.flagSuper,
         );
 
-        const abilitazioni = await this.getUserDirectPermissions(codiceUtente);
-        const ruoli = await this.getUserRoles(codiceUtente);
+        const abilitazioni = await this.getUserDirectPermissions(codiceUtente, scopeCodes);
+        const ruoli = await this.getUserRoles(codiceUtente, scopeCodes);
         const grants = this.composeGrants(
             abilitazioni,
             ruoli,
             isSuperAdmin,
-            await this.getAllActiveMenusAsGrants(),
+            await this.getAllActiveMenusAsGrants(scopeCodes),
         );
 
         return { abilitazioni, ruoli, grants };
@@ -846,11 +904,13 @@ export class PermissionService {
      * (invece di N set di query) e restituisce mappa per codice utente. Stessa composizione della
      * lettura singola.
      */
-    public async getUsersRolesAndGrants(codiciUtente: number[]): Promise<Map<number, {
+    public async getUsersRolesAndGrants(codiciUtente: number[], scope?: string): Promise<Map<number, {
         abilitazioni: AbilitazioneMenu[],
         ruoli: Role[],
         grants: AbilitazioneMenu[]
     }>> {
+        const scopeCodes = await this.resolveScopeCodes(scope);
+        const scopeFilter = this.scopeFilter('M', scopeCodes);
         const result = new Map<number, { abilitazioni: AbilitazioneMenu[], ruoli: Role[], grants: AbilitazioneMenu[] }>();
         const ids = Array.from(new Set(codiciUtente.filter((id) => Number.isInteger(id) && id > 0)));
         if (ids.length === 0) {
@@ -887,8 +947,8 @@ export class PermissionService {
             FROM ABILITAZIONI A
             INNER JOIN MENU M ON A.CODMNU = M.CODMNU
             LEFT JOIN MENU_GRP G ON G.CODGRP = M.CODGRP
-            WHERE A.CODUTE IN (${placeholders}) AND M.FLGENABLED = 1 AND COALESCE(G.FLGENABLED, 1) = 1`,
-            ids,
+            WHERE A.CODUTE IN (${placeholders}) AND M.FLGENABLED = 1 AND COALESCE(G.FLGENABLED, 1) = 1${scopeFilter.sql}`,
+            [...ids, ...scopeFilter.params],
         )).map(RestUtilities.convertKeysToCamelCase) as Array<Record<string, unknown>>;
 
         const roleRows = (await Orm.query(
@@ -906,11 +966,11 @@ export class PermissionService {
             LEFT JOIN RUOLI_MNU RM ON R.CODRUO = RM.CODRUO
             LEFT JOIN MENU M ON RM.CODMNU = M.CODMNU AND M.FLGENABLED = 1
             LEFT JOIN MENU_GRP G ON G.CODGRP = M.CODGRP
-            WHERE RU.CODUTE IN (${placeholders})`,
-            ids,
+            WHERE RU.CODUTE IN (${placeholders})${scopeFilter.sql}`,
+            [...ids, ...scopeFilter.params],
         )).map(RestUtilities.convertKeysToCamelCase) as Array<Record<string, unknown>>;
 
-        const allActiveMenus = await this.getAllActiveMenusAsGrants();
+        const allActiveMenus = await this.getAllActiveMenusAsGrants(scopeCodes);
 
         const permissionsByUser = new Map<number, AbilitazioneMenu[]>();
         for (const row of permissionRows) {
@@ -952,6 +1012,128 @@ export class PermissionService {
 
 
 
+    // -----------------------------------------------------------------------
+    // Scope applicativi: catalogo e associazioni menu/scope.
+    // -----------------------------------------------------------------------
+
+    private normalizeScopeCode(value: string): string {
+        const code = String(value ?? '').trim().toUpperCase();
+        if (!/^[A-Z][A-Z0-9_]{0,19}$/.test(code)) {
+            throw new BadRequestException(
+                'Codice scope non valido: usa lettere maiuscole, cifre e underscore (max 20 caratteri).',
+            );
+        }
+        return code;
+    }
+
+    private async assertScopeExists(codiceScope: string): Promise<void> {
+        if ((await this.countWhere('SCOPES', 'CODICE', codiceScope)) === 0) {
+            throw new BadRequestException(`Lo scope ${codiceScope} non esiste.`);
+        }
+    }
+
+    private async assertMenuExists(codiceMenu: string): Promise<void> {
+        if ((await this.countWhere('MENU', 'CODMNU', codiceMenu)) === 0) {
+            throw new BadRequestException(`Il menu ${codiceMenu} non esiste.`);
+        }
+    }
+
+    /** Catalogo degli scope applicativi (disponibile anche ai client per le etichette). */
+    public async getScopes(): Promise<ScopeEntity[]> {
+        const rows = await Orm.query(
+            this.accessiOptions.databaseOptions,
+            'SELECT CODICE AS codice, NOME AS nome FROM SCOPES ORDER BY CODICE',
+            [],
+        );
+        return rows.map(RestUtilities.convertKeysToCamelCase) as unknown as ScopeEntity[];
+    }
+
+    public async createScope(input: CreateScopeRequest): Promise<void> {
+        const codice = this.normalizeScopeCode(input.codice);
+        if ((await this.countWhere('SCOPES', 'CODICE', codice)) > 0) {
+            throw new BadRequestException(`Lo scope ${codice} esiste gia.`);
+        }
+        await Orm.execute(
+            this.accessiOptions.databaseOptions,
+            'INSERT INTO SCOPES (CODICE, NOME) VALUES (?, ?)',
+            [codice, input.nome],
+        );
+    }
+
+    public async updateScope(codiceScope: string, input: UpdateScopeRequest): Promise<void> {
+        const codice = this.normalizeScopeCode(codiceScope);
+        await this.assertScopeExists(codice);
+        if (input.nome === undefined) return;
+        await Orm.execute(
+            this.accessiOptions.databaseOptions,
+            'UPDATE SCOPES SET NOME = ? WHERE CODICE = ?',
+            [input.nome, codice],
+        );
+    }
+
+    /** Elimina lo scope; le associazioni menu/scope spariscono per FK ON DELETE CASCADE. */
+    public async deleteScope(codiceScope: string): Promise<void> {
+        const codice = this.normalizeScopeCode(codiceScope);
+        await this.assertScopeExists(codice);
+        await Orm.execute(
+            this.accessiOptions.databaseOptions,
+            'DELETE FROM SCOPES WHERE CODICE = ?',
+            [codice],
+        );
+    }
+
+    /** Scope associati a un menu. */
+    public async getMenuScopes(codiceMenu: string): Promise<string[]> {
+        const code = String(codiceMenu ?? '').trim().toUpperCase();
+        await this.assertMenuExists(code);
+        const rows = await Orm.query(
+            this.accessiOptions.databaseOptions,
+            'SELECT CODICE_SCOPE FROM MENU_SCOPES WHERE CODICE_MENU = ? ORDER BY CODICE_SCOPE',
+            [code],
+        );
+        return rows
+            .map((row) => String((row as Record<string, unknown>).CODICE_SCOPE ?? (row as Record<string, unknown>).codiceScope ?? '').trim())
+            .filter((value) => value.length > 0);
+    }
+
+    /** Sostituisce in modo atomico gli scope di un menu. */
+    public async setMenuScopes(codiceMenu: string, scopes: string[]): Promise<void> {
+        const code = String(codiceMenu ?? '').trim().toUpperCase();
+        await this.assertMenuExists(code);
+        const normalized = Array.from(
+            new Set((scopes ?? []).map((scope) => this.normalizeScopeCode(scope))),
+        );
+        for (const scope of normalized) {
+            await this.assertScopeExists(scope);
+        }
+        const queries = [
+            { query: 'DELETE FROM MENU_SCOPES WHERE CODICE_MENU = ?', params: [code] },
+            ...normalized.map((scope) => ({
+                query: 'INSERT INTO MENU_SCOPES (CODICE_MENU, CODICE_SCOPE) VALUES (?, ?)',
+                params: [code, scope],
+            })),
+        ];
+        await Orm.executeMultiple(this.accessiOptions.databaseOptions, queries);
+    }
+
+    /** Sostituisce in modo atomico i menu di uno scope (assegnazione massiva). */
+    public async setScopeMenus(codiceScope: string, menus: string[]): Promise<void> {
+        const scope = this.normalizeScopeCode(codiceScope);
+        await this.assertScopeExists(scope);
+        const normalized = Array.from(
+            new Set((menus ?? []).map((menu) => String(menu ?? '').trim().toUpperCase()).filter(Boolean)),
+        );
+        for (const menu of normalized) {
+            await this.assertMenuExists(menu);
+        }
+        const queries = [
+            { query: 'DELETE FROM MENU_SCOPES WHERE CODICE_SCOPE = ?', params: [scope] },
+            ...normalized.map((menu) => ({
+                query: 'INSERT INTO MENU_SCOPES (CODICE_MENU, CODICE_SCOPE) VALUES (?, ?)',
+                params: [menu, scope],
+            })),
+        ];
+        await Orm.executeMultiple(this.accessiOptions.databaseOptions, queries);
+    }
+
 }
-
-

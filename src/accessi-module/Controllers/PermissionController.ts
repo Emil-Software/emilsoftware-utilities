@@ -31,6 +31,14 @@ import { ActionResponse, ErrorResponse } from '../Dtos/BaseResponse';
 import { AssignPermissionsToUserRequest } from '../Dtos/AssignPermissionsToUserRequest';
 import { AssignRolesToUserRequest } from '../Dtos/AssignRolesToUserRequest';
 import {
+  CreateScopeRequest,
+  GetMenuScopesResponse,
+  GetScopesResponse,
+  SetMenuScopesRequest,
+  SetScopeMenusRequest,
+  UpdateScopeRequest,
+} from '../Dtos/ScopeDtos';
+import {
   CreateMenuGroupRequest,
   CreateMenuRequest,
   CreateMenuTypeRequest,
@@ -315,10 +323,16 @@ export class PermissionController {
   @ApiOkResponse({ description: 'Elenco menu', type: GetMenusResponse })
   @ApiResponse({ status: 200, description: 'Lista dei menu recuperata con successo', type: GetMenusResponse })
   @ApiResponse({ status: 500, description: 'Errore interno del server', type: ErrorResponse })
+  @ApiQuery({
+    name: 'scope',
+    required: false,
+    type: String,
+    description: 'Filtra per scope applicativi (CSV, es. STEX,TINTEMIX). Assente = tutti.',
+  })
   @Get('menus')
-  async getMenus(@Res() res: Response) {
+  async getMenus(@Query('scope') scope: string, @Res() res: Response) {
     try {
-      const menus = await this.permissionService.getMenus();
+      const menus = await this.permissionService.getMenus(scope);
       return RestUtilities.sendBaseResponse(res, menus);
     } catch (error) {
       return this.sendControllerError(res, error);
@@ -341,15 +355,25 @@ export class PermissionController {
     type: Boolean,
     description: 'Quando true ritorna anche i menu e gruppi disabilitati.',
   })
+  @ApiQuery({
+    name: 'scope',
+    required: false,
+    type: String,
+    description: 'Filtra per scope applicativi (CSV, es. STEX,TINTEMIX). Assente = tutti.',
+  })
   @Get('groups-with-menus')
-  async getGroupsWithMenus(@Query('includeDisabled') includeDisabled: string, @Res() res: Response) {
+  async getGroupsWithMenus(
+    @Query('includeDisabled') includeDisabled: string,
+    @Query('scope') scope: string,
+    @Res() res: Response,
+  ) {
     try {
       const includeDisabledFlag =
         typeof includeDisabled === 'string'
           ? ['true', '1', 'yes'].includes(includeDisabled.toLowerCase())
           : false;
 
-      const menus = await this.permissionService.getGroupsWithMenus(includeDisabledFlag);
+      const menus = await this.permissionService.getGroupsWithMenus(includeDisabledFlag, scope);
       return RestUtilities.sendBaseResponse(res, menus);
     } catch (error) {
       return this.sendControllerError(res, error);
@@ -554,10 +578,17 @@ export class PermissionController {
   @ApiOkResponse({ description: 'Elenco grant utente', type: UserGrantsResponse })
   @ApiResponse({ status: 200, description: 'Grant utente recuperati con successo', type: UserGrantsResponse })
   @ApiResponse({ status: 500, description: 'Errore interno del server', type: ErrorResponse })
+  @ApiQuery({
+    name: 'scope',
+    required: false,
+    type: String,
+    description: 'Filtra i grant per scope applicativi (CSV). Assente = tutti.',
+  })
   @Get('grants/:codiceUtente')
   async getUserRolesAndGrants(
     @Req() request: Request,
     @Param('codiceUtente', ParseIntPipe) codiceUtente: number,
+    @Query('scope') scope: string,
     @Res() res: Response,
   ) {
     try {
@@ -572,10 +603,134 @@ export class PermissionController {
         await this.ensureManageableTarget(authenticatedUser, codiceUtente);
       }
 
-      const menus = await this.permissionService.getUserRolesAndGrants(codiceUtente);
+      const menus = await this.permissionService.getUserRolesAndGrants(codiceUtente, scope);
       return RestUtilities.sendBaseResponse(res, menus);
     } catch (error) {
       return this.sendControllerError(res, error);
     }
   }
+  // -------------------------------------------------------------------------
+  // Scope applicativi: catalogo e associazioni menu/scope.
+  // -------------------------------------------------------------------------
+
+  @ApiOperation({ summary: 'Recupera il catalogo degli scope applicativi', operationId: 'getScopes' })
+  @ApiOkResponse({ description: 'Elenco degli scope', type: GetScopesResponse })
+  @ApiResponse({ status: 500, description: 'Errore interno del server', type: ErrorResponse })
+  @Get('scopes')
+  async getScopes(@Res() res: Response) {
+    try {
+      const scopes = await this.permissionService.getScopes();
+      return RestUtilities.sendBaseResponse(res, scopes);
+    } catch (error) {
+      return this.sendControllerError(res, error);
+    }
+  }
+
+  @ApiOperation({ summary: 'Crea uno scope applicativo', operationId: 'createScope' })
+  @ApiBody({ type: CreateScopeRequest })
+  @ApiResponse({ status: 201, description: 'Scope creato', type: ActionResponse })
+  @ApiResponse({ status: 400, description: 'Dati non validi', type: ErrorResponse })
+  @Post('scopes')
+  async createScope(@Req() request: Request, @Body() body: CreateScopeRequest, @Res() res: Response) {
+    try {
+      ensureAdmin(getAuthenticatedAccessiUser(request), 'Solo gli amministratori possono creare scope.');
+      await this.permissionService.createScope(body);
+      return RestUtilities.sendOKMessage(res, `Lo scope ${body.codice} e stato creato con successo.`, HttpStatus.CREATED);
+    } catch (error) {
+      return this.sendControllerError(res, error);
+    }
+  }
+
+  @ApiOperation({ summary: 'Aggiorna uno scope applicativo', operationId: 'updateScope' })
+  @ApiParam({ name: 'codiceScope', description: 'Codice dello scope', required: true })
+  @ApiBody({ type: UpdateScopeRequest })
+  @ApiResponse({ status: 200, description: 'Scope aggiornato', type: ActionResponse })
+  @ApiResponse({ status: 400, description: 'Dati non validi', type: ErrorResponse })
+  @Put('scopes/:codiceScope')
+  async updateScope(
+    @Req() request: Request,
+    @Param('codiceScope') codiceScope: string,
+    @Body() body: UpdateScopeRequest,
+    @Res() res: Response,
+  ) {
+    try {
+      ensureAdmin(getAuthenticatedAccessiUser(request), 'Solo gli amministratori possono modificare scope.');
+      await this.permissionService.updateScope(codiceScope, body);
+      return RestUtilities.sendOKMessage(res, `Lo scope ${codiceScope} e stato aggiornato con successo.`);
+    } catch (error) {
+      return this.sendControllerError(res, error);
+    }
+  }
+
+  @ApiOperation({ summary: 'Elimina uno scope applicativo', operationId: 'deleteScope' })
+  @ApiParam({ name: 'codiceScope', description: 'Codice dello scope', required: true })
+  @ApiResponse({ status: 200, description: 'Scope eliminato', type: ActionResponse })
+  @Delete('scopes/:codiceScope')
+  async deleteScope(
+    @Req() request: Request,
+    @Param('codiceScope') codiceScope: string,
+    @Res() res: Response,
+  ) {
+    try {
+      ensureAdmin(getAuthenticatedAccessiUser(request), 'Solo gli amministratori possono eliminare scope.');
+      await this.permissionService.deleteScope(codiceScope);
+      return RestUtilities.sendOKMessage(res, `Lo scope ${codiceScope} e stato eliminato con successo.`);
+    } catch (error) {
+      return this.sendControllerError(res, error);
+    }
+  }
+
+  @ApiOperation({ summary: 'Scope associati a un menu', operationId: 'getMenuScopes' })
+  @ApiParam({ name: 'codiceMenu', description: 'Codice del menu', required: true })
+  @ApiOkResponse({ description: 'Scope del menu', type: GetMenuScopesResponse })
+  @Get('menus/:codiceMenu/scopes')
+  async getMenuScopes(@Param('codiceMenu') codiceMenu: string, @Res() res: Response) {
+    try {
+      const scopes = await this.permissionService.getMenuScopes(codiceMenu);
+      return RestUtilities.sendBaseResponse(res, scopes);
+    } catch (error) {
+      return this.sendControllerError(res, error);
+    }
+  }
+
+  @ApiOperation({ summary: 'Sostituisce gli scope di un menu', operationId: 'setMenuScopes' })
+  @ApiParam({ name: 'codiceMenu', description: 'Codice del menu', required: true })
+  @ApiBody({ type: SetMenuScopesRequest })
+  @ApiResponse({ status: 200, description: 'Scope del menu aggiornati', type: ActionResponse })
+  @Put('menus/:codiceMenu/scopes')
+  async setMenuScopes(
+    @Req() request: Request,
+    @Param('codiceMenu') codiceMenu: string,
+    @Body() body: SetMenuScopesRequest,
+    @Res() res: Response,
+  ) {
+    try {
+      ensureAdmin(getAuthenticatedAccessiUser(request), 'Solo gli amministratori possono modificare gli scope.');
+      await this.permissionService.setMenuScopes(codiceMenu, body.scopes);
+      return RestUtilities.sendOKMessage(res, `Scope del menu ${codiceMenu} aggiornati con successo.`);
+    } catch (error) {
+      return this.sendControllerError(res, error);
+    }
+  }
+
+  @ApiOperation({ summary: 'Sostituisce i menu di uno scope', operationId: 'setScopeMenus' })
+  @ApiParam({ name: 'codiceScope', description: 'Codice dello scope', required: true })
+  @ApiBody({ type: SetScopeMenusRequest })
+  @ApiResponse({ status: 200, description: 'Menu dello scope aggiornati', type: ActionResponse })
+  @Put('scopes/:codiceScope/menus')
+  async setScopeMenus(
+    @Req() request: Request,
+    @Param('codiceScope') codiceScope: string,
+    @Body() body: SetScopeMenusRequest,
+    @Res() res: Response,
+  ) {
+    try {
+      ensureAdmin(getAuthenticatedAccessiUser(request), 'Solo gli amministratori possono modificare gli scope.');
+      await this.permissionService.setScopeMenus(codiceScope, body.menu);
+      return RestUtilities.sendOKMessage(res, `Menu dello scope ${codiceScope} aggiornati con successo.`);
+    } catch (error) {
+      return this.sendControllerError(res, error);
+    }
+  }
+
 }

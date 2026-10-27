@@ -127,6 +127,11 @@ export type CatalogScriptChecksumPolicy = 'error' | 'warn' | 'reapply';
  * riconciliazione dello schema. Ogni script e tracciato nella tabella `ACCESSI_CATALOG_SCRIPT`,
  * quindi viene applicato una sola volta per database (idempotenza lato DB).
  */
+export interface SystemSeedsOptions {
+  /** `false` disabilita il seed automatico, ad esempio per ambienti gestiti manualmente. */
+  enabled?: boolean;
+}
+
 export interface CatalogScriptsOptions {
   /** Abilita l'esecuzione automatica al bootstrap. Default `false`. */
   enabled?: boolean;
@@ -209,6 +214,8 @@ export interface AccessiOptions {
   serviceTokens?: ServiceTokenOptions;
   /** Catalog migrations applicative eseguite dopo la riconciliazione dello schema. */
   catalogScripts?: CatalogScriptsOptions;
+  /** Seed di sistema eseguiti dopo la riconciliazione dello schema. Default: abilitati. */
+  systemSeeds?: SystemSeedsOptions;
   /** Bootstrap del primo admin tramite token casuale stampato a ogni avvio. */
   adminBootstrap?: AdminBootstrapOptions;
   /** Base URL pubblica usata solo per loggare gli indirizzi (console, swagger, API). */

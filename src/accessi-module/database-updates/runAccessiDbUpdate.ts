@@ -1,6 +1,7 @@
 import { AccessiDatabaseUpdater } from "./AccessiDatabaseUpdater";
 import { createAccessiOptionsFromEnv } from "./accessiOptionsFromEnv";
 import { Orm } from "../../Orm";
+import { applyMenuScopeSeeds } from "./menuScopeSeeder";
 
 async function main(): Promise<void> {
   const options = createAccessiOptionsFromEnv();
@@ -12,7 +13,10 @@ async function main(): Promise<void> {
   );
 
   if (checkOnly) await AccessiDatabaseUpdater.assertCompatible(options);
-  else await AccessiDatabaseUpdater.run(options);
+  else {
+    await AccessiDatabaseUpdater.run(options);
+    await applyMenuScopeSeeds(options);
+  }
 
   const currentVersion = await AccessiDatabaseUpdater.getCurrentVersion(options);
   console.log(

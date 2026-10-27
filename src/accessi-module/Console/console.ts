@@ -9,6 +9,7 @@
   createMenu,
   createMenuGroup,
   createMenuType,
+  createScope,
   createRole,
   createServiceToken,
   deleteFederatedIdentityPermanently,
@@ -16,6 +17,7 @@
   deleteMenu,
   deleteMenuGroup,
   deleteMenuType,
+  deleteScope,
   deleteRole,
   deleteUser,
   deleteUserPermanently,
@@ -25,7 +27,9 @@
   getFederatedIdentities,
   getFederatedProviders,
   getGroupsWithMenus,
+  getMenuScopes,
   getMenuTypes,
+  getScopes,
   getRoles,
   getSchema,
   getServiceTokens,
@@ -41,6 +45,7 @@
   setGdpr,
   setGroupEnabled,
   setMenuEnabled,
+  setScopeMenus,
   setStatoRegistrazione,
   setUserPassword,
   updateFederatedIdentity,
@@ -48,6 +53,7 @@
   updateMenu,
   updateMenuGroup,
   updateMenuType,
+  updateScope,
   updateRole,
   updateUtente,
 } from './generated/accessiApi';
@@ -72,6 +78,7 @@ import type {
   RegisterRequest,
   Role,
   SchemaDdlResult,
+  ScopeEntity,
   ServiceTokenDto,
   IssuedServiceTokenDto,
   UserDto,
@@ -90,6 +97,7 @@ type ConsoleView =
   | 'menuGroups'
   | 'menuItems'
   | 'menuTypes'
+  | 'menuScopes'
   | 'ssoProviders'
   | 'ssoUsers'
   | 'tokens'
@@ -103,6 +111,7 @@ const routeSegment: Record<ConsoleView, string> = {
   menuGroups: 'menu-e-gruppi/gruppi',
   menuItems: 'menu-e-gruppi/menu',
   menuTypes: 'menu-e-gruppi/tipi-menu',
+  menuScopes: 'menu-e-gruppi/scope',
   ssoProviders: 'sso/provider',
   ssoUsers: 'sso/utenti',
   tokens: 'token-di-servizio',
@@ -1524,6 +1533,78 @@ async function showMenuItems(): Promise<void> {
   });
 }
 
+/** Gestione degli scope applicativi: catalogo e assegnazione dei menu. */
+async function showMenuScopes(): Promise<void> {
+  const scopes = result(await getScopes()) as ScopeEntity[];
+  render(`<div class="toolbar"><button id="new-scope">Nuovo scope</button><button id="reload-scopes" class="secondary">Aggiorna</button></div>
+    <h2>Scope applicativi</h2><p class="form-help">Uno scope decide in quali applicazioni un menu e visibile. Un menu puo appartenere a piu scope.</p>
+    <table class="entity-table"><thead><tr><th>Codice</th><th>Nome</th><th>Azioni</th></tr></thead><tbody>
+      ${scopes.map((scope) => `<tr><td><code>${escapeHtml(scope.codice)}</code></td><td>${escapeHtml(scope.nome)}</td><td class="row-actions"><button type="button" class="secondary" data-scope-menus="${escapeHtml(scope.codice)}">Menu</button><button type="button" class="secondary" data-scope-edit="${escapeHtml(scope.codice)}">Rinomina</button><button type="button" class="danger-button" data-scope-delete="${escapeHtml(scope.codice)}">Elimina</button></td></tr>`).join('') || '<tr><td colspan="3">Nessuno scope configurato.</td></tr>'}
+    </tbody></table>`);
+  byId('new-scope').onclick = () => showScopeForm();
+  byId('reload-scopes').onclick = () => handleAction(showMenuScopes);
+  document.querySelectorAll<HTMLButtonElement>('[data-scope-menus]').forEach((button) => {
+    button.onclick = () => handleAction(() => showScopeMenus(button.dataset.scopeMenus ?? ''));
+  });
+  document.querySelectorAll<HTMLButtonElement>('[data-scope-edit]').forEach((button) => {
+    button.onclick = () => showScopeForm(scopes.find((scope) => scope.codice === button.dataset.scopeEdit));
+  });
+  document.querySelectorAll<HTMLButtonElement>('[data-scope-delete]').forEach((button) => {
+    button.onclick = () => handleAction(async () => {
+      if (!window.confirm(`Eliminare lo scope ${button.dataset.scopeDelete}? Le associazioni ai menu verranno rimosse.`)) return;
+      await deleteScope(button.dataset.scopeDelete ?? '');
+      showNotice('Scope eliminato.');
+      await showMenuScopes();
+    });
+  });
+}
+
+function showScopeForm(scope?: ScopeEntity): void {
+  render(`<form id="scope-form"><h2>${scope ? 'Rinomina scope' : 'Nuovo scope'}</h2>
+    <label>Codice<input name="codice" maxlength="20" required ${scope ? 'readonly' : ''} value="${escapeHtml(scope?.codice ?? '')}"><span class="form-help">Es. STEX. Maiuscole, cifre e underscore.</span></label>
+    <label>Nome<input name="nome" maxlength="100" required value="${escapeHtml(scope?.nome ?? '')}"><span class="form-help">Etichetta leggibile, es. SteX.</span></label>
+    <div class="toolbar"><button>Salva</button><button type="button" class="secondary" id="cancel-scope">Annulla</button></div></form>`);
+  const form = byId('scope-form') as HTMLFormElement;
+  form.onsubmit = (event) => {
+    event.preventDefault();
+    handleAction(async () => {
+      const values = formValues(form);
+      const nome = values['nome'] ?? '';
+      if (scope) {
+        await updateScope(scope.codice, { nome });
+      } else {
+        await createScope({ codice: (values['codice'] ?? '').trim().toUpperCase(), nome });
+      }
+      showNotice('Scope salvato.');
+      await showMenuScopes();
+    });
+  };
+  byId('cancel-scope').onclick = () => handleAction(showMenuScopes);
+}
+
+async function showScopeMenus(codiceScope: string): Promise<void> {
+  const [groupsResponse, assignedResponse] = await Promise.all([
+    getGroupsWithMenus({ includeDisabled: true }),
+    getMenuScopes(codiceScope),
+  ]);
+  const groups = result<GroupWithMenusEntity[]>(groupsResponse);
+  const assigned = new Set(result<string[]>(assignedResponse));
+  render(`<form id="scope-menus"><h2>Menu dello scope ${escapeHtml(codiceScope)}</h2><p class="form-help">Seleziona i menu visibili nelle applicazioni associate a questo scope. Il salvataggio sostituisce l'elenco.</p>
+    ${groups.map((group) => `<fieldset class="grant-menu-group"><legend>${escapeHtml(group.descrizioneGruppo)}</legend>${group.menus.map((menu) => `<label class="check"><input type="checkbox" name="menu" value="${escapeHtml(menu.codiceMenu)}" ${assigned.has(menu.codiceMenu) ? 'checked' : ''}><span>${escapeHtml(menu.descrizioneMenu)} <code>${escapeHtml(menu.codiceMenu)}</code></span></label>`).join('')}</fieldset>`).join('')}
+    <div class="toolbar"><button>Salva</button><button type="button" class="secondary" id="cancel-scope-menus">Indietro</button></div></form>`);
+  const form = byId('scope-menus') as HTMLFormElement;
+  form.onsubmit = (event) => {
+    event.preventDefault();
+    handleAction(async () => {
+      const selected = new FormData(form).getAll('menu').map((value) => String(value));
+      await setScopeMenus(codiceScope, { menu: selected });
+      showNotice('Menu dello scope aggiornati.');
+      await showMenuScopes();
+    });
+  };
+  byId('cancel-scope-menus').onclick = () => handleAction(showMenuScopes);
+}
+
 /** Gestione dei tipi menu: elenco, creazione, modifica ed eliminazione. */
 async function showMenuTypes(): Promise<void> {
   const menuTypes = result(await getMenuTypes()) as MenuTypeEntity[];
@@ -1955,6 +2036,7 @@ async function show(view: ConsoleView): Promise<void> {
       menuGroups: showMenuGroups,
       menuItems: showMenuItems,
       menuTypes: showMenuTypes,
+      menuScopes: showMenuScopes,
       ssoProviders: showSsoProviders,
       ssoUsers: showSsoUsers,
       tokens: showServiceTokens,

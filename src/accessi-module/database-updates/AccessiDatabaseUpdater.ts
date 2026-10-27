@@ -5,6 +5,7 @@ import { Orm } from '../../Orm';
 import { Logger } from '../../Logger';
 import { ACCESSI_SCHEMA_VERSION, ACCESSI_VERSION_KEY, accessiTables, accessiForeignKeys, accessiIndexes, accessiTriggers, accessiGenerators, accessiChecks, accessiRenamedColumns, accessiObsoleteColumns, accessiColumnCopies } from './accessiSchema';
 import { applyCatalogScripts } from './AccessiCatalogMigrator';
+import { applyMenuScopeSeeds } from './menuScopeSeeder';
 
 type Row = Record<string, unknown>;
 export interface AccessiSchemaReport { compatible: boolean; issues: string[]; warnings: string[]; }
@@ -44,6 +45,7 @@ export class AccessiDatabaseUpdater extends DatabaseUpdater implements OnModuleI
     }
 
     await this.run(options);
+    await applyMenuScopeSeeds(options);
     if (options.catalogScripts?.enabled) {
       await applyCatalogScripts(options);
     }

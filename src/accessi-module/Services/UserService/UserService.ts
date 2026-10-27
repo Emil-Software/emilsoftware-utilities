@@ -191,7 +191,7 @@ export class UserService {
       limit?: number;
       offset?: number;
     },
-    options?: { includeExtensionFields: boolean; includeGrants: boolean },
+    options?: { includeExtensionFields: boolean; includeGrants: boolean; scope?: string },
   ): Promise<GetUsersResult[]> {
     try {
       const filterColumns = await getTableColumns(this.accessiOptions, 'FILTRI');
@@ -309,7 +309,7 @@ export class UserService {
 
       // I grant sono caricati in batch (query IN) invece che utente per utente.
       const grantsByUser = options?.includeGrants
-        ? await this.permissionService.getUsersRolesAndGrants(users.map((user) => user.codiceUtente))
+        ? await this.permissionService.getUsersRolesAndGrants(users.map((user) => user.codiceUtente), options?.scope)
         : undefined;
 
       for (const user of users) {

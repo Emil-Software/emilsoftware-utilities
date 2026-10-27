@@ -9,6 +9,7 @@
 .env
 .vscode/settings.json
 !/test/menus-catalog.mjs
+!/test/menu-scopes.cjs
 !/test/accessi-schema.cjs
 !/test/accessi-regressions.cjs
 !/test/password-reset-regressions.cjs

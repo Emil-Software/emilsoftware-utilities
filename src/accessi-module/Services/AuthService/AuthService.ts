@@ -137,10 +137,10 @@ export class AuthService {
   }
 
   /** Builds the standard login response for a user authenticated by a supported method. */
-  public async getLoginResultForUser(codiceUtente: number): Promise<LoginResult> {
+  public async getLoginResultForUser(codiceUtente: number, scope?: string): Promise<LoginResult> {
     const users = await this.userService.getUsers(
       { codiceUtente },
-      { includeExtensionFields: true, includeGrants: true },
+      { includeExtensionFields: true, includeGrants: true, ...(scope ? { scope } : {}) },
     );
     const result = users[0];
     if (!result?.utente) {
@@ -268,7 +268,7 @@ export class AuthService {
       [utente.codiceUtente]
     );
 
-    return this.getLoginResultForUser(utente.codiceUtente);
+    return this.getLoginResultForUser(utente.codiceUtente, request.scope);
   }
 
   /**

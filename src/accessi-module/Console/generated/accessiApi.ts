@@ -22,6 +22,7 @@ import type {
   CreateMenuGroupRequest,
   CreateMenuRequest,
   CreateMenuTypeRequest,
+  CreateScopeRequest,
   CreateServiceTokenRequest,
   CreateServiceTokenResponse,
   ErrorResponse,
@@ -35,14 +36,18 @@ import type {
   GetFiltriUtenteResponse,
   GetGroupsWithMenusParams,
   GetGroupsWithMenusResponse,
+  GetMenuScopesResponse,
   GetMenuTypesResponse,
+  GetMenusParams,
   GetMenusResponse,
   GetRolesResponse,
   GetSchemaResponse,
+  GetScopesResponse,
   GetServiceTokensParams,
   GetServiceTokensResponse,
   GetUserByTokenRequest,
   GetUserByTokenResponse,
+  GetUserRolesAndGrantsParams,
   GetUsersParams,
   GetUsersResponse,
   LoginAsRequest,
@@ -56,7 +61,9 @@ import type {
   Role,
   SendResetPasswordEmailRequest,
   ServeResetPasswordPageParams,
+  SetMenuScopesRequest,
   SetPasswordLoginPolicyRequest,
+  SetScopeMenusRequest,
   SetStatoRegistrazioneDto,
   SetUserPasswordRequest,
   UpdateEnabledStatusRequest,
@@ -66,6 +73,7 @@ import type {
   UpdateMenuGroupRequest,
   UpdateMenuRequest,
   UpdateMenuTypeRequest,
+  UpdateScopeRequest,
   UserDto,
   UserGrantsResponse,
   VerifyTwoFactorRequest
@@ -471,14 +479,23 @@ export type getMenusResponse = {
   status: number;
 }
 
-export const getGetMenusUrl = () => {
+export const getGetMenusUrl = (params?: GetMenusParams,) => {
 
+  const normalizedParams = new URLSearchParams();
 
-  return `/api/accessi/permission/menus`
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value === null) {
+      normalizedParams.append(key, 'null');
+    } else if (value !== undefined) {
+      normalizedParams.append(key, value.toString());
+    }
+  });
+
+  return `/api/accessi/permission/menus?${normalizedParams.toString()}`
 }
 
-export const getMenus = async ( options?: RequestInit): Promise<getMenusResponse> => {
-return accessiFetch<Promise<getMenusResponse>>(getGetMenusUrl(),
+export const getMenus = async (params?: GetMenusParams, options?: RequestInit): Promise<getMenusResponse> => {
+return accessiFetch<Promise<getMenusResponse>>(getGetMenusUrl(params),
   {      
     ...options,
     method: 'GET'
@@ -777,18 +794,204 @@ export type getUserRolesAndGrantsResponse = {
   status: number;
 }
 
-export const getGetUserRolesAndGrantsUrl = (codiceUtente: number,) => {
+export const getGetUserRolesAndGrantsUrl = (codiceUtente: number,
+    params?: GetUserRolesAndGrantsParams,) => {
 
+  const normalizedParams = new URLSearchParams();
 
-  return `/api/accessi/permission/grants/${codiceUtente}`
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value === null) {
+      normalizedParams.append(key, 'null');
+    } else if (value !== undefined) {
+      normalizedParams.append(key, value.toString());
+    }
+  });
+
+  return `/api/accessi/permission/grants/${codiceUtente}?${normalizedParams.toString()}`
 }
 
-export const getUserRolesAndGrants = async (codiceUtente: number, options?: RequestInit): Promise<getUserRolesAndGrantsResponse> => {
-return accessiFetch<Promise<getUserRolesAndGrantsResponse>>(getGetUserRolesAndGrantsUrl(codiceUtente),
+export const getUserRolesAndGrants = async (codiceUtente: number,
+    params?: GetUserRolesAndGrantsParams, options?: RequestInit): Promise<getUserRolesAndGrantsResponse> => {
+return accessiFetch<Promise<getUserRolesAndGrantsResponse>>(getGetUserRolesAndGrantsUrl(codiceUtente,params),
   {      
     ...options,
     method: 'GET'
     
+  }
+);}
+
+
+/**
+ * @summary Recupera il catalogo degli scope applicativi
+ */
+export type getScopesResponse = {
+  data: GetScopesResponse;
+  status: number;
+}
+
+export const getGetScopesUrl = () => {
+
+
+  return `/api/accessi/permission/scopes`
+}
+
+export const getScopes = async ( options?: RequestInit): Promise<getScopesResponse> => {
+return accessiFetch<Promise<getScopesResponse>>(getGetScopesUrl(),
+  {      
+    ...options,
+    method: 'GET'
+    
+  }
+);}
+
+
+/**
+ * @summary Crea uno scope applicativo
+ */
+export type createScopeResponse = {
+  data: ActionResponse;
+  status: number;
+}
+
+export const getCreateScopeUrl = () => {
+
+
+  return `/api/accessi/permission/scopes`
+}
+
+export const createScope = async (createScopeRequest: CreateScopeRequest, options?: RequestInit): Promise<createScopeResponse> => {
+return accessiFetch<Promise<createScopeResponse>>(getCreateScopeUrl(),
+  {      
+    ...options,
+    method: 'POST',
+    body: JSON.stringify(
+      createScopeRequest,)
+  }
+);}
+
+
+/**
+ * @summary Aggiorna uno scope applicativo
+ */
+export type updateScopeResponse = {
+  data: ActionResponse;
+  status: number;
+}
+
+export const getUpdateScopeUrl = (codiceScope: string,) => {
+
+
+  return `/api/accessi/permission/scopes/${codiceScope}`
+}
+
+export const updateScope = async (codiceScope: string,
+    updateScopeRequest: UpdateScopeRequest, options?: RequestInit): Promise<updateScopeResponse> => {
+return accessiFetch<Promise<updateScopeResponse>>(getUpdateScopeUrl(codiceScope),
+  {      
+    ...options,
+    method: 'PUT',
+    body: JSON.stringify(
+      updateScopeRequest,)
+  }
+);}
+
+
+/**
+ * @summary Elimina uno scope applicativo
+ */
+export type deleteScopeResponse = {
+  data: ActionResponse;
+  status: number;
+}
+
+export const getDeleteScopeUrl = (codiceScope: string,) => {
+
+
+  return `/api/accessi/permission/scopes/${codiceScope}`
+}
+
+export const deleteScope = async (codiceScope: string, options?: RequestInit): Promise<deleteScopeResponse> => {
+return accessiFetch<Promise<deleteScopeResponse>>(getDeleteScopeUrl(codiceScope),
+  {      
+    ...options,
+    method: 'DELETE'
+    
+  }
+);}
+
+
+/**
+ * @summary Scope associati a un menu
+ */
+export type getMenuScopesResponse = {
+  data: GetMenuScopesResponse;
+  status: number;
+}
+
+export const getGetMenuScopesUrl = (codiceMenu: string,) => {
+
+
+  return `/api/accessi/permission/menus/${codiceMenu}/scopes`
+}
+
+export const getMenuScopes = async (codiceMenu: string, options?: RequestInit): Promise<getMenuScopesResponse> => {
+return accessiFetch<Promise<getMenuScopesResponse>>(getGetMenuScopesUrl(codiceMenu),
+  {      
+    ...options,
+    method: 'GET'
+    
+  }
+);}
+
+
+/**
+ * @summary Sostituisce gli scope di un menu
+ */
+export type setMenuScopesResponse = {
+  data: ActionResponse;
+  status: number;
+}
+
+export const getSetMenuScopesUrl = (codiceMenu: string,) => {
+
+
+  return `/api/accessi/permission/menus/${codiceMenu}/scopes`
+}
+
+export const setMenuScopes = async (codiceMenu: string,
+    setMenuScopesRequest: SetMenuScopesRequest, options?: RequestInit): Promise<setMenuScopesResponse> => {
+return accessiFetch<Promise<setMenuScopesResponse>>(getSetMenuScopesUrl(codiceMenu),
+  {      
+    ...options,
+    method: 'PUT',
+    body: JSON.stringify(
+      setMenuScopesRequest,)
+  }
+);}
+
+
+/**
+ * @summary Sostituisce i menu di uno scope
+ */
+export type setScopeMenusResponse = {
+  data: ActionResponse;
+  status: number;
+}
+
+export const getSetScopeMenusUrl = (codiceScope: string,) => {
+
+
+  return `/api/accessi/permission/scopes/${codiceScope}/menus`
+}
+
+export const setScopeMenus = async (codiceScope: string,
+    setScopeMenusRequest: SetScopeMenusRequest, options?: RequestInit): Promise<setScopeMenusResponse> => {
+return accessiFetch<Promise<setScopeMenusResponse>>(getSetScopeMenusUrl(codiceScope),
+  {      
+    ...options,
+    method: 'PUT',
+    body: JSON.stringify(
+      setScopeMenusRequest,)
   }
 );}
 

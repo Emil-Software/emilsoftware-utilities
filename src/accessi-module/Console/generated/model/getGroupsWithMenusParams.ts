@@ -10,4 +10,8 @@ export type GetGroupsWithMenusParams = {
  * Quando true ritorna anche i menu e gruppi disabilitati.
  */
 includeDisabled?: boolean;
+/**
+ * Filtra per scope applicativi (CSV, es. STEX,TINTEMIX). Assente = tutti.
+ */
+scope?: string;
 };
