@@ -1,3 +1,15 @@
+# [2.0.0-dev.63](https://github.com/Emil-Software/emilsoftware-utilities/compare/v2.0.0-dev.62...v2.0.0-dev.63) (2026-10-27)
+
+
+### Bug Fixes
+
+* **accessi:** filter two-factor login grants by scope ([e65c2f6](https://github.com/Emil-Software/emilsoftware-utilities/commit/e65c2f64903c8e7044ff34eb1006cfaada9d676d))
+
+
+### Features
+
+* **menus:** read the application scope from the frontend environment ([5f44053](https://github.com/Emil-Software/emilsoftware-utilities/commit/5f440534afd9efada1fb7e1e65505ed3496ff9b8))
+
 # [2.0.0-dev.62](https://github.com/Emil-Software/emilsoftware-utilities/compare/v2.0.0-dev.61...v2.0.0-dev.62) (2026-10-27)
 
 
