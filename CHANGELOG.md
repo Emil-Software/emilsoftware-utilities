@@ -1,3 +1,10 @@
+# [2.0.0-dev.61](https://github.com/Emil-Software/emilsoftware-utilities/compare/v2.0.0-dev.60...v2.0.0-dev.61) (2026-10-27)
+
+
+### Features
+
+* **accessi:** application scopes with automatic schema and seed ([06a11bb](https://github.com/Emil-Software/emilsoftware-utilities/commit/06a11bbe0028590bd894c5d2f1f05d1f07598bd5))
+
 # [2.0.0-dev.60](https://github.com/Emil-Software/emilsoftware-utilities/compare/v2.0.0-dev.59...v2.0.0-dev.60) (2026-10-27)
 
 
