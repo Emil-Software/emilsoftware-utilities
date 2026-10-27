@@ -82,7 +82,7 @@ const failedApps = [];
 
 for (const app of apps) {
   const catalog = readCatalog(app);
-  const errors = validateCatalog(catalog, app.app);
+  const errors = validateCatalog(catalog, app.app, app.scope?.codice);
   if (errors.length > 0) {
     console.error(`${app.app}: catalogo non valido`);
     for (const error of errors) console.error(`  - ${error}`);

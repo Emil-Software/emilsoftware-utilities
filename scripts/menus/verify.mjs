@@ -71,7 +71,7 @@ for (const app of apps) {
 
 for (const app of apps) {
   const catalog = catalogs.get(app.app);
-  const errors = validateCatalog(catalog, app.app);
+  const errors = validateCatalog(catalog, app.app, app.scope?.codice);
   if (errors.length > 0) {
     console.log(`${app.app}: catalogo non valido`);
     for (const error of errors) console.log(`  - ${error}`);

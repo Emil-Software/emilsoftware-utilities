@@ -38,8 +38,35 @@ export const LIMITS = {
   note: 1000,
 };
 
+/**
+ * Scope applicativo dichiarato dall'environment del frontend.
+ *
+ * L'environment (`src/environments/environment*.ts`) e' la fonte unica del
+ * codice scope: il catalogo menu deve dichiararlo e ogni menu deve
+ * appartenerci. Il registro apps.json resta solo per i percorsi e il nome.
+ */
+export function readEnvironmentScope(app) {
+  const { root } = appPaths(app);
+  const envDir = path.join(root, 'src', 'environments');
+  const candidates = fs.existsSync(envDir)
+    ? fs.readdirSync(envDir).filter((name) => /^environment.*\.ts$/.test(name))
+    : [];
+  for (const name of candidates) {
+    const contents = fs.readFileSync(path.join(envDir, name), 'utf8');
+    const match = contents.match(/accessiScope\s*:\s*'([A-Z][A-Z0-9_]{0,19})'/);
+    if (match) return normalizeCode(match[1]);
+  }
+  return undefined;
+}
+
 export function loadRegistry() {
   const registry = JSON.parse(fs.readFileSync(REGISTRY_PATH, 'utf8'));
+  for (const app of registry.apps) {
+    const envScope = readEnvironmentScope(app);
+    if (envScope) {
+      app.scope = { codice: envScope, nome: app.scope?.nome ?? app.app };
+    }
+  }
   return registry;
 }
 
@@ -83,7 +110,7 @@ export function normalizeCode(value) {
  * Valida il catalogo di un'app. Restituisce la lista degli errori invece di
  * lanciare, cosi' verify puo' mostrarli tutti insieme.
  */
-export function validateCatalog(catalog, appName) {
+export function validateCatalog(catalog, appName, envScope) {
   const errors = [];
   if (!catalog || typeof catalog !== 'object') {
     return ['il catalogo non e un oggetto'];
@@ -107,6 +134,9 @@ export function validateCatalog(catalog, appName) {
     if (!String(scope.nome ?? '').trim()) errors.push(`scope ${code}: nome mancante`);
   }
   if (scopeCodes.size === 0) errors.push('catalog.scopes mancante');
+  if (envScope && !scopeCodes.has(envScope)) {
+    errors.push(`accessiScope "${envScope}" non dichiarato in catalog.scopes`);
+  }
 
   const groupCodes = new Set();
   for (const group of groups) {
@@ -168,6 +198,9 @@ export function validateCatalog(catalog, appName) {
     if (menuScopes.length === 0) errors.push(`menu ${code}: scopes mancanti`);
     for (const scope of menuScopes) {
       if (!scopeCodes.has(scope)) errors.push(`menu ${code}: scope "${scope}" non dichiarato`);
+    }
+    if (envScope && !menuScopes.includes(envScope)) {
+      errors.push(`menu ${code}: manca lo scope dell'app "${envScope}"`);
     }
   }
 
@@ -683,9 +716,7 @@ export function buildGeneratedTs(app, catalog) {
   lines.push('');
   lines.push("export type ScopeCode = (typeof SCOPES)[number]['codice'];");
   lines.push('');
-  lines.push("/** Scope predefinito dell'applicazione (primo dichiarato). */");
-  lines.push('export const APP_SCOPE: ScopeCode = SCOPES[0].codice;');
-  lines.push('');
+
   lines.push('/** Gruppi menu dell\'applicazione (senza la lista dei menu, che e in MENU). */');
   lines.push('export const MENU_GROUPS = [');
   for (const group of groups) {
