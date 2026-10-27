@@ -102,17 +102,27 @@ MENU.STEX_ARRIVI_CQ.pagina;     // 'arrivi'
 ritorna il backend. `MENU_CODES` elenca i codici disponibili, `MENU_BY_CODE`
 serve quando il codice arriva a runtime (es. da un grant).
 
-Lo stesso file genera gli scope dell'app:
+Lo stesso file genera gli scope dichiarati dal catalogo:
 
 ```ts
 export const SCOPES = [{ codice: 'STEX', nome: 'SteX' }] as const;
-export const APP_SCOPE: ScopeCode = SCOPES[0].codice;
 export const MENU_SCOPES = { STEX_ARRIVI_CQ: ['STEX'], ... } as const;
 ```
 
-Gli scope sono **definiti solo** nel catalogo: non esistono costanti duplicate nel
-codice. `sync` crea/aggiorna gli scope e aggiunge le associazioni menu/scope in
-modo add-only: gli scope di altre app sullo stesso menu non vengono mai rimossi.
+Lo scope **dell'applicazione** non e' una costante duplicata: vive
+nell'environment del frontend:
+
+```ts
+// src/environments/environment.ts
+import type { ScopeCode } from '../app/menus/menu.catalog';
+export const environment = { production: false, accessiScope: 'STEX' as ScopeCode };
+```
+
+`src/app/shared/app-scope.ts` esporta `APP_SCOPE` da `environment.accessiScope`.
+`menus:generate`, `menus:init` e `menus:verify` leggono lo stesso environment e
+falliscono se il catalogo non dichiara quello scope o se un menu non lo contiene.
+`sync` crea/aggiorna gli scope e aggiunge le associazioni menu/scope in modo
+add-only: gli scope di altre app sullo stesso menu non vengono mai rimossi.
 
 I `menu.service.ts` delle app derivano le costanti storiche dal catalogo:
 
