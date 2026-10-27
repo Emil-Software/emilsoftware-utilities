@@ -8,6 +8,7 @@
 /logs
 .env
 .vscode/settings.json
+!/test/angular-components.cjs
 !/test/menus-catalog.mjs
 !/test/menu-scopes.cjs
 !/test/accessi-schema.cjs
