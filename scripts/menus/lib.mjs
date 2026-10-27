@@ -591,7 +591,7 @@ export function buildGeneratedTs(app, catalog) {
   lines.push('/**');
   lines.push(' * Catalogo menu dell\'applicazione, generato da `menus/menu-catalog.json`.');
   lines.push(' *');
-  lines.push(' * NON modificare a mano: usare `npm run menus:generate` in emilsoftware-utilities.');
+  lines.push(' * NON modificare a mano: usare `npm run menus:generate`.');
   lines.push(' * Le voci sono tipizzate con i modelli Orval di Accessi, quindi `MENU.FOO`');
   lines.push(' * espone direttamente il `MenuEntity` salvato nel database.');
   lines.push(' */');

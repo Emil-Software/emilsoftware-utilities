@@ -15,20 +15,25 @@ nuove che l'app dichiara nel codice.
 
 ## Comandi
 
-Tutti i comandi si eseguono da `emilsoftware-utilities`:
+I comandi si lanciano **dal frontend**, dove vivono catalogo e runner:
 
 ```bash
-npm run menus:init                 # crea/aggiorna i menu di tutte le app
-npm run menus:init -- --app=SteX   # solo un'app
-npm run menus:init -- --dry-run    # piano senza scrivere
+cd SteX           # o TintemiX, Magaz-Tint, EsGestX, StaffX, SteriliX/frontend
+npm run menus:sync       # crea/aggiorna i menu (chiede admin)
+npm run menus:verify     # confronta catalogo e DB
+npm run menus:generate   # rigenera il TS
+npm run menus:check      # CI: TS allineato al JSON
+```
 
-npm run menus:verify               # confronta catalogo e DB
-npm run menus:verify -- --strict   # fallisce anche per i menu extra del DB
+Runner locale: `<app>/menus/menu-sync.mjs` (nessuna dipendenza dal backend).
+In `emilsoftware-utilities` restano i comandi di workspace, utili per
+bootstrap e verifica globale:
 
-npm run menus:generate             # rigenera i file TS dai JSON
-npm run menus:check                # CI: verifica che i TS siano aggiornati
-
+```bash
 npm run menus:bootstrap            # ricostruisce i cataloghi da DB + codice FE
+npm run menus:init                 # sync di tutte le app in un colpo
+npm run menus:verify               # confronto globale + menu orfani
+npm run menus:check                # TS di tutte le app
 ```
 
 `init` e `verify` chiedono **email e password dell'admin** in console. Per la
