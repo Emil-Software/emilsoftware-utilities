@@ -1,3 +1,10 @@
+# [2.0.0-dev.64](https://github.com/Emil-Software/emilsoftware-utilities/compare/v2.0.0-dev.63...v2.0.0-dev.64) (2026-10-27)
+
+
+### Features
+
+* **angular-components:** frameworkless areas web component with light and dark themes ([f315410](https://github.com/Emil-Software/emilsoftware-utilities/commit/f31541084b335ede469ac6cba338e27008e937d2))
+
 # [2.0.0-dev.63](https://github.com/Emil-Software/emilsoftware-utilities/compare/v2.0.0-dev.62...v2.0.0-dev.63) (2026-10-27)
 
 
