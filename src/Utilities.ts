@@ -586,6 +586,7 @@ export class DatabaseUtilities {
             connectTimeout: 15000,
             connectTimeoutMs: 15000,
             trimStringResults: true,
+            utcDates: true,
         };
     }
 }

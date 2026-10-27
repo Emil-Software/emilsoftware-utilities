@@ -115,6 +115,33 @@ La CI (`.github/workflows/ci.yml`) esegue typecheck, test con coverage e build, 
 integration test in matrice su Firebird 5 e 3. Il workflow di release (`publish.yml`) esegue
 typecheck e test prima di build e pubblicazione.
 
+## Firebird: drop-in di `es-node-firebird`
+
+La libreria **ri-esporta l'intera API di `node-firebird`** (`export * from "node-firebird"` piu il
+namespace `Firebird`), quindi sostituisce il fork deprecato `es-node-firebird` senza modifiche al
+codice applicativo: basta cambiare l'import.
+
+```ts
+// prima
+import * as Firebird from 'es-node-firebird';
+// dopo
+import { Firebird } from 'emilsoftware-utilities';
+// oppure, con import nominati
+import { attach, create, pool, ISOLATION_READ_COMMITTED } from 'emilsoftware-utilities';
+```
+
+I comportamenti storici del fork sono riprodotti da un **layer di compatibilita esterno**
+(`src/firebird-compat.ts`), senza toccare il driver ufficiale:
+
+- **Date come UTC** (`utcDates`, default `true`): `DATE`/`TIME`/`TIMESTAMP` vengono reinterpretati
+  come UTC, come faceva il fork con `setUTCMilliseconds`. Con `utcDates: false` restano in ora locale.
+- **Trim dei campi testo** (`trimStringResults`, default `true`): le stringhe vengono trimmate come
+  il fork (`.trim()`). Con `trimStringResults: false` restano intatte.
+- **Compatibilita wire/auth** (`wireCrypt`, `pluginName`): normalizzazione dei valori e diagnostica
+  arricchita sugli errori di connessione.
+
+Le opzioni si passano in `databaseOptions` (vedi `FirebirdOptions` in `src/firebird-compat.ts`).
+
 ## Service token (macchina-a-macchina)
 
 Credenziali di servizio per chiamate tecniche, **non legate a un utente** e senza login giornaliero.
@@ -177,7 +204,7 @@ Tutta la configurazione e riservata al backend: segreti JWT/SMTP/DB non devono m
 
 | Campo | Tipo | Note |
 | --- | --- | --- |
-| `databaseOptions` | `Options` | Connessione Firebird (`DatabaseUtilities.createOption`). Supporta `logQueryParameters`, `poolSize`, `wireCrypt`, `pluginName`. |
+| `databaseOptions` | `Options` | Connessione Firebird (`DatabaseUtilities.createOption`). Supporta `logQueryParameters`, `poolSize`, `wireCrypt`, `pluginName`, `utcDates`, `trimStringResults`. |
 | `confirmationEmailUrl` / `confirmationEmailReturnUrl` | `string` | URL per le email di reset. |
 | `customResetPage` / `confirmationEmailPrefix` | `string?` | Pagina di reset personalizzata. |
 | `encryptionKey` | `string` | Solo compatibilita/migrazione password legacy cifrate. |

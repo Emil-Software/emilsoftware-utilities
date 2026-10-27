@@ -7,6 +7,7 @@ import {
     enhanceFirebirdError,
     FirebirdOptions,
     normalizeFirebirdOptions,
+    normalizeFirebirdResult,
 } from "./firebird-compat";
 
 /** Valore scalare di una colonna Firebird (riga flat). */
@@ -118,32 +119,8 @@ export class Orm {
         return options.trimStringResults !== false;
     }
 
-    private static normalizeResultValue(value: unknown, trimStringResults: boolean): unknown {
-        if (!trimStringResults || value === undefined || value === null) {
-            return value;
-        }
-
-        if (typeof value === "string" || value instanceof String) {
-            return String(value).trimEnd();
-        }
-
-        if (Array.isArray(value)) {
-            return value.map((item) => this.normalizeResultValue(item, trimStringResults));
-        }
-
-        if (value instanceof Date || Buffer.isBuffer(value)) {
-            return value;
-        }
-
-        if (typeof value === "object") {
-            const source = value as Record<string, unknown>;
-            return Object.keys(source).reduce((normalized: Record<string, unknown>, key: string) => {
-                normalized[key] = this.normalizeResultValue(source[key], trimStringResults);
-                return normalized;
-            }, {});
-        }
-
-        return value;
+    private static shouldConvertDatesToUtc(options: FirebirdOptions): boolean {
+        return options.utcDates !== false;
     }
 
     private static attachWithTimeout(options: Options): Promise<Database> {
@@ -266,7 +243,7 @@ export class Orm {
                         return reject(enhanceFirebirdError(error, normalizedOptions, { stage: "query", sql: query }));
                     }
 
-                    return resolve(this.normalizeResultValue(result, this.shouldTrimStringResults(normalizedOptions)) as T[]);
+                    return resolve(normalizeFirebirdResult(result, this.shouldTrimStringResults(normalizedOptions), this.shouldConvertDatesToUtc(normalizedOptions)) as T[]);
                 });
             });
         } catch (error) {
@@ -323,7 +300,7 @@ export class Orm {
                         return reject(enhanceFirebirdError(error, normalizedOptions, { stage: "execute", sql: query }));
                     }
 
-                    return resolve(this.normalizeResultValue(result, this.shouldTrimStringResults(normalizedOptions)) as T[]);
+                    return resolve(normalizeFirebirdResult(result, this.shouldTrimStringResults(normalizedOptions), this.shouldConvertDatesToUtc(normalizedOptions)) as T[]);
                 });
             });
         } catch (error) {

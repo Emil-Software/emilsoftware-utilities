@@ -15,6 +15,12 @@ export type FirebirdOptions = Options & {
     firebirdDriver?: FirebirdDriverStrategy;
     trimStringResults?: boolean;
     /**
+     * When `true` (default), DATE/TIME/TIMESTAMP values are returned as UTC,
+     * reproducing the legacy `es-node-firebird` fork behaviour. When `false`,
+     * the values are left as decoded by `node-firebird` (local time).
+     */
+    utcDates?: boolean;
+    /**
      * When `true`, query parameters are interpolated into the logged SQL. Off by
      * default so that secrets, credentials and personal data are not written to
      * the console or to the daily log files.
@@ -43,6 +49,73 @@ type EnhancedFirebirdError = Error & {
 
 function isBlank(value: unknown): boolean {
     return value === undefined || value === null || (typeof value === "string" && value.trim() === "");
+}
+
+/**
+ * Reinterprets a Date's local wall-clock components as UTC.
+ *
+ * `node-firebird` 2.x decodes Firebird DATE/TIME/TIMESTAMP (which are
+ * timezone-less) as *local* time via `setMilliseconds(... + getTimezoneOffset())`.
+ * The legacy `es-node-firebird` fork instead decoded them as UTC
+ * (`setUTCMilliseconds`). This helper reproduces that legacy behaviour by
+ * taking the local wall-clock fields and rebuilding the Date as if they were
+ * UTC, so existing applications keep seeing the same values.
+ */
+export function toUtcDate(date: Date): Date {
+    return new Date(Date.UTC(
+        date.getFullYear(),
+        date.getMonth(),
+        date.getDate(),
+        date.getHours(),
+        date.getMinutes(),
+        date.getSeconds(),
+        date.getMilliseconds(),
+    ));
+}
+
+/**
+ * Normalizes a decoded Firebird result value to reproduce the legacy
+ * `es-node-firebird` fork behaviour:
+ *
+ * - strings are trimmed (the fork called `.trim()` on every text field);
+ * - `Date` values are reinterpreted as UTC (the fork used `setUTCMilliseconds`);
+ * - arrays and plain objects are normalized recursively;
+ * - `Buffer`, `null` and `undefined` are left untouched.
+ */
+export function normalizeFirebirdResult(
+    value: unknown,
+    trimStringResults: boolean,
+    utcDates: boolean,
+): unknown {
+    if (value === undefined || value === null) {
+        return value;
+    }
+
+    if (typeof value === "string" || value instanceof String) {
+        return trimStringResults ? String(value).trim() : value;
+    }
+
+    if (Array.isArray(value)) {
+        return value.map((item) => normalizeFirebirdResult(item, trimStringResults, utcDates));
+    }
+
+    if (value instanceof Date) {
+        return utcDates ? toUtcDate(value) : value;
+    }
+
+    if (Buffer.isBuffer(value)) {
+        return value;
+    }
+
+    if (typeof value === "object") {
+        const source = value as Record<string, unknown>;
+        return Object.keys(source).reduce((normalized: Record<string, unknown>, key: string) => {
+            normalized[key] = normalizeFirebirdResult(source[key], trimStringResults, utcDates);
+            return normalized;
+        }, {});
+    }
+
+    return value;
 }
 
 function normalizeWireCryptMode(value: FirebirdOptions["wireCrypt"]): number | undefined {
@@ -202,6 +275,7 @@ export function normalizeFirebirdOptions(options: Options): FirebirdOptions {
         logQueryParameters: _logQueryParameters,
         poolSize: _poolSize,
         trimStringResults,
+        utcDates,
         ...baseOptions
     } = compatibilityOptions;
 
@@ -209,6 +283,7 @@ export function normalizeFirebirdOptions(options: Options): FirebirdOptions {
         ...baseOptions,
         pluginName: normalizeAuthPlugin(compatibilityOptions.pluginName),
         trimStringResults,
+        utcDates,
         wireCrypt: normalizeWireCryptMode(compatibilityOptions.wireCrypt),
     };
 

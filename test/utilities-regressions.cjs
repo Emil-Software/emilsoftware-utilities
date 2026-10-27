@@ -12,6 +12,7 @@ const { autobind } = require('../src/autobind');
 const { Logger } = require('../src/Logger');
 const { checkPublicAuthRateLimit } = require('../src/accessi-module/security/publicAuthRateLimit');
 const { AllegatiAuthorizationGuard } = require('../src/allegati-module/security/allegatiAuthorizationGuard');
+const { toUtcDate, normalizeFirebirdResult } = require('../src/firebird-compat');
 
 test('timingSafeStringEquals accepts equal values and rejects different ones', () => {
   assert.equal(PasswordUtilities.timingSafeStringEquals('abc', 'abc'), true);
@@ -183,4 +184,117 @@ test('DateUtilities formatta in modo stabile', () => {
   const date = new Date(2026, 0, 2, 3, 4, 5);
   assert.equal(DateUtilities.dateToSql(date), '2026-01-02 03:04:05');
   assert.equal(DateUtilities.dateToSimple(date), '02-01-2026');
+});
+
+test('toUtcDate reinterpreta il wall-clock locale come UTC (compat es-node-firebird)', () => {
+  // node-firebird 2.x decodifica DATE/TIME/TIMESTAMP come ora locale; il fork
+  // es-node-firebird li restituiva come UTC. toUtcDate deve riprodurre il fork.
+  const local = new Date(2026, 0, 2, 3, 4, 5); // 2026-01-02 03:04:05 locale
+  const utc = toUtcDate(local);
+  assert.equal(utc.toISOString(), '2026-01-02T03:04:05.000Z');
+  // L'istanza originale non deve essere mutata.
+  assert.equal(local.getFullYear(), 2026);
+  assert.equal(local.getHours(), 3);
+});
+
+test('toUtcDate riproduce setUTCMilliseconds del fork per DATE/TIME/TIMESTAMP', () => {
+  // Il fork (stato finale) usava setUTCMilliseconds per DATE, TIME e TIMESTAMP.
+  // Simuliamo ciò che node-firebird 2.x restituisce (ora locale) e verifichiamo
+  // che toUtcDate produca lo stesso valore UTC del fork.
+  const DateOffset = 40587; // giorni dal 17/11/1858 al 01/01/1970
+  const TimeCoeff = 24 * 60 * 60 * 1000; // ms per giorno
+
+  // DATE: 2026-01-02 (giorni dal 17/11/1858)
+  const dateDays = Math.floor(Date.UTC(2026, 0, 2) / TimeCoeff) + DateOffset;
+  const forkDate = new Date(0);
+  forkDate.setUTCMilliseconds((dateDays - DateOffset) * TimeCoeff);
+  const driverDate = new Date(0);
+  driverDate.setMilliseconds((dateDays - DateOffset) * TimeCoeff + driverDate.getTimezoneOffset() * 60000);
+  assert.equal(toUtcDate(driverDate).getTime(), forkDate.getTime());
+
+  // TIME: 03:04:05 (frazioni di giorno * 10)
+  const timeValue = ((3 * 3600 + 4 * 60 + 5) * 1000) * 10;
+  const forkTime = new Date(0);
+  forkTime.setUTCMilliseconds(Math.floor(timeValue / 10));
+  const driverTime = new Date(0);
+  driverTime.setMilliseconds(Math.floor(timeValue / 10) + driverTime.getTimezoneOffset() * 60000);
+  assert.equal(toUtcDate(driverTime).getTime(), forkTime.getTime());
+
+  // TIMESTAMP: 2026-01-02 03:04:05
+  const tsDate = Math.floor(Date.UTC(2026, 0, 2) / TimeCoeff) + DateOffset;
+  const tsTime = ((3 * 3600 + 4 * 60 + 5) * 1000) * 10;
+  const forkTs = new Date(0);
+  forkTs.setUTCMilliseconds((tsDate - DateOffset) * TimeCoeff + Math.floor(tsTime / 10));
+  const driverTs = new Date(0);
+  driverTs.setMilliseconds((tsDate - DateOffset) * TimeCoeff + Math.floor(tsTime / 10) + driverTs.getTimezoneOffset() * 60000);
+  assert.equal(toUtcDate(driverTs).getTime(), forkTs.getTime());
+});
+
+test('normalizeFirebirdResult trima le stringhe come il fork (.trim)', () => {
+  // Il fork chiamava .trim() (spazi iniziali e finali) sui campi testo.
+  assert.equal(normalizeFirebirdResult('  abc  ', true, true), 'abc');
+  assert.equal(normalizeFirebirdResult('abc   ', true, true), 'abc');
+  assert.equal(normalizeFirebirdResult('   abc', true, true), 'abc');
+  // Con trimStringResults=false la stringa resta intatta.
+  assert.equal(normalizeFirebirdResult('  abc  ', false, true), '  abc  ');
+});
+
+test('normalizeFirebirdResult converte le Date in UTC e ricorre in array/oggetti', () => {
+  const local = new Date(2026, 0, 2, 3, 4, 5);
+  const expected = toUtcDate(local).toISOString();
+
+  // Data diretta.
+  assert.equal(normalizeFirebirdResult(local, true, true).toISOString(), expected);
+  // Data dentro array.
+  const arr = normalizeFirebirdResult([local, '  x  '], true, true);
+  assert.equal(arr[0].toISOString(), expected);
+  assert.equal(arr[1], 'x');
+  // Data dentro oggetto annidato.
+  const obj = normalizeFirebirdResult({ a: { b: local }, c: '  y  ' }, true, true);
+  assert.equal(obj.a.b.toISOString(), expected);
+  assert.equal(obj.c, 'y');
+  // Con utcDates=false la data resta invariata.
+  assert.equal(normalizeFirebirdResult(local, true, false), local);
+});
+
+test('normalizeFirebirdResult lascia intatti Buffer, null e undefined', () => {
+  const buf = Buffer.from('abc');
+  assert.equal(normalizeFirebirdResult(buf, true, true), buf);
+  assert.equal(normalizeFirebirdResult(null, true, true), null);
+  assert.equal(normalizeFirebirdResult(undefined, true, true), undefined);
+  assert.equal(normalizeFirebirdResult(42, true, true), 42);
+  assert.equal(normalizeFirebirdResult(true, true, true), true);
+});
+
+test('emilsoftware-utilities serve node-firebird come drop-in di es-node-firebird', () => {
+  // Il pacchetto deve ri-esporre l'intera API di node-firebird (funzioni,
+  // costanti e namespace) cosi che migrare da es-node-firebird richieda solo
+  // il cambio dell'import, senza toccare il resto del codice.
+  const index = require('../src/index');
+
+  // Funzioni principali.
+  for (const fn of ['attach', 'create', 'attachOrCreate', 'pool', 'drop', 'escape']) {
+    assert.equal(typeof index[fn], 'function', `manca la funzione ${fn}`);
+  }
+
+  // Costanti di isolamento e autenticazione usate dal fork.
+  for (const c of [
+    'ISOLATION_READ_UNCOMMITTED',
+    'ISOLATION_READ_COMMITTED',
+    'ISOLATION_REPEATABLE_READ',
+    'ISOLATION_SERIALIZABLE',
+    'ISOLATION_READ_COMMITTED_READ_ONLY',
+    'AUTH_PLUGIN_LEGACY',
+    'AUTH_PLUGIN_SRP',
+    'WIRE_CRYPT_ENABLE',
+    'WIRE_CRYPT_DISABLE',
+  ]) {
+    assert.ok(index[c] !== undefined, `manca la costante ${c}`);
+  }
+
+  // Namespace Firebird: deve esporre le stesse funzioni.
+  assert.equal(typeof index.Firebird, 'object', 'manca il namespace Firebird');
+  assert.equal(typeof index.Firebird.attach, 'function');
+  assert.equal(typeof index.Firebird.pool, 'function');
+  assert.equal(index.Firebird.ISOLATION_READ_COMMITTED, index.ISOLATION_READ_COMMITTED);
 });
