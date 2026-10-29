@@ -54,7 +54,7 @@ inventata, nessun SQL diretto.
   "groups": [
     {
       "codiceGruppo": "U",
-      "descrizioneGruppo": "STEX_QUALITA",
+      "descrizioneGruppo": "STEX",
       "ordineGruppo": 16,
       "enabled": true,
       "owned": true
@@ -63,13 +63,13 @@ inventata, nessun SQL diretto.
   "menuTypes": [{ "codiceTipo": "M", "descrizioneTipo": "Menu di navigazione" }],
   "menus": [
     {
-      "codiceMenu": "STEX_ARRIVI_CQ",
+      "codiceMenu": "CQ_ARRIVI",
       "scopes": ["STEX"],
-      "descrizioneMenu": "SteX - Arrivi CQ",
+      "descrizioneMenu": "Arrivi CQ",
       "codiceGruppo": "U",
       "tipo": "M",
       "icona": "checkmark-done-outline",
-      "pagina": "arrivi",
+      "pagina": "/cq-arrivi",
       "ordineMenu": 10,
       "enabled": true
     }
@@ -94,8 +94,8 @@ Regole:
 ```ts
 import { MENU, MENU_CODES, MENU_BY_CODE } from '../menus/menu.catalog';
 
-MENU.STEX_ARRIVI_CQ.codiceMenu; // 'STEX_ARRIVI_CQ' (tipo letterale)
-MENU.STEX_ARRIVI_CQ.pagina;     // 'arrivi'
+MENU.CQ_ARRIVI.codiceMenu; // 'CQ_ARRIVI' (tipo letterale)
+MENU.CQ_ARRIVI.pagina;     // '/cq-arrivi'
 ```
 
 `MENU` è tipizzato con `MenuEntity` di Orval: i campi sono gli stessi che
@@ -106,7 +106,7 @@ Lo stesso file genera gli scope dichiarati dal catalogo:
 
 ```ts
 export const SCOPES = [{ codice: 'STEX', nome: 'SteX' }] as const;
-export const MENU_SCOPES = { STEX_ARRIVI_CQ: ['STEX'], ... } as const;
+export const MENU_SCOPES = { CQ_ARRIVI: ['STEX'], ... } as const;
 ```
 
 Lo scope **dell'applicazione** non e' una costante duplicata: vive
@@ -121,8 +121,10 @@ export const environment = { production: false, accessiScope: 'STEX' as ScopeCod
 `src/app/shared/app-scope.ts` esporta `APP_SCOPE` da `environment.accessiScope`.
 `menus:generate`, `menus:init` e `menus:verify` leggono lo stesso environment e
 falliscono se il catalogo non dichiara quello scope o se un menu non lo contiene.
-`sync` crea/aggiorna gli scope e aggiunge le associazioni menu/scope in modo
-add-only: gli scope di altre app sullo stesso menu non vengono mai rimossi.
+`sync` crea/aggiorna gli scope e riallinea le associazioni menu/scope: lo scope
+dell'app viene staccato dai menu che non sono piu' nel catalogo e riaggiunto a
+quelli del catalogo. Gli scope delle altre app sui menu condivisi non vengono
+mai rimossi.
 
 I `menu.service.ts` delle app derivano le costanti storiche dal catalogo:
 
@@ -151,3 +153,15 @@ del registro: tutte le copie vengono allineate a quei valori.
 
 I cataloghi sono la fonte di verità dopo il bootstrap: si modificano a mano e
 non serve più rieseguirlo.
+
+## Collisioni tra codici menu
+
+Un codice menu è unico nel database Accessi. Se due app dichiarano lo stesso
+codice:
+
+- **stessa `pagina`**: è lo stesso menu condiviso; si sommano gli scope e i due
+  cataloghi devono avere gli stessi campi.
+- **`pagina` diversa**: non è lo stesso menu. Si tiene il codice più naturale
+  per l'app proprietaria e si aggiunge un suffisso funzionale all'altra (es.
+  `HOME` per SteX e `HOME_DIPENDENTI` per StaffX), senza reintrodurre il
+  prefisso dell'app.

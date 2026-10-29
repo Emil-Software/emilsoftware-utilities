@@ -12,8 +12,11 @@ Il modulo non legge direttamente il file `.env`: riceve un oggetto `AccessiOptio
 - `encryptionKey`: chiave usata per cifrare la password
 - `mockDemoUser`: abilita gli utenti demo hardcoded `demo` e `admin`
 - `passwordExpiration`: abilita il controllo sulla scadenza password
-- `jwtOptions.secret`: segreto JWT
+- `jwtOptions.secret`: segreto JWT (obbligatorio anche con algoritmi asimmetrici, per reset e 2FA)
 - `jwtOptions.expiresIn`: durata JWT
+- `jwtOptions.algorithm`, `issuer`, `audience`, `privateKey`, `publicKey`, `keyId`: firma e verifica degli access token. Default `HS256`; usare RS/ES in una topologia multi-servizio
+- `openapi`: path, titolo, descrizione e `enabled` della documentazione OpenAPI
+- `serviceTokens`: token macchina-a-macchina; lo scope `accessi:introspect` abilita l'introspection per i backend fratelli
 - `emailOptions`: configurazione SMTP per le mail di reset
 - `extensionFieldsOptions`: tabelle esterne opzionali da allegare al login
 - `autoUpdateDatabase`: se `false`, disabilita le modifiche automatiche ma verifica comunque lo schema al boot e blocca avvii incompatibili; dettagli in [Aggiornamento database](database-update.md)

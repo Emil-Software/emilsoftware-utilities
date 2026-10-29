@@ -19,12 +19,23 @@ import {
   getAccessiJwtSecret,
   verifyPasswordResetToken,
 } from "../../security/passwordResetToken";
+import {
+  getAccessiAccessTokenSigningConfig,
+  getAccessiAccessTokenVerificationConfig,
+} from "../../security/jwtTokenOptions";
 import { assertStrongPassword } from '../../security/passwordPolicy';
 import { Logger } from "../../../Logger";
 import { TokenResult } from '../../Dtos/TokenResult';
 
 /** Error code deliberately returned when a user is configured as SSO-only. */
 export const PASSWORD_LOGIN_DISABLED = 'PASSWORD_LOGIN_DISABLED';
+
+/** Esito di una verifica token usata dall'endpoint di introspection. */
+export interface AccessiTokenIntrospectionResult {
+  active: boolean;
+  codiceUtente?: number;
+  payload?: Record<string, unknown>;
+}
 
 interface AccessiTokenIssueOptions {
   /** Sovrascrive jwtOptions.expiresIn per token a durata ridotta (es. Login as). */
@@ -92,10 +103,15 @@ export class AuthService {
       throw new Error('jwtOptions.expiresIn non configurato: impossibile emettere token senza scadenza.');
     }
 
+    const signing = getAccessiAccessTokenSigningConfig(this.accessiOptions);
     const token = jwt.sign(
       { ...(tokenOptions.extraClaims ?? {}), utente, typ: 'access', amr: methods },
-      getAccessiJwtSecret(this.accessiOptions),
-      { expiresIn: expiresIn as jwt.SignOptions['expiresIn'] },
+      signing.key,
+      {
+        expiresIn: expiresIn as jwt.SignOptions['expiresIn'],
+        algorithm: signing.algorithm,
+        ...signing.signOptions,
+      },
     );
 
     // Difesa in profondita: un `expiresIn` malformato farebbe emettere un token permanente.
@@ -272,6 +288,46 @@ export class AuthService {
   }
 
   /**
+   * Verifica un access token Accessi senza sollevare eccezioni per token invalidi.
+   *
+   * Gli errori di configurazione o database continuano a propagarsi: un problema
+   * infrastrutturale non deve essere confuso con un token scaduto.
+   */
+  public async introspectAccessToken(token: string): Promise<AccessiTokenIntrospectionResult> {
+    if (typeof token !== "string" || token.trim() === "") {
+      return { active: false };
+    }
+
+    const verification = getAccessiAccessTokenVerificationConfig(this.accessiOptions);
+    let decoded: unknown;
+    try {
+      decoded = jwt.verify(token.trim(), verification.key, verification.verifyOptions);
+    } catch {
+      return { active: false };
+    }
+
+    const codiceUtente = resolveCodiceUtenteFromTokenPayload(decoded);
+    if (!codiceUtente) {
+      return { active: false };
+    }
+
+    const currentUser = await this.userService.getAuthenticatedUserSnapshot(codiceUtente);
+    if (
+      !currentUser ||
+      !isAuthenticatedUserEnabledForJwt(currentUser) ||
+      !isAccessiTokenAllowedForUser(decoded, currentUser)
+    ) {
+      return { active: false };
+    }
+
+    return {
+      active: true,
+      codiceUtente,
+      payload: buildAuthenticatedTokenPayload(decoded, currentUser),
+    };
+  }
+
+  /**
    * Verifica un JWT Accessi e ricostruisce il profilo corrente dal database.
    * Questo evita che privilegi, stato utente o flag amministrativi presenti in un token vecchio restino validi.
    */
@@ -280,20 +336,12 @@ export class AuthService {
       throw new Error("Token non fornito.");
     }
 
-    const secret = getAccessiJwtSecret(this.accessiOptions);
-    const decoded = jwt.verify(token.trim(), secret, { algorithms: ['HS256'] });
-    const codiceUtente = resolveCodiceUtenteFromTokenPayload(decoded);
-
-    if (!codiceUtente) {
-      throw new Error("Token non valido.");
-    }
-
-    const currentUser = await this.userService.getAuthenticatedUserSnapshot(codiceUtente);
-    if (!currentUser || !isAuthenticatedUserEnabledForJwt(currentUser) || !isAccessiTokenAllowedForUser(decoded, currentUser)) {
+    const introspection = await this.introspectAccessToken(token);
+    if (!introspection.active || !introspection.payload) {
       throw new Error("Token non valido o utente non autorizzato.");
     }
 
-    return buildAuthenticatedTokenPayload(decoded, currentUser);
+    return introspection.payload;
   }
 
   /** Starts a second-factor challenge after the hosting backend has verified an SSO identity. */

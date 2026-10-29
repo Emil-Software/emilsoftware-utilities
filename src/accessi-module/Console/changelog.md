@@ -5,6 +5,13 @@ Novità e modifiche rilevanti della libreria `emilsoftware-utilities` (modulo Ac
 ## Non rilasciato
 
 ### Cambiamenti
+- Distribuzione: nuovi entry point `accessi/server`, `accessi/resource-server`, `accessi/client`, `accessi/contracts`, `accessi/contracts/dtos`, `accessi/openapi`, `accessi/console` e `accessi/ui`. Gli entry point sono dichiarati in `package.json#exports`; il root export resta per retrocompatibilita.
+- Resource server: aggiunti `createAccessiAuthMiddleware`, `createAccessiAuthGuard`, `createAccessiTokenVerifier` e `createAccessiIntrospectionClient` per backend fratelli che non possiedono il database Accessi. Supporta HS256, RS/ES con chiave pubblica PEM e JWKS con cache.
+- Introspection: nuovo `POST /api/accessi/auth/introspect` protetto da service token con scope `accessi:introspect`. Restituisce `active`, profilo utente e grant correnti.
+- JWT: `jwtOptions` accetta `algorithm`, `issuer`, `audience`, `privateKey`, `publicKey` e `keyId`. Default HS256 invariato; RS/ES sono consigliati per la topologia multi-servizio.
+- OpenAPI: aggiunto `mergeOpenApiDocuments` per unire il documento Accessi nel documento unico dell'host con conflitti espliciti.
+- Console: aggiunto `buildAccessiConsoleUrl` per linkare la console centrale senza mettere JWT nell'URL.
+- Rinomina: la configurazione e gli helper della documentazione usano `openapi`/`OpenApi` (`AccessiOptions.openapi`, `OpenApiSetupOptions`, `setupOpenApi`, `DEFAULT_ACCESSI_OPENAPI`); i vecchi nomi `swagger` non sono piu esportati.
 - Token Accessi: `TokenResult.expiresIn` riporta sempre la validita effettiva in secondi (es. `86400`), anche quando `jwtOptions.expiresIn` usa un formato leggibile come `24h`. I client possono quindi esporre `expires_in` anche per il token di login normale.
 - Console: nuova funzione **Login as** per superutenti e admin. Dalla lista utenti si genera un URL verso l'applicazione scelta con `?loginAsToken=<jwt>`; il token dura quanto la sessione Accessi standard (`jwtOptions.expiresIn`), registra l'attore nelle claim `act`/`loginAs` e resta soggetto alla gerarchia ADMIN > SUPER. Endpoint: `POST /api/accessi/user/login-as/:codiceUtente`.
 - Console: rimosse le sezioni **Filtri utente** e **Tipi filtro**. I filtri applicativi sono deprecati e non vengono più letti né scritti dalla console; le tabelle restano invariate e la gestione torna manuale sul database.

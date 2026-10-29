@@ -38,19 +38,12 @@ import {
 // Regole di anagrafica
 // ---------------------------------------------------------------------------
 
-/** Codici usati nel FE che nel DB hanno gia' un nome piu' corto. */
-const CODE_ALIASES = {
-  STAFFX_COMUNICAZIONI_AZIENDA: 'STAFFX_COM_AZIENDA',
-  STAFFX_COMUNICAZIONI_GENERALI: 'STAFFX_COM_GENERALI',
-  STAFFX_COMUNICAZIONI_SICUREZZA: 'STAFFX_COM_SICUREZZA',
-};
-
 /** Proprietario di un gruppo, dedotto dal prefisso della descrizione. */
 const GROUP_OWNERS = [
   { prefix: 'ESGESTX_', app: 'EsGestX' },
   { prefix: 'TINTEMIX_', app: 'TintemiX' },
   { prefix: 'MAGAZTINT_', app: 'Magaz-Tint' },
-  { prefix: 'STEX_', app: 'SteX' },
+  { prefix: 'STEX', app: 'SteX' },
   { prefix: 'STAFFX_', app: 'StaffX' },
   { prefix: 'STERILIX_', app: 'SteriliX' },
   { prefix: 'CENTROCONTROLLO_', app: 'SteX' },
@@ -217,10 +210,7 @@ const assignedOrder = new Map();
 const built = [];
 
 for (const app of apps) {
-  const declared = new Map();
-  for (const [code, meta] of scanDeclaredCodes(app)) {
-    declared.set(CODE_ALIASES[code] ?? code, meta);
-  }
+  const declared = scanDeclaredCodes(app);
   const ownedGroups = groupsByOwner.get(app.app) ?? new Set();
   const codes = new Set();
   for (const [code, menu] of snapshot.menus) {

@@ -50,6 +50,8 @@ import type {
   GetUserRolesAndGrantsParams,
   GetUsersParams,
   GetUsersResponse,
+  IntrospectAccessiTokenRequest,
+  IntrospectAccessiTokenResponse,
   LoginAsRequest,
   LoginAsResponse,
   LoginRequest,
@@ -2020,6 +2022,32 @@ return accessiFetch<Promise<getSchemaResponse>>(getGetSchemaUrl(),
     ...options,
     method: 'GET'
     
+  }
+);}
+
+
+/**
+ * Restituisce active=false per token invalido, scaduto o utente non piu abilitato. Richiede un service token con scope accessi:introspect.
+ * @summary Verifica un access token Accessi
+ */
+export type introspectAccessiTokenResponse = {
+  data: IntrospectAccessiTokenResponse;
+  status: number;
+}
+
+export const getIntrospectAccessiTokenUrl = () => {
+
+
+  return `/api/accessi/auth/introspect`
+}
+
+export const introspectAccessiToken = async (introspectAccessiTokenRequest: IntrospectAccessiTokenRequest, options?: RequestInit): Promise<introspectAccessiTokenResponse> => {
+return accessiFetch<Promise<introspectAccessiTokenResponse>>(getIntrospectAccessiTokenUrl(),
+  {      
+    ...options,
+    method: 'POST',
+    body: JSON.stringify(
+      introspectAccessiTokenRequest,)
   }
 );}
 

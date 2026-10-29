@@ -5,6 +5,86 @@
   "main": "dist/index.js",
   "module": "dist/index.js",
   "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "require": "./dist/index.js",
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
+    },
+    "./accessi/server": {
+      "types": "./dist/accessi/server/index.d.ts",
+      "require": "./dist/accessi/server/index.js",
+      "import": "./dist/accessi/server/index.js",
+      "default": "./dist/accessi/server/index.js"
+    },
+    "./accessi/contracts": {
+      "types": "./dist/accessi/contracts/index.d.ts",
+      "require": "./dist/accessi/contracts/index.js",
+      "import": "./dist/accessi/contracts/index.js",
+      "default": "./dist/accessi/contracts/index.js"
+    },
+    "./accessi/contracts/dtos": {
+      "types": "./dist/accessi/contracts/dtos.d.ts",
+      "require": "./dist/accessi/contracts/dtos.js",
+      "import": "./dist/accessi/contracts/dtos.js",
+      "default": "./dist/accessi/contracts/dtos.js"
+    },
+    "./accessi/resource-server": {
+      "types": "./dist/accessi/resource-server/index.d.ts",
+      "require": "./dist/accessi/resource-server/index.js",
+      "import": "./dist/accessi/resource-server/index.js",
+      "default": "./dist/accessi/resource-server/index.js"
+    },
+    "./accessi/resource-server/core": {
+      "types": "./dist/accessi/resource-server/core.d.ts",
+      "require": "./dist/accessi/resource-server/core.js",
+      "import": "./dist/accessi/resource-server/core.js",
+      "default": "./dist/accessi/resource-server/core.js"
+    },
+    "./accessi/resource-server/express": {
+      "types": "./dist/accessi/resource-server/express.d.ts",
+      "require": "./dist/accessi/resource-server/express.js",
+      "import": "./dist/accessi/resource-server/express.js",
+      "default": "./dist/accessi/resource-server/express.js"
+    },
+    "./accessi/resource-server/nest": {
+      "types": "./dist/accessi/resource-server/nest.d.ts",
+      "require": "./dist/accessi/resource-server/nest.js",
+      "import": "./dist/accessi/resource-server/nest.js",
+      "default": "./dist/accessi/resource-server/nest.js"
+    },
+    "./accessi/client": {
+      "types": "./dist/accessi/client/index.d.ts",
+      "require": "./dist/accessi/client/index.js",
+      "import": "./dist/accessi/client/index.js",
+      "default": "./dist/accessi/client/index.js"
+    },
+    "./accessi/openapi": {
+      "types": "./dist/accessi/openapi/index.d.ts",
+      "require": "./dist/accessi/openapi/index.js",
+      "import": "./dist/accessi/openapi/index.js",
+      "default": "./dist/accessi/openapi/index.js"
+    },
+    "./accessi/console": {
+      "types": "./dist/accessi/console/index.d.ts",
+      "require": "./dist/accessi/console/index.js",
+      "import": "./dist/accessi/console/index.js",
+      "default": "./dist/accessi/console/index.js"
+    },
+    "./accessi/console/index.html": "./dist/accessi-module/Console/index.html",
+    "./accessi/console/console.js": "./dist/accessi-module/Console/console.js",
+    "./accessi/console/console.css": "./dist/accessi-module/Console/console.css",
+    "./accessi/ui": {
+      "types": "./dist/accessi/ui/index.d.ts",
+      "require": "./dist/accessi/ui/index.js",
+      "import": "./dist/accessi/ui/index.js",
+      "default": "./dist/accessi/ui/index.js"
+    },
+    "./accessi/ui/aree-disponibili": "./dist/angular-components/aree-disponibili/aree-disponibili.js",
+    "./dist/*": "./dist/*",
+    "./package.json": "./package.json"
+  },
   "scripts": {
     "release": "semantic-release",
     "build": "npm run generate:accessi-openapi && npm run generate:accessi-client && npm run generate:accessi-wiki && tsc && tsc -p tsconfig.console.json --noEmit && npm run build:accessi-console && npm run copy-views",
@@ -21,8 +101,8 @@
     "typecheck": "tsc --noEmit",
     "lint": "node scripts/lint.cjs",
     "test": "npm run typecheck && npm run lint && npm run test:unit",
-    "test:unit": "node --test test/angular-components.cjs test/menus-catalog.mjs test/menu-scopes.cjs test/accessi-regressions.cjs test/password-reset-regressions.cjs test/two-factor.cjs test/accessi-schema.cjs test/utilities-regressions.cjs test/service-token-regressions.cjs test/accessi-email-config.cjs test/accessi-catalog-scripts.cjs",
-    "test:coverage": "node --experimental-test-coverage --test-coverage-lines=50 --test-coverage-functions=60 --test-coverage-branches=60 --test test/angular-components.cjs test/menus-catalog.mjs test/menu-scopes.cjs test/accessi-regressions.cjs test/password-reset-regressions.cjs test/two-factor.cjs test/accessi-schema.cjs test/utilities-regressions.cjs test/service-token-regressions.cjs test/accessi-email-config.cjs test/accessi-catalog-scripts.cjs",
+    "test:unit": "node --test test/angular-components.cjs test/menus-catalog.mjs test/menu-scopes.cjs test/accessi-regressions.cjs test/password-reset-regressions.cjs test/two-factor.cjs test/accessi-schema.cjs test/utilities-regressions.cjs test/service-token-regressions.cjs test/accessi-email-config.cjs test/accessi-catalog-scripts.cjs test/openapi-config.cjs test/resource-server.cjs",
+    "test:coverage": "node --experimental-test-coverage --test-coverage-lines=50 --test-coverage-functions=60 --test-coverage-branches=60 --test test/angular-components.cjs test/menus-catalog.mjs test/menu-scopes.cjs test/accessi-regressions.cjs test/password-reset-regressions.cjs test/two-factor.cjs test/accessi-schema.cjs test/utilities-regressions.cjs test/service-token-regressions.cjs test/accessi-email-config.cjs test/accessi-catalog-scripts.cjs test/openapi-config.cjs test/resource-server.cjs",
     "test:accessi": "npm run test:unit",
     "test:all": "npm test && npm run test:integration",
     "test:integration": "node test/integration/run-firebird.cjs 5",
@@ -38,7 +118,9 @@
     "menus:verify": "node scripts/menus/verify.mjs",
     "menus:generate": "node scripts/menus/generate.mjs",
     "menus:check": "node scripts/menus/generate.mjs --check",
-    "menus:bootstrap": "node scripts/menus/bootstrap.mjs"
+    "menus:bootstrap": "node scripts/menus/bootstrap.mjs",
+    "menus:seed": "node scripts/menus/seed.mjs",
+    "menus:seed:check": "node scripts/menus/seed.mjs --check"
   },
   "publishConfig": {
     "access": "public"
@@ -100,7 +182,8 @@
     "typescript": "^5.8.3"
   },
   "files": [
-    "dist"
+    "dist",
+    "integration-prompt.md"
   ],
   "config": {
     "commitizen": {

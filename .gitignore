@@ -18,6 +18,8 @@
 !/test/console-two-factor.cjs
 !/test/utilities-regressions.cjs
 !/test/service-token-regressions.cjs
+!/test/openapi-config.cjs
+!/test/resource-server.cjs
 !/test/integration/
 !/test/integration/**
 

@@ -7,6 +7,9 @@
  */
 import { Options } from 'node-firebird';
 import { DynamicModule, Global, Module } from '@nestjs/common';
+import type { LoggerService } from '@nestjs/common';
+import type { OpenApiSetupOptions } from '../openapi/OpenApiConfig';
+import type { AccessiAccessTokenAlgorithm } from './security/jwtTokenOptions';
 import { AuthService } from './Services/AuthService/AuthService';
 import { EmailService } from './Services/EmailService/EmailService';
 import { PermissionService } from './Services/PermissionService/PermissionService';
@@ -30,6 +33,7 @@ import { ServiceTokenController } from './Controllers/ServiceTokenController';
 import { ServiceTokenService } from './Services/ServiceTokenService/ServiceTokenService';
 import { ServiceTokenGuard } from './security/serviceTokenGuard';
 import { SchemaController } from './Controllers/SchemaController';
+import { AccessiIntrospectionController } from './Controllers/AccessiIntrospectionController';
 import { SchemaExportService } from './Services/SchemaExportService/SchemaExportService';
 import { AdminBootstrapService } from './Services/AdminBootstrapService/AdminBootstrapService';
 import { assertEmailConfigured } from './security/emailConfiguration';
@@ -38,6 +42,18 @@ import { assertEmailConfigured } from './security/emailConfiguration';
 export interface JwtOptions {
   /** Segreto simmetrico per firmare e verificare i JWT Accessi; deve essere unico per ambiente. */
   secret: string;
+  /** Issuer (`iss`) opzionale degli access token. Consigliato in una topologia multi-servizio. */
+  issuer?: string;
+  /** Audience (`aud`) opzionale degli access token. */
+  audience?: string | string[];
+  /** Algoritmo degli access token. Default `HS256` per retrocompatibilita. */
+  algorithm?: AccessiAccessTokenAlgorithm;
+  /** Chiave privata PEM per RS/ES. Obbligatoria quando `algorithm` non e HS*. */
+  privateKey?: string;
+  /** Chiave pubblica PEM per la verifica RS/ES. */
+  publicKey?: string;
+  /** Key id pubblicato nella JWKS, per rotazione chiavi. */
+  keyId?: string;
   /** Durata compatibile con `jsonwebtoken`, per esempio `24h` o `3600s`. */
   expiresIn: string;
 }
@@ -218,8 +234,17 @@ export interface AccessiOptions {
   systemSeeds?: SystemSeedsOptions;
   /** Bootstrap del primo admin tramite token casuale stampato a ogni avvio. */
   adminBootstrap?: AdminBootstrapOptions;
-  /** Base URL pubblica usata solo per loggare gli indirizzi (console, swagger, API). */
+  /** Base URL pubblica usata solo per loggare gli indirizzi (console, OpenAPI, API). */
   publicBaseUrl?: string;
+  /**
+   * Documentazione OpenAPI del modulo. Default invariati:
+   * UI `accessi/openapi`, JSON `accessi/openapi.json`.
+   */
+  openapi?: OpenApiSetupOptions;
+  /** Logger Nest usato dal sotto-app Accessi. Se assente Nest usa il proprio logger. */
+  logger?: LoggerService;
+  /** Buffer dei log di bootstrap del sotto-app. Default `true` (comportamento storico). */
+  bufferLogs?: boolean;
 }
 
 @Global()
@@ -236,6 +261,7 @@ export interface AccessiOptions {
     ConsoleEntryController,
     ServiceTokenController,
     SchemaController,
+    AccessiIntrospectionController,
   ],
   providers: [AuthService, TwoFactorService, UserService, EmailService, PermissionService, FiltriService, ConfiguratorService, JwtSimpleGuard, AuthenticateGenService, AccessiDatabaseUpdater, FederatedAuthService, ServiceTokenService, ServiceTokenGuard, SchemaExportService, AdminBootstrapService],
   exports: [AuthService, UserService, EmailService, PermissionService, FiltriService, ConfiguratorService, JwtSimpleGuard, AuthenticateGenService, FederatedAuthService, ServiceTokenService, ServiceTokenGuard, SchemaExportService, AdminBootstrapService],

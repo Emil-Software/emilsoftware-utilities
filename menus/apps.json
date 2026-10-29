@@ -49,7 +49,7 @@
       "folder": "../EsGestX",
       "catalog": "menus/menu-catalog.json",
       "generated": "src/app/menus/menu.catalog.ts",
-      "modelsImport": "../Service/orval-esu/models",
+      "modelsImport": "../Service/emilsoftware-utilities/models",
       "sources": [
         "src/app/Service/menu.service.ts"
       ],

@@ -120,6 +120,16 @@ for (const app of apps) {
     console.log(`  - menu del DB nei gruppi dell'app non in catalogo (${realExtras.length}): ${realExtras.map((m) => m.codiceMenu).join(', ')}`);
     if (strict) problems += realExtras.length;
   }
+  const scopeCodes = (catalog.scopes ?? []).map((scope) => normalizeCode(scope.codice));
+  const scopedResponse = await client.getMenus({ scope: scopeCodes.join(',') });
+  const catalogCodes = new Set((catalog.menus ?? []).map((menu) => normalizeCode(menu.codiceMenu)));
+  const scopedExtras = [...new Set((scopedResponse?.data?.Result ?? [])
+    .map((menu) => normalizeCode(menu.codiceMenu))
+    .filter((code) => Boolean(code) && !catalogCodes.has(code)))].sort();
+  if (scopedExtras.length > 0) {
+    console.log(`  - menu con lo scope dell'app ma fuori catalogo (${scopedExtras.length}): ${scopedExtras.join(', ')}`);
+    problems += scopedExtras.length;
+  }
   console.log('');
 }
 

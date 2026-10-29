@@ -56,7 +56,7 @@
   updateScope,
   updateRole,
   updateUtente,
-} from './generated/accessiApi';
+} from './generated/emilsoftware-utilities';
 import { ACCESSI_UNAUTHORIZED_EVENT, setAccessiConsoleToken } from './accessiFetch';
 import { WIKI_SECTIONS, wikiGroups, buildAiDigest } from './wiki';
 import changelogMarkdown from './changelog.md';

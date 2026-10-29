@@ -12,7 +12,7 @@ La dipendenza `file:../..` punta direttamente alla root del repository: non pubb
 
 Aprire `http://localhost:3001/api/accessi/console` e autenticarsi con un superutente gia presente nel database Accessi.
 
-Swagger e disponibile su `http://localhost:3001/accessi/swagger`; il JSON su `http://localhost:3001/accessi/swagger.json`.
+OpenAPI e disponibile su `http://localhost:3001/accessi/openapi`; il JSON su `http://localhost:3001/accessi/openapi.json`.
 
 `ACCESSI_FIREBIRD_WIRE_CRYPT` viene passato come valore numerico quando valorizzato. `ACCESSI_FIREBIRD_AUTH_PLUGIN` resta nel file di configurazione per compatibilita con i deployment, ma la versione di `node-firebird` usata dalla libreria non espone quell'opzione e l'esempio lo segnala, senza inviarlo al driver.
 

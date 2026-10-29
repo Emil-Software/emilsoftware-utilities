@@ -15,10 +15,10 @@ export async function initializeAllegatiModule(app: Application, options: Allega
         nestApp.enableCors();
 
         nestApp.setGlobalPrefix('api', {
-            exclude: ['/swagger', '/swagger/(.*)']
+            exclude: ['/openapi', '/openapi/{*path}']
         });
 
-        // Note: Swagger setup is now handled by the unified module
+        // Note: OpenAPI setup is now handled by the unified module
         await nestApp.init();
 
     } catch (error) {

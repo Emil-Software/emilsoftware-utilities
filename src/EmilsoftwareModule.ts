@@ -1,8 +1,9 @@
 import { DynamicModule, Module } from "@nestjs/common";
+import type { LoggerService } from "@nestjs/common";
 import { AccessiModule, AccessiOptions } from "./accessi-module/AccessiModule";
 import { AllegatiModule, AllegatiOptions } from "./allegati-module/AllegatiModule";
 import { Logger } from "./Logger";
-import type { SwaggerSetupOptions } from "./swagger/SwaggerConfig";
+import type { OpenApiSetupOptions } from "./openapi/OpenApiConfig";
 
 /**
  * Configuration options for the unified module that combines Accessi and Allegati functionality
@@ -13,13 +14,20 @@ export interface EmilsoftwareOptions {
     /**
      * Documentazione OpenAPI del modulo unificato. Default: `accessi/openapi`
      * (UI) e `accessi/openapi.json` (spec).
+     *
+     * Precedenza: questo campo vince su `accessiOptions.openapi`, che a sua
+     * volta vince sui default storici.
      */
-    swagger?: SwaggerSetupOptions;
+    openapi?: OpenApiSetupOptions;
+    /** Logger Nest usato dal sotto-app unificato. Se assente Nest usa il proprio logger. */
+    logger?: LoggerService;
+    /** Buffer dei log di bootstrap del sotto-app. Default `true` (comportamento storico). */
+    bufferLogs?: boolean;
 }
 
 /**
  * Unified module that combines user access management (Accessi) and file attachment management (Allegati)
- * into a single NestJS module with shared Swagger documentation
+ * into a single NestJS module with shared OpenAPI documentation
  */
 @Module({})
 export class EmilsoftwareModule {

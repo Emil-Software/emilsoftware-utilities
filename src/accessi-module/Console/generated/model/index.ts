@@ -7,6 +7,7 @@
 
 export * from './abilitazioneMenu';
 export * from './abilitazioneMenuTipoAbilitazione';
+export * from './accessiIntrospectionResultDto';
 export * from './actionResponse';
 export * from './adminBootstrapStatusResponse';
 export * from './adminBootstrapStatusResult';
@@ -65,6 +66,8 @@ export * from './getUsersResponse';
 export * from './getUsersResult';
 export * from './getUsersResultExtensionFields';
 export * from './groupWithMenusEntity';
+export * from './introspectAccessiTokenRequest';
+export * from './introspectAccessiTokenResponse';
 export * from './issuedServiceTokenDto';
 export * from './loginAsRequest';
 export * from './loginAsResponse';

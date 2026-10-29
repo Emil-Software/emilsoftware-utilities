@@ -63,6 +63,14 @@ function printActions(appName, actions) {
       console.log(`    ~ ${action.entity} ${action.code} (${fields})`);
     }
   }
+  const detached = actions.filter((action) => action.kind === 'detach');
+  if (detached.length > 0) {
+    console.log(`  ${appName}: ${detached.length} menu da staccare dallo scope`);
+    for (const action of detached) {
+      const scopes = action.changes.scopes.length > 0 ? action.changes.scopes.join(', ') : '(nessuno)';
+      console.log(`    - ${action.code} -> ${scopes}`);
+    }
+  }
 }
 
 const registry = loadRegistry();

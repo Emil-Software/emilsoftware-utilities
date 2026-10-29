@@ -23,5 +23,6 @@ export * from "./allegati-module";
 export * from "node-firebird";
 export { autobind, ExecutionTimeLogger, Logger, LogLevels, Orm, DateUtilities, RestUtilities, DatabaseUtilities, DatabaseUpdater, StatusCode, DocumentGenerator, Firebird };
 // Unified module exports
-export * from "./swagger/SwaggerConfig";
+export * from "./openapi/OpenApiConfig";
+export * from "./openapi/OpenApiMerge";
 export * from "./initEmilsoftwareModule";

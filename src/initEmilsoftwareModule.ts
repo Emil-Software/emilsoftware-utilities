@@ -1,7 +1,14 @@
 import express, { Application, Request } from "express";
 import { NestFactory } from "@nestjs/core";
 import { ExpressAdapter } from "@nestjs/platform-express";
-import { setupSwagger } from "./swagger/SwaggerConfig";
+import type { INestApplication } from "@nestjs/common";
+import type { OpenAPIObject } from "@nestjs/swagger";
+import {
+    buildOpenApiExcludePaths,
+    isOpenApiRequestPath,
+    resolveAccessiOpenApiOptions,
+    setupOpenApi
+} from "./openapi/OpenApiConfig";
 import { Logger } from "./Logger";
 import { EmilsoftwareModule, EmilsoftwareOptions } from "./EmilsoftwareModule";
 import {
@@ -14,12 +21,24 @@ import { logAccessiStartup } from "./accessi-module/startupLog";
 import { createAccessiValidationPipe } from './accessi-module/security/accessiValidation';
 import { AccessiHttpExceptionFilter } from './accessi-module/security/AccessiHttpExceptionFilter';
 
+/** Esito del bootstrap del modulo unificato. */
+export interface EmilsoftwareModuleInitializationResult {
+    /** Sotto-app Nest che serve Accessi, Allegati e la documentazione. */
+    nestApp: INestApplication;
+    /** Documento OpenAPI generato, mergiabile nel documento unico dell'host. */
+    document: OpenAPIObject;
+}
+
 /**
  * Initializes the unified module that combines Accessi and Allegati functionality
  * @param app Express application instance
  * @param options Configuration options for both modules
+ * @returns Il sotto-app Nest e il documento OpenAPI generato.
  */
-export async function initEmilsoftwareModule(app: Application, options: EmilsoftwareOptions) {
+export async function initEmilsoftwareModule(
+    app: Application,
+    options: EmilsoftwareOptions
+): Promise<EmilsoftwareModuleInitializationResult> {
     const logger: Logger = new Logger(initEmilsoftwareModule.name);
     if (options?.accessiOptions) {
         beginAccessiAuthInitialization();
@@ -31,23 +50,17 @@ export async function initEmilsoftwareModule(app: Application, options: Emilsoft
         // Prefisso OpenAPI configurabile (default `accessi/openapi`), cosi' piu'
         // documentazioni possono convivere (backend su `/openapi`, moduli sotto
         // `/<modulo>/openapi`).
-        const swaggerPath = (options?.swagger?.swaggerPath ?? "accessi/openapi").replace(/^\/+|\/+$/g, "");
-        const swaggerJsonPath = (options?.swagger?.swaggerJsonPath ?? `${swaggerPath}.json`).replace(/^\/+/, "");
-        const legacySwaggerJsonPath = `${swaggerPath}-json`;
-        const swaggerRoutePaths = [
-            `/${swaggerPath}`,
-            `/${swaggerPath}/`,
-            `/${swaggerJsonPath}`,
-            `/${legacySwaggerJsonPath}`,
-        ];
+        // Precedenza: EmilsoftwareOptions.openapi > AccessiOptions.openapi > default.
+        const resolvedOpenApi = resolveAccessiOpenApiOptions(
+            options?.accessiOptions?.openapi,
+            options?.openapi
+        );
 
         const nestHostApp = express();
         const isNestRoute = (path: string) =>
             path === "/api" ||
             path.startsWith("/api/") ||
-            swaggerRoutePaths.some(
-                (routePath) => path === routePath || path.startsWith(`${routePath.replace(/\/$/, "")}/`)
-            );
+            isOpenApiRequestPath(path, resolvedOpenApi);
 
         app.use((req: Request, res, next) => {
             if (!isNestRoute(req.path)) {
@@ -58,7 +71,8 @@ export async function initEmilsoftwareModule(app: Application, options: Emilsoft
 
         const nestExpressInstance = new ExpressAdapter(nestHostApp);
         const nestApp = await NestFactory.create(EmilsoftwareModule.forRoot(options), nestExpressInstance, {
-            bufferLogs: true
+            bufferLogs: options?.bufferLogs !== false,
+            ...(options?.logger ? { logger: options.logger } : {})
         });
 
         nestApp.enableCors();
@@ -69,27 +83,23 @@ export async function initEmilsoftwareModule(app: Application, options: Emilsoft
         }
 
         nestApp.setGlobalPrefix('api', {
-            exclude: [`/${swaggerPath}`, `/${swaggerPath}/(.*)`]
+            exclude: buildOpenApiExcludePaths(resolvedOpenApi)
         });
 
         // Documentazione OpenAPI del modulo unificato (Accessi + Allegati).
-        setupSwagger(nestApp, {
-            swaggerPath,
-            swaggerJsonPath,
-            title: options?.swagger?.title,
-            description: options?.swagger?.description,
-        });
+        const document = setupOpenApi(nestApp, resolvedOpenApi);
 
         await nestApp.init();
         if (options?.accessiOptions) {
             const accessiServices = registerAccessiModuleServices(app, nestApp);
             app.locals.accessiAuthService = accessiServices.authenticateGenService;
             setAccessiAuthService(accessiServices.authenticateGenService);
-            logAccessiStartup(options.accessiOptions);
+            logAccessiStartup(options.accessiOptions, resolvedOpenApi);
         }
 
         logger.info("Emilsoftware module initialized successfully");
 
+        return { nestApp, document };
     } catch (error) {
         if (options?.accessiOptions) {
             failAccessiAuthInitialization(error);

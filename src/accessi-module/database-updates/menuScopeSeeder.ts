@@ -26,7 +26,7 @@ const GROUP_PREFIXES: ReadonlyArray<readonly [string, string]> = [
   ['ESGESTX_', 'ESGESTX'],
   ['TINTEMIX_', 'TINTEMIX'],
   ['MAGAZTINT_', 'MAGAZTINT'],
-  ['STEX_', 'STEX'],
+  ['STEX', 'STEX'],
   ['STAFFX_', 'STAFFX'],
   ['STERILIX_', 'STERILIX'],
   ['CENTROCONTROLLO_', 'CENTROCONTROLLO'],

@@ -46,6 +46,17 @@ claim standard `iat` ed `exp`.
 
 Se il servizio non e' ancora inizializzato, il middleware risponde con `503` o `500` a seconda dello stato del bootstrap.
 
+## Resource server e introspection
+
+Un backend che non possiede il database Accessi non deve usare `authorizeAccessi` con i servizi locali. Usa `emilsoftware-utilities/accessi/resource-server`:
+
+- `createAccessiAuthMiddleware` per Express;
+- `createAccessiAuthGuard` per Nest;
+- `createAccessiTokenVerifier` per la sola verifica JWT;
+- `createAccessiIntrospectionClient` per leggere utente e grant correnti.
+
+L'endpoint `POST /api/accessi/auth/introspect` richiede un service token con scope `accessi:introspect` e restituisce `active`, profilo e grant. Il resource server applica una cache breve ai risultati attivi e fallisce chiuso se Accessi Service non e raggiungibile.
+
 ## Requisiti
 
 Il modulo espone un DSL per comporre i controlli:

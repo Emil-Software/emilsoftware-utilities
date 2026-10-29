@@ -20,7 +20,7 @@ import {
   isAccessiTokenAllowedForUser,
   resolveCodiceUtenteFromTokenPayload,
 } from "../security/authenticatedToken";
-import { getAccessiJwtSecret } from "../security/passwordResetToken";
+import { getAccessiAccessTokenVerificationConfig } from "../security/jwtTokenOptions";
 
 const logger = new Logger("AuthenticateGen");
 const ACCESSI_AUTH_SERVICE_LOCALS_KEY = "accessiAuthService";
@@ -134,16 +134,16 @@ async function authorizeWithDependencies(
       );
     }
 
-    let secret: string;
+    let verification: ReturnType<typeof getAccessiAccessTokenVerificationConfig>;
     try {
-      secret = getAccessiJwtSecret(accessiOptions, 'access');
+      verification = getAccessiAccessTokenVerificationConfig(accessiOptions);
     } catch {
-      throw authError(500, "AUTH_JWT_SECRET_MISSING", "JWT secret not configured");
+      throw authError(500, "AUTH_JWT_SECRET_MISSING", "JWT signing key not configured");
     }
 
     let decoded: unknown;
     try {
-      decoded = jwt.verify(token, secret, { algorithms: ['HS256'] });
+      decoded = jwt.verify(token, verification.key, verification.verifyOptions);
     } catch {
       throw authError(401, "AUTH_TOKEN_INVALID", "Invalid JWT token");
     }

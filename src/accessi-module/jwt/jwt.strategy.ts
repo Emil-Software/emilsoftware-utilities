@@ -16,7 +16,7 @@ import {
   isAccessiTokenAllowedForUser,
   resolveCodiceUtenteFromTokenPayload,
 } from '../security/authenticatedToken';
-import { getAccessiJwtSecret } from '../security/passwordResetToken';
+import { getAccessiAccessTokenVerificationConfig } from '../security/jwtTokenOptions';
 
 @Injectable()
 export class JwtSimpleGuard implements CanActivate {
@@ -35,15 +35,15 @@ export class JwtSimpleGuard implements CanActivate {
     if (!token) throw new UnauthorizedException('Formato token non valido.');
 
     try {
-      let secret: string;
+      let verification: ReturnType<typeof getAccessiAccessTokenVerificationConfig>;
       try {
-        secret = getAccessiJwtSecret(this.accessiOptions, 'access');
+        verification = getAccessiAccessTokenVerificationConfig(this.accessiOptions);
       } catch {
-        throw new InternalServerErrorException('JWT secret non configurato.');
+        throw new InternalServerErrorException('Chiave JWT non configurata.');
       }
       let payload: jwt.JwtPayload | string;
       try {
-            payload = jwt.verify(token, secret, { algorithms: ['HS256'] });
+        payload = jwt.verify(token, verification.key, verification.verifyOptions);
       } catch {
         throw new UnauthorizedException('Token non valido o scaduto.');
       }

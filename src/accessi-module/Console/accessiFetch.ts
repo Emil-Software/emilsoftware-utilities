@@ -1,4 +1,6 @@
 let accessToken: string | null = null;
+let baseUrl: string | null = null;
+let tokenProvider: (() => string | null | Promise<string | null>) | null = null;
 
 const loadingEventName = 'accessi-console-network';
 /** Emesso quando una richiesta autenticata riceve 401: la console deve riportare al login. */
@@ -24,6 +26,18 @@ export function setAccessiConsoleToken(token: string | null): void {
   accessToken = token;
 }
 
+/** Prefissa le chiamate relative del client generato (es. `https://accessi.example.com`). */
+export function setAccessiFetchBaseUrl(url: string | null): void {
+  baseUrl = url ? url.replace(/\/+$/, '') : null;
+}
+
+/** Token provider per client esterni alla console (server-to-server o frontend). */
+export function setAccessiFetchTokenProvider(
+  provider: (() => string | null | Promise<string | null>) | null,
+): void {
+  tokenProvider = provider;
+}
+
 /** Legge una stringa non vuota dal payload di errore Accessi, ignorando tipi inattesi. */
 function payloadString(payload: unknown, key: string): string | undefined {
   if (!payload || typeof payload !== 'object') return undefined;
@@ -41,12 +55,14 @@ export async function accessiFetch<T>(url: string, options: RequestInit): Promis
   if (options.body !== undefined && !headers.has('Content-Type')) {
     headers.set('Content-Type', 'application/json');
   }
-  const authenticatedRequest = accessToken !== null;
-  if (accessToken) headers.set('Authorization', `Bearer ${accessToken}`);
+  const resolvedToken = tokenProvider ? await tokenProvider() : accessToken;
+  const authenticatedRequest = resolvedToken !== null && resolvedToken !== undefined;
+  if (resolvedToken) headers.set('Authorization', `Bearer ${resolvedToken}`);
+  const requestUrl = baseUrl && url.startsWith('/') ? `${baseUrl}${url}` : url;
 
   notifyNetworkActivity(true);
   try {
-    const response = await fetch(url, { ...options, headers });
+    const response = await fetch(requestUrl, { ...options, headers });
     const payload = await response.json().catch(() => undefined);
     if (!response.ok) {
       const message = payloadString(payload, 'message') ?? payloadString(payload, 'error') ?? `Errore HTTP ${response.status}`;

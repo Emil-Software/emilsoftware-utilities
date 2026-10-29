@@ -69,16 +69,16 @@ test('aree-disponibili: buildModel condiviso raggruppa e risolve le rotte', () =
   const grants = [
     { codiceMenu: 'MNUMAIN', descrizioneMenu: 'Home', codiceGruppo: 'G', descrizioneGruppo: 'Generale', pagina: '/main', tipo: 'M', icona: 'home-outline' },
     { codiceMenu: 'MNUAVANZA', descrizioneMenu: 'Avanzamento', codiceGruppo: 'P', descrizioneGruppo: 'Produzione', pagina: '/avanzamento', tipo: 'M' },
-    { codiceMenu: 'STEX_ARRIVI_CQ', descrizioneMenu: 'Arrivi CQ', codiceGruppo: 'U', descrizioneGruppo: 'Qualita', pagina: 'arrivi', tipo: 'M' },
+    { codiceMenu: 'CQ_ARRIVI', descrizioneMenu: 'Arrivi CQ', codiceGruppo: 'U', descrizioneGruppo: 'Qualita', pagina: 'arrivi', tipo: 'M' },
     { codiceMenu: 'WIDGET', descrizioneMenu: 'Widget', codiceGruppo: 'P', descrizioneGruppo: 'Produzione', pagina: '', tipo: 'M' },
     { codiceMenu: 'PERMESSO', descrizioneMenu: 'Permesso', codiceGruppo: 'P', descrizioneGruppo: 'Produzione', pagina: '/x', tipo: 'A' },
   ];
 
   const groups = api.buildModel(grants, {
-    routeMap: { STEX_ARRIVI_CQ: '/cq-arrivi' },
+    routeMap: { CQ_ARRIVI: '/cq-arrivi' },
     availableRoutes: ['/main'],
     groupOrder: { G: 5, P: 4, U: 16 },
-    menuOrder: { MNUMAIN: 1, MNUAVANZA: 2, STEX_ARRIVI_CQ: 3 },
+    menuOrder: { MNUMAIN: 1, MNUAVANZA: 2, CQ_ARRIVI: 3 },
   });
 
   assert.deepEqual(
@@ -93,8 +93,8 @@ test('aree-disponibili: buildModel condiviso raggruppa e risolve le rotte', () =
   assert.equal(byCode.size, 3);
   assert.equal(byCode.get('MNUMAIN').available, true);
   assert.equal(byCode.get('MNUMAIN').route, '/main');
-  assert.equal(byCode.get('STEX_ARRIVI_CQ').available, true);
-  assert.equal(byCode.get('STEX_ARRIVI_CQ').route, '/cq-arrivi');
+  assert.equal(byCode.get('CQ_ARRIVI').available, true);
+  assert.equal(byCode.get('CQ_ARRIVI').route, '/cq-arrivi');
   assert.equal(byCode.get('MNUAVANZA').available, false);
   assert.equal(byCode.get('MNUAVANZA').page, '/avanzamento');
   assert.equal(byCode.has('WIDGET'), false);

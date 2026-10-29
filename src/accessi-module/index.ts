@@ -1,10 +1,17 @@
 import express, { Application, Request } from "express";
 import { NestFactory } from "@nestjs/core";
 import { ExpressAdapter } from "@nestjs/platform-express";
+import type { INestApplication } from "@nestjs/common";
+import type { OpenAPIObject } from "@nestjs/swagger";
 import { AccessiModule, AccessiOptions } from "./AccessiModule";
 import { Logger } from "../Logger";
 import { AuthService } from "./Services/AuthService/AuthService";
-import { setupSwagger } from "../swagger/SwaggerConfig";
+import {
+    buildOpenApiExcludePaths,
+    isOpenApiRequestPath,
+    resolveAccessiOpenApiOptions,
+    setupOpenApi
+} from "../openapi/OpenApiConfig";
 import {
     beginAccessiAuthInitialization,
     failAccessiAuthInitialization,
@@ -15,6 +22,14 @@ import { logAccessiStartup } from "./startupLog";
 import { createAccessiValidationPipe } from './security/accessiValidation';
 import { AccessiHttpExceptionFilter } from './security/AccessiHttpExceptionFilter';
 import { assertEmailConfigured } from './security/emailConfiguration';
+
+/** Esito del bootstrap Express di Accessi. */
+export interface AccessiModuleInitializationResult {
+    /** Sotto-app Nest che serve `/api/accessi/*` e la documentazione. */
+    nestApp: INestApplication;
+    /** Documento OpenAPI generato, mergiabile nel documento unico dell'host. */
+    document: OpenAPIObject;
+}
 
 function describeDatabaseTarget(options: AccessiOptions): string {
     const dbOptions = options.databaseOptions as {
@@ -30,20 +45,26 @@ function describeDatabaseTarget(options: AccessiOptions): string {
 /**
  * Monta il modulo Accessi in un'applicazione Express gia esistente.
  *
- * Il bootstrap crea un host Nest isolato per le rotte `/api/accessi`, inizializza Swagger,
- * validazione ed error handler, quindi rende disponibile `authorizeAccessi` al resto dell'app.
+ * Il bootstrap crea un host Nest isolato per le rotte `/api/accessi`, inizializza la
+ * documentazione OpenAPI, validazione ed error handler, quindi rende disponibile
+ * `authorizeAccessi` al resto dell'app.
  * Attendere questa Promise prima di aprire la porta HTTP: durante il bootstrap il middleware
  * restituisce `ACCESSI_AUTH_INITIALIZING` invece di autorizzare richieste parzialmente inizializzate.
  *
  * @param app Applicazione Express ospitante. Non viene sostituita ne vengono intercettate rotte estranee ad Accessi.
  * @param options Configurazione riservata del modulo; proviene normalmente da variabili d'ambiente o secret manager.
+ * @returns Il sotto-app Nest e il documento OpenAPI generato (utile per il merge nell'host).
  */
-export async function initializeAccessiModule(app: Application, options: AccessiOptions): Promise<void> {
+export async function initializeAccessiModule(
+    app: Application,
+    options: AccessiOptions
+): Promise<AccessiModuleInitializationResult> {
     // Il servizio email e obbligatorio: reset password, 2FA e creazione utente ne dipendono.
     assertEmailConfigured(options);
     const logger: Logger = new Logger("initializeAccessiModule");
     beginAccessiAuthInitialization();
     const startedAt = performance.now();
+    const resolvedOpenApi = resolveAccessiOpenApiOptions(options.openapi);
 
     try {
         logger.info("Inizializzazione modulo accessi avviata.");
@@ -55,10 +76,7 @@ export async function initializeAccessiModule(app: Application, options: Accessi
         const isNestRoute = (path: string) =>
             path === "/api/accessi" ||
             path.startsWith("/api/accessi/") ||
-            path === "/accessi/openapi" ||
-            path.startsWith("/accessi/openapi/") ||
-            path === "/accessi/openapi.json" ||
-            path === "/accessi/openapi-json";
+            isOpenApiRequestPath(path, resolvedOpenApi);
 
         app.use((req: Request, res, next) => {
             if (!isNestRoute(req.path)) {
@@ -71,7 +89,8 @@ export async function initializeAccessiModule(app: Application, options: Accessi
         const nestExpressInstance = new ExpressAdapter(nestHostApp);
 
         const nestApp = await NestFactory.create(AccessiModule.forRoot(options), nestExpressInstance, {
-            bufferLogs: true
+            bufferLogs: options.bufferLogs !== false,
+            ...(options.logger ? { logger: options.logger } : {})
         });
         logger.info("Applicazione Nest accessi creata.");
 
@@ -80,15 +99,10 @@ export async function initializeAccessiModule(app: Application, options: Accessi
         nestApp.useGlobalFilters(new AccessiHttpExceptionFilter());
 
         nestApp.setGlobalPrefix('api', {
-            exclude: ['/accessi/openapi', '/accessi/openapi/(.*)']
+            exclude: buildOpenApiExcludePaths(resolvedOpenApi)
         });
 
-        setupSwagger(nestApp, {
-            swaggerPath: "accessi/openapi",
-            swaggerJsonPath: "accessi/openapi.json",
-            title: "Accessi API Documentation",
-            description: "API del modulo accessi",
-        });
+        const document = setupOpenApi(nestApp, resolvedOpenApi);
         logger.info("Avvio init del modulo accessi.");
         await nestApp.init();
         logger.info("Init del modulo accessi completata.");
@@ -102,10 +116,11 @@ export async function initializeAccessiModule(app: Application, options: Accessi
         const accessiServices = registerAccessiModuleServices(app, nestApp);
         app.locals.accessiAuthService = accessiServices.authenticateGenService;
         setAccessiAuthService(accessiServices.authenticateGenService);
-        logAccessiStartup(options);
+        logAccessiStartup(options, resolvedOpenApi);
         const elapsedMs = performance.now() - startedAt;
         logger.info(`Accessi initialized. Tempo totale bootstrap: ${elapsedMs.toFixed(2)} ms`);
 
+        return { nestApp, document };
     } catch (error) {
         failAccessiAuthInitialization(error);
         logger.error(
@@ -119,6 +134,8 @@ export async function initializeAccessiModule(app: Application, options: Accessi
 }
 
 export { AccessiModule } from "./AccessiModule";
+export { AccessiIntrospectionController } from "./Controllers/AccessiIntrospectionController";
+export type { AccessiTokenIntrospectionResult } from "./Services/AuthService/AuthService";
 export { AccessiDatabaseUpdater } from "./database-updates/AccessiDatabaseUpdater";
 export type { AccessiOptions, EmailOptions, JwtOptions, ExtensionFieldsOptions, PublicAuthRateLimitOptions, PublicAuthRateLimitRuleOptions } from "./AccessiModule";
 export type { PublicRegistrationOptions, FederatedAuthenticationOptions, ServiceTokenOptions } from "./AccessiModule";

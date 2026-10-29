@@ -518,6 +518,30 @@ async function syncMenuScopes(client, code, desiredScopes, snapshot, actions, dr
   await client.setMenuScopes(code, { scopes: merged });
 }
 
+/**
+ * Riallinea gli scope dell'applicazione: lo scope dell'app viene staccato dai
+ * menu che non sono piu' nel catalogo, cosi un utente dell'app non riceve per
+ * errore menu di altre applicazioni. Gli scope delle altre app sui menu
+ * condivisi non vengono toccati.
+ */
+async function reconcileMenuScopes(client, catalog, actions, dryRun) {
+  const scopeCodes = (catalog.scopes ?? []).map((scope) => normalizeCode(scope.codice));
+  if (scopeCodes.length === 0) return;
+  const catalogCodes = new Set((catalog.menus ?? []).map((menu) => normalizeCode(menu.codiceMenu)));
+  const response = await client.getMenus({ scope: scopeCodes.join(',') });
+  const scoped = new Set((response?.data?.Result ?? []).map((menu) => normalizeCode(menu.codiceMenu)));
+  for (const code of scoped) {
+    if (!code || catalogCodes.has(code)) continue;
+    const current = await client.getMenuScopes(code);
+    const existing = (current?.data?.Result ?? []).map(normalizeCode);
+    const remaining = existing.filter((scope) => !scopeCodes.includes(scope));
+    if (remaining.length === existing.length) continue;
+    actions.push({ kind: 'detach', entity: 'menu-scopes', code, changes: { scopes: remaining } });
+    if (dryRun) continue;
+    await client.setMenuScopes(code, { scopes: remaining });
+  }
+}
+
 export async function applyCatalog(client, catalog, snapshot, options = {}) {
   const dryRun = options.dryRun === true;
   const actions = [];
@@ -660,6 +684,8 @@ export async function applyCatalog(client, catalog, snapshot, options = {}) {
     await syncMenuScopes(client, code, (menu.scopes ?? []).map(normalizeCode), snapshot, actions, dryRun);
   }
 
+  await reconcileMenuScopes(client, catalog, actions, dryRun);
+
   return actions;
 }
 
@@ -702,7 +728,8 @@ export function buildGeneratedTs(app, catalog) {
   lines.push(' * Le voci sono tipizzate con i modelli Orval di Accessi, quindi `MENU.FOO`');
   lines.push(' * espone direttamente il `MenuEntity` salvato nel database.');
   lines.push(' */');
-  lines.push(`import type { GroupWithMenusEntity, MenuEntity, MenuTypeEntity, ScopeEntity } from '${app.modelsImport}';`);
+  const modelsImport = catalog.modelsImport ?? app.modelsImport;
+  lines.push(`import type { GroupWithMenusEntity, MenuEntity, MenuTypeEntity, ScopeEntity } from '${modelsImport}';`);
   lines.push('');
   lines.push('/** Scope applicativi dichiarati da questa app. */');
   lines.push('export const SCOPES = [');
@@ -739,7 +766,8 @@ export function buildGeneratedTs(app, catalog) {
   }
   lines.push('] as const satisfies readonly MenuTypeEntity[];');
   lines.push('');
-  lines.push('/** Menu dell\'applicazione: `MENU.MNUMAIN.codiceMenu === \'MNUMAIN\'`. */');
+  const firstMenuCode = menus[0]?.codiceMenu ?? 'HOME';
+  lines.push(`/** Menu dell'applicazione: \`MENU.${firstMenuCode}.codiceMenu === '${firstMenuCode}'\`. */`);
   lines.push('export const MENU = {');
   for (const menu of menus) {
     const group = groupByCode.get(normalizeCode(menu.codiceGruppo));

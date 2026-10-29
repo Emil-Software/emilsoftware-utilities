@@ -18,6 +18,17 @@ function getOptionalBoolean(name: string, fallback: boolean): boolean {
   return value.toLowerCase() === "true";
 }
 
+const JWT_ALGORITHMS = [
+  "HS256", "HS384", "HS512",
+  "RS256", "RS384", "RS512",
+  "ES256", "ES384", "ES512",
+] as const;
+
+function getJwtAlgorithm(): (typeof JWT_ALGORITHMS)[number] | undefined {
+  const value = process.env.ACCESSI_JWT_ALGORITHM?.trim().toUpperCase();
+  return JWT_ALGORITHMS.find((algorithm) => algorithm === value);
+}
+
 /** Catalog migrations lette dall'ambiente: cartella in ACCESSI_CATALOG_FOLDER. */
 export function createCatalogScriptsOptionsFromEnv(): CatalogScriptsOptions | undefined {
   const folder = process.env.ACCESSI_CATALOG_FOLDER;
@@ -65,6 +76,12 @@ export function createAccessiOptionsFromEnv(): AccessiOptions {
     jwtOptions: {
       secret: getEnv("ACCESSI_JWT_SECRET", "local-accessi-update"),
       expiresIn: getEnv("ACCESSI_JWT_EXPIRES", "24h"),
+      ...(process.env.ACCESSI_JWT_ISSUER ? { issuer: process.env.ACCESSI_JWT_ISSUER } : {}),
+      ...(process.env.ACCESSI_JWT_AUDIENCE ? { audience: process.env.ACCESSI_JWT_AUDIENCE } : {}),
+      ...(getJwtAlgorithm() ? { algorithm: getJwtAlgorithm() } : {}),
+      ...(process.env.ACCESSI_JWT_PRIVATE_KEY ? { privateKey: process.env.ACCESSI_JWT_PRIVATE_KEY } : {}),
+      ...(process.env.ACCESSI_JWT_PUBLIC_KEY ? { publicKey: process.env.ACCESSI_JWT_PUBLIC_KEY } : {}),
+      ...(process.env.ACCESSI_JWT_KEY_ID ? { keyId: process.env.ACCESSI_JWT_KEY_ID } : {}),
     },
     emailOptions: {
       host: getEnv("ACCESSI_EMAIL_HOST", "localhost"),

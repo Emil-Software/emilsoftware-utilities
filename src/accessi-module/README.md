@@ -13,6 +13,16 @@ Documentazione divisa per argomenti, per renderla piu' leggibile e facile da agg
 - [Utenti, ruoli e permessi](docs/users-permissions.md)
 - [Aggiornamento database](docs/database-update.md)
 
+## Distribuzione multi-app
+
+Accessi puo essere usato in tre modi:
+
+- **servizio completo**: `emilsoftware-utilities/accessi/server` (DB, SMTP, migrazioni, console);
+- **resource server**: `emilsoftware-utilities/accessi/resource-server` (solo verifica JWT, guard/middleware, introspection);
+- **solo contratti/client**: `emilsoftware-utilities/accessi/contracts`, `accessi/contracts/dtos` e `accessi/client`.
+
+Il contesto completo per frontend, backend e agenti AI e in [`integration-prompt.md`](../../integration-prompt.md). La topologia consigliata e un solo Accessi Service proprietario del database; gli altri backend restano resource server.
+
 ## Flussi per gli integratori
 
 - **Bootstrap Express**: chiamare `initializeAccessiModule(app, options)` prima di aprire la porta HTTP. Il middleware esportato `authorizeAccessi` diventa disponibile al termine del bootstrap.
@@ -24,7 +34,7 @@ Documentazione divisa per argomenti, per renderla piu' leggibile e facile da agg
 - **Auto-ingresso console**: un frontend gia' autenticato apre la console senza re-login via `POST /api/accessi/console/entry` + `/api/accessi/console#entry=<ticket>` (il JWT non passa mai nell'URL). Dettagli in [Autenticazione e autorizzazione](docs/authentication.md).
 - **Login as**: superutenti e admin generano dalla console un URL con `?loginAsToken=<jwt>` per entrare in un'altra applicazione come un utente. Il token dura quanto la sessione Accessi standard (`jwtOptions.expiresIn`) e l'app di destinazione decide come consumarlo. Dettagli in [Autenticazione e autorizzazione](docs/authentication.md#login-as-impersonazione-temporanea).
 
-I commenti JSDoc sulle API pubbliche descrivono precondizioni, effetti sul database e compatibilita; Swagger documenta invece il contratto HTTP generato.
+I commenti JSDoc sulle API pubbliche descrivono precondizioni, effetti sul database e compatibilita; OpenAPI documenta invece il contratto HTTP generato.
 
 ## Flag di privilegio e gestione utenti
 

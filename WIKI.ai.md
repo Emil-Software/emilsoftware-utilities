@@ -70,7 +70,7 @@ app.listen(3000); // porta aperta prima del bootstrap
 await initializeAccessiModule(app, options); // le richieste nel frattempo ricevono 503
 ```
 **Rotte montate**
-Accessi intercetta solo /api/accessi/*, /accessi/openapi* e /accessi/openapi.json. Tutte le altre rotte passano intatte al tuo stack Express.
+Accessi intercetta solo /api/accessi/* e i path OpenAPI configurati (default /accessi/openapi* e /accessi/openapi.json). Tutte le altre rotte passano intatte al tuo stack Express.
 [OK] req.user: authorizeAccessi popola req.user con il payload utente corrente (utente, codiceUtente, flag) e req.data come alias storico. req.userGrants è presente solo se hai richiesto dei requisiti.
 
 ### Bootstrap su NestJS esistente
@@ -86,6 +86,31 @@ import { AccessiModule } from 'emilsoftware-utilities';
 export class AppModule {}
 ```
 Il global prefix api e le rotte /api/accessi/* sono gestiti dal modulo. Le tue rotte Nest si proteggono con JwtSimpleGuard usando il JWT Accessi.
+
+### Distribuzione multi-app e package entry point
+Come usare Accessi come servizio centrale, come resource server o solo come contratti.
+Accessi non va montato per forza in ogni backend. La distribuzione consigliata separa il servizio che possiede il database e la console dai backend fratelli che devono solo autenticare le richieste.
+| Entry point | Uso | Dipendenze server |
+| --- | --- | --- |
+| accessi/server | Bootstrap completo: DB, SMTP, migrazioni, console, API. | sì |
+| accessi/resource-server | Guard/middleware per backend fratelli: verifica JWT e autorizzazione remota. | no |
+| accessi/client | Client OpenAPI generato per chiamare Accessi Service. | no |
+| accessi/contracts | Tipi, enum e helper puri browser-safe. | no |
+| accessi/contracts/dtos | DTO Nest con class-validator e decoratori OpenAPI. | no |
+| accessi/openapi | setupOpenApi e merge del documento OpenAPI. | no |
+| accessi/console | Helper per URL console, ticket e 2FA handoff. | no |
+| accessi/ui | Percorsi degli asset Web Component frameworkless. | no |
+Topologia consigliata: un solo Accessi Service possiede database, encryptionKey, SMTP, chiavi JWT e console. Gli altri backend usano resource-server e client, senza credenziali del database Accessi.
+```ts
+// Backend che ospita Accessi
+import { initializeAccessiModule } from 'emilsoftware-utilities/accessi/server';
+
+// Backend fratello: nessun AccessiModule, nessun DB Accessi
+import { createAccessiAuthMiddleware } from 'emilsoftware-utilities/accessi/resource-server';
+import { configureAccessiClient, login } from 'emilsoftware-utilities/accessi/client';
+```
+[WARN] Un solo proprietario: Non montare AccessiModule in due backend puntati allo stesso database: migrazioni, bootstrap admin, ticket console e rate limit diventano ambigui.
+[INFO] Prompt di integrazione: Il file integration-prompt.md nella root del repository contiene il contesto completo per frontend, backend e agenti AI.
 
 ## Configurazione
 ### AccessiOptions (riferimento completo)
@@ -103,7 +128,7 @@ Ogni campo di configurazione con tipo, obbligo e note.
 | passwordExpirationDays | number | no | Valore predefinito: 90 giorni. |
 | legacyPasswordMigrationOnStartup | boolean | no | Predefinito true: converte le password legacy. |
 | autoUpdateDatabase | boolean | no | Predefinito true: riconcilia lo schema al boot. |
-| jwtOptions | { secret, expiresIn } | sì | Firma HS256 e durata dei JWT Accessi. |
+| jwtOptions | { secret, expiresIn, algorithm, issuer, audience, privateKey, publicKey, keyId } | sì | Firma e durata JWT. Default HS256; RS/ES consigliati per resource server multi-servizio. |
 | emailOptions | EmailOptions | sì | SMTP per reset e codici email. |
 | publicAuthRateLimit | PublicAuthRateLimitOptions | no | Limiti in-memory sugli endpoint pubblici. |
 | publicRegistration | { enabled } | no | Registrazione pubblica: disattivata per impostazione predefinita. |
@@ -112,7 +137,10 @@ Ogni campo di configurazione con tipo, obbligo e note.
 | serviceTokens | { enabled, defaultTtlDays } | no | Token macchina-a-macchina, abilitati per impostazione predefinita. |
 | catalogScripts | { enabled, folder, ... } | no | Catalog migrations SQL eseguite dopo la riconciliazione dello schema. |
 | adminBootstrap | { enabled, superUser } | no | Token casuale a ogni avvio per creare il primo admin dalla console. |
-| publicBaseUrl | string | no | Base URL usata solo per loggare console/swagger/API. |
+| publicBaseUrl | string | no | Base URL usata solo per loggare console/OpenAPI/API. |
+| openapi | OpenApiSetupOptions | no | Path, titolo, descrizione e enabled della documentazione OpenAPI. Default invariati. |
+| logger | LoggerService | no | Logger Nest del sotto-app; se assente Nest usa il proprio logger. |
+| bufferLogs | boolean | no | Buffer dei log di bootstrap del sotto-app. Default true. |
 ```ts
 import type { AccessiOptions } from 'emilsoftware-utilities';
 
@@ -133,6 +161,8 @@ export const options: AccessiOptions = {
   jwtOptions: {
     secret: process.env.ACCESSI_JWT_SECRET!, // almeno 32 caratteri casuali, unico per ambiente
     expiresIn: '24h',
+    issuer: 'accessi',
+    audience: 'backend-app',
   },
   emailOptions: {
     host: process.env.SMTP_HOST!,
@@ -146,6 +176,14 @@ export const options: AccessiOptions = {
   publicRegistration: { enabled: false },
   serviceTokens: { enabled: true, defaultTtlDays: 365 },
 };
+```
+options.openapi personalizza path, titolo e descrizione della documentazione OpenAPI. Con enabled: false UI e JSON non vengono montati, ma le API /api/accessi restano attive. initializeAccessiModule restituisce { nestApp, document } per mergiare il contratto nel documento OpenAPI unico dell'host.
+```ts
+const { document } = await initializeAccessiModule(app, {
+  ...options,
+  openapi: { openApiPath: 'auth/docs', openApiJsonPath: 'auth/docs.json', title: 'Auth API' },
+});
+// document.paths e document.components.schemas sono pronti per il merge
 ```
 ```ts
 jwtOptions: { secret: 'accessi', expiresIn: '24h' }, // segreto debole e condiviso
@@ -300,6 +338,49 @@ app.get('/api/report', authorizeAccessi, (req, res) => {
 });
 ```
 [DANGER] Lo stato utente è sempre ricontrollato: Un JWT valido non basta: se l'utente è stato bloccato, eliminato o ha cambiato policy, il middleware risponde 401 AUTH_USER_DISABLED.
+
+### Resource server e introspection
+Proteggere un backend fratello senza accedere al database Accessi.
+Un backend che non possiede Accessi usa resource-server. La verifica puo essere locale (JWT) oppure delegata all'introspection di Accessi Service. La policy di autorizzazione usa gli stessi accessiRequirement del middleware storico.
+```ts
+import { createAccessiAuthMiddleware } from 'emilsoftware-utilities/accessi/resource-server';
+
+app.use(createAccessiAuthMiddleware({
+  jwt: {
+    // In una topologia multi-servizio preferire RS256/JWKS:
+    // publicKey: process.env.ACCESSI_JWT_PUBLIC_KEY,
+    // algorithms: ["RS256"],
+    serverSecret: process.env.ACCESSI_JWT_SECRET, // HS256: deriva la chiave access
+    issuer: "accessi",
+    audience: "backend-a",
+  },
+  introspection: {
+    url: "https://accessi.example.com/api/accessi/auth/introspect",
+    serviceToken: process.env.ACCESSI_SERVICE_TOKEN!,
+  },
+}));
+```
+```ts
+import { createAccessiAuthGuard } from 'emilsoftware-utilities/accessi/resource-server';
+
+@UseGuards(createAccessiAuthGuard({
+  jwt: { publicKey: process.env.ACCESSI_JWT_PUBLIC_KEY, algorithms: ["RS256"] },
+  introspection: { url: process.env.ACCESSI_INTROSPECT_URL!, serviceToken: process.env.ACCESSI_SERVICE_TOKEN! },
+  authorization: { requirements: [{ menuCode: "ORDINI", minPermissionLevel: 20 }] },
+}))
+@Get("ordini")
+list(@Req() req: Request) { return req.user; }
+```
+| Campo | Obbligo | Note |
+| --- | --- | --- |
+| jwt.serverSecret | HS256 | Segreto grezzo Accessi; il resource server applica la KDF access. |
+| jwt.publicKey / jwt.jwks | RS/ES | Consigliato in multi-servizio. JWKS ha cache e timeout. |
+| jwt.issuer / jwt.audience | no | Consigliati per evitare token di altri ambienti. |
+| introspection.url | se servono grant | Endpoint service-to-service protetto da service token. |
+| introspection.serviceToken | se introspection | Scope richiesto: accessi:introspect. |
+| authorization | no | Policy accessiRequirement; senza introspection i grant sono obbligatori. |
+[WARN] Fail closed: Se introspection e configurata ma non raggiungibile, il resource server risponde 503. Non autorizza la richiesta.
+[INFO] Introspection: POST /api/accessi/auth/introspect restituisce active=false per token invalido, scaduto o utente disabilitato. I risultati attivi sono cachati lato resource server per 30 secondi per default.
 
 ### Requisiti e livelli di abilitazione
 DSL accessiRequirement: permission, and, or, not, custom.
@@ -474,6 +555,7 @@ await federatedAuthService.authenticate({ provider, subject: req.body.email }); 
 Autenticazione tecnica con scope: non è un superutente.
 Formato: st_<id>.<segreto> (segreto da 256 bit). Nel database si salva solo lo SHA-256 del segreto; il segreto è mostrato una sola volta. La verifica restituisce { tokenId, label, scopes }: nessun ruolo o grant.
 [DANGER] Non è un superutente: Un service token non apre le API Accessi: abilita solo le rotte della tua app che proteggi con ServiceTokenGuard.
+[INFO] Introspection: Per un backend fratello creare un service token con scope accessi:introspect e usarlo in POST /api/accessi/auth/introspect. Il resource server lo configura in introspection.serviceToken.
 ```ts
 import { ServiceTokenGuard, RequireServiceTokenScopes } from 'emilsoftware-utilities';
 
@@ -512,6 +594,7 @@ La console è servita dal modulo su /api/accessi/console. Non ha stato proprio: 
 [INFO] Accesso: Apri /api/accessi/console e accedi con un utente con FLGSUPER o FLGADMIN. Le sezioni sono raggiungibili anche tramite deep link (per esempio /api/accessi/console/menu-e-gruppi/menu).
 [INFO] Bootstrap admin: Con adminBootstrap.enabled il backend stampa a ogni avvio un token casuale (monouso, valido fino al riavvio). La sezione "Crea utente admin" nella schermata di login compare solo quando adminBootstrap è abilitato (stato esposto da GET /api/accessi/auth/bootstrap-admin/status): incolla il token e crea il primo admin senza email di conferma. La password è opzionale: se assente viene generata e mostrata una sola volta.
 [OK] Auto-ingresso dal frontend: Se un frontend ha già una sessione Accessi valida e l'utente è abilitato alla console, può aprire la console senza rifare il login: `POST /api/accessi/console/entry` con `Authorization: Bearer <jwt>` restituisce un ticket monouso; apri poi `/api/accessi/console#entry=<ticket>`. Il JWT non finisce mai nell'URL; il ticket dura 60 secondi ed è utilizzabile una sola volta (endpoint di scambio protetto da rate limit).
+[INFO] Console centralizzata: In una topologia multi-backend la console va ospitata una sola volta su Accessi Service. Gli altri backend possono linkarla con `buildAccessiConsoleUrl` di `accessi/console` oppure proxare `/api/accessi/*` sullo stesso dominio. Non copiare gli asset della console in ogni applicazione.
 
 ### Login as (accesso temporaneo)
 Superutenti e admin possono generare un URL per entrare in un applicazione come un altro utente.

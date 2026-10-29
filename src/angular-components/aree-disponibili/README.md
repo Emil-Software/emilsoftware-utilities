@@ -105,7 +105,7 @@ autonomamente gruppi, ordinamento, rotte e stato disponibile/bloccato partendo
 dai grant Accessi (anche nella forma raggruppata `mnuAbil`/`{ menu: [...] }`):
 
 ```ts
-element.routeMap = { STEX_ARRIVI_CQ: '/cq-arrivi' };
+element.routeMap = { CQ_ARRIVI: '/cq-arrivi' };
 element.groupOrder = { P: 4, G: 5, A: 7 };
 element.menuOrder = { MNUMAIN: 1, MNUAVANZA: 2 };
 element.availableRoutes = ['/main', '/lista-profili', '/cq-arrivi'];
