@@ -1,3 +1,11 @@
+# [2.0.0-dev.67](https://github.com/Emil-Software/emilsoftware-utilities/compare/v2.0.0-dev.66...v2.0.0-dev.67) (2026-10-29)
+
+
+### Features
+
+* removed monolith architecture ([04378e9](https://github.com/Emil-Software/emilsoftware-utilities/commit/04378e9e09654a789fd4f9f97ad734d6944cb172))
+* removed monolitic architecture ([c43ac48](https://github.com/Emil-Software/emilsoftware-utilities/commit/c43ac483402e1ed55ab4c9f44522a004a5f7f63a))
+
 # [2.0.0-dev.66](https://github.com/Emil-Software/emilsoftware-utilities/compare/v2.0.0-dev.65...v2.0.0-dev.66) (2026-10-27)
 
 
