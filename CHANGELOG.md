@@ -1,3 +1,10 @@
+# [2.0.0-dev.68](https://github.com/Emil-Software/emilsoftware-utilities/compare/v2.0.0-dev.67...v2.0.0-dev.68) (2026-10-29)
+
+
+### Features
+
+* edge rate limiter ([2a2f0ac](https://github.com/Emil-Software/emilsoftware-utilities/commit/2a2f0accc091b3528ee4fceecacf66057a5c14f5))
+
 # [2.0.0-dev.67](https://github.com/Emil-Software/emilsoftware-utilities/compare/v2.0.0-dev.66...v2.0.0-dev.67) (2026-10-29)
 
 
