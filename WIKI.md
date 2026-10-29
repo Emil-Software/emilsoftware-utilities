@@ -238,17 +238,19 @@ _Ogni campo di configurazione con tipo, obbligo e note._
 | passwordExpirationDays | number | no | Valore predefinito: 90 giorni. |
 | legacyPasswordMigrationOnStartup | boolean | no | Predefinito true: converte le password legacy. |
 | autoUpdateDatabase | boolean | no | Predefinito true: riconcilia lo schema al boot. |
-| jwtOptions | \{ secret, expiresIn, algorithm, issuer, audience, privateKey, publicKey, keyId \} | sì | Firma e durata JWT. Default HS256; RS/ES consigliati per resource server multi-servizio. |
+| jwtOptions | \{ secret, expiresIn, algorithm, issuer, audience, privateKey, publicKey, keyId, jwksPath, previousPublicKeys \} | sì | Firma, durata e JWKS. Default HS256; RS/ES consigliati per resource server multi-servizio. |
 | emailOptions | EmailOptions | sì | SMTP per reset e codici email. |
-| publicAuthRateLimit | PublicAuthRateLimitOptions | no | Limiti in-memory sugli endpoint pubblici. |
+| publicAuthRateLimit | PublicAuthRateLimitOptions | no | Limiti per endpoint pubblici; store condiviso opzionale (Redis) per il cluster. |
+| edgeRateLimit | AccessiEdgeRateLimitOptions | no | Limite grossolano per IP davanti alle rotte Accessi; opzionale, store condiviso supportato. |
 | publicRegistration | \{ enabled \} | no | Registrazione pubblica: disattivata per impostazione predefinita. |
 | federatedAuthentication | FederatedAuthenticationOptions | no | Abilita l'SSO generico. |
 | extensionFieldsOptions | ExtensionFieldsOptions\[\] | no | Tabelle esterne allegate al profilo. |
-| serviceTokens | \{ enabled, defaultTtlDays \} | no | Token macchina-a-macchina, abilitati per impostazione predefinita. |
+| serviceTokens | \{ enabled, defaultTtlDays, rateLimitStore \} | no | Token macchina-a-macchina, abilitati per impostazione predefinita; rate limit condiviso opzionale. |
 | catalogScripts | \{ enabled, folder, ... \} | no | Catalog migrations SQL eseguite dopo la riconciliazione dello schema. |
 | adminBootstrap | \{ enabled, superUser \} | no | Token casuale a ogni avvio per creare il primo admin dalla console. |
 | publicBaseUrl | string | no | Base URL usata solo per loggare console/OpenAPI/API. |
 | openapi | OpenApiSetupOptions | no | Path, titolo, descrizione e enabled della documentazione OpenAPI. Default invariati. |
+| consoleEntry | \{ ttlMs, store \} | no | TTL e store condiviso dei ticket console (Redis per multi-istanza). Default in memoria. |
 | logger | LoggerService | no | Logger Nest del sotto-app; se assente Nest usa il proprio logger. |
 | bufferLogs | boolean | no | Buffer dei log di bootstrap del sotto-app. Default true. |
 
@@ -626,6 +628,10 @@ list(@Req() req: Request) { return req.user; }
 > **Introspection**
 > POST /api/accessi/auth/introspect restituisce active=false per token invalido, scaduto o utente disabilitato. I risultati attivi sono cachati lato resource server per 30 secondi per default.
 
+> [!NOTE]
+> **JWKS**
+> Con RS256/ES256 Accessi pubblica la JWKS su /accessi/.well-known/jwks.json (configurabile con jwtOptions.jwksPath). Il resource server puo usare jwks.url e ruotare le chiavi con previousPublicKeys.
+
 ---
 
 ## Requisiti e livelli di abilitazione
@@ -895,6 +901,14 @@ Formato: st\_\<id\>.\<segreto\> (segreto da 256 bit). Nel database si salva solo
 > **Introspection**
 > Per un backend fratello creare un service token con scope accessi:introspect e usarlo in POST /api/accessi/auth/introspect. Il resource server lo configura in introspection.serviceToken.
 
+> [!WARNING]
+> **Rate limit condiviso**
+> In cluster configurare serviceTokens.rateLimitStore e publicAuthRateLimit.store con createRedisRateLimitStore: i contatori in memoria valgono solo per singola istanza.
+
+> [!NOTE]
+> **Edge rate limit**
+> Per una soglia grossolana per IP configurare edgeRateLimit: viene applicata davanti alle rotte Accessi. Il gateway/API gateway resta comunque consigliato per bot protection e limiti di connessione.
+
 **Esempio corretto — Rotta tecnica protetta**
 
 ```ts
@@ -975,6 +989,10 @@ La console è servita dal modulo su /api/accessi/console. Non ha stato proprio: 
 > [!NOTE]
 > **Console centralizzata**
 > In una topologia multi-backend la console va ospitata una sola volta su Accessi Service. Gli altri backend possono linkarla con \`buildAccessiConsoleUrl\` di \`accessi/console\` oppure proxare \`/api/accessi/\*\` sullo stesso dominio. Non copiare gli asset della console in ogni applicazione.
+
+> [!WARNING]
+> **Ticket multi-istanza**
+> I ticket di ingresso console sono in memoria per default. Con piu istanze configurare \`consoleEntry.store\` con \`createRedisConsoleEntryStore\`: il JWT viene cifrato e il consume e atomico.
 
 ---
 

@@ -20,6 +20,7 @@
 !/test/service-token-regressions.cjs
 !/test/openapi-config.cjs
 !/test/resource-server.cjs
+!/test/accessi-security-standards.cjs
 !/test/integration/
 !/test/integration/**
 

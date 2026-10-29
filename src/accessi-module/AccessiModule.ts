@@ -10,6 +10,9 @@ import { DynamicModule, Global, Module } from '@nestjs/common';
 import type { LoggerService } from '@nestjs/common';
 import type { OpenApiSetupOptions } from '../openapi/OpenApiConfig';
 import type { AccessiAccessTokenAlgorithm } from './security/jwtTokenOptions';
+import type { ConsoleEntryStore } from './security/consoleEntry';
+import type { RateLimitStore } from './security/rateLimitStore';
+import type { AccessiEdgeRateLimitOptions } from './security/edgeRateLimit';
 import { AuthService } from './Services/AuthService/AuthService';
 import { EmailService } from './Services/EmailService/EmailService';
 import { PermissionService } from './Services/PermissionService/PermissionService';
@@ -54,8 +57,24 @@ export interface JwtOptions {
   publicKey?: string;
   /** Key id pubblicato nella JWKS, per rotazione chiavi. */
   keyId?: string;
+  /** Path pubblico della JWKS. Default `accessi/.well-known/jwks.json` con algoritmi asimmetrici. */
+  jwksPath?: string;
+  /** Chiavi pubbliche precedenti, esposte in JWKS durante la rotazione. */
+  previousPublicKeys?: Array<{
+    publicKey: string;
+    keyId: string;
+    algorithm?: AccessiAccessTokenAlgorithm;
+  }>;
   /** Durata compatibile con `jsonwebtoken`, per esempio `24h` o `3600s`. */
   expiresIn: string;
+}
+
+/** Configurazione dei ticket di ingresso alla console. */
+export interface ConsoleEntryOptions {
+  /** Durata del ticket in millisecondi. Default 60000. */
+  ttlMs?: number;
+  /** Store condiviso (es. Redis) per deployment multi-istanza. Default: memoria. */
+  store?: ConsoleEntryStore;
 }
 
 /** Parametri SMTP usati esclusivamente per impostazione e reset della password. */
@@ -94,9 +113,11 @@ export interface PublicAuthRateLimitRuleOptions {
   maxAttempts: number;
 }
 
-/** Protezione in-memory degli endpoint pubblici. In cluster aggiungere un limite anche al gateway. */
+/** Protezione degli endpoint pubblici. Default in memoria; in cluster usare uno store condiviso. */
 export interface PublicAuthRateLimitOptions {
   enabled?: boolean;
+  /** Store condiviso (es. Redis). Default: memoria del processo. */
+  store?: RateLimitStore;
   login?: PublicAuthRateLimitRuleOptions;
   register?: PublicAuthRateLimitRuleOptions;
   passwordResetEmail?: PublicAuthRateLimitRuleOptions;
@@ -132,6 +153,8 @@ export interface ServiceTokenOptions {
   enabled?: boolean;
   /** Durata predefinita in giorni quando non e indicata una scadenza esplicita. Default: nessuna scadenza. */
   defaultTtlDays?: number;
+  /** Store condiviso per il rate limit dei service token. Default: memoria. */
+  rateLimitStore?: RateLimitStore;
 }
 
 /** Cosa fare quando uno script gia applicato presenta un checksum diverso (file modificato). */
@@ -245,6 +268,10 @@ export interface AccessiOptions {
   logger?: LoggerService;
   /** Buffer dei log di bootstrap del sotto-app. Default `true` (comportamento storico). */
   bufferLogs?: boolean;
+  /** Ticket di ingresso console: TTL e store condiviso per deployment multi-istanza. */
+  consoleEntry?: ConsoleEntryOptions;
+  /** Limite grossolano per IP davanti alle rotte Accessi. Opzionale. */
+  edgeRateLimit?: AccessiEdgeRateLimitOptions;
 }
 
 @Global()

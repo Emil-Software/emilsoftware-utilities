@@ -98,13 +98,13 @@ test('issue + verify + revoke usano hash e controlli di stato', async (t) => {
   assert.equal(await service.verify(issued.token), undefined);
 });
 
-test('rate limit service token consente N tentativi e poi blocca', () => {
+test('rate limit service token consente N tentativi e poi blocca', async () => {
   const { resetServiceTokenRateLimit, assertServiceTokenRateLimit } = require('../src/accessi-module/security/serviceTokenRateLimit');
   resetServiceTokenRateLimit();
   for (let attempt = 0; attempt < 120; attempt += 1) {
-    assertServiceTokenRateLimit('198.51.100.9');
+    await assertServiceTokenRateLimit('198.51.100.9');
   }
-  assert.throws(() => assertServiceTokenRateLimit('198.51.100.9'));
+  await assert.rejects(() => assertServiceTokenRateLimit('198.51.100.9'));
   resetServiceTokenRateLimit();
 });
 
@@ -124,16 +124,16 @@ test('ServiceTokenGuard verifica, allega il token e applica gli scope', async ()
     getClass: () => class {},
   };
 
-  const guard = new ServiceTokenGuard({ verify: async () => verified }, { getAllAndOverride: () => [] });
+  const guard = new ServiceTokenGuard({ verify: async () => verified }, { getAllAndOverride: () => [] }, { serviceTokens: {} });
   assert.equal(await guard.canActivate(context), true);
   assert.deepEqual(request.accessiServiceToken, verified);
 
   // Scope richiesto non presente: 403.
-  const scopeGuard = new ServiceTokenGuard({ verify: async () => verified }, { getAllAndOverride: () => ['chat'] });
+  const scopeGuard = new ServiceTokenGuard({ verify: async () => verified }, { getAllAndOverride: () => ['chat'] }, { serviceTokens: {} });
   await assert.rejects(() => scopeGuard.canActivate(context));
 
   // Token mancante o non valido: 401.
-  const missingGuard = new ServiceTokenGuard({ verify: async () => undefined }, { getAllAndOverride: () => [] });
+  const missingGuard = new ServiceTokenGuard({ verify: async () => undefined }, { getAllAndOverride: () => [] }, { serviceTokens: {} });
   const missingContext = { switchToHttp: () => ({ getRequest: () => ({ headers: {} }) }), getHandler: () => (() => {}), getClass: () => class {} };
   await assert.rejects(() => missingGuard.canActivate(missingContext));
 });

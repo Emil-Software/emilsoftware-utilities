@@ -150,6 +150,127 @@ const merged = mergeOpenApiDocuments(hostDocument, accessiDocument, {
 });
 ```
 
+### JWKS e rotazione chiavi
+
+Con RS256/ES256 Accessi pubblica automaticamente:
+
+```text
+GET /accessi/.well-known/jwks.json
+```
+
+Configurazione:
+
+```ts
+jwtOptions: {
+  algorithm: "RS256",
+  privateKey: process.env.ACCESSI_JWT_PRIVATE_KEY,
+  publicKey: process.env.ACCESSI_JWT_PUBLIC_KEY,
+  keyId: "accessi-2026-02",
+  jwksPath: "accessi/.well-known/jwks.json",
+  previousPublicKeys: [
+    {
+      publicKey: process.env.ACCESSI_JWT_PUBLIC_KEY_2026_01!,
+      keyId: "accessi-2026-01",
+      algorithm: "RS256",
+    },
+  ],
+}
+```
+
+Rotazione:
+
+1. generare la nuova coppia
+2. pubblicare la nuova chiave mantenendo la precedente in `previousPublicKeys`
+3. firmare con la nuova `keyId`
+4. attendere la scadenza massima dei token + il TTL cache della JWKS (default 5 minuti)
+5. rimuovere la chiave precedente
+
+Per un'app Nest esistente si può usare `setupAccessiJwks(app.getHttpAdapter().getInstance(), options)`.
+
+### Store ticket console
+
+Il default è in memoria, adatto a una sola istanza. In multi-istanza configurare uno store condiviso:
+
+```ts
+import { createRedisConsoleEntryStore } from "emilsoftware-utilities/accessi/server";
+
+consoleEntry: {
+  ttlMs: 60_000,
+  store: createRedisConsoleEntryStore({
+    client: redis, // ioredis o client compatibile con eval(script, numKeys, ...args)
+    encryptionKey: process.env.ACCESSI_CONSOLE_ENTRY_KEY!,
+    keyPrefix: "accessi:console-entry:",
+  }),
+}
+```
+
+Lo store Redis:
+
+- cifra il JWT con AES-256-GCM
+- usa `SET ... PX ... NX` con TTL
+- consuma con `GET` + `DEL` atomici in Lua
+- rende il ticket monouso anche tra istanze diverse
+
+Se lo store condiviso non è raggiungibile, la console deve fallire chiusa.
+
+### Rate limit condiviso
+
+Con più istanze anche i rate limit devono usare uno store condiviso:
+
+```ts
+import { createRedisRateLimitStore } from "emilsoftware-utilities/accessi/server";
+
+const rateLimitStore = createRedisRateLimitStore({
+  client: redis, // ioredis o client compatibile con eval(script, numKeys, ...args)
+  keyPrefix: "accessi:rate:",
+});
+
+publicAuthRateLimit: {
+  enabled: true,
+  store: rateLimitStore,
+  login: { windowMs: 15 * 60_000, maxAttempts: 10 },
+  twoFactorVerify: { windowMs: 15 * 60_000, maxAttempts: 20 },
+},
+
+serviceTokens: {
+  enabled: true,
+  rateLimitStore: rateLimitStore,
+},
+```
+
+Lo store Redis usa `INCR` + `PEXPIRE` atomici:
+
+- conta tentativi per IP e per soggetto (email, challenge, ticket, tokenId);
+- il limite è globale tra le istanze;
+- non viene azzerato da un restart;
+- se Redis non è raggiungibile il controllo fallisce chiuso: l’endpoint risponde con errore, non autorizza.
+
+Default: store in memoria. Va bene per una singola istanza o per ambienti di sviluppo.
+
+### Edge rate limit per IP
+
+Per una soglia grossolana davanti alle rotte Accessi:
+
+```ts
+edgeRateLimit: {
+  enabled: true,
+  windowMs: 60_000,
+  maxAttempts: 300,
+  store: rateLimitStore, // stesso store Redis, opzionale
+}
+```
+
+Viene applicato prima del dispatcher Accessi e copre `/api/accessi/*`, OpenAPI e JWKS. In caso di store non disponibile risponde `503 ACCESSI_RATE_LIMIT_UNAVAILABLE`; quando la soglia è superata risponde `429 ACCESSI_EDGE_RATE_LIMITED` con `Retry-After`.
+
+Il gateway/API gateway resta consigliato per:
+
+- limiti di connessione e burst;
+- bot protection e WAF;
+- rate limit per IP a livello di rete;
+- blocco geografico o reputazionale.
+
+Configurazioni di riferimento: `docs/gateway-rate-limit.md`.
+
 ---
 
 ## 4. Backend fratello — Express
@@ -190,7 +311,9 @@ Dopo il middleware:
 - **HS256**: usare `jwt.serverSecret` con `ACCESSI_JWT_SECRET`. Il resource server deriva la chiave access con la stessa KDF del server.
 - **RS256/ES256**: usare `jwt.publicKey` PEM oppure `jwt.jwks.url`. Consigliato in multi-servizio.
 - Il server Accessi supporta `jwtOptions.algorithm`, `privateKey`, `publicKey`, `keyId`.
-- Accessi non espone ancora un endpoint JWKS integrato: pubblicare la chiave pubblica con il proprio hosting/reverse proxy oppure usare `publicKey` PEM.
+- Accessi espone la JWKS su `jwtOptions.jwksPath` (default `accessi/.well-known/jwks.json`) quando usa RS/ES.
+- La JWKS include la chiave corrente e le `previousPublicKeys`, per la rotazione senza downtime.
+- Configurare il resource server con `jwks: { url: "https://accessi.example.com/accessi/.well-known/jwks.json" }`.
 
 ### Errori
 
@@ -404,6 +527,9 @@ ACCESSI_JWT_ALGORITHM=RS256
 ACCESSI_JWT_PRIVATE_KEY=
 ACCESSI_JWT_PUBLIC_KEY=
 ACCESSI_JWT_KEY_ID=
+ACCESSI_JWKS_PATH=accessi/.well-known/jwks.json
+ACCESSI_CONSOLE_ENTRY_TTL_MS=60000
+ACCESSI_CONSOLE_ENTRY_KEY=
 SMTP_HOST=
 SMTP_PORT=587
 SMTP_USER=
@@ -428,6 +554,7 @@ Frontend:
 ```env
 ACCESSI_API_BASE_URL=https://accessi.example.com
 ACCESSI_CONSOLE_URL=https://accessi.example.com/api/accessi/console
+ACCESSI_JWKS_URL=https://accessi.example.com/accessi/.well-known/jwks.json
 ```
 
 ---
@@ -443,16 +570,20 @@ Checklist:
 5. Spostare la console una sola volta.
 6. Passare i backend fratelli a `resource-server`.
 7. Configurare un service token con `accessi:introspect`.
-8. Testare:
+8. Pubblicare la JWKS e configurare i resource server su `jwks.url`.
+9. In multi-istanza configurare `consoleEntry.store`, `publicAuthRateLimit.store` e `serviceTokens.rateLimitStore` con Redis.
+10. Testare:
    - login
    - token valido
    - token scaduto
    - utente disabilitato
    - revoca grants
    - Accessi Service spento (fail closed)
-   - console entry ticket
-9. Aggiornare CORS se i frontend cambiano dominio.
-10. Aggiornare monitoraggio e log senza includere token.
+   - console entry ticket su istanze diverse
+   - rate limit condiviso tra istanze
+   - rotazione JWKS con vecchia chiave ancora valida
+11. Aggiornare CORS se i frontend cambiano dominio.
+12. Aggiornare monitoraggio e log senza includere token.
 
 ---
 
@@ -474,8 +605,8 @@ Checklist:
 
 ## 14. Limiti attuali da conoscere
 
-- I ticket di ingresso console sono in memoria del processo: con piu istanze di Accessi Service servono sticky session o uno store condiviso.
-- I rate limit pubblici e dei service token sono in memoria.
-- Accessi non espone ancora un endpoint JWKS pronto: il resource server sa verificare una JWKS, ma la chiave pubblica va pubblicata dall'host.
+- I ticket di ingresso console usano lo store in memoria per default: in multi-istanza configurare `consoleEntry.store` con Redis. Lo store Redis e cifrato e monouso, ma richiede un client Redis compatibile.
+- I rate limit usano lo store in memoria per default: in multi-istanza configurare `publicAuthRateLimit.store` e `serviceTokens.rateLimitStore` con Redis. Il gateway resta comunque consigliato per i limiti grossolani per IP.
 - Il client generato e completo (include endpoint amministrativi): non distribuirlo a frontend non amministrativi senza valutare gli endpoint esposti. Per un client pubblico ridotto, generare un sottoinsieme per tag con Orval.
 - I DTO in `accessi/contracts/dtos` dipendono da Nest/class-validator: non sono pensati per bundle frontend minimali.
+- La JWKS viene pubblicata solo con algoritmi asimmetrici: con HS256 non esiste una chiave pubblica da distribuire.

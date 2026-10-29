@@ -22,6 +22,8 @@ import { logAccessiStartup } from "./startupLog";
 import { createAccessiValidationPipe } from './security/accessiValidation';
 import { AccessiHttpExceptionFilter } from './security/AccessiHttpExceptionFilter';
 import { assertEmailConfigured } from './security/emailConfiguration';
+import { getAccessiJwksPath, setupAccessiJwks } from './security/jwks';
+import { createAccessiEdgeRateLimitMiddleware } from './security/edgeRateLimit';
 
 /** Esito del bootstrap Express di Accessi. */
 export interface AccessiModuleInitializationResult {
@@ -73,18 +75,34 @@ export async function initializeAccessiModule(
             `Configurazione accessi: autoUpdateDatabase=${options.autoUpdateDatabase !== false}, legacyPasswordMigrationOnStartup=${options.legacyPasswordMigrationOnStartup !== false}`
         );
         const nestHostApp = express();
-        const isNestRoute = (path: string) =>
+        const jwksPath = getAccessiJwksPath(options);
+        const isAccessiRoute = (path: string) =>
             path === "/api/accessi" ||
             path.startsWith("/api/accessi/") ||
-            isOpenApiRequestPath(path, resolvedOpenApi);
+            isOpenApiRequestPath(path, resolvedOpenApi) ||
+            (jwksPath !== undefined && path === jwksPath);
+        const edgeRateLimit = options.edgeRateLimit
+            ? createAccessiEdgeRateLimitMiddleware({
+                ...options.edgeRateLimit,
+                match: options.edgeRateLimit.match ?? ((path) => isAccessiRoute(path)),
+            })
+            : undefined;
+        if (edgeRateLimit) {
+            app.use(edgeRateLimit);
+        }
 
         app.use((req: Request, res, next) => {
-            if (!isNestRoute(req.path)) {
+            if (!isAccessiRoute(req.path)) {
                 return next();
             }
 
             return nestHostApp(req, res, next);
         });
+
+        setupAccessiJwks(app, options);
+        if (jwksPath) {
+            logger.info(`JWKS accessi disponibile su: ${jwksPath}`);
+        }
 
         const nestExpressInstance = new ExpressAdapter(nestHostApp);
 
@@ -139,7 +157,37 @@ export type { AccessiTokenIntrospectionResult } from "./Services/AuthService/Aut
 export { AccessiDatabaseUpdater } from "./database-updates/AccessiDatabaseUpdater";
 export type { AccessiOptions, EmailOptions, JwtOptions, ExtensionFieldsOptions, PublicAuthRateLimitOptions, PublicAuthRateLimitRuleOptions } from "./AccessiModule";
 export type { PublicRegistrationOptions, FederatedAuthenticationOptions, ServiceTokenOptions } from "./AccessiModule";
-export type { CatalogScriptsOptions, CatalogScriptChecksumPolicy } from "./AccessiModule";
+export type { CatalogScriptsOptions, CatalogScriptChecksumPolicy, ConsoleEntryOptions } from "./AccessiModule";
+export {
+    createMemoryConsoleEntryStore,
+    createRedisConsoleEntryStore,
+    getDefaultConsoleEntryStore
+} from './security/consoleEntry';
+export type {
+    ConsoleEntryRedisClient,
+    ConsoleEntryRecord,
+    ConsoleEntryStore,
+    ConsoleEntryTicket,
+    MemoryConsoleEntryStore,
+    RedisConsoleEntryStoreOptions
+} from './security/consoleEntry';
+export {
+    createMemoryRateLimitStore,
+    createRedisRateLimitStore,
+    getDefaultRateLimitStore
+} from './security/rateLimitStore';
+export type {
+    MemoryRateLimitStore,
+    RateLimitDecision,
+    RateLimitRedisClient,
+    RateLimitStore,
+    RedisRateLimitStoreOptions
+} from './security/rateLimitStore';
+export { createAccessiEdgeRateLimitMiddleware } from './security/edgeRateLimit';
+export type {
+    AccessiEdgeRateLimitMiddleware,
+    AccessiEdgeRateLimitOptions
+} from './security/edgeRateLimit';
 export {
     AccessiCatalogMigrator,
     applyCatalogScripts,
@@ -171,6 +219,13 @@ export {
 export { ServiceTokenGuard, RequireServiceTokenScopes, getAccessiServiceToken } from './security/serviceTokenGuard';
 export { assertEmailConfigured, isEmailConfigured, AccessiEmailNotConfiguredError, ACCESSI_EMAIL_NOT_CONFIGURED } from './security/emailConfiguration';
 export { buildLoginAsUrl, LOGIN_AS_QUERY_PARAM } from './security/loginAs';
+export {
+    buildAccessiJwks,
+    createAccessiJwksHandler,
+    getAccessiJwksPath,
+    setupAccessiJwks
+} from './security/jwks';
+export type { AccessiJwksDocument, AccessiJwksKey } from './security/jwks';
 export { FederatedAuthService } from './federated-auth/FederatedAuthService';
 export type { FederatedAuthenticationResult, FederatedIdentity, FederatedProvider, VerifiedFederatedIdentity } from './federated-auth/FederatedAuthTypes';
 export * from "./Dtos";

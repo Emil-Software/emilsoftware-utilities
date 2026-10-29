@@ -57,19 +57,19 @@ test('autobind lega i metodi e mantiene la catena dei metadata (DI Nest)', () =>
   assert.equal(detachedRead(), 7);
 });
 
-test('rate limit blocca dopo il numero massimo e non e aggirabile cambiando soggetto', () => {
+test('rate limit blocca dopo il numero massimo e non e aggirabile cambiando soggetto', async () => {
   const options = { publicAuthRateLimit: { login: { windowMs: 60000, maxAttempts: 2 } } };
   const req = { ip: '203.0.113.77', socket: {} };
 
-  assert.equal(checkPublicAuthRateLimit(options, 'login', req).allowed, true);
-  assert.equal(checkPublicAuthRateLimit(options, 'login', req).allowed, true);
+  assert.equal((await checkPublicAuthRateLimit(options, 'login', req)).allowed, true);
+  assert.equal((await checkPublicAuthRateLimit(options, 'login', req)).allowed, true);
 
-  const blocked = checkPublicAuthRateLimit(options, 'login', req);
+  const blocked = await checkPublicAuthRateLimit(options, 'login', req);
   assert.equal(blocked.allowed, false);
   assert.ok(blocked.retryAfterSeconds > 0);
 
   // Con IP gia bloccato un nuovo identificatore resta bloccato (short-circuit).
-  const blockedByIp = checkPublicAuthRateLimit(options, 'login', req, ['nuovo@example.com']);
+  const blockedByIp = await checkPublicAuthRateLimit(options, 'login', req, ['nuovo@example.com']);
   assert.equal(blockedByIp.allowed, false);
 });
 

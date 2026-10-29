@@ -23,6 +23,13 @@ Accessi puo essere usato in tre modi:
 
 Il contesto completo per frontend, backend e agenti AI e in [`integration-prompt.md`](../../integration-prompt.md). La topologia consigliata e un solo Accessi Service proprietario del database; gli altri backend restano resource server.
 
+Per il multi-istanza:
+
+- con RS/ES Accessi pubblica la JWKS su `/accessi/.well-known/jwks.json` (configurabile);
+- configurare `consoleEntry.store` con `createRedisConsoleEntryStore` per rendere i ticket console monouso tra istanze diverse;
+- configurare `publicAuthRateLimit.store` e `serviceTokens.rateLimitStore` con `createRedisRateLimitStore` per rate limit condivisi;
+- opzionalmente configurare `edgeRateLimit` per una soglia grossolana per IP davanti alle rotte Accessi.
+
 ## Flussi per gli integratori
 
 - **Bootstrap Express**: chiamare `initializeAccessiModule(app, options)` prima di aprire la porta HTTP. Il middleware esportato `authorizeAccessi` diventa disponibile al termine del bootstrap.

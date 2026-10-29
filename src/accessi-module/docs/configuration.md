@@ -15,7 +15,11 @@ Il modulo non legge direttamente il file `.env`: riceve un oggetto `AccessiOptio
 - `jwtOptions.secret`: segreto JWT (obbligatorio anche con algoritmi asimmetrici, per reset e 2FA)
 - `jwtOptions.expiresIn`: durata JWT
 - `jwtOptions.algorithm`, `issuer`, `audience`, `privateKey`, `publicKey`, `keyId`: firma e verifica degli access token. Default `HS256`; usare RS/ES in una topologia multi-servizio
+- `jwtOptions.jwksPath`, `previousPublicKeys`: JWKS pubblica e rotazione chiavi con algoritmi asimmetrici
 - `openapi`: path, titolo, descrizione e `enabled` della documentazione OpenAPI
+- `consoleEntry.ttlMs`, `consoleEntry.store`: TTL e store condiviso dei ticket console; usare `createRedisConsoleEntryStore` in multi-istanza
+- `publicAuthRateLimit.store`, `serviceTokens.rateLimitStore`: rate limit condiviso con `createRedisRateLimitStore` in cluster; default in memoria
+- `edgeRateLimit`: limite grossolano per IP davanti alle rotte Accessi, con store condiviso opzionale
 - `serviceTokens`: token macchina-a-macchina; lo scope `accessi:introspect` abilita l'introspection per i backend fratelli
 - `emailOptions`: configurazione SMTP per le mail di reset
 - `extensionFieldsOptions`: tabelle esterne opzionali da allegare al login

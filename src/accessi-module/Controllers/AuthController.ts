@@ -61,7 +61,7 @@ export class AuthController {
     @Body() body: ConfirmResetPasswordRequest,
   ) {
     try {
-      const rateLimitDecision = checkPublicAuthRateLimit(
+      const rateLimitDecision = await checkPublicAuthRateLimit(
         this.options,
         'passwordResetConfirm',
         request,
@@ -99,7 +99,7 @@ export class AuthController {
     @Res() res: Response,
   ) {
     try {
-      const rateLimitDecision = checkPublicAuthRateLimit(
+      const rateLimitDecision = await checkPublicAuthRateLimit(
         this.options,
         'getUserByToken',
         request,
@@ -157,7 +157,7 @@ export class AuthController {
   @Post('login')
   async login(@Req() request: Request, @Body() loginRequest: LoginRequest, @Res() res: Response) {
     try {
-      const rateLimitDecision = checkPublicAuthRateLimit(
+      const rateLimitDecision = await checkPublicAuthRateLimit(
         this.options,
         'login',
         request,
@@ -215,7 +215,7 @@ export class AuthController {
   @ApiResponse({ status: 429, type: ErrorResponse })
   async verifyTwoFactor(@Req() request: Request, @Body() body: VerifyTwoFactorRequest, @Res() res: Response) {
     try {
-      const limit = checkPublicAuthRateLimit(this.options, 'twoFactorVerify', request, [body.challengeId]);
+      const limit = await checkPublicAuthRateLimit(this.options, 'twoFactorVerify', request, [body.challengeId]);
       if (!limit.allowed) return sendPublicAuthRateLimitExceeded(res, limit.retryAfterSeconds);
       return RestUtilities.sendBaseResponse(res, await this.authService.verifyTwoFactor(body.challengeId, body.code, body.scope));
     } catch (error) {
@@ -231,7 +231,7 @@ export class AuthController {
   @ApiResponse({ status: 429, type: ErrorResponse })
   async resendTwoFactor(@Req() request: Request, @Body() body: ResendTwoFactorRequest, @Res() res: Response) {
     try {
-      const limit = checkPublicAuthRateLimit(this.options, 'twoFactorResend', request, [body.challengeId]);
+      const limit = await checkPublicAuthRateLimit(this.options, 'twoFactorResend', request, [body.challengeId]);
       if (!limit.allowed) return sendPublicAuthRateLimitExceeded(res, limit.retryAfterSeconds);
       return RestUtilities.sendBaseResponse(res, await this.authService.resendTwoFactor(body.challengeId));
     } catch (error) {
@@ -254,7 +254,7 @@ export class AuthController {
   @ApiResponse({ status: 429, description: 'Troppi tentativi', type: ErrorResponse })
   async bootstrapAdmin(@Req() request: Request, @Body() body: BootstrapAdminRequest, @Res() res: Response) {
     try {
-      const limit = checkPublicAuthRateLimit(this.options, 'adminBootstrap', request);
+      const limit = await checkPublicAuthRateLimit(this.options, 'adminBootstrap', request);
       if (!limit.allowed) return sendPublicAuthRateLimitExceeded(res, limit.retryAfterSeconds);
       return RestUtilities.sendBaseResponse(res, await this.adminBootstrapService.bootstrap(body));
     } catch (error) {

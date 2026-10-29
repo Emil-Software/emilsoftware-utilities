@@ -20,6 +20,8 @@ import { registerAccessiModuleServices } from "./accessi-module/accessiRuntime";
 import { logAccessiStartup } from "./accessi-module/startupLog";
 import { createAccessiValidationPipe } from './accessi-module/security/accessiValidation';
 import { AccessiHttpExceptionFilter } from './accessi-module/security/AccessiHttpExceptionFilter';
+import { getAccessiJwksPath, setupAccessiJwks } from './accessi-module/security/jwks';
+import { createAccessiEdgeRateLimitMiddleware } from './accessi-module/security/edgeRateLimit';
 
 /** Esito del bootstrap del modulo unificato. */
 export interface EmilsoftwareModuleInitializationResult {
@@ -57,10 +59,23 @@ export async function initEmilsoftwareModule(
         );
 
         const nestHostApp = express();
+        const jwksPath = options?.accessiOptions
+            ? getAccessiJwksPath(options.accessiOptions)
+            : undefined;
         const isNestRoute = (path: string) =>
             path === "/api" ||
             path.startsWith("/api/") ||
-            isOpenApiRequestPath(path, resolvedOpenApi);
+            isOpenApiRequestPath(path, resolvedOpenApi) ||
+            (jwksPath !== undefined && path === jwksPath);
+        const edgeRateLimit = options?.accessiOptions?.edgeRateLimit
+            ? createAccessiEdgeRateLimitMiddleware({
+                ...options.accessiOptions.edgeRateLimit,
+                match: options.accessiOptions.edgeRateLimit.match ?? ((path) => isNestRoute(path)),
+            })
+            : undefined;
+        if (edgeRateLimit) {
+            app.use(edgeRateLimit);
+        }
 
         app.use((req: Request, res, next) => {
             if (!isNestRoute(req.path)) {
@@ -68,6 +83,13 @@ export async function initEmilsoftwareModule(
             }
             return nestHostApp(req, res, next);
         });
+
+        if (options?.accessiOptions) {
+            setupAccessiJwks(app, options.accessiOptions);
+            if (jwksPath) {
+                logger.info(`JWKS accessi disponibile su: ${jwksPath}`);
+            }
+        }
 
         const nestExpressInstance = new ExpressAdapter(nestHostApp);
         const nestApp = await NestFactory.create(EmilsoftwareModule.forRoot(options), nestExpressInstance, {

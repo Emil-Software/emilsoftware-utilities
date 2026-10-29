@@ -532,7 +532,7 @@ export class UserController {
         );
       }
 
-      const rateLimitDecision = checkPublicAuthRateLimit(
+      const rateLimitDecision = await checkPublicAuthRateLimit(
         this.accessiOptions,
         'register',
         request,

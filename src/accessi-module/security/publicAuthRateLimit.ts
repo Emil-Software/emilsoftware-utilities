@@ -1,7 +1,9 @@
-import { HttpStatus } from '@nestjs/common';
+import { HttpException, HttpStatus } from '@nestjs/common';
 import { Request, Response } from 'express';
 import { RestUtilities } from '../../Utilities';
 import type { AccessiOptions, PublicAuthRateLimitRuleOptions } from '../AccessiModule';
+import { getDefaultRateLimitStore } from './rateLimitStore';
+import type { RateLimitDecision, RateLimitStore } from './rateLimitStore';
 
 export type PublicAuthRateLimitScope =
   | 'login'
@@ -13,17 +15,6 @@ export type PublicAuthRateLimitScope =
   | 'getUserByToken'
   | 'adminBootstrap'
   | 'consoleEntry';
-
-type RateLimitBucket = {
-  count: number;
-  resetAt: number;
-  lastSeenAt: number;
-};
-
-type RateLimitDecision = {
-  allowed: boolean;
-  retryAfterSeconds: number;
-};
 
 const DEFAULT_PUBLIC_AUTH_RATE_LIMITS: Record<
   PublicAuthRateLimitScope,
@@ -39,12 +30,6 @@ const DEFAULT_PUBLIC_AUTH_RATE_LIMITS: Record<
   adminBootstrap: { windowMs: 15 * 60 * 1000, maxAttempts: 10 },
   consoleEntry: { windowMs: 5 * 60 * 1000, maxAttempts: 30 },
 };
-
-const RATE_LIMIT_BUCKETS = new Map<string, RateLimitBucket>();
-const MAX_TRACKED_BUCKETS = 20000;
-const MAX_WINDOW_MS = Math.max(
-  ...Object.values(DEFAULT_PUBLIC_AUTH_RATE_LIMITS).map((rule) => rule.windowMs),
-);
 
 function getRule(
   options: AccessiOptions,
@@ -68,6 +53,24 @@ function getRule(
   return DEFAULT_PUBLIC_AUTH_RATE_LIMITS[scope];
 }
 
+async function consumeRateLimit(
+  store: RateLimitStore,
+  key: string,
+  rule: PublicAuthRateLimitRuleOptions,
+): Promise<RateLimitDecision> {
+  try {
+    return await store.consume(key, rule.windowMs, rule.maxAttempts);
+  } catch {
+    throw new HttpException(
+      {
+        code: 'ACCESSI_RATE_LIMIT_UNAVAILABLE',
+        message: 'Rate limit non disponibile. Riprova piu tardi.',
+      },
+      HttpStatus.SERVICE_UNAVAILABLE,
+    );
+  }
+}
+
 function normalizeIdentifier(identifier: string): string | null {
   if (typeof identifier !== 'string') {
     return null;
@@ -77,90 +80,32 @@ function normalizeIdentifier(identifier: string): string | null {
   return normalized === '' ? null : normalized;
 }
 
-function pruneRateLimitBuckets(now: number): void {
-  if (RATE_LIMIT_BUCKETS.size < MAX_TRACKED_BUCKETS) {
-    return;
-  }
-
-  for (const [key, bucket] of RATE_LIMIT_BUCKETS.entries()) {
-    if (bucket.resetAt <= now || bucket.lastSeenAt <= now - MAX_WINDOW_MS * 2) {
-      RATE_LIMIT_BUCKETS.delete(key);
-    }
-
-    if (RATE_LIMIT_BUCKETS.size < MAX_TRACKED_BUCKETS) {
-      return;
-    }
-  }
-}
-
-/** Mantiene il numero di bucket sotto la soglia, scartando i meno recenti. */
-function enforceBucketCap(): void {
-  while (RATE_LIMIT_BUCKETS.size >= MAX_TRACKED_BUCKETS) {
-    let oldestKey: string | undefined;
-    let oldestSeen = Number.POSITIVE_INFINITY;
-
-    for (const [key, bucket] of RATE_LIMIT_BUCKETS.entries()) {
-      if (bucket.lastSeenAt < oldestSeen) {
-        oldestSeen = bucket.lastSeenAt;
-        oldestKey = key;
-      }
-    }
-
-    if (oldestKey === undefined) {
-      return;
-    }
-
-    RATE_LIMIT_BUCKETS.delete(oldestKey);
-  }
-}
-
-function consumeBucket(
-  bucketKey: string,
-  rule: PublicAuthRateLimitRuleOptions,
-  now: number,
-): number | null {
-  const existingBucket = RATE_LIMIT_BUCKETS.get(bucketKey);
-  if (!existingBucket || existingBucket.resetAt <= now) {
-    enforceBucketCap();
-    RATE_LIMIT_BUCKETS.set(bucketKey, {
-      count: 1,
-      resetAt: now + rule.windowMs,
-      lastSeenAt: now,
-    });
-    return null;
-  }
-
-  existingBucket.lastSeenAt = now;
-  if (existingBucket.count >= rule.maxAttempts) {
-    return Math.max(1, Math.ceil((existingBucket.resetAt - now) / 1000));
-  }
-
-  existingBucket.count += 1;
-  return null;
-}
-
-export function checkPublicAuthRateLimit(
+/**
+ * Applica il rate limit per IP e, opzionalmente, per soggetto.
+ *
+ * Con `publicAuthRateLimit.store` e possibile usare uno store Redis condiviso;
+ * senza store usa la memoria del processo.
+ */
+export async function checkPublicAuthRateLimit(
   options: AccessiOptions,
   scope: PublicAuthRateLimitScope,
   req: Request,
   identifiers: string[] = [],
-): RateLimitDecision {
+): Promise<RateLimitDecision> {
   if (options.publicAuthRateLimit?.enabled === false) {
     return { allowed: true, retryAfterSeconds: 0 };
   }
 
   const rule = getRule(options, scope);
-  const now = Date.now();
-  pruneRateLimitBuckets(now);
-
+  const store = options.publicAuthRateLimit?.store ?? getDefaultRateLimitStore();
   const ipAddress =
     normalizeIdentifier(req.ip ?? req.socket?.remoteAddress ?? 'unknown') ?? 'unknown';
 
   // Consuma prima il bucket per IP: se gia bloccato non crea bucket per soggetto,
   // evitando crescita di memoria con identificatori sempre diversi.
-  const ipRetryAfterSeconds = consumeBucket(`${scope}|ip|${ipAddress}`, rule, now);
-  if (ipRetryAfterSeconds) {
-    return { allowed: false, retryAfterSeconds: ipRetryAfterSeconds };
+  const ipDecision = await consumeRateLimit(store, `${scope}|ip|${ipAddress}`, rule);
+  if (!ipDecision.allowed) {
+    return ipDecision;
   }
 
   let retryAfterSeconds = 0;
@@ -170,21 +115,18 @@ export function checkPublicAuthRateLimit(
       continue;
     }
 
-    const bucketRetryAfterSeconds = consumeBucket(
+    const subjectDecision = await consumeRateLimit(
+      store,
       `${scope}|ip-subject|${ipAddress}|${normalizedIdentifier}`,
       rule,
-      now,
     );
-    if (bucketRetryAfterSeconds) {
-      retryAfterSeconds = Math.max(retryAfterSeconds, bucketRetryAfterSeconds);
+    if (!subjectDecision.allowed) {
+      retryAfterSeconds = Math.max(retryAfterSeconds, subjectDecision.retryAfterSeconds);
     }
   }
 
   if (retryAfterSeconds > 0) {
-    return {
-      allowed: false,
-      retryAfterSeconds,
-    };
+    return { allowed: false, retryAfterSeconds };
   }
 
   return { allowed: true, retryAfterSeconds: 0 };

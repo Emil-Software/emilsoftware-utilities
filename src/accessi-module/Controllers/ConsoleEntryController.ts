@@ -26,7 +26,8 @@ import { ErrorResponse } from '../Dtos/BaseResponse';
 import { JwtSimpleGuard } from '../jwt/jwt.strategy';
 import { ensureConsoleAccess, getAuthenticatedAccessiUser } from '../security/accessControl';
 import { extractAccessiBearerToken } from '../security/authenticatedToken';
-import { consumeConsoleEntryTicket, issueConsoleEntryTicket } from '../security/consoleEntry';
+import { getDefaultConsoleEntryStore } from '../security/consoleEntry';
+import type { ConsoleEntryStore } from '../security/consoleEntry';
 import {
   checkPublicAuthRateLimit,
   sendPublicAuthRateLimitExceeded,
@@ -42,6 +43,14 @@ import {
 @Controller('accessi/console')
 export class ConsoleEntryController {
   constructor(@Inject('ACCESSI_OPTIONS') private readonly options: AccessiOptions) {}
+
+  private get store(): ConsoleEntryStore {
+    return this.options.consoleEntry?.store ?? getDefaultConsoleEntryStore();
+  }
+
+  private get ttlMs(): number {
+    return this.options.consoleEntry?.ttlMs ?? 60_000;
+  }
 
   @ApiOperation({
     summary: 'Emetti un ticket di ingresso alla console',
@@ -63,7 +72,10 @@ export class ConsoleEntryController {
         throw new UnauthorizedException({ code: 'ACCESSI_CONSOLE_ENTRY_TOKEN_MISSING', message: 'Token Accessi mancante.' });
       }
 
-      const issued = issueConsoleEntryTicket({ token: tokenValue, codiceUtente: user.codiceUtente });
+      const issued = await this.store.issue(
+        { token: tokenValue, codiceUtente: user.codiceUtente },
+        this.ttlMs,
+      );
       return RestUtilities.sendBaseResponse(res, issued);
     } catch (error) {
       return RestUtilities.sendErrorMessage(
@@ -91,12 +103,12 @@ export class ConsoleEntryController {
     @Res() res: Response,
   ) {
     try {
-      const decision = checkPublicAuthRateLimit(this.options, 'consoleEntry', request, [body?.ticket ?? '']);
+      const decision = await checkPublicAuthRateLimit(this.options, 'consoleEntry', request, [body?.ticket ?? '']);
       if (!decision.allowed) {
         return sendPublicAuthRateLimitExceeded(res, decision.retryAfterSeconds);
       }
 
-      const entry = consumeConsoleEntryTicket(body?.ticket);
+      const entry = await this.store.consume(body?.ticket);
       if (!entry) {
         throw new UnauthorizedException({
           code: 'ACCESSI_CONSOLE_ENTRY_INVALID',

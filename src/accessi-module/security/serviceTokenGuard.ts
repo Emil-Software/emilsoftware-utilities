@@ -2,12 +2,14 @@ import {
   CanActivate,
   ExecutionContext,
   ForbiddenException,
+  Inject,
   Injectable,
   SetMetadata,
   UnauthorizedException,
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import type { Request } from 'express';
+import type { AccessiOptions } from '../AccessiModule';
 import { ServiceTokenService, serviceTokenHasScope, VerifiedServiceToken } from '../Services/ServiceTokenService/ServiceTokenService';
 import { extractAccessiBearerToken } from './authenticatedToken';
 import { assertServiceTokenRateLimit } from './serviceTokenRateLimit';
@@ -40,12 +42,13 @@ export class ServiceTokenGuard implements CanActivate {
   constructor(
     private readonly serviceTokenService: ServiceTokenService,
     private readonly reflector: Reflector,
+    @Inject('ACCESSI_OPTIONS') private readonly accessiOptions: AccessiOptions,
   ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const request = context.switchToHttp().getRequest<Request>();
     const ip = request.ip ?? request.socket?.remoteAddress ?? 'unknown';
-    assertServiceTokenRateLimit(ip);
+    await assertServiceTokenRateLimit(ip, this.accessiOptions.serviceTokens?.rateLimitStore);
 
     const token = extractAccessiBearerToken(request.headers['authorization']);
     if (!token) {

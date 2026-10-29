@@ -57,6 +57,12 @@ Un backend che non possiede il database Accessi non deve usare `authorizeAccessi
 
 L'endpoint `POST /api/accessi/auth/introspect` richiede un service token con scope `accessi:introspect` e restituisce `active`, profilo e grant. Il resource server applica una cache breve ai risultati attivi e fallisce chiuso se Accessi Service non e raggiungibile.
 
+Con RS/ES Accessi pubblica la JWKS su `/accessi/.well-known/jwks.json` (configurabile con `jwtOptions.jwksPath`). La JWKS include la chiave corrente e `previousPublicKeys`, cosi la rotazione non interrompe i token gia emessi.
+
+I ticket di ingresso console sono in memoria per default. In multi-istanza configurare `consoleEntry.store` con `createRedisConsoleEntryStore`: il JWT viene cifrato, il TTL e applicato da Redis e il consume e atomico.
+
+Anche i rate limit sono in memoria per default. In cluster configurare `publicAuthRateLimit.store` e `serviceTokens.rateLimitStore` con `createRedisRateLimitStore`: i contatori diventano condivisi e atomici tra le istanze.
+
 ## Requisiti
 
 Il modulo espone un DSL per comporre i controlli:

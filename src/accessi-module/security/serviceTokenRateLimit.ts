@@ -1,51 +1,46 @@
 import { HttpException, HttpStatus } from '@nestjs/common';
-
-type RateLimitBucket = { count: number; resetAt: number };
+import { getDefaultRateLimitStore } from './rateLimitStore';
+import type { RateLimitStore } from './rateLimitStore';
 
 /**
  * Limite anti-abuso per la verifica dei token di servizio.
  *
  * Il segreto ha 256 bit di entropia (brute force non praticabile), ma il limite evita
- * che un client difettoso o malevolo martelli l'endpoint. In-memory: in cluster va
- * aggiunto un limite anche al gateway.
+ * che un client difettoso o malevolo martelli l'endpoint. Con `serviceTokens.rateLimitStore`
+ * e possibile usare uno store condiviso in cluster.
  */
 const WINDOW_MS = 60_000;
 const MAX_ATTEMPTS = 120;
-const MAX_BUCKETS = 20_000;
-const buckets = new Map<string, RateLimitBucket>();
 
-export function checkServiceTokenRateLimit(identifier: string): { allowed: boolean; retryAfterSeconds: number } {
-  const now = Date.now();
-  const key = identifier && identifier.trim() !== '' ? identifier : 'unknown';
-  const bucket = buckets.get(key);
-
-  if (!bucket || bucket.resetAt <= now) {
-    if (buckets.size >= MAX_BUCKETS) {
-      const oldestKey = buckets.keys().next().value;
-      if (oldestKey !== undefined) {
-        buckets.delete(oldestKey);
-      }
-    }
-    buckets.set(key, { count: 1, resetAt: now + WINDOW_MS });
-    return { allowed: true, retryAfterSeconds: 0 };
+export async function checkServiceTokenRateLimit(
+  identifier: string,
+  store: RateLimitStore = getDefaultRateLimitStore(),
+): Promise<{ allowed: boolean; retryAfterSeconds: number }> {
+  const key = identifier && identifier.trim() !== '' ? identifier.trim() : 'unknown';
+  try {
+    return await store.consume(`service-token|${key}`, WINDOW_MS, MAX_ATTEMPTS);
+  } catch {
+    throw new HttpException(
+      {
+        code: 'ACCESSI_RATE_LIMIT_UNAVAILABLE',
+        message: 'Rate limit non disponibile. Riprova piu tardi.',
+      },
+      HttpStatus.SERVICE_UNAVAILABLE,
+    );
   }
-
-  if (bucket.count >= MAX_ATTEMPTS) {
-    return { allowed: false, retryAfterSeconds: Math.max(1, Math.ceil((bucket.resetAt - now) / 1000)) };
-  }
-
-  bucket.count += 1;
-  return { allowed: true, retryAfterSeconds: 0 };
 }
 
-/** Svuota i bucket (usato nei test). */
+/** Svuota i bucket dello store di default (usato nei test). */
 export function resetServiceTokenRateLimit(): void {
-  buckets.clear();
+  getDefaultRateLimitStore().reset();
 }
 
 /** Lancia 429 con `Retry-After` quando il limite e superato. */
-export function assertServiceTokenRateLimit(identifier: string): void {
-  const decision = checkServiceTokenRateLimit(identifier);
+export async function assertServiceTokenRateLimit(
+  identifier: string,
+  store?: RateLimitStore,
+): Promise<void> {
+  const decision = await checkServiceTokenRateLimit(identifier, store);
   if (!decision.allowed) {
     throw new HttpException(
       { code: 'ACCESSI_SERVICE_TOKEN_RATE_LIMITED', message: 'Troppi tentativi. Riprova piu tardi.' },

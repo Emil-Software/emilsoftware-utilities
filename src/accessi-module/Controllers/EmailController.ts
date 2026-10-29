@@ -62,7 +62,7 @@ export class EmailController {
     @Res() res: Response,
   ) {
     try {
-      const rateLimitDecision = checkPublicAuthRateLimit(
+      const rateLimitDecision = await checkPublicAuthRateLimit(
         this.accessiOptions,
         'passwordResetEmail',
         request,

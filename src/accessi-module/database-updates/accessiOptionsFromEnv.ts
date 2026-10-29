@@ -82,6 +82,7 @@ export function createAccessiOptionsFromEnv(): AccessiOptions {
       ...(process.env.ACCESSI_JWT_PRIVATE_KEY ? { privateKey: process.env.ACCESSI_JWT_PRIVATE_KEY } : {}),
       ...(process.env.ACCESSI_JWT_PUBLIC_KEY ? { publicKey: process.env.ACCESSI_JWT_PUBLIC_KEY } : {}),
       ...(process.env.ACCESSI_JWT_KEY_ID ? { keyId: process.env.ACCESSI_JWT_KEY_ID } : {}),
+      ...(process.env.ACCESSI_JWKS_PATH ? { jwksPath: process.env.ACCESSI_JWKS_PATH } : {}),
     },
     emailOptions: {
       host: getEnv("ACCESSI_EMAIL_HOST", "localhost"),
@@ -97,6 +98,13 @@ export function createAccessiOptionsFromEnv(): AccessiOptions {
         pass: getEnv("ACCESSI_EMAIL_PASSWORD", "local-password"),
       },
     },
+    ...(process.env.ACCESSI_CONSOLE_ENTRY_TTL_MS
+      ? {
+          consoleEntry: {
+            ttlMs: Number(process.env.ACCESSI_CONSOLE_ENTRY_TTL_MS),
+          },
+        }
+      : {}),
     extensionFieldsOptions: [],
     catalogScripts: createCatalogScriptsOptionsFromEnv(),
   };
