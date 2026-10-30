@@ -116,6 +116,20 @@ La CI (`.github/workflows/ci.yml`) esegue typecheck, test con coverage e build, 
 integration test in matrice su Firebird 5 e 3. Il workflow di release (`publish.yml`) esegue
 typecheck e test prima di build e pubblicazione.
 
+### Packaging
+
+Il pacchetto e pubblicato come **CommonJS** (build `tsc` in `dist/`) con export map esplicita per
+ogni entry point; gli `import` ESM funzionano tramite interop Node. La scelta CJS e intenzionale:
+il pacchetto gira in host Nest/Express e non esiste un bundle ESM separato da mantenere.
+
+- `sideEffects` elenca solo i moduli con effetti collaterali (root barrel, `firebird-compat`,
+  bundle console), tutto il resto resta tree-shakable.
+- `typesVersions` copre i TypeScript precedenti al campo `exports`.
+- `npm run test:pack` crea il tarball con `npm pack`, lo installa in un progetto temporaneo e
+  verifica ogni subpath (`accessi/server`, `resource-server/*`, `client/*`, `contracts`, `openapi`,
+  `console`, `ui`), l'assenza di dipendenze server-side in `contracts` e l'interop ESM. La CI lo
+  esegue in un job dedicato dopo la build.
+
 ### Integration test su Redis reale
 
 Gli store condivisi (rate limit, ticket console, revoca sessioni, revoca `jti`, rotazione refresh

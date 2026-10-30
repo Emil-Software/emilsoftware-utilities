@@ -38,6 +38,7 @@ Dipendenze, peer e build.
 npm install emilsoftware-utilities
 ```
 La libreria dipende da node-firebird per il database e da Express 5 come peer per il montaggio. È consigliato Node 18 o superiore.
+Il pacchetto è pubblicato in CommonJS con export map esplicita per ogni entry point (accessi/server, accessi/resource-server/*, accessi/client/*, accessi/contracts*, accessi/openapi, accessi/console, accessi/ui): gli import ESM funzionano tramite interop Node. sideEffects elenca solo root barrel, firebird-compat e bundle console, così il resto è tree-shakable.
 [WARN] Un solo modulo per processo: AccessiModule è @Global(): inizializzalo una sola volta per processo. In caso di più istanze, usa un processo per istanza.
 
 ### Bootstrap su Express esistente

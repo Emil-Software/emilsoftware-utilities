@@ -5,6 +5,18 @@
   "main": "dist/index.js",
   "module": "dist/index.js",
   "types": "dist/index.d.ts",
+  "typesVersions": {
+    "*": {
+      "accessi/*": [
+        "dist/accessi/*"
+      ]
+    }
+  },
+  "sideEffects": [
+    "./dist/index.js",
+    "./dist/firebird-compat.js",
+    "./dist/accessi-module/Console/console.js"
+  ],
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
@@ -134,6 +146,7 @@
     "test:integration:fb3": "node test/integration/run-firebird.cjs 3",
     "test:integration:fb25": "node test/integration/run-firebird.cjs 2.5",
     "test:accessi-console": "npm run build && node test/console-two-factor.cjs",
+    "test:pack": "node scripts/pack-smoke-test.cjs",
     "accessi:seed-admin": "node scripts/seed-accessi-admin.cjs",
     "accessi:console": "node scripts/run-accessi-console.cjs",
     "test:accessi-schema": "node --test test/accessi-schema.cjs",
