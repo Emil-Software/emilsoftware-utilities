@@ -26,6 +26,13 @@ import { AuthService, PASSWORD_LOGIN_DISABLED } from '../Services/AuthService/Au
 import { AdminBootstrapService } from '../Services/AdminBootstrapService/AdminBootstrapService';
 import { JwtSimpleGuard } from '../jwt/jwt.strategy';
 import { getAuthenticatedAccessiUser } from '../security/accessControl';
+import { extractAccessiBearerToken } from '../security/authenticatedToken';
+import {
+  applyAccessiAuthCookies,
+  clearAccessiAuthCookies,
+  getAccessiRefreshTokenFromCookie,
+  resolveAccessiAuthCookieOptions,
+} from '../security/authCookies';
 import {
   getSessionRevocationStore,
   revokeAccessiUserSessions,
@@ -123,7 +130,10 @@ export class AuthController {
         return sendPublicAuthRateLimitExceeded(res, rateLimitDecision.retryAfterSeconds);
       }
 
-      if (!body?.token) {
+      const requestToken = typeof body?.token === 'string' && body.token.trim() !== ''
+        ? body.token
+        : extractAccessiBearerToken(request.headers.authorization);
+      if (!requestToken) {
         return RestUtilities.sendErrorMessage(
           res,
           'Token non fornito',
@@ -132,7 +142,7 @@ export class AuthController {
         );
       }
 
-      const authenticatedPayload = await this.authService.getAuthenticatedTokenPayload(body.token);
+      const authenticatedPayload = await this.authService.getAuthenticatedTokenPayload(requestToken);
       const userData = (authenticatedPayload as { utente?: unknown })?.utente;
       if (!userData) {
         throw new Error('Il token non contiene un utente Accessi valido.');
@@ -170,6 +180,8 @@ export class AuthController {
         );
       }
       await revokeAccessiUserSessions(this.options, user.codiceUtente);
+      const cookieConfig = resolveAccessiAuthCookieOptions(this.options);
+      if (cookieConfig) clearAccessiAuthCookies(res, cookieConfig);
       return RestUtilities.sendOKMessage(res, 'Sessioni revocate con successo.');
     } catch (error) {
       return RestUtilities.sendErrorMessage(
@@ -247,6 +259,10 @@ export class AuthController {
         jti: targetJti,
         self: isCurrentToken,
       });
+      if (isCurrentToken) {
+        const cookieConfig = resolveAccessiAuthCookieOptions(this.options);
+        if (cookieConfig) clearAccessiAuthCookies(res, cookieConfig);
+      }
       return RestUtilities.sendOKMessage(res, 'Token revocato con successo.');
     } catch (error) {
       return RestUtilities.sendErrorMessage(
@@ -303,6 +319,7 @@ export class AuthController {
         const tokens = this.authService.createTokenPair(userData.utente, ['password']);
         userData.token = tokens.access;
         if (tokens.refresh) userData.refreshToken = tokens.refresh;
+        applyAccessiAuthCookies(res, resolveAccessiAuthCookieOptions(this.options), userData);
       }
 
       return RestUtilities.sendBaseResponse(res, userData);
@@ -355,8 +372,15 @@ export class AuthController {
     @Res() res: Response,
   ) {
     try {
-      const tokenKey = typeof body?.refreshToken === 'string'
-        ? createHash('sha256').update(body.refreshToken).digest('hex').slice(0, 32)
+      const cookieConfig = resolveAccessiAuthCookieOptions(this.options);
+      const cookieRefreshToken = cookieConfig?.refreshFromCookie
+        ? getAccessiRefreshTokenFromCookie(request.headers.cookie, cookieConfig)
+        : undefined;
+      const refreshToken = typeof body?.refreshToken === 'string' && body.refreshToken.trim() !== ''
+        ? body.refreshToken
+        : cookieRefreshToken;
+      const tokenKey = typeof refreshToken === 'string'
+        ? createHash('sha256').update(refreshToken).digest('hex').slice(0, 32)
         : undefined;
       const decision = await checkPublicAuthRateLimit(
         this.options,
@@ -368,14 +392,20 @@ export class AuthController {
         return sendPublicAuthRateLimitExceeded(res, decision.retryAfterSeconds);
       }
 
-      const result = await this.authService.refreshAccessToken(body?.refreshToken);
+      if (!refreshToken) {
+        throw new HttpException('Refresh token mancante.', HttpStatus.UNAUTHORIZED);
+      }
+
+      const result = await this.authService.refreshAccessToken(refreshToken);
       if (!result.token) {
         throw new HttpException('Refresh token non valido.', HttpStatus.UNAUTHORIZED);
       }
-      return RestUtilities.sendBaseResponse(res, {
+      const response = {
         token: result.token,
         ...(result.refreshToken ? { refreshToken: result.refreshToken } : {}),
-      });
+      };
+      applyAccessiAuthCookies(res, cookieConfig, response);
+      return RestUtilities.sendBaseResponse(res, response);
     } catch (error) {
       return RestUtilities.sendErrorMessage(
         res,
@@ -396,7 +426,9 @@ export class AuthController {
     try {
       const limit = await checkPublicAuthRateLimit(this.options, 'twoFactorVerify', request, [body.challengeId]);
       if (!limit.allowed) return sendPublicAuthRateLimitExceeded(res, limit.retryAfterSeconds);
-      return RestUtilities.sendBaseResponse(res, await this.authService.verifyTwoFactor(body.challengeId, body.code, body.scope));
+      const result = await this.authService.verifyTwoFactor(body.challengeId, body.code, body.scope);
+      applyAccessiAuthCookies(res, resolveAccessiAuthCookieOptions(this.options), result);
+      return RestUtilities.sendBaseResponse(res, result);
     } catch (error) {
       return RestUtilities.sendErrorMessage(res, error, AuthController.name, error instanceof HttpException ? error.getStatus() : 500);
     }

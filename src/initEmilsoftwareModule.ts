@@ -23,6 +23,7 @@ import { AccessiHttpExceptionFilter } from './accessi-module/security/AccessiHtt
 import { getAccessiJwksPath, setupAccessiJwks } from './accessi-module/security/jwks';
 import { createAccessiEdgeRateLimitMiddleware } from './accessi-module/security/edgeRateLimit';
 import { createAccessiSecurityHeadersMiddleware } from './accessi-module/security/securityHeaders';
+import { createAccessiAuthCookieMiddleware } from './accessi-module/security/authCookies';
 
 /** Esito del bootstrap del modulo unificato. */
 export interface EmilsoftwareModuleInitializationResult {
@@ -80,6 +81,12 @@ export async function initEmilsoftwareModule(
             : undefined;
         if (edgeRateLimit) {
             app.use(edgeRateLimit);
+        }
+        if (options?.accessiOptions) {
+            const authCookie = createAccessiAuthCookieMiddleware(options.accessiOptions, isNestRoute);
+            if (authCookie) {
+                app.use(authCookie);
+            }
         }
         if (options?.accessiOptions && options.accessiOptions.http?.securityHeaders !== false) {
             const securityHeaders = createAccessiSecurityHeadersMiddleware(

@@ -268,6 +268,7 @@ _Ogni campo di configurazione con tipo, obbligo e note._
 | publicAuthRateLimit | PublicAuthRateLimitOptions | no | Limiti per endpoint pubblici; store condiviso opzionale (Redis) per il cluster. |
 | edgeRateLimit | AccessiEdgeRateLimitOptions | no | Limite grossolano per IP davanti alle rotte Accessi; opzionale, store condiviso supportato. |
 | http | \{ cors, trustProxy, securityHeaders \} | no | CORS, IP reali dietro proxy e header di sicurezza con CSP a nonce per la console e direttive configurabili. |
+| authCookie | \{ enabled, secure, sameSite, csrf, ... \} | no | Cookie HttpOnly e CSRF double-submit al posto del Bearer. Default disattivato. |
 | publicRegistration | \{ enabled \} | no | Registrazione pubblica: disattivata per impostazione predefinita. |
 | federatedAuthentication | FederatedAuthenticationOptions | no | Abilita l'SSO generico. |
 | extensionFieldsOptions | ExtensionFieldsOptions\[\] | no | Tabelle esterne allegate al profilo. |

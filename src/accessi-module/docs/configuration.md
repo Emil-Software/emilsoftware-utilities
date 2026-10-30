@@ -22,6 +22,7 @@ Il modulo non legge direttamente il file `.env`: riceve un oggetto `AccessiOptio
 - `publicAuthRateLimit.store`, `serviceTokens.rateLimitStore`: rate limit condiviso con `createRedisRateLimitStore` in cluster; default in memoria
 - `edgeRateLimit`: limite grossolano per IP davanti alle rotte Accessi, con store condiviso opzionale
 - `http`: opzioni CORS, `trustProxy` e header di sicurezza (`securityHeaders`, con CSP a nonce per la console, `'unsafe-inline'` documentato solo per Swagger UI, `Report-Only` e direttive personalizzabili; vedi `docs/security-headers.md`)
+- `authCookie`: modalita opzionale con cookie `HttpOnly` e CSRF double-submit; Bearer resta il default. Vedi `docs/auth-cookies.md`
 - `sessionRevocation`: store memory/Redis per revocare tutte le sessioni di un utente
 - `refreshTokenRotation`: store memory/Redis per rendere il refresh token monouso
 - `validateAccessiOptions` / `assertValidAccessiOptions`: validazione fail-fast della configurazione

@@ -6,6 +6,6 @@
  */
 
 export interface GetUserByTokenRequest {
-  /** JWT dell'utente. */
-  token: string;
+  /** JWT dell'utente. In modalita cookie puo essere omesso: si usa il cookie httpOnly o l'header Authorization. */
+  token?: string;
 }

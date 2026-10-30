@@ -25,6 +25,7 @@ import { assertEmailConfigured } from './security/emailConfiguration';
 import { getAccessiJwksPath, setupAccessiJwks } from './security/jwks';
 import { createAccessiEdgeRateLimitMiddleware } from './security/edgeRateLimit';
 import { createAccessiSecurityHeadersMiddleware } from './security/securityHeaders';
+import { createAccessiAuthCookieMiddleware } from './security/authCookies';
 
 /** Esito del bootstrap Express di Accessi. */
 export interface AccessiModuleInitializationResult {
@@ -95,6 +96,10 @@ export async function initializeAccessiModule(
         if (edgeRateLimit) {
             app.use(edgeRateLimit);
         }
+        const authCookie = createAccessiAuthCookieMiddleware(options, isAccessiRoute);
+        if (authCookie) {
+            app.use(authCookie);
+        }
         if (options.http?.securityHeaders !== false) {
             const securityHeaders = createAccessiSecurityHeadersMiddleware(
                 options.http?.securityHeaders,
@@ -128,7 +133,7 @@ export async function initializeAccessiModule(
         logger.info("Applicazione Nest accessi creata.");
 
         if (options.http?.cors !== false) {
-            nestApp.enableCors(options.http?.cors ?? { exposedHeaders: ['X-Total-Count'] });
+            nestApp.enableCors(options.http?.cors ?? { exposedHeaders: ['X-Total-Count', 'X-CSRF-Token'] });
         }
         nestApp.useGlobalPipes(createAccessiValidationPipe());
         nestApp.useGlobalFilters(new AccessiHttpExceptionFilter());
@@ -315,6 +320,23 @@ export type {
     ResolvedAccessiCsp,
     ResolvedAccessiSecurityHeaders
 } from './security/securityHeaders';
+export {
+    createAccessiAuthCookieMiddleware,
+    resolveAccessiAuthCookieOptions,
+    getAccessiAccessTokenFromCookie,
+    getAccessiRefreshTokenFromCookie,
+    setAccessiAuthCookies,
+    clearAccessiAuthCookies,
+    applyAccessiAuthCookies,
+    parseAccessiCookieHeader,
+    isAccessiCsrfExemptPath
+} from './security/authCookies';
+export type {
+    AccessiAuthCookieOptions,
+    AccessiAuthCookieSetting,
+    AccessiAuthTokenPair,
+    ResolvedAccessiAuthCookieOptions
+} from './security/authCookies';
 export {
     getAccessiAccessTokenSigningConfig,
     getAccessiAccessTokenVerificationConfig,

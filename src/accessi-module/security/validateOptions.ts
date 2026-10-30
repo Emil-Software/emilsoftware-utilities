@@ -1,5 +1,10 @@
 import { createPublicKey } from 'crypto';
 import type { AccessiOptions } from '../AccessiModule';
+import {
+  accessiCookieNames,
+  isValidAccessiCookieName,
+  resolveAccessiAuthCookieOptions,
+} from './authCookies';
 
 export interface AccessiOptionsValidationIssue {
   code: string;
@@ -157,6 +162,58 @@ export function validateAccessiOptions(options: AccessiOptions): AccessiOptionsV
   }
   if (options?.consoleEntry?.ttlMs !== undefined && !positive(options.consoleEntry.ttlMs)) {
     addError('ACCESSI_CONSOLE_ENTRY_TTL_INVALID', 'consoleEntry.ttlMs deve essere positivo.');
+  }
+
+  const authCookie = resolveAccessiAuthCookieOptions(options ?? {});
+  if (authCookie) {
+    const names = accessiCookieNames(authCookie);
+    names.forEach((name, index) => {
+      if (!isValidAccessiCookieName(name)) {
+        addError(
+          'ACCESSI_AUTH_COOKIE_NAME_INVALID',
+          `Il nome cookie "${names[index]}" non e valido.`,
+        );
+      }
+    });
+    if (new Set(names).size !== names.length) {
+      addError(
+        'ACCESSI_AUTH_COOKIE_NAME_DUPLICATE',
+        'I nomi dei cookie access, refresh e CSRF devono essere diversi.',
+      );
+    }
+    if (authCookie.sameSite === 'none' && !authCookie.secure) {
+      addError(
+        'ACCESSI_AUTH_COOKIE_SAMESITE_NONE_INSECURE',
+        'SameSite=None richiede secure: true.',
+      );
+    }
+    if (!authCookie.accessPath.startsWith('/')) {
+      addError('ACCESSI_AUTH_COOKIE_PATH_INVALID', 'accessPath deve iniziare con "/".');
+    }
+    if (!authCookie.refreshPath.startsWith('/')) {
+      addError('ACCESSI_AUTH_COOKIE_PATH_INVALID', 'refreshPath deve iniziare con "/".');
+    }
+    if (!authCookie.csrfPath.startsWith('/')) {
+      addError('ACCESSI_AUTH_COOKIE_PATH_INVALID', 'csrfPath deve iniziare con "/".');
+    }
+    if (authCookie.csrf === 'off') {
+      addWarning(
+        'ACCESSI_AUTH_COOKIE_CSRF_DISABLED',
+        'CSRF disattivato in modalita cookie: l host deve applicare una propria protezione.',
+      );
+    }
+    if (authCookie.exposeTokens) {
+      addWarning(
+        'ACCESSI_AUTH_COOKIE_TOKENS_EXPOSED',
+        'exposeTokens restituisce i token nel body: riduce il beneficio di httpOnly.',
+      );
+    }
+    if (!jwt?.refreshExpiresIn && authCookie.refreshFromCookie) {
+      addWarning(
+        'ACCESSI_AUTH_COOKIE_REFRESH_DISABLED',
+        'refreshFromCookie e attivo ma jwtOptions.refreshExpiresIn non e configurato.',
+      );
+    }
   }
 
   return { errors, warnings };

@@ -167,7 +167,7 @@ test('#14: la shell console riceve un nonce per richiesta coerente con la CSP', 
 
   const nonce = /nonce-([^']+)'/.exec(res.headers['content-security-policy'])[1];
   assert.ok(res.body.includes(`nonce="${nonce}"`));
-  assert.equal((res.body.match(new RegExp(`nonce="${nonce}"`, 'g')) || []).length, 2);
+  assert.equal(res.body.split(`nonce="${nonce}"`).length - 1, 2);
   assert.doesNotMatch(res.body, /__ACCESSI_CSP_NONCE__/);
   assert.ok(res.body.includes('window.__ACCESSI_API_BASE_URL__="https://api.example.test";'));
   // Nessuno script inline oltre ai due firmati dal nonce.

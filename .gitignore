@@ -31,6 +31,7 @@
 !/test/readiness.cjs
 !/test/jwt-key-rotation.cjs
 !/test/security-headers.cjs
+!/test/auth-cookies.cjs
 !/test/integration/
 !/test/integration/**
 

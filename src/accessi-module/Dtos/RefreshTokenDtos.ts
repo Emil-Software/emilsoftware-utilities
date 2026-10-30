@@ -1,13 +1,16 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
-import { IsString, ValidateNested } from 'class-validator';
+import { IsOptional, IsString, ValidateNested } from 'class-validator';
 import { BaseResponse } from './BaseResponse';
 import { TokenResult } from './TokenResult';
 
 export class RefreshTokenRequest {
-  @ApiProperty({ description: 'Refresh token emesso al login, 2FA o SSO.' })
+  @ApiPropertyOptional({
+    description: 'Refresh token emesso al login, 2FA o SSO. In modalita cookie puo essere omesso.',
+  })
+  @IsOptional()
   @IsString()
-  refreshToken!: string;
+  refreshToken?: string;
 }
 
 export class RefreshTokenResult {

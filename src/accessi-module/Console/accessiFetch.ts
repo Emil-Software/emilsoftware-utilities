@@ -21,6 +21,10 @@ export interface AccessiClientConfig {
 declare global {
   interface Window {
     __ACCESSI_API_BASE_URL__?: string;
+    /** La console e servita in modalita cookie httpOnly. */
+    __ACCESSI_AUTH_COOKIE__?: boolean;
+    __ACCESSI_CSRF_COOKIE_NAME__?: string;
+    __ACCESSI_CSRF_HEADER_NAME__?: string;
   }
 }
 
@@ -92,25 +96,61 @@ function payloadString(payload: unknown, key: string): string | undefined {
   return typeof value === 'string' && value.length > 0 ? value : undefined;
 }
 
+/** Legge un cookie non httpOnly (token CSRF double-submit). */
+function readBrowserCookie(name: string): string | null {
+  if (typeof document === 'undefined' || !document.cookie) return null;
+  for (const part of document.cookie.split(';')) {
+    const separator = part.indexOf('=');
+    if (separator < 0) continue;
+    if (part.slice(0, separator).trim() !== name) continue;
+    try {
+      return decodeURIComponent(part.slice(separator + 1).trim());
+    } catch {
+      return part.slice(separator + 1).trim();
+    }
+  }
+  return null;
+}
+
+function isCookieAuthMode(): boolean {
+  return typeof window !== 'undefined' && window.__ACCESSI_AUTH_COOKIE__ === true;
+}
+
+const UNSAFE_METHODS = new Set(['POST', 'PUT', 'PATCH', 'DELETE']);
+
 /**
  * Trasporto comune del client Orval: aggiunge il Bearer token e converte le
  * risposte di errore Accessi in Error JavaScript leggibili dalla console.
+ *
+ * In modalita cookie non richiede un token in memoria: invia i cookie
+ * same-origin/cross-origin e l'header CSRF double-submit.
  */
 export async function accessiFetch<T>(url: string, options: RequestInit): Promise<T> {
   // Il contesto va letto prima di ogni await: la funzione generata invoca il
   // trasporto in modo sincrono, quindi la configurazione appartiene a questa call.
   const config = scopedConfig;
+  const cookieMode = isCookieAuthMode();
   const headers = new Headers(options.headers);
   headers.set('Accept', 'application/json');
   if (options.body !== undefined && !headers.has('Content-Type')) {
     headers.set('Content-Type', 'application/json');
+  }
+  if (cookieMode) {
+    const method = (options.method ?? 'GET').toUpperCase();
+    if (UNSAFE_METHODS.has(method)) {
+      const csrfCookie = window.__ACCESSI_CSRF_COOKIE_NAME__ ?? 'accessi_csrf';
+      const csrfHeader = window.__ACCESSI_CSRF_HEADER_NAME__ ?? 'x-csrf-token';
+      const csrfToken = readBrowserCookie(csrfCookie);
+      if (csrfToken) headers.set(csrfHeader, csrfToken);
+    }
   }
   const resolvedToken = config
     ? (config.getToken ? await config.getToken() : config.token ?? null)
     : tokenProvider
       ? await tokenProvider()
       : accessToken;
-  const authenticatedRequest = resolvedToken !== null && resolvedToken !== undefined;
+  const isAuthEntryRequest = /\/(?:auth\/(?:login|refresh|two-factor\/(?:verify|resend))|console\/entry\/exchange)\b/.test(url);
+  const authenticatedRequest = !isAuthEntryRequest && (cookieMode || (resolvedToken !== null && resolvedToken !== undefined));
   if (resolvedToken) headers.set('Authorization', `Bearer ${resolvedToken}`);
   const runtimeBaseUrl = config?.baseUrl !== undefined
     ? config.baseUrl
@@ -121,7 +161,11 @@ export async function accessiFetch<T>(url: string, options: RequestInit): Promis
 
   notifyNetworkActivity(true);
   try {
-    const response = await fetch(requestUrl, { ...options, headers });
+    const response = await fetch(requestUrl, {
+      ...options,
+      headers,
+      ...(cookieMode ? { credentials: 'include' as const } : {}),
+    });
     const payload = await response.json().catch(() => undefined);
     if (!response.ok) {
       const message = payloadString(payload, 'message') ?? payloadString(payload, 'error') ?? `Errore HTTP ${response.status}`;

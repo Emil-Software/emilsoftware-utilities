@@ -6,6 +6,6 @@
  */
 
 export interface RefreshTokenRequest {
-  /** Refresh token emesso al login, 2FA o SSO. */
-  refreshToken: string;
+  /** Refresh token emesso al login, 2FA o SSO. In modalita cookie puo essere omesso. */
+  refreshToken?: string;
 }

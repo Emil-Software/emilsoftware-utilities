@@ -40,6 +40,7 @@
   login,
   verifyTwoFactor,
   resendTwoFactor,
+  revokeToken,
   revokeServiceToken,
   rotateServiceToken,
   setGdpr,
@@ -134,6 +135,8 @@ const consoleBasePath = consoleMarkerIndex >= 0
 const USERS_PAGE_SIZE = 25;
 
 let token = sessionStorage.getItem('accessi-console-token');
+/** Modalita cookie httpOnly: il token non e leggibile da JS e viaggia nei cookie. */
+const cookieMode = typeof window !== 'undefined' && window.__ACCESSI_AUTH_COOKIE__ === true;
 let currentUser: ConsoleUser | null = null;
 let federatedAuthenticationAvailable = false;
 let usersPage = 0;
@@ -702,19 +705,23 @@ async function completeLoginStep(response: LoginResult): Promise<void> {
     byId('login-submit').textContent = 'Accedi';
     return;
   }
-  if (!response.token?.value) throw new Error('Risposta di autenticazione incompleta.');
-  token = response.token.value;
-  sessionStorage.setItem('accessi-console-token', token);
-  setAccessiConsoleToken(token);
+  if (response.token?.value) {
+    token = response.token.value;
+    sessionStorage.setItem('accessi-console-token', token);
+    setAccessiConsoleToken(token);
+  } else if (!cookieMode) {
+    throw new Error('Risposta di autenticazione incompleta.');
+  }
   resetLogin();
   await bootstrap();
 }
 
 async function bootstrap(): Promise<void> {
+  const hadToken = token !== null;
   try {
     setAccessiConsoleToken(token);
-    if (!token) throw new Error('Inserisci le credenziali amministrative.');
-    const payload = result<AuthenticatedTokenPayloadDto>(await getUserByToken({ token }));
+    if (!token && !cookieMode) throw new Error('Inserisci le credenziali amministrative.');
+    const payload = result<AuthenticatedTokenPayloadDto>(await getUserByToken({ token: token ?? '' }));
     currentUser = payload.userData;
     requireConsoleAccess();
     applyRoleNavigation();
@@ -731,7 +738,9 @@ async function bootstrap(): Promise<void> {
     federatedAuthenticationAvailable = false;
     sessionStorage.removeItem('accessi-console-token');
     finishBoot('login');
-    byId('login-error').textContent = error instanceof Error ? error.message : 'Sessione non valida.';
+    byId('login-error').textContent = cookieMode && !hadToken
+      ? ''
+      : (error instanceof Error ? error.message : 'Sessione non valida.');
   }
 }
 
@@ -743,12 +752,13 @@ async function exchangeConsoleEntry(ticket: string): Promise<void> {
   try {
     const session = result<ConsoleEntrySessionResult>(await exchangeConsoleEntryTicket({ ticket }));
     const value = session.token?.value;
-    if (typeof value !== 'string' || value === '') {
+    if (typeof value === 'string' && value !== '') {
+      token = value;
+      sessionStorage.setItem('accessi-console-token', value);
+      setAccessiConsoleToken(value);
+    } else if (!cookieMode) {
       throw new Error('Apertura automatica della console non riuscita.');
     }
-    token = value;
-    sessionStorage.setItem('accessi-console-token', value);
-    setAccessiConsoleToken(value);
     await bootstrap();
   } catch (error) {
     token = null;
@@ -2103,13 +2113,19 @@ byId('resend-code').onclick = async () => {
   }
 };
 byId('logout').onclick = () => {
-  resetLogin();
-  token = null;
-  currentUser = null;
-  setAccessiConsoleToken(null);
-  sessionStorage.removeItem('accessi-console-token');
-  window.history.replaceState(null, '', consoleBasePath);
-  void bootstrap();
+  void (async () => {
+    if (cookieMode) {
+      // Revoca il token corrente e cancella i cookie lato server (best effort).
+      await revokeToken({}).catch(() => undefined);
+    }
+    resetLogin();
+    token = null;
+    currentUser = null;
+    setAccessiConsoleToken(null);
+    sessionStorage.removeItem('accessi-console-token');
+    window.history.replaceState(null, '', consoleBasePath);
+    void bootstrap();
+  })();
 };
 byId('nav').onclick = (event) => {
   const link = (event.target as HTMLElement).closest<HTMLAnchorElement>('a[data-view]');
@@ -2122,7 +2138,7 @@ window.addEventListener('popstate', () => {
 });
 // Sessione scaduta o token revocato: il trasporto segnala il 401, la console torna al login.
 window.addEventListener(ACCESSI_UNAUTHORIZED_EVENT, () => {
-  if (!token) return;
+  if (!token && !cookieMode) return;
   token = null;
   currentUser = null;
   setAccessiConsoleToken(null);
@@ -2176,7 +2192,7 @@ if (entryTicket) {
   window.history.replaceState(null, '', window.location.pathname);
   finishBoot('login');
   showTwoFactor({ challengeId: ssoChallenge, resendAfterSeconds: 60 });
-} else if (token) {
+} else if (token || cookieMode) {
   void bootstrap();
 } else {
   finishBoot('login');

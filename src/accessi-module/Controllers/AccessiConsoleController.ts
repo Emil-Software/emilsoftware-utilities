@@ -9,6 +9,7 @@ import {
   applyAccessiContentSecurityPolicy,
   resolveAccessiSecurityHeaders,
 } from '../security/securityHeaders';
+import { resolveAccessiAuthCookieOptions } from '../security/authCookies';
 
 /** Serves the framework-free administrative console bundled with Accessi. API authorization remains on each API endpoint. */
 @ApiExcludeController()
@@ -22,8 +23,15 @@ export class AccessiConsoleController {
     const baseUrl = this.options.consoleApiBaseUrl?.replace(/\/+$/, '');
     if (this.htmlCache && this.htmlCache.baseUrl === baseUrl) return this.htmlCache.content;
 
-    const marker = baseUrl
-      ? `<script nonce="__ACCESSI_CSP_NONCE__">window.__ACCESSI_API_BASE_URL__=${JSON.stringify(baseUrl)};</script>`
+    const cookieConfig = resolveAccessiAuthCookieOptions(this.options);
+    const bootstrap = [
+      baseUrl ? `window.__ACCESSI_API_BASE_URL__=${JSON.stringify(baseUrl)};` : '',
+      cookieConfig ? 'window.__ACCESSI_AUTH_COOKIE__=true;' : '',
+      cookieConfig ? `window.__ACCESSI_CSRF_COOKIE_NAME__=${JSON.stringify(cookieConfig.csrfTokenName)};` : '',
+      cookieConfig ? `window.__ACCESSI_CSRF_HEADER_NAME__=${JSON.stringify(cookieConfig.csrfHeaderName)};` : '',
+    ].join('');
+    const marker = bootstrap
+      ? `<script nonce="__ACCESSI_CSP_NONCE__">${bootstrap}</script>`
       : '';
     const content = readFileSync(join(__dirname, '..', 'Console', 'index.html'), 'utf8')
       .replace('</head>', `${marker}</head>`);

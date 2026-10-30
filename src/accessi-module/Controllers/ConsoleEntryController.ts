@@ -32,6 +32,10 @@ import {
   checkPublicAuthRateLimit,
   sendPublicAuthRateLimitExceeded,
 } from '../security/publicAuthRateLimit';
+import {
+  resolveAccessiAuthCookieOptions,
+  setAccessiAuthCookies,
+} from '../security/authCookies';
 
 /**
  * Auto-ingresso alla console amministrativa da un frontend gia autenticato.
@@ -116,6 +120,13 @@ export class ConsoleEntryController {
         });
       }
 
+      const cookieConfig = resolveAccessiAuthCookieOptions(this.options);
+      if (cookieConfig) {
+        setAccessiAuthCookies(res, cookieConfig, { access: entry.token });
+        if (!cookieConfig.exposeTokens) {
+          return RestUtilities.sendBaseResponse(res, {});
+        }
+      }
       return RestUtilities.sendBaseResponse(res, { token: { value: entry.token, type: 'Bearer' } });
     } catch (error) {
       return RestUtilities.sendErrorMessage(

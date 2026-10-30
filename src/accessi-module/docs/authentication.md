@@ -69,6 +69,8 @@ La revoca sessioni per utente si configura con `sessionRevocation.store` e si at
 
 Con `jwtOptions.refreshExpiresIn` (es. `30d`) login, 2FA e SSO restituiscono anche `refreshToken`. `POST /api/accessi/auth/refresh` scambia il refresh token con una nuova coppia access+refresh. Il refresh token ha `typ: "refresh"` e non e accettato dai guard API.
 
+Con `authCookie` Accessi puo emettere gli stessi token in cookie `HttpOnly` invece che nel body. In questa modalita il refresh avviene dal cookie, le richieste non sicure richiedono l'header CSRF double-submit e la console funziona senza token in `sessionStorage`. Bearer resta il default invariato; dettagli in `docs/auth-cookies.md`.
+
 Con `refreshTokenRotation.store` il refresh token e monouso: ogni refresh lo consuma e ne emette uno nuovo. Due refresh concorrenti dello stesso token producono un solo successo.
 
 ## Requisiti

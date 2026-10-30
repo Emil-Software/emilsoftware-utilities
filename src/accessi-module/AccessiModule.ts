@@ -97,6 +97,7 @@ export interface ConsoleEntryOptions {
 }
 
 import type { AccessiSecurityHeadersSetting } from './security/securityHeaders';
+import type { AccessiAuthCookieOptions } from './security/authCookies';
 
 /** Impostazioni HTTP del servizio Accessi. */
 export interface AccessiHttpOptions {
@@ -308,6 +309,11 @@ export interface AccessiOptions {
   edgeRateLimit?: AccessiEdgeRateLimitOptions;
   /** CORS, trust proxy e header di sicurezza del servizio. */
   http?: AccessiHttpOptions;
+  /**
+   * Autenticazione opzionale via cookie httpOnly. Bearer resta il default:
+   * la modalita si abilita passando questo oggetto (o `enabled: true`).
+   */
+  authCookie?: AccessiAuthCookieOptions;
   /** Revoca sessioni per utente tramite store memory/Redis. */
   sessionRevocation?: SessionRevocationOptions;
   /** Revoca dei singoli access token tramite `jti`, memory/Redis. */
