@@ -1,3 +1,10 @@
+# [2.0.0-dev.75](https://github.com/Emil-Software/emilsoftware-utilities/compare/v2.0.0-dev.74...v2.0.0-dev.75) (2026-10-30)
+
+
+### Features
+
+* **accessi:** rotazione JWKS da env con chiavi precedenti e alert kid ([a8c1efa](https://github.com/Emil-Software/emilsoftware-utilities/commit/a8c1efaa04fda2d1db47a5943e1f01ea68a9e67d))
+
 # [2.0.0-dev.74](https://github.com/Emil-Software/emilsoftware-utilities/compare/v2.0.0-dev.73...v2.0.0-dev.74) (2026-10-30)
 
 
