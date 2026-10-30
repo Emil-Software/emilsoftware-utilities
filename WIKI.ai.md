@@ -86,7 +86,7 @@ import { AccessiModule } from 'emilsoftware-utilities';
 })
 export class AppModule {}
 ```
-Il global prefix api e le rotte /api/accessi/* sono gestiti dal modulo. Le tue rotte Nest si proteggono con JwtSimpleGuard usando il JWT Accessi.
+Il global prefix api e le rotte /api/accessi/* sono gestiti dal modulo. Le tue rotte Nest si proteggono con JwtSimpleGuard usando il JWT Accessi. Per health e readiness usare createAccessiHealthModule({ accessiOptions }): espone /health/live e /health/ready con lo stesso contratto del servizio standalone (bootstrap, database, store Redis e check aggiuntivi).
 
 ### Distribuzione multi-app e package entry point
 Come usare Accessi come servizio centrale, come resource server o solo come contratti.

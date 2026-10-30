@@ -268,6 +268,7 @@ lista utenti apre un pannello in cui inserire l'URL dell'applicazione e generare
 | Backend Express esistente | `await initializeAccessiModule(app, accessiOptions)` monta le rotte `/api/accessi` su un host Nest isolato |
 | Applicazione NestJS | importa `AccessiModule.forRoot(accessiOptions)` (e/o `AllegatiModule.forRoot(allegatiOptions)`) |
 | Accessi + Allegati insieme | `EmilsoftwareModule.forRoot({ accessiOptions, allegatiOptions })` |
+| Health/readiness in host Nest | `createAccessiHealthModule({ accessiOptions })` espone `/health/live` e `/health/ready` con lo stesso contratto del servizio standalone |
 | Client multi-istanza / multi-tenant | `createAccessiClient({ baseUrl, getToken })` isola base URL e token per istanza (concorrenza sicura); `configureAccessiClient` resta il default globale |
 | Client per scope | `accessi/client/public` (frontend), `accessi/client/admin` (tool admin), `accessi/client/service` (backend fratelli): stesse tipi del client completo, nessuna operazione fuori scope |
 

@@ -134,7 +134,7 @@ export const WIKI_SECTIONS: WikiSection[] = [
         '})',
         'export class AppModule {}',
       ].join('\n'), 'app.module.ts'),
-      p(`Il global prefix api e le rotte /api/accessi/* sono gestiti dal modulo. Le tue rotte Nest si proteggono con JwtSimpleGuard usando il JWT Accessi.`),
+      p(`Il global prefix api e le rotte /api/accessi/* sono gestiti dal modulo. Le tue rotte Nest si proteggono con JwtSimpleGuard usando il JWT Accessi. Per health e readiness usare createAccessiHealthModule({ accessiOptions }): espone /health/live e /health/ready con lo stesso contratto del servizio standalone (bootstrap, database, store Redis e check aggiuntivi).`),
     ],
   },
   // -------------------------------------------------------------------------

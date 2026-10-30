@@ -50,6 +50,31 @@ GET /health/metrics   -> metriche Prometheus testuali
 - `healthCheck()` degli store Redis configurati
 - `readinessChecks` aggiuntivi passati dal chiamante
 
+### Host Nest con `AccessiModule.forRoot`
+
+Un'app Nest che monta Accessi in-process ottiene gli stessi endpoint con il modulo di health:
+
+```ts
+import { AccessiModule, createAccessiHealthModule } from "emilsoftware-utilities/accessi/server";
+
+@Module({
+  imports: [
+    AccessiModule.forRoot(accessiOptions),
+    createAccessiHealthModule({
+      accessiOptions,
+      readinessChecks: [{ name: "coda", check: async () => queue.isReady() }],
+      path: "/health", // default
+    }),
+  ],
+})
+export class AppModule {}
+```
+
+Il contratto e identico al servizio standalone (200/503, `checks` con `bootstrap`, `database`,
+store configurati e check aggiuntivi). Per un uso programmatico (senza controller) ci sono
+`checkAccessiReadiness(accessiOptions, checks)`, `createAccessiLiveReport()` e
+`readinessHttpStatus(report)`.
+
 ## Esecuzione come processo
 
 In produzione il servizio viene eseguito come processo Node gestito da systemd, PM2 o dal supervisor del cliente:

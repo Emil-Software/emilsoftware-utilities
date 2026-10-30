@@ -320,3 +320,22 @@ export type {
     AccessiCustomRequirementContext,
     AccessiCustomRequirementHandler
 } from "./middleware/accessiRequirements";
+
+export {
+    checkAccessiReadiness,
+    checkAccessiDatabase,
+    collectAccessiHealthStores,
+    createAccessiLiveReport,
+    readinessHttpStatus
+} from './health/readiness';
+export type {
+    AccessiHealthCheckResult,
+    AccessiHealthStore,
+    AccessiLiveReport,
+    AccessiReadinessCheck,
+    AccessiReadinessDependencies,
+    AccessiReadinessReport
+} from './health/readiness';
+export { createAccessiHealthModule } from './health/nest';
+export type { AccessiHealthModuleOptions } from './health/nest';
+

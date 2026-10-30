@@ -10,15 +10,15 @@ import type {
 import type { AccessiOptions } from '../../accessi-module/AccessiModule';
 import { createAccessiOptionsFromEnv } from '../../accessi-module/database-updates/accessiOptionsFromEnv';
 import {
-  ACCESSI_SCHEMA_VERSION,
-} from '../../accessi-module/database-updates/accessiSchema';
-import { AccessiDatabaseUpdater } from '../../accessi-module/database-updates/AccessiDatabaseUpdater';
+  checkAccessiReadiness,
+  createAccessiLiveReport,
+  readinessHttpStatus,
+} from '../../accessi-module/health/readiness';
+import type { AccessiReadinessCheck } from '../../accessi-module/health/readiness';
 import { assertValidAccessiOptions, validateAccessiOptions } from '../../accessi-module/security/validateOptions';
 
-export interface AccessiReadinessCheck {
-  name: string;
-  check: () => boolean | Promise<boolean>;
-}
+export type { AccessiReadinessCheck } from '../../accessi-module/health/readiness';
+
 
 export interface AccessiServiceOptions {
   /** Applicazione Express gia esistente. Default: nuova app. */
@@ -43,11 +43,6 @@ export interface AccessiService {
   document: AccessiModuleInitializationResult['document'];
   start(): Promise<Server>;
   stop(): Promise<void>;
-}
-
-interface HealthCheckResult {
-  ok: boolean;
-  detail?: string;
 }
 
 function normalizePath(value: string): string {
@@ -100,43 +95,6 @@ function createMetrics() {
   return { middleware, render };
 }
 
-function collectHealthStores(options: AccessiOptions): Array<{ name: string; store: { healthCheck?: () => Promise<boolean> } }> {
-  const stores: Array<{ name: string; store: { healthCheck?: () => Promise<boolean> } }> = [];
-  const seen = new Set<unknown>();
-
-  const add = (name: string, store: { healthCheck?: () => Promise<boolean> } | undefined): void => {
-    if (!store || seen.has(store) || typeof store.healthCheck !== 'function') return;
-    seen.add(store);
-    stores.push({ name, store });
-  };
-
-  add('publicAuthRateLimit', options.publicAuthRateLimit?.store);
-  add('serviceTokenRateLimit', options.serviceTokens?.rateLimitStore);
-  add('consoleEntry', options.consoleEntry?.store);
-  add('edgeRateLimit', options.edgeRateLimit?.store);
-  add('sessionRevocation', options.sessionRevocation?.store);
-  add('accessTokenRevocation', options.accessTokenRevocation?.store);
-  add('refreshTokenRotation', options.refreshTokenRotation?.store);
-  return stores;
-}
-
-async function checkDatabase(options: AccessiOptions): Promise<HealthCheckResult> {
-  try {
-    const version = await AccessiDatabaseUpdater.getCurrentVersion(options);
-    if (!version) {
-      return { ok: false, detail: 'schema Accessi non inizializzato' };
-    }
-    return {
-      ok: true,
-      detail: version === ACCESSI_SCHEMA_VERSION
-        ? version
-        : `${version} (atteso ${ACCESSI_SCHEMA_VERSION})`,
-    };
-  } catch (error) {
-    return { ok: false, detail: error instanceof Error ? error.message : String(error) };
-  }
-}
-
 /**
  * Crea un servizio Accessi standalone con health, readiness, metriche e shutdown.
  *
@@ -165,10 +123,7 @@ export async function createAccessiService(
   app.use(metrics.middleware);
 
   app.get(`${healthPath}/live`, (_req: Request, res: Response) => {
-    res.status(200).json({
-      status: 'ok',
-      uptimeSeconds: Math.floor(process.uptime()),
-    });
+    res.status(200).json(createAccessiLiveReport());
   });
 
   app.get(`${healthPath}/ready`, async (_req: Request, res: Response) => {
@@ -180,41 +135,8 @@ export async function createAccessiService(
       return;
     }
 
-    const checks: Record<string, HealthCheckResult> = {
-      bootstrap: { ok: true },
-      database: await checkDatabase(accessiOptions),
-    };
-
-    const stores = collectHealthStores(accessiOptions);
-    await Promise.all(stores.map(async ({ name, store }) => {
-      try {
-        checks[name] = { ok: Boolean(await store.healthCheck?.()) };
-      } catch (error) {
-        checks[name] = {
-          ok: false,
-          detail: error instanceof Error ? error.message : String(error),
-        };
-      }
-    }));
-
-    for (const check of readinessChecks) {
-      try {
-        const ok = await check.check();
-        checks[check.name] = { ok: Boolean(ok) };
-      } catch (error) {
-        checks[check.name] = {
-          ok: false,
-          detail: error instanceof Error ? error.message : String(error),
-        };
-      }
-    }
-
-    const ok = Object.values(checks).every((check) => check.ok);
-    res.status(ok ? 200 : 503).json({
-      status: ok ? 'ok' : 'error',
-      checks,
-      timestamp: new Date().toISOString(),
-    });
+    const report = await checkAccessiReadiness(accessiOptions, readinessChecks);
+    res.status(readinessHttpStatus(report)).json(report);
   });
 
   if (options.metrics !== false) {
