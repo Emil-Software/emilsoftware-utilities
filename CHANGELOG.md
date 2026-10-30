@@ -1,3 +1,10 @@
+# [2.0.0-dev.74](https://github.com/Emil-Software/emilsoftware-utilities/compare/v2.0.0-dev.73...v2.0.0-dev.74) (2026-10-30)
+
+
+### Features
+
+* **accessi:** health/readiness riutilizzabile per host Nest ([afb33a9](https://github.com/Emil-Software/emilsoftware-utilities/commit/afb33a992dc4a4053d6a0b1d2497d549826d6086)), closes [#13](https://github.com/Emil-Software/emilsoftware-utilities/issues/13)
+
 # [2.0.0-dev.73](https://github.com/Emil-Software/emilsoftware-utilities/compare/v2.0.0-dev.72...v2.0.0-dev.73) (2026-10-30)
 
 
