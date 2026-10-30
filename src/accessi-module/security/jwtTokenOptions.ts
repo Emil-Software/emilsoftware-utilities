@@ -3,6 +3,7 @@ import type { AccessiOptions } from "../AccessiModule";
 import { getAccessiJwtSecret } from "./passwordResetToken";
 import type { AccessiJwtPurpose } from "./passwordResetToken";
 import { recordAccessiMetric } from "../observability/metrics";
+import { auditAccessi } from "./audit";
 
 /** Algoritmi supportati per gli access token Accessi. */
 export type AccessiAccessTokenAlgorithm =
@@ -175,6 +176,11 @@ export function resolveAccessiVerificationKeys(
     purpose: config.purpose,
   });
   recordAccessiMetric('accessi_jwt_unknown_key_id_total', 1, {
+    purpose: config.purpose,
+    ...(header.algorithm ? { algorithm: header.algorithm } : {}),
+  });
+  auditAccessi('jwt_unknown_key_id', {
+    kid: header.keyId,
     purpose: config.purpose,
     ...(header.algorithm ? { algorithm: header.algorithm } : {}),
   });

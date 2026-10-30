@@ -47,6 +47,7 @@ export default defineConfig({
           'Console',
           'Federated authentication',
           'Schema',
+          'Audit',
         ],
       },
     },

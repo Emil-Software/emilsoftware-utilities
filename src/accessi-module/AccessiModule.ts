@@ -45,6 +45,8 @@ import { SchemaExportService } from './Services/SchemaExportService/SchemaExport
 import { AdminBootstrapService } from './Services/AdminBootstrapService/AdminBootstrapService';
 import { AccessiJwksBootstrapService } from './security/jwksBootstrap';
 import { assertEmailConfigured } from './security/emailConfiguration';
+import { configureAccessiAudit } from './security/audit';
+import { AccessiAuditController } from './Controllers/AccessiAuditController';
 
 /** JWT emesso da Accessi dopo un login locale o SSO. Non riutilizzare il segreto del provider SSO. */
 export interface JwtOptions {
@@ -99,6 +101,7 @@ export interface ConsoleEntryOptions {
 import type { AccessiSecurityHeadersSetting } from './security/securityHeaders';
 import type { AccessiAuthCookieOptions } from './security/authCookies';
 import type { AccessiMetricsOptions } from './observability/metrics';
+import type { AccessiAuditOptions } from './security/audit';
 
 /** Impostazioni HTTP del servizio Accessi. */
 export interface AccessiHttpOptions {
@@ -291,6 +294,8 @@ export interface AccessiOptions {
   systemSeeds?: SystemSeedsOptions;
   /** Bootstrap del primo admin tramite token casuale stampato a ogni avvio. */
   adminBootstrap?: AdminBootstrapOptions;
+  /** Audit persistente: sink, retention ed endpoint amministrativi di query/export. */
+  audit?: AccessiAuditOptions;
   /** Base URL pubblica usata solo per loggare gli indirizzi (console, OpenAPI, API). */
   publicBaseUrl?: string;
   /** Base URL API per la console quando UI e API sono su domini diversi. */
@@ -341,6 +346,7 @@ export interface AccessiOptions {
     ServiceTokenController,
     SchemaController,
     AccessiIntrospectionController,
+    AccessiAuditController,
   ],
   providers: [AuthService, TwoFactorService, UserService, EmailService, PermissionService, FiltriService, ConfiguratorService, JwtSimpleGuard, AuthenticateGenService, AccessiDatabaseUpdater, FederatedAuthService, ServiceTokenService, ServiceTokenGuard, SchemaExportService, AdminBootstrapService, AccessiJwksBootstrapService],
   exports: [AuthService, UserService, EmailService, PermissionService, FiltriService, ConfiguratorService, JwtSimpleGuard, AuthenticateGenService, FederatedAuthService, ServiceTokenService, ServiceTokenGuard, SchemaExportService, AdminBootstrapService],
@@ -356,6 +362,7 @@ export class AccessiModule {
   static forRoot(options: AccessiOptions): DynamicModule {
     // Il servizio email e obbligatorio: reset password, 2FA e creazione utente ne dipendono.
     assertEmailConfigured(options);
+    configureAccessiAudit(options.audit);
     return {
       module: AccessiModule,
       providers: [

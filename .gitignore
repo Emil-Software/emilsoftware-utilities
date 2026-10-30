@@ -33,6 +33,7 @@
 !/test/security-headers.cjs
 !/test/auth-cookies.cjs
 !/test/metrics.cjs
+!/test/audit.cjs
 !/test/integration/
 !/test/integration/**
 

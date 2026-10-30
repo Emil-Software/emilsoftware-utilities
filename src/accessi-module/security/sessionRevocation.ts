@@ -1,8 +1,7 @@
 import type { AccessiOptions } from '../AccessiModule';
 import { instrumentAccessiRedisClient } from '../observability/redisMetrics';
 import { auditAccessi } from './audit';
-import { countAccessiMetric } from '../observability/metrics';
-import { isAccessiAccessTokenRevoked } from './accessTokenRevocation';
+import { countAccessiMetric } from '../observability/metrics';import { isAccessiAccessTokenRevoked } from './accessTokenRevocation';
 import { isRefreshTokenFamilyRevoked } from './refreshTokenRotation';
 
 /**

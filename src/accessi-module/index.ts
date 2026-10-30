@@ -175,6 +175,7 @@ export async function initializeAccessiModule(
 
 export { AccessiModule } from "./AccessiModule";
 export { AccessiIntrospectionController } from "./Controllers/AccessiIntrospectionController";
+export { AccessiAuditController } from "./Controllers/AccessiAuditController";
 export { FederatedAuthExchangeController } from "./federated-auth/FederatedAuthExchangeController";
 export type { AccessiTokenIntrospectionResult } from "./Services/AuthService/AuthService";
 export { AccessiDatabaseUpdater } from "./database-updates/AccessiDatabaseUpdater";
@@ -215,7 +216,33 @@ export {
     assertValidAccessiOptions,
     validateAccessiOptions
 } from './security/validateOptions';
-export { auditAccessi } from './security/audit';
+export {
+    auditAccessi,
+    configureAccessiAudit,
+    getAccessiAuditStore,
+    redactAccessiAuditValue,
+    resetAccessiAudit
+} from './security/audit';
+export type {
+    AccessiAuditOptions,
+    AccessiAuditPage,
+    AccessiAuditQuery,
+    AccessiAuditQueryableSink,
+    AccessiAuditRecord,
+    AccessiAuditSink
+} from './security/audit';
+export {
+    createCallbackAccessiAuditSink,
+    createHttpAccessiAuditSink,
+    createMemoryAccessiAuditSink,
+    createRedisAccessiAuditSink
+} from './security/auditSinks';
+export type {
+    HttpAccessiAuditSinkOptions,
+    MemoryAccessiAuditSink,
+    MemoryAccessiAuditSinkOptions,
+    RedisAccessiAuditSinkOptions
+} from './security/auditSinks';
 export {
     createMemorySessionRevocationStore,
     createRedisSessionRevocationStore,

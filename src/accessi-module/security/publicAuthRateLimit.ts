@@ -5,6 +5,7 @@ import type { AccessiOptions, PublicAuthRateLimitRuleOptions } from '../AccessiM
 import { getDefaultRateLimitStore } from './rateLimitStore';
 import type { RateLimitDecision, RateLimitStore } from './rateLimitStore';
 import { countAccessiMetric } from '../observability/metrics';
+import { auditAccessi } from './audit';
 
 export type PublicAuthRateLimitScope =
   | 'login'
@@ -109,6 +110,11 @@ export async function checkPublicAuthRateLimit(
   const ipDecision = await consumeRateLimit(store, `${scope}|ip|${ipAddress}`, rule);
   if (!ipDecision.allowed) {
     countAccessiMetric(options, 'rate_limit_blocked_total', { scope, layer: 'public' });
+    auditAccessi('public_rate_limited', {
+      scope,
+      ip: ipAddress,
+      retryAfterSeconds: ipDecision.retryAfterSeconds,
+    });
     return ipDecision;
   }
 
@@ -131,6 +137,7 @@ export async function checkPublicAuthRateLimit(
 
   if (retryAfterSeconds > 0) {
     countAccessiMetric(options, 'rate_limit_blocked_total', { scope, layer: 'public' });
+    auditAccessi('public_rate_limited', { scope, ip: ipAddress, retryAfterSeconds });
     return { allowed: false, retryAfterSeconds };
   }
 

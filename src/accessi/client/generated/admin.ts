@@ -20,6 +20,7 @@ import type {
   CreateMenuTypeRequest,
   CreateScopeRequest,
   ExchangeFederatedIdentityRequest,
+  ExportAuditParams,
   FederatedExchangeResponse,
   FederatedIdentityListResponse,
   FederatedIdentityResponse,
@@ -44,6 +45,7 @@ import type {
   LoginAsRequest,
   LoginAsResponse,
   PublicRegisterRequest,
+  QueryAuditParams,
   RegisterRequest,
   RegisterResponse,
   Role,
@@ -1683,6 +1685,74 @@ export const getGetSchemaUrl = () => {
 
 export const getSchema = async ( options?: RequestInit): Promise<getSchemaResponse> => {
 return accessiFetch<Promise<getSchemaResponse>>(getGetSchemaUrl(),
+  {      
+    ...options,
+    method: 'GET'
+    
+  }
+);}
+
+
+/**
+ * Richiede audit.store o un sink interrogabile. Supporta filtro per evento, intervallo, utente e paginazione.
+ * @summary Elenca gli eventi di audit persistiti
+ */
+export type queryAuditResponse = {
+  data: void;
+  status: number;
+}
+
+export const getQueryAuditUrl = (params?: QueryAuditParams,) => {
+
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value === null) {
+      normalizedParams.append(key, 'null');
+    } else if (value !== undefined) {
+      normalizedParams.append(key, value.toString());
+    }
+  });
+
+  return `/api/accessi/audit?${normalizedParams.toString()}`
+}
+
+export const queryAudit = async (params?: QueryAuditParams, options?: RequestInit): Promise<queryAuditResponse> => {
+return accessiFetch<Promise<queryAuditResponse>>(getQueryAuditUrl(params),
+  {      
+    ...options,
+    method: 'GET'
+    
+  }
+);}
+
+
+/**
+ * Stessi filtri della query, senza paginazione. Il file contiene record gia redatti; limite di sicurezza 100000 record.
+ * @summary Esporta gli eventi di audit in NDJSON
+ */
+export type exportAuditResponse = {
+  data: void;
+  status: number;
+}
+
+export const getExportAuditUrl = (params?: ExportAuditParams,) => {
+
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value === null) {
+      normalizedParams.append(key, 'null');
+    } else if (value !== undefined) {
+      normalizedParams.append(key, value.toString());
+    }
+  });
+
+  return `/api/accessi/audit/export?${normalizedParams.toString()}`
+}
+
+export const exportAudit = async (params?: ExportAuditParams, options?: RequestInit): Promise<exportAuditResponse> => {
+return accessiFetch<Promise<exportAuditResponse>>(getExportAuditUrl(params),
   {      
     ...options,
     method: 'GET'

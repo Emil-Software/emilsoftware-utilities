@@ -24,6 +24,7 @@ Il modulo non legge direttamente il file `.env`: riceve un oggetto `AccessiOptio
 - `http`: opzioni CORS, `trustProxy` e header di sicurezza (`securityHeaders`, con CSP a nonce per la console, `'unsafe-inline'` documentato solo per Swagger UI, `Report-Only` e direttive personalizzabili; vedi `docs/security-headers.md`)
 - `authCookie`: modalita opzionale con cookie `HttpOnly` e CSRF double-submit; Bearer resta il default. Vedi `docs/auth-cookies.md`
 - `metrics`: metriche Prometheus di dominio per login, 2FA, refresh, rate limit, introspection, JWKS, revoche, ticket console e store Redis; `enabled: false` le disattiva, `sink` invia a un sistema esterno. Vedi `docs/metrics.md`
+- `audit`: audit persistente con sink Redis/HTTP/callback, redazione di token e segreti, retention e endpoint admin `GET /api/accessi/audit` e `/audit/export`. Vedi `docs/audit.md`
 - `sessionRevocation`: store memory/Redis per revocare tutte le sessioni di un utente
 - `refreshTokenRotation`: store memory/Redis per rendere il refresh token monouso
 - `validateAccessiOptions` / `assertValidAccessiOptions`: validazione fail-fast della configurazione

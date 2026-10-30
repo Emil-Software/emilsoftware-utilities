@@ -37,6 +37,7 @@ import {
   setAccessiAuthCookies,
 } from '../security/authCookies';
 import { countAccessiMetric } from '../observability/metrics';
+import { auditAccessi } from '../security/audit';
 
 /**
  * Auto-ingresso alla console amministrativa da un frontend gia autenticato.
@@ -82,6 +83,7 @@ export class ConsoleEntryController {
         this.ttlMs,
       );
       countAccessiMetric(this.options, 'console_ticket_total', { action: 'create', result: 'issued' });
+      auditAccessi('console_ticket_issued', { codiceUtente: user.codiceUtente });
       return RestUtilities.sendBaseResponse(res, issued);
     } catch (error) {
       countAccessiMetric(this.options, 'console_ticket_total', { action: 'create', result: 'error' });
@@ -125,6 +127,7 @@ export class ConsoleEntryController {
       }
 
       countAccessiMetric(this.options, 'console_ticket_total', { action: 'exchange', result: 'consumed' });
+      auditAccessi('console_ticket_consumed', { codiceUtente: entry.codiceUtente });
       const cookieConfig = resolveAccessiAuthCookieOptions(this.options);
       if (cookieConfig) {
         setAccessiAuthCookies(res, cookieConfig, { access: entry.token });
@@ -136,6 +139,9 @@ export class ConsoleEntryController {
     } catch (error) {
       countAccessiMetric(this.options, 'console_ticket_total', {
         action: 'exchange',
+        result: error instanceof UnauthorizedException ? 'invalid' : 'error',
+      });
+      auditAccessi('console_ticket_failed', {
         result: error instanceof UnauthorizedException ? 'invalid' : 'error',
       });
       return RestUtilities.sendErrorMessage(

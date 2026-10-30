@@ -331,6 +331,7 @@ export class AuthController {
       const userData = await this.authService.login(loginRequest);
       if (!userData) {
         countAccessiMetric(this.options, 'auth_login_total', { result: 'failure' });
+        auditAccessi('login_failed', { result: 'failure', ip: request.ip, emailProvided: Boolean(loginRequest?.email) });
         return RestUtilities.sendInvalidCredentials(res);
       }
 
@@ -347,6 +348,12 @@ export class AuthController {
           ? 'password_required'
           : 'success';
       countAccessiMetric(this.options, 'auth_login_total', { result });
+      if (result === 'success') {
+        auditAccessi('login_succeeded', {
+          codiceUtente: userData.utente?.codiceUtente,
+          ip: request.ip,
+        });
+      }
       return RestUtilities.sendBaseResponse(res, userData);
     } catch (error) {
       const message = (error as Error)?.message;
@@ -356,6 +363,7 @@ export class AuthController {
           ? 'sso_only'
           : 'error';
       countAccessiMetric(this.options, 'auth_login_total', { result });
+      auditAccessi('login_failed', { result, ip: request.ip, emailProvided: Boolean(loginRequest?.email) });
       if (message === 'PASSWORD_EXPIRED') {
         this.logger.warning('Password scaduta, cambiare password ', error);
         return RestUtilities.sendPasswordExpired(res);
@@ -442,6 +450,7 @@ export class AuthController {
       };
       applyAccessiAuthCookies(res, cookieConfig, response);
       countAccessiMetric(this.options, 'auth_refresh_total', { result: 'success' });
+      auditAccessi('refresh_succeeded', { ip: request.ip });
       return RestUtilities.sendBaseResponse(res, response);
     } catch (error) {
       const code = authErrorCode(error);
@@ -453,6 +462,7 @@ export class AuthController {
             ? 'store_unavailable'
             : 'invalid';
       countAccessiMetric(this.options, 'auth_refresh_total', { result });
+      if (result !== 'reuse') auditAccessi('refresh_failed', { result, ip: request.ip });
       return RestUtilities.sendErrorMessage(
         res,
         error,
@@ -481,9 +491,11 @@ export class AuthController {
       const result = await this.authService.verifyTwoFactor(body.challengeId, body.code, body.scope);
       applyAccessiAuthCookies(res, resolveAccessiAuthCookieOptions(this.options), result);
       countAccessiMetric(this.options, 'auth_two_factor_total', { action: 'verify', result: 'success' });
+      auditAccessi('two_factor_succeeded', { codiceUtente: result.utente?.codiceUtente, ip: request.ip });
       return RestUtilities.sendBaseResponse(res, result);
     } catch (error) {
       countAccessiMetric(this.options, 'auth_two_factor_total', { action: 'verify', result: 'failure' });
+      auditAccessi('two_factor_failed', { ip: request.ip });
       return RestUtilities.sendErrorMessage(res, error, AuthController.name, error instanceof HttpException ? error.getStatus() : 500);
     } finally {
       observeAccessiMetric(this.options, 'auth_two_factor_duration_ms', Date.now() - startedAt, { action: 'verify' });
