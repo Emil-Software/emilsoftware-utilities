@@ -1,3 +1,10 @@
+# [2.0.0-dev.73](https://github.com/Emil-Software/emilsoftware-utilities/compare/v2.0.0-dev.72...v2.0.0-dev.73) (2026-10-30)
+
+
+### Features
+
+* **ci:** diff semantico OpenAPI con baseline e allowlist ([e6f36f8](https://github.com/Emil-Software/emilsoftware-utilities/commit/e6f36f88183b6f19659b820d172f5510774c6b54)), closes [#16](https://github.com/Emil-Software/emilsoftware-utilities/issues/16)
+
 # [2.0.0-dev.72](https://github.com/Emil-Software/emilsoftware-utilities/compare/v2.0.0-dev.71...v2.0.0-dev.72) (2026-10-30)
 
 
