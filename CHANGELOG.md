@@ -1,3 +1,10 @@
+# [2.0.0-dev.80](https://github.com/Emil-Software/emilsoftware-utilities/compare/v2.0.0-dev.79...v2.0.0-dev.80) (2026-10-30)
+
+
+### Features
+
+* **accessi:** multi-tenancy con database separati e cartella di config ([9f031ec](https://github.com/Emil-Software/emilsoftware-utilities/commit/9f031ecfedc24d475358247a1135f7830ffc700b))
+
 # [2.0.0-dev.79](https://github.com/Emil-Software/emilsoftware-utilities/compare/v2.0.0-dev.78...v2.0.0-dev.79) (2026-10-30)
 
 
