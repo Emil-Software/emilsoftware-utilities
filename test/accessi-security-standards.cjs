@@ -21,6 +21,15 @@ const {
 const { checkPublicAuthRateLimit } = require('../src/accessi-module/security/publicAuthRateLimit');
 const { assertServiceTokenRateLimit } = require('../src/accessi-module/security/serviceTokenRateLimit');
 const { createAccessiEdgeRateLimitMiddleware } = require('../src/accessi-module/security/edgeRateLimit');
+const { AccessiJwksBootstrapService } = require('../src/accessi-module/security/jwksBootstrap');
+const { FederatedAuthExchangeController } = require('../src/accessi-module/federated-auth/FederatedAuthExchangeController');
+const { AccessiConsoleController } = require('../src/accessi-module/Controllers/AccessiConsoleController');
+const {
+  createMemorySessionRevocationStore,
+  createRedisSessionRevocationStore,
+  isAccessiTokenRevoked,
+  revokeAccessiUserSessions,
+} = require('../src/accessi-module/security/sessionRevocation');
 
 function rsaKeys() {
   return generateKeyPairSync('rsa', {
@@ -121,6 +130,26 @@ test('setupAccessiJwks monta la route e risponde con cache header', () => {
   assert.equal(res.statusCode, 200);
   assert.equal(res.headers['Cache-Control'], 'public, max-age=300');
   assert.equal(res.body.keys[0].kid, 'key-1');
+});
+
+test('AccessiJwksBootstrapService monta la JWKS sull adapter Nest', () => {
+  const keys = rsaKeys();
+  const routes = [];
+  const app = { get(path) { routes.push(path); } };
+  const service = new AccessiJwksBootstrapService(
+    accessiOptions({
+      secret: 'unused-for-rs256',
+      expiresIn: '1h',
+      algorithm: 'RS256',
+      privateKey: keys.privateKey,
+      publicKey: keys.publicKey,
+      keyId: 'auto-key',
+    }),
+    { httpAdapter: { getInstance: () => app } },
+  );
+
+  service.onModuleInit();
+  assert.deepEqual(routes, ['/accessi/.well-known/jwks.json']);
 });
 
 test('JWKS handler risponde 404 quando la configurazione e HS256', () => {
@@ -343,6 +372,72 @@ test('edge rate limit fallisce chiuso se lo store non risponde', async () => {
   );
   assert.equal(res.statusCode, 503);
   assert.equal(res.body.code, 'ACCESSI_RATE_LIMIT_UNAVAILABLE');
+});
+
+test('session revocation memory: invalida i token precedenti ma non quelli nuovi', async () => {
+  const store = createMemorySessionRevocationStore();
+  const options = { sessionRevocation: { store } };
+  const nowSeconds = Math.floor(Date.now() / 1000);
+
+  assert.equal(await isAccessiTokenRevoked(options, { iat: nowSeconds - 10 }, 7), false);
+  await revokeAccessiUserSessions(options, 7, Date.now());
+  assert.equal(await isAccessiTokenRevoked(options, { iat: nowSeconds - 10 }, 7), true);
+  assert.equal(await isAccessiTokenRevoked(options, { iat: nowSeconds + 10 }, 7), false);
+  assert.equal(await isAccessiTokenRevoked(options, { iat: nowSeconds - 10 }, 8), false);
+});
+
+test('session revocation Redis: SET/GET con TTL e health check', async () => {
+  const data = new Map();
+  const client = {
+    async eval(script, _numKeys, ...args) {
+      if (script.includes("redis.call('PING')")) return 'PONG';
+      if (script.includes("redis.call('SET'")) {
+        data.set(args[0], args[1]);
+        return 'OK';
+      }
+      if (script.includes("redis.call('GET'")) {
+        return data.get(args[0]) ?? null;
+      }
+      throw new Error(`Script non gestito: ${script}`);
+    },
+  };
+  const store = createRedisSessionRevocationStore({ client, ttlMs: 60_000 });
+  await store.revokeUser(9, 123456789);
+  assert.equal(await store.getUserRevocation(9), 123456789);
+  assert.equal(await store.getUserRevocation(10), null);
+  assert.equal(await store.healthCheck(), true);
+});
+
+test('FederatedAuthExchangeController scambia provider e subject', async () => {
+  const calls = [];
+  const controller = new FederatedAuthExchangeController({
+    async authenticate(identity) {
+      calls.push(identity);
+      return {
+        codiceUtente: 5,
+        login: { utente: { codiceUtente: 5 } },
+        token: { value: 'jwt', type: 'Bearer', expiresIn: '3600' },
+      };
+    },
+  });
+  const res = fakeResponse();
+  await controller.exchange({ provider: 'azure', subject: 'subject-1' }, res);
+  assert.deepEqual(calls, [{ provider: 'azure', subject: 'subject-1' }]);
+  assert.equal(res.statusCode, 200);
+  assert.equal(res.body.Result.codiceUtente, 5);
+  assert.equal(res.body.Result.token.value, 'jwt');
+});
+
+test('console API base URL viene iniettata nella pagina della console', () => {
+  const controller = new AccessiConsoleController({
+    consoleApiBaseUrl: 'https://accessi.example.test/',
+  });
+  const res = fakeResponse();
+  controller.index(res);
+  assert.match(
+    res.body,
+    /window\.__ACCESSI_API_BASE_URL__="https:\/\/accessi\.example\.test";/,
+  );
 });
 
 test('ConsoleEntryController usa lo store configurato', async () => {

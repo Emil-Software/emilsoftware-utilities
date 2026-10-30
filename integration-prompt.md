@@ -74,6 +74,60 @@ const { nestApp, document } = await initializeAccessiModule(app, options);
 
 Aprire la porta HTTP solo dopo l'await.
 
+### Avvio standalone
+
+Per un servizio Accessi autonomo:
+
+```ts
+import { startAccessiService } from "emilsoftware-utilities/accessi/server";
+
+await startAccessiService({
+  port: Number(process.env.PORT ?? 3000),
+  healthPath: "/health",
+  metrics: true,
+});
+```
+
+Oppure:
+
+```bash
+npm run accessi:serve
+```
+
+Endpoint:
+
+```text
+GET /health/live
+GET /health/ready
+GET /health/metrics
+```
+
+`/health/ready` controlla bootstrap, database, schema, store Redis configurati e `readinessChecks` custom. `startAccessiService` registra SIGTERM/SIGINT e chiude Nest e i pool Firebird.
+
+In produzione il servizio viene eseguito come processo Node con systemd/PM2/supervisor:
+
+```bash
+npm run accessi:serve:dist
+```
+
+Dettagli e esempio systemd: `docs/standalone-service.md`.
+
+### Validazione configurazione
+
+```ts
+import {
+  assertValidAccessiOptions,
+  validateAccessiOptions,
+} from "emilsoftware-utilities/accessi/server";
+
+const validation = validateAccessiOptions(options);
+// validation.errors / validation.warnings
+
+assertValidAccessiOptions(options); // fail-fast
+```
+
+`createAccessiService` la applica automaticamente. Controlla JWT/key, DB, encryption key, URL email, rate limit, console entry e `http`.
+
 ### Bootstrap Nest
 
 ```ts
@@ -149,6 +203,24 @@ const merged = mergeOpenApiDocuments(hostDocument, accessiDocument, {
   conflict: "error", // "keep" | "overwrite"
 });
 ```
+
+### HTTP, CORS e proxy
+
+```ts
+http: {
+  cors: {
+    origin: ["https://app.example.com"],
+    credentials: false,
+  },
+  trustProxy: 1, // load balancer/reverse proxy
+  securityHeaders: true,
+}
+```
+
+- `cors: false` disabilita CORS.
+- `trustProxy` e obbligatorio per rate limit corretti dietro proxy.
+- `securityHeaders` aggiunge `X-Content-Type-Options`, `X-Frame-Options`, `Referrer-Policy`, `Permissions-Policy`.
+- Con Bearer token non serve CSRF. Se usi cookie httpOnly, aggiungi CSRF e cookie same-site.
 
 ### JWKS e rotazione chiavi
 
@@ -270,6 +342,12 @@ Il gateway/API gateway resta consigliato per:
 - blocco geografico o reputazionale.
 
 Configurazioni di riferimento: `docs/gateway-rate-limit.md`.
+
+### Audit
+
+Resource server ed edge rate limit producono eventi strutturati tramite `auditAccessi`. I campi sensibili vengono redatti dal Logger. Disattivabile con `audit: false` nelle rispettive opzioni.
+
+Nel servizio standalone le metriche Prometheus sono su `/health/metrics`.
 
 ---
 
@@ -397,6 +475,60 @@ Risposta:
 - Il resource server cachea i risultati attivi per `cacheTtlMs` (default 30s). I risultati inattivi non sono cachati.
 - Fail closed: se Accessi Service non risponde, la richiesta non viene autorizzata.
 
+### SSO exchange service-to-service
+
+Se un backend fratello valida un provider SSO proprio, non deve duplicare utenti o grant. Dopo aver verificato firma, issuer, audience e subject del provider, chiama:
+
+```http
+POST /api/accessi/federated-auth/exchange
+Authorization: Bearer <service-token>
+Content-Type: application/json
+
+{ "provider": "azure-ad-acme-produzione", "subject": "<oid o sub>" }
+```
+
+Scope richiesto: `accessi:federated:exchange`.
+
+La risposta contiene:
+
+- `codiceUtente`
+- `login` con profilo, grant e token
+- `token` assente quando è richiesta la verifica 2FA
+
+Accessi non riceve il token del provider: riceve solo l'identità esterna già verificata.
+
+### Revoca sessioni
+
+Configurazione:
+
+```ts
+import { createRedisSessionRevocationStore } from "emilsoftware-utilities/accessi/server";
+
+sessionRevocation: {
+  store: createRedisSessionRevocationStore({
+    client: redis,
+    ttlMs: 30 * 24 * 60 * 60 * 1000, // maggiore della durata massima dei token
+  }),
+}
+```
+
+Endpoint utente:
+
+```http
+POST /api/accessi/auth/revoke-sessions
+Authorization: Bearer <access-token>
+```
+
+Invalida i token emessi prima della chiamata. I token emessi dopo restano validi. Per i backend fratelli configurare lo stesso store anche nel resource server:
+
+```ts
+revocation: {
+  store: revocationStore,
+}
+```
+
+Senza store condiviso la revoca vale solo nel processo che la esegue.
+
 ---
 
 ## 7. Frontend
@@ -425,6 +557,29 @@ configureAccessiClient({
   token,
 });
 ```
+
+Se `jwtOptions.refreshExpiresIn` è configurato, la risposta contiene anche `refreshToken`. Conservarlo separatamente dall’access token e usarlo su:
+
+```http
+POST /api/accessi/auth/refresh
+Content-Type: application/json
+
+{ "refreshToken": "<refresh-token>" }
+```
+
+La risposta contiene un nuovo `token` e un nuovo `refreshToken`. Il refresh token ha `typ: "refresh"` e non va mai usato come Bearer sulle API.
+
+Per rendere il refresh token monouso anche in multi-istanza:
+
+```ts
+import { createRedisRefreshTokenRotationStore } from "emilsoftware-utilities/accessi/server";
+
+refreshTokenRotation: {
+  store: createRedisRefreshTokenRotationStore({ client: redis }),
+}
+```
+
+Ogni refresh consuma il vecchio `jti` in modo atomico. Due refresh concorrenti dello stesso token producono un solo successo.
 
 Per token che cambiano nel tempo:
 
@@ -455,6 +610,7 @@ const consoleUrl = buildAccessiConsoleUrl("https://accessi.example.com", {
 - Il ticket e monouso, dura 60 secondi.
 - Per il 2FA handoff usare `twoFactorChallengeId`.
 - Se la console deve stare sullo stesso dominio, fare reverse proxy di `/api/accessi/*` verso Accessi Service, non copiare gli asset.
+- Se la UI della console è su un dominio diverso dall’API, configurare `consoleApiBaseUrl`: Accessi inietta `window.__ACCESSI_API_BASE_URL__` nella pagina servita.
 
 ### Web component
 
@@ -485,6 +641,7 @@ Per chiamare l'introspection o API tecniche:
 2. Creare un token dalla console o con `POST /api/accessi/service-token`.
 3. Assegnare lo scope minimo necessario:
    - `accessi:introspect` per l'introspection
+   - `accessi:federated:exchange` per scambiare un'identita SSO verificata
    - altri scope applicativi secondo necessita
 4. Conservarlo come secret nel backend fratello.
 5. Ruotarlo periodicamente; il segreto e mostrato una sola volta.
@@ -520,6 +677,7 @@ ACCESSI_DB_PASSWORD=
 ACCESSI_ENCRYPTION_KEY=
 ACCESSI_JWT_SECRET=
 ACCESSI_JWT_EXPIRES=24h
+ACCESSI_JWT_REFRESH_EXPIRES=30d
 ACCESSI_JWT_ISSUER=accessi
 ACCESSI_JWT_AUDIENCE=backend-app
 # Opzionale RS256
@@ -584,6 +742,8 @@ Checklist:
    - rotazione JWKS con vecchia chiave ancora valida
 11. Aggiornare CORS se i frontend cambiano dominio.
 12. Aggiornare monitoraggio e log senza includere token.
+13. Eseguire `npm run check:accessi-openapi` e `npm run typecheck` prima del rilascio.
+14. Dopo una modifica intenzionale al contratto, aggiornare il fingerprint con `npm run accessi:update-openapi-fingerprint` e includerlo nel commit.
 
 ---
 

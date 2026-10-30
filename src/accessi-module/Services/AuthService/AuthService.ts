@@ -1,4 +1,5 @@
-﻿import { Inject, Injectable, UnauthorizedException } from "@nestjs/common";
+﻿import { Inject, Injectable, ServiceUnavailableException, UnauthorizedException } from "@nestjs/common";
+import { randomUUID } from "crypto";
 import { TwoFactorService, TwoFactorProof } from '../TwoFactorService/TwoFactorService';
 import * as jwt from "jsonwebtoken";
 import { Orm } from "../../../Orm";
@@ -19,9 +20,13 @@ import {
   getAccessiJwtSecret,
   verifyPasswordResetToken,
 } from "../../security/passwordResetToken";
+import { isAccessiTokenRevoked } from "../../security/sessionRevocation";
+import { getRefreshTokenRotationStore } from "../../security/refreshTokenRotation";
 import {
   getAccessiAccessTokenSigningConfig,
   getAccessiAccessTokenVerificationConfig,
+  getAccessiRefreshTokenSigningConfig,
+  getAccessiRefreshTokenVerificationConfig,
 } from "../../security/jwtTokenOptions";
 import { assertStrongPassword } from '../../security/passwordPolicy';
 import { Logger } from "../../../Logger";
@@ -81,10 +86,10 @@ export class AuthService {
     return nodeEnv !== "production";
   }
 
-  /** Creates the normal internal JWT consumed by all existing Accessi guards. */
-  public createAccessiToken(
+  private createToken(
     utente: LoginResult['utente'],
-    methods: string[] = [],
+    methods: string[],
+    type: 'access' | 'refresh',
     tokenOptions: AccessiTokenIssueOptions = {},
   ): TokenResult {
     if (!utente?.codiceUtente) {
@@ -100,12 +105,20 @@ export class AuthService {
       ? Number.isFinite(expiresIn) && expiresIn > 0
       : typeof expiresIn === 'string' && expiresIn.trim() !== '';
     if (!expiresInIsValid) {
-      throw new Error('jwtOptions.expiresIn non configurato: impossibile emettere token senza scadenza.');
+      throw new Error('Durata token non configurata: impossibile emettere token senza scadenza.');
     }
 
-    const signing = getAccessiAccessTokenSigningConfig(this.accessiOptions);
+    const signing = type === 'refresh'
+      ? getAccessiRefreshTokenSigningConfig(this.accessiOptions)
+      : getAccessiAccessTokenSigningConfig(this.accessiOptions);
     const token = jwt.sign(
-      { ...(tokenOptions.extraClaims ?? {}), utente, typ: 'access', amr: methods },
+      {
+        ...(tokenOptions.extraClaims ?? {}),
+        utente,
+        typ: type,
+        amr: methods,
+        jti: randomUUID(),
+      },
       signing.key,
       {
         expiresIn: expiresIn as jwt.SignOptions['expiresIn'],
@@ -131,6 +144,35 @@ export class AuthService {
       value: token,
       type: 'Bearer',
     };
+  }
+
+  /** Creates the normal internal JWT consumed by all existing Accessi guards. */
+  public createAccessiToken(
+    utente: LoginResult['utente'],
+    methods: string[] = [],
+    tokenOptions: AccessiTokenIssueOptions = {},
+  ): TokenResult {
+    return this.createToken(utente, methods, 'access', tokenOptions);
+  }
+
+  /** Emette il refresh token quando `jwtOptions.refreshExpiresIn` e configurato. */
+  public createRefreshToken(
+    utente: LoginResult['utente'],
+    methods: string[] = [],
+  ): TokenResult | undefined {
+    const expiresIn = this.accessiOptions.jwtOptions.refreshExpiresIn;
+    if (!expiresIn) return undefined;
+    return this.createToken(utente, methods, 'refresh', { expiresIn });
+  }
+
+  /** Crea la coppia access + refresh token usata da login, 2FA e SSO. */
+  public createTokenPair(
+    utente: LoginResult['utente'],
+    methods: string[] = [],
+  ): { access: TokenResult; refresh?: TokenResult } {
+    const access = this.createAccessiToken(utente, methods);
+    const refresh = this.createRefreshToken(utente, methods);
+    return { access, ...(refresh ? { refresh } : {}) };
   }
 
   /**
@@ -310,6 +352,9 @@ export class AuthService {
     if (!codiceUtente) {
       return { active: false };
     }
+    if (await isAccessiTokenRevoked(this.accessiOptions, decoded as Record<string, unknown>, codiceUtente)) {
+      return { active: false };
+    }
 
     const currentUser = await this.userService.getAuthenticatedUserSnapshot(codiceUtente);
     if (
@@ -344,6 +389,72 @@ export class AuthService {
     return introspection.payload;
   }
 
+  /**
+   * Scambia un refresh token valido con una nuova coppia access + refresh.
+   *
+   * Il refresh token non e accettato dai guard API: ha `typ: "refresh"`.
+   */
+  public async refreshAccessToken(refreshToken: string): Promise<LoginResult> {
+    if (!this.accessiOptions.jwtOptions.refreshExpiresIn) {
+      throw new UnauthorizedException('Refresh token non abilitato.');
+    }
+    if (typeof refreshToken !== 'string' || refreshToken.trim() === '') {
+      throw new UnauthorizedException('Refresh token mancante.');
+    }
+
+    const verification = getAccessiRefreshTokenVerificationConfig(this.accessiOptions);
+    let decoded: unknown;
+    try {
+      decoded = jwt.verify(refreshToken.trim(), verification.key, verification.verifyOptions);
+    } catch {
+      throw new UnauthorizedException('Refresh token non valido o scaduto.');
+    }
+
+    const codiceUtente = resolveCodiceUtenteFromTokenPayload(decoded, 'refresh');
+    if (!codiceUtente) {
+      throw new UnauthorizedException('Refresh token privo di un utente valido.');
+    }
+    if (await isAccessiTokenRevoked(this.accessiOptions, decoded as Record<string, unknown>, codiceUtente)) {
+      throw new UnauthorizedException('Sessione revocata.');
+    }
+
+    const currentUser = await this.userService.getAuthenticatedUserSnapshot(codiceUtente);
+    if (!isAuthenticatedUserEnabledForJwt(currentUser) || !isAccessiTokenAllowedForUser(decoded, currentUser)) {
+      throw new UnauthorizedException('Utente non piu autorizzato.');
+    }
+
+    const rotationStore = getRefreshTokenRotationStore(this.accessiOptions);
+    if (rotationStore) {
+      const decodedRecord = decoded as { jti?: unknown; exp?: unknown };
+      const jti = typeof decodedRecord.jti === 'string' ? decodedRecord.jti : undefined;
+      const expiresAt = Number(decodedRecord.exp);
+      if (!jti || !Number.isFinite(expiresAt)) {
+        throw new UnauthorizedException('Refresh token privo di jti o scadenza.');
+      }
+      try {
+        const consumed = await rotationStore.consume(jti, expiresAt * 1000);
+        if (!consumed) {
+          throw new UnauthorizedException('Refresh token gia utilizzato.');
+        }
+      } catch (error) {
+        if (error instanceof UnauthorizedException) throw error;
+        throw new ServiceUnavailableException({
+          code: 'ACCESSI_REFRESH_ROTATION_UNAVAILABLE',
+          message: 'Rotazione refresh token non disponibile. Riprova piu tardi.',
+        });
+      }
+    }
+
+    const login = await this.getLoginResultForUser(codiceUtente);
+    const methods = Array.isArray((decoded as { amr?: unknown }).amr)
+      ? ((decoded as { amr: unknown[] }).amr.filter((method): method is string => typeof method === 'string'))
+      : [];
+    const pair = this.createTokenPair(login.utente, methods);
+    login.token = pair.access;
+    if (pair.refresh) login.refreshToken = pair.refresh;
+    return login;
+  }
+
   /** Starts a second-factor challenge after the hosting backend has verified an SSO identity. */
   public async beginFederatedTwoFactor(codiceUtente: number, identityKey: string): Promise<LoginResult> {
     const user = await this.userService.getAuthenticatedUserSnapshot(codiceUtente);
@@ -371,7 +482,9 @@ export class AuthService {
     const proof = await this.twoFactorService.consume(challengeId, code);
     await this.validateTwoFactorProof(proof);
     const result = await this.getLoginResultForUser(proof.codiceUtente, scope);
-    result.token = this.createAccessiToken(result.utente, [proof.mode, 'otp']);
+    const tokens = this.createTokenPair(result.utente, [proof.mode, 'otp']);
+    result.token = tokens.access;
+    if (tokens.refresh) result.refreshToken = tokens.refresh;
     await Orm.execute(this.accessiOptions.databaseOptions, 'UPDATE UTENTI SET DATLASTLOGIN = CURRENT_TIMESTAMP WHERE CODUTE = ?', [proof.codiceUtente]);
     if (proof.mode === 'federated') {
       await Orm.execute(this.accessiOptions.databaseOptions, 'UPDATE UTENTI_IDENTITA_EXT SET DATLASTLOGIN = CURRENT_TIMESTAMP WHERE IDNKEY = ?', [proof.identityKey]);

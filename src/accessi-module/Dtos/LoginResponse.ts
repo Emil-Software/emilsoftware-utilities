@@ -38,6 +38,11 @@ export class LoginResult {
   @ValidateNested()
   @Type(() => TokenResult)
   token?: TokenResult;
+
+  @ApiPropertyOptional({ description: 'Refresh token, presente solo se jwtOptions.refreshExpiresIn e configurato.', type: TokenResult })
+  @ValidateNested()
+  @Type(() => TokenResult)
+  refreshToken?: TokenResult;
 }
 
 export class LoginResponse extends BaseResponse {

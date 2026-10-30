@@ -27,6 +27,8 @@ export interface ConsoleEntryTicket {
 export interface ConsoleEntryStore {
   issue(record: ConsoleEntryRecord, ttlMs: number): Promise<ConsoleEntryTicket>;
   consume(ticket: string): Promise<ConsoleEntryRecord | null>;
+  /** Health check opzionale per readiness del servizio. */
+  healthCheck?(): Promise<boolean>;
 }
 
 const DEFAULT_TTL_MS = 60_000;
@@ -102,6 +104,9 @@ export function createMemoryConsoleEntryStore(
     },
     async consume(ticket) {
       return consumeSync(ticket);
+    },
+    async healthCheck() {
+      return true;
     },
   };
 }
@@ -245,6 +250,15 @@ export function createRedisConsoleEntryStore(
       );
       if (typeof value !== 'string') return null;
       return decryptRecord(value, key);
+    },
+
+    async healthCheck() {
+      try {
+        const result = await options.client.eval("return redis.call('PING')", 0);
+        return String(result).toUpperCase() === 'PONG';
+      } catch {
+        return false;
+      }
     },
   };
 }

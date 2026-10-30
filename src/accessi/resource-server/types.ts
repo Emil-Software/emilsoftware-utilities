@@ -3,6 +3,7 @@ import type {
   AccessiGrant,
   GrantsResult,
 } from "../contracts";
+import type { SessionRevocationStore } from "../../accessi-module/security/sessionRevocation";
 
 /** Algoritmi JWT supportati dal resource server. */
 export type AccessiJwtAlgorithm =
@@ -84,6 +85,12 @@ export interface AccessiResourceServerOptions {
   introspection?: AccessiIntrospectionOptions;
   /** Policy di autorizzazione opzionale applicata dopo l'autenticazione. */
   authorization?: AccessiAuthorizationOptions;
+  /** Store condiviso di revoca sessioni. Opzionale. */
+  revocation?: {
+    store: SessionRevocationStore;
+  };
+  /** Audit strutturato degli errori di autenticazione. Default: true. */
+  audit?: boolean;
 }
 
 /** Dati allegati alla request dopo l'autenticazione. */

@@ -69,6 +69,8 @@ export function createAccessiOptionsFromEnv(): AccessiOptions {
     confirmationEmailReturnUrl: getEnv("ACCESSI_CONFIRMATION_RETURN_EMAIL_URL", "http://localhost"),
     confirmationEmailPrefix: process.env.ACCESSI_CONFIRMATION_EMAIL_PREFIX,
     customResetPage: process.env.ACCESSI_CUSTOM_RESET_PAGE,
+    consoleApiBaseUrl: process.env.ACCESSI_CONSOLE_API_BASE_URL,
+    publicBaseUrl: process.env.ACCESSI_PUBLIC_BASE_URL,
     encryptionKey: getEnv("ACCESSI_ENCRYPTION_KEY", "1234567890ABCDEF"),
     mockDemoUser: getOptionalBoolean("ACCESSI_MOCK_DEMO_USER", false),
     passwordExpiration: getOptionalBoolean("ACCESSI_PASSWORD_EXPIRATION", false),
@@ -76,6 +78,7 @@ export function createAccessiOptionsFromEnv(): AccessiOptions {
     jwtOptions: {
       secret: getEnv("ACCESSI_JWT_SECRET", "local-accessi-update"),
       expiresIn: getEnv("ACCESSI_JWT_EXPIRES", "24h"),
+      ...(process.env.ACCESSI_JWT_REFRESH_EXPIRES ? { refreshExpiresIn: process.env.ACCESSI_JWT_REFRESH_EXPIRES } : {}),
       ...(process.env.ACCESSI_JWT_ISSUER ? { issuer: process.env.ACCESSI_JWT_ISSUER } : {}),
       ...(process.env.ACCESSI_JWT_AUDIENCE ? { audience: process.env.ACCESSI_JWT_AUDIENCE } : {}),
       ...(getJwtAlgorithm() ? { algorithm: getJwtAlgorithm() } : {}),

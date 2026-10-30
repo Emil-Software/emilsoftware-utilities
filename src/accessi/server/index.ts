@@ -6,6 +6,7 @@
  * `accessi/resource-server` e `accessi/client`.
  */
 export * from "../../accessi-module";
+export * from "./standalone";
 export type { AccessiOptions as AccessiServerOptions } from "../../accessi-module";
 export {
   createAccessiOptionsFromEnv,

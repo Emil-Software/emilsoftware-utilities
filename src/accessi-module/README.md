@@ -23,12 +23,18 @@ Accessi puo essere usato in tre modi:
 
 Il contesto completo per frontend, backend e agenti AI e in [`integration-prompt.md`](../../integration-prompt.md). La topologia consigliata e un solo Accessi Service proprietario del database; gli altri backend restano resource server.
 
+Accessi puo girare come servizio autonomo con `startAccessiService` (`npm run accessi:serve`): health/readiness, metriche Prometheus, validazione configurazione e shutdown graceful. Dettagli in [`docs/standalone-service.md`](../../docs/standalone-service.md). Le chiavi JWT si generano con `npm run accessi:generate-jwt-keys`.
+
 Per il multi-istanza:
 
 - con RS/ES Accessi pubblica la JWKS su `/accessi/.well-known/jwks.json` (configurabile);
 - configurare `consoleEntry.store` con `createRedisConsoleEntryStore` per rendere i ticket console monouso tra istanze diverse;
 - configurare `publicAuthRateLimit.store` e `serviceTokens.rateLimitStore` con `createRedisRateLimitStore` per rate limit condivisi;
-- opzionalmente configurare `edgeRateLimit` per una soglia grossolana per IP davanti alle rotte Accessi.
+- opzionalmente configurare `edgeRateLimit` per una soglia grossolana per IP davanti alle rotte Accessi;
+- usare `auditAccessi`/metriche e `npm run check:accessi-openapi` come gate di sicurezza e contratto;
+- configurare `sessionRevocation.store` per la revoca sessioni condivisa (`POST /api/accessi/auth/revoke-sessions`);
+- abilitare `jwtOptions.refreshExpiresIn` e usare `POST /api/accessi/auth/refresh` per access token brevi;
+- configurare `refreshTokenRotation.store` per rendere il refresh token monouso in multi-istanza.
 
 ## Flussi per gli integratori
 

@@ -21,6 +21,8 @@ Il modulo si puo' inizializzare in due modi:
 
 In una topologia con piu backend, solo il servizio che possiede il database Accessi deve usare `accessi/server`. Gli altri backend usano `accessi/resource-server` (guard/middleware e introspection) e `accessi/client`. Vedi `integration-prompt.md` nella root del repository.
 
+Accessi puo girare anche come servizio autonomo con `startAccessiService`: health/readiness, metriche, validazione configurazione e shutdown graceful sono inclusi. Dettagli in [`docs/standalone-service.md`](../../../docs/standalone-service.md).
+
 ## Punti di ingresso utili
 
 - [Configurazione](configuration.md)

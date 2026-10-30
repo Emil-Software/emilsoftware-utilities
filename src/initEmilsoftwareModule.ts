@@ -59,6 +59,10 @@ export async function initEmilsoftwareModule(
         );
 
         const nestHostApp = express();
+        if (options?.accessiOptions?.http?.trustProxy !== undefined) {
+            app.set('trust proxy', options.accessiOptions.http.trustProxy);
+            nestHostApp.set('trust proxy', options.accessiOptions.http.trustProxy);
+        }
         const jwksPath = options?.accessiOptions
             ? getAccessiJwksPath(options.accessiOptions)
             : undefined;
@@ -75,6 +79,18 @@ export async function initEmilsoftwareModule(
             : undefined;
         if (edgeRateLimit) {
             app.use(edgeRateLimit);
+        }
+        if (options?.accessiOptions?.http?.securityHeaders !== false) {
+            app.use((req: Request, res, next) => {
+                if (!isNestRoute(req.path)) {
+                    return next();
+                }
+                res.setHeader('X-Content-Type-Options', 'nosniff');
+                res.setHeader('X-Frame-Options', 'SAMEORIGIN');
+                res.setHeader('Referrer-Policy', 'no-referrer');
+                res.setHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
+                return next();
+            });
         }
 
         app.use((req: Request, res, next) => {
@@ -97,7 +113,9 @@ export async function initEmilsoftwareModule(
             ...(options?.logger ? { logger: options.logger } : {})
         });
 
-        nestApp.enableCors();
+        if (options?.accessiOptions?.http?.cors !== false) {
+            nestApp.enableCors(options?.accessiOptions?.http?.cors);
+        }
         if (options?.accessiOptions) {
             // Keep the Accessi API contract identical for standalone and unified bootstraps.
             nestApp.useGlobalPipes(createAccessiValidationPipe());

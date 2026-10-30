@@ -19,6 +19,7 @@ const { buildAccessiConsoleUrl } = require('../src/accessi/console');
 const { AccessiIntrospectionController } = require('../src/accessi-module');
 const { AuthService } = require('../src/accessi-module/Services/AuthService/AuthService');
 const { configureAccessiClient, login } = require('../src/accessi/client');
+const { createMemorySessionRevocationStore } = require('../src/accessi-module/security/sessionRevocation');
 
 const RAW_SECRET = 'resource-server-test-secret';
 const ACCESS_SECRET = deriveAccessiAccessSecret(RAW_SECRET);
@@ -268,6 +269,21 @@ test('middleware Express risponde 401 con contratto stabile', async () => {
   assert.equal(res.statusCode, 401);
   assert.equal(res.body.code, 'AUTH_TOKEN_INVALID');
   assert.equal(res.body.error, 'AUTH_TOKEN_INVALID');
+});
+
+test('resource server rifiuta token revocati', async () => {
+  const store = createMemorySessionRevocationStore();
+  const runtime = createAccessiResourceServer({
+    jwt: { serverSecret: RAW_SECRET },
+    revocation: { store },
+  });
+  const token = signAccessToken(ACCESS_SECRET);
+  await store.revokeUser(123, Date.now() + 5_000);
+
+  await assert.rejects(
+    () => authenticateAccessiRequest(createFakeRequest(token), runtime),
+    error => error.status === 401 && error.code === 'AUTH_TOKEN_REVOKED',
+  );
 });
 
 test('autorizzazione remota: grant sufficiente consente, grant insufficiente nega', async () => {

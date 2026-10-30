@@ -7,6 +7,8 @@ export interface RateLimitDecision {
 /** Store pluggable per rate limit: memoria per singola istanza, Redis per cluster. */
 export interface RateLimitStore {
   consume(key: string, windowMs: number, maxAttempts: number): Promise<RateLimitDecision>;
+  /** Health check opzionale per readiness del servizio. */
+  healthCheck?(): Promise<boolean>;
 }
 
 export interface MemoryRateLimitStore extends RateLimitStore {
@@ -88,6 +90,9 @@ export function createMemoryRateLimitStore(
     reset() {
       buckets.clear();
     },
+    async healthCheck() {
+      return true;
+    },
   };
 }
 
@@ -159,6 +164,14 @@ export function createRedisRateLimitStore(
           ? 0
           : Math.max(1, Number.isFinite(ttlMs) && ttlMs > 0 ? Math.ceil(ttlMs / 1000) : 1),
       };
+    },
+    async healthCheck() {
+      try {
+        const result = await options.client.eval("return redis.call('PING')", 0);
+        return String(result).toUpperCase() === 'PONG';
+      } catch {
+        return false;
+      }
     },
   };
 }

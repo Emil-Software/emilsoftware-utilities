@@ -63,6 +63,14 @@ I ticket di ingresso console sono in memoria per default. In multi-istanza confi
 
 Anche i rate limit sono in memoria per default. In cluster configurare `publicAuthRateLimit.store` e `serviceTokens.rateLimitStore` con `createRedisRateLimitStore`: i contatori diventano condivisi e atomici tra le istanze.
 
+Se un backend fratello valida un provider SSO proprio, può scambiare l'identità verificata con `POST /api/accessi/federated-auth/exchange` e service token scope `accessi:federated:exchange`. Accessi riceve solo `{ provider, subject }`, mai il token del provider.
+
+La revoca sessioni per utente si configura con `sessionRevocation.store` e si attiva con `POST /api/accessi/auth/revoke-sessions` (JWT dell'utente). Il token corrente e tutti quelli emessi prima del cutoff vengono invalidati; i token emessi dopo restano validi. Resource server e guard controllano il cutoff tramite lo stesso store.
+
+Con `jwtOptions.refreshExpiresIn` (es. `30d`) login, 2FA e SSO restituiscono anche `refreshToken`. `POST /api/accessi/auth/refresh` scambia il refresh token con una nuova coppia access+refresh. Il refresh token ha `typ: "refresh"` e non e accettato dai guard API.
+
+Con `refreshTokenRotation.store` il refresh token e monouso: ogni refresh lo consuma e ne emette uno nuovo. Due refresh concorrenti dello stesso token producono un solo successo.
+
 ## Requisiti
 
 Il modulo espone un DSL per comporre i controlli:

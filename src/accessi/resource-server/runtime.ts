@@ -124,6 +124,17 @@ export async function authenticateAccessiRequest(
     throw accessiAuthError(401, "AUTH_USER_CODE_MISSING", "Token privo di un utente valido.");
   }
 
+  if (mode === "local" && runtime.options.revocation?.store) {
+    const issuedAt = Number(payload?.iat);
+    if (!Number.isFinite(issuedAt)) {
+      throw accessiAuthError(401, "AUTH_TOKEN_INVALID", "Token privo di iat.");
+    }
+    const revokedAt = await runtime.options.revocation.store.getUserRevocation(codiceUtente);
+    if (revokedAt !== null && issuedAt < Math.floor(revokedAt / 1000)) {
+      throw accessiAuthError(401, "AUTH_TOKEN_REVOKED", "Sessione revocata.");
+    }
+  }
+
   const requirementTree = buildRequirementTree(runtime.options.authorization);
   if (requirementTree) {
     if (!grants) {

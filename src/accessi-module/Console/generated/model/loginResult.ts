@@ -24,6 +24,8 @@ export interface LoginResult {
   filtri?: FiltriUtente[] | null;
   /** Il primo passo email richiede ora la password. Nessun utente o token viene restituito. */
   passwordRequired?: LoginResultPasswordRequired;
+  /** Refresh token, presente solo se jwtOptions.refreshExpiresIn e configurato. */
+  refreshToken?: TokenResult;
   /** Token, assente durante la verifica del codice. */
   token?: TokenResult;
   /** Abilitazioni e ruoli utente */

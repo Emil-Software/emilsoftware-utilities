@@ -2,6 +2,12 @@ let accessToken: string | null = null;
 let baseUrl: string | null = null;
 let tokenProvider: (() => string | null | Promise<string | null>) | null = null;
 
+declare global {
+  interface Window {
+    __ACCESSI_API_BASE_URL__?: string;
+  }
+}
+
 const loadingEventName = 'accessi-console-network';
 /** Emesso quando una richiesta autenticata riceve 401: la console deve riportare al login. */
 export const ACCESSI_UNAUTHORIZED_EVENT = 'accessi-console-unauthorized';
@@ -58,7 +64,11 @@ export async function accessiFetch<T>(url: string, options: RequestInit): Promis
   const resolvedToken = tokenProvider ? await tokenProvider() : accessToken;
   const authenticatedRequest = resolvedToken !== null && resolvedToken !== undefined;
   if (resolvedToken) headers.set('Authorization', `Bearer ${resolvedToken}`);
-  const requestUrl = baseUrl && url.startsWith('/') ? `${baseUrl}${url}` : url;
+  const runtimeBaseUrl = baseUrl
+    ?? (typeof window !== 'undefined' ? window.__ACCESSI_API_BASE_URL__ ?? null : null);
+  const requestUrl = runtimeBaseUrl && url.startsWith('/')
+    ? `${runtimeBaseUrl.replace(/\/+$/, '')}${url}`
+    : url;
 
   notifyNetworkActivity(true);
   try {

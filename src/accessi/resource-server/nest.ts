@@ -9,6 +9,7 @@ import {
   UnauthorizedException,
 } from "@nestjs/common";
 import type { Request } from "express";
+import { auditAccessi } from "../../accessi-module/security/audit";
 import { AccessiResourceServerError } from "./errors";
 import { authenticateAccessiRequest, createAccessiResourceServer } from "./runtime";
 import type { AccessiResourceServerOptions } from "./types";
@@ -44,6 +45,18 @@ export function createAccessiAuthGuard(
         await authenticateAccessiRequest(request, runtime);
         return true;
       } catch (error) {
+        const normalized = error instanceof AccessiResourceServerError
+          ? error
+          : new AccessiResourceServerError(500, "AUTH_INTERNAL_ERROR", "Errore interno durante l'autenticazione.");
+        if (runtime.options.audit !== false) {
+          auditAccessi("auth_failure", {
+            code: normalized.code,
+            status: normalized.status,
+            method: request.method,
+            path: request.path,
+            ip: request.ip,
+          });
+        }
         throw toNestException(error);
       }
     }

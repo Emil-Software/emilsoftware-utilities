@@ -75,6 +75,10 @@ export async function initializeAccessiModule(
             `Configurazione accessi: autoUpdateDatabase=${options.autoUpdateDatabase !== false}, legacyPasswordMigrationOnStartup=${options.legacyPasswordMigrationOnStartup !== false}`
         );
         const nestHostApp = express();
+        if (options.http?.trustProxy !== undefined) {
+            app.set('trust proxy', options.http.trustProxy);
+            nestHostApp.set('trust proxy', options.http.trustProxy);
+        }
         const jwksPath = getAccessiJwksPath(options);
         const isAccessiRoute = (path: string) =>
             path === "/api/accessi" ||
@@ -89,6 +93,18 @@ export async function initializeAccessiModule(
             : undefined;
         if (edgeRateLimit) {
             app.use(edgeRateLimit);
+        }
+        if (options.http?.securityHeaders !== false) {
+            app.use((req: Request, res, next) => {
+                if (!isAccessiRoute(req.path)) {
+                    return next();
+                }
+                res.setHeader('X-Content-Type-Options', 'nosniff');
+                res.setHeader('X-Frame-Options', 'SAMEORIGIN');
+                res.setHeader('Referrer-Policy', 'no-referrer');
+                res.setHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
+                return next();
+            });
         }
 
         app.use((req: Request, res, next) => {
@@ -112,7 +128,9 @@ export async function initializeAccessiModule(
         });
         logger.info("Applicazione Nest accessi creata.");
 
-        nestApp.enableCors({ exposedHeaders: ['X-Total-Count'] });
+        if (options.http?.cors !== false) {
+            nestApp.enableCors(options.http?.cors ?? { exposedHeaders: ['X-Total-Count'] });
+        }
         nestApp.useGlobalPipes(createAccessiValidationPipe());
         nestApp.useGlobalFilters(new AccessiHttpExceptionFilter());
 
@@ -153,6 +171,7 @@ export async function initializeAccessiModule(
 
 export { AccessiModule } from "./AccessiModule";
 export { AccessiIntrospectionController } from "./Controllers/AccessiIntrospectionController";
+export { FederatedAuthExchangeController } from "./federated-auth/FederatedAuthExchangeController";
 export type { AccessiTokenIntrospectionResult } from "./Services/AuthService/AuthService";
 export { AccessiDatabaseUpdater } from "./database-updates/AccessiDatabaseUpdater";
 export type { AccessiOptions, EmailOptions, JwtOptions, ExtensionFieldsOptions, PublicAuthRateLimitOptions, PublicAuthRateLimitRuleOptions } from "./AccessiModule";
@@ -188,6 +207,41 @@ export type {
     AccessiEdgeRateLimitMiddleware,
     AccessiEdgeRateLimitOptions
 } from './security/edgeRateLimit';
+export {
+    assertValidAccessiOptions,
+    validateAccessiOptions
+} from './security/validateOptions';
+export { auditAccessi } from './security/audit';
+export {
+    createMemorySessionRevocationStore,
+    createRedisSessionRevocationStore,
+    revokeAccessiUserSessions,
+    isAccessiTokenRevoked,
+    getSessionRevocationStore
+} from './security/sessionRevocation';
+export type {
+    MemorySessionRevocationStore,
+    RedisSessionRevocationStoreOptions,
+    SessionRevocationOptions,
+    SessionRevocationRedisClient,
+    SessionRevocationStore
+} from './security/sessionRevocation';
+export {
+    createMemoryRefreshTokenRotationStore,
+    createRedisRefreshTokenRotationStore,
+    getRefreshTokenRotationStore
+} from './security/refreshTokenRotation';
+export type {
+    MemoryRefreshTokenRotationStore,
+    RedisRefreshTokenRotationStoreOptions,
+    RefreshTokenRotationOptions,
+    RefreshTokenRotationRedisClient,
+    RefreshTokenRotationStore
+} from './security/refreshTokenRotation';
+export type {
+    AccessiOptionsValidationIssue,
+    AccessiOptionsValidationResult
+} from './security/validateOptions';
 export {
     AccessiCatalogMigrator,
     applyCatalogScripts,

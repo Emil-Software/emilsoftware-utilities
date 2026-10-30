@@ -7,12 +7,14 @@
  */
 import { Options } from 'node-firebird';
 import { DynamicModule, Global, Module } from '@nestjs/common';
-import type { LoggerService } from '@nestjs/common';
+import type { INestApplication, LoggerService } from '@nestjs/common';
 import type { OpenApiSetupOptions } from '../openapi/OpenApiConfig';
 import type { AccessiAccessTokenAlgorithm } from './security/jwtTokenOptions';
 import type { ConsoleEntryStore } from './security/consoleEntry';
 import type { RateLimitStore } from './security/rateLimitStore';
 import type { AccessiEdgeRateLimitOptions } from './security/edgeRateLimit';
+import type { SessionRevocationOptions } from './security/sessionRevocation';
+import type { RefreshTokenRotationOptions } from './security/refreshTokenRotation';
 import { AuthService } from './Services/AuthService/AuthService';
 import { EmailService } from './Services/EmailService/EmailService';
 import { PermissionService } from './Services/PermissionService/PermissionService';
@@ -30,6 +32,7 @@ import { AuthenticateGenService } from './middleware/authenticateGen';
 import { AccessiDatabaseUpdater } from './database-updates/AccessiDatabaseUpdater';
 import { FederatedAuthService } from './federated-auth/FederatedAuthService';
 import { FederatedAuthController } from './federated-auth/FederatedAuthController';
+import { FederatedAuthExchangeController } from './federated-auth/FederatedAuthExchangeController';
 import { AccessiConsoleController } from './Controllers/AccessiConsoleController';
 import { ConsoleEntryController } from './Controllers/ConsoleEntryController';
 import { ServiceTokenController } from './Controllers/ServiceTokenController';
@@ -39,6 +42,7 @@ import { SchemaController } from './Controllers/SchemaController';
 import { AccessiIntrospectionController } from './Controllers/AccessiIntrospectionController';
 import { SchemaExportService } from './Services/SchemaExportService/SchemaExportService';
 import { AdminBootstrapService } from './Services/AdminBootstrapService/AdminBootstrapService';
+import { AccessiJwksBootstrapService } from './security/jwksBootstrap';
 import { assertEmailConfigured } from './security/emailConfiguration';
 
 /** JWT emesso da Accessi dopo un login locale o SSO. Non riutilizzare il segreto del provider SSO. */
@@ -67,6 +71,11 @@ export interface JwtOptions {
   }>;
   /** Durata compatibile con `jsonwebtoken`, per esempio `24h` o `3600s`. */
   expiresIn: string;
+  /**
+   * Durata del refresh token. Se assente il refresh token non viene emesso.
+   * Consigliato: `30d`.
+   */
+  refreshExpiresIn?: string;
 }
 
 /** Configurazione dei ticket di ingresso alla console. */
@@ -75,6 +84,16 @@ export interface ConsoleEntryOptions {
   ttlMs?: number;
   /** Store condiviso (es. Redis) per deployment multi-istanza. Default: memoria. */
   store?: ConsoleEntryStore;
+}
+
+/** Impostazioni HTTP del servizio Accessi. */
+export interface AccessiHttpOptions {
+  /** Opzioni CORS Nest. `false` disabilita CORS. Default: exposedHeaders ['X-Total-Count']. */
+  cors?: Parameters<INestApplication['enableCors']>[0] | false;
+  /** Trust proxy per IP reali dietro load balancer/reverse proxy. */
+  trustProxy?: boolean | number | string;
+  /** Header di sicurezza di base su console/OpenAPI. Default: true. */
+  securityHeaders?: boolean;
 }
 
 /** Parametri SMTP usati esclusivamente per impostazione e reset della password. */
@@ -122,6 +141,7 @@ export interface PublicAuthRateLimitOptions {
   register?: PublicAuthRateLimitRuleOptions;
   passwordResetEmail?: PublicAuthRateLimitRuleOptions;
   passwordResetConfirm?: PublicAuthRateLimitRuleOptions;
+  refresh?: PublicAuthRateLimitRuleOptions;
   getUserByToken?: PublicAuthRateLimitRuleOptions;
   twoFactorVerify?: PublicAuthRateLimitRuleOptions;
   twoFactorResend?: PublicAuthRateLimitRuleOptions;
@@ -259,6 +279,8 @@ export interface AccessiOptions {
   adminBootstrap?: AdminBootstrapOptions;
   /** Base URL pubblica usata solo per loggare gli indirizzi (console, OpenAPI, API). */
   publicBaseUrl?: string;
+  /** Base URL API per la console quando UI e API sono su domini diversi. */
+  consoleApiBaseUrl?: string;
   /**
    * Documentazione OpenAPI del modulo. Default invariati:
    * UI `accessi/openapi`, JSON `accessi/openapi.json`.
@@ -272,6 +294,12 @@ export interface AccessiOptions {
   consoleEntry?: ConsoleEntryOptions;
   /** Limite grossolano per IP davanti alle rotte Accessi. Opzionale. */
   edgeRateLimit?: AccessiEdgeRateLimitOptions;
+  /** CORS, trust proxy e header di sicurezza del servizio. */
+  http?: AccessiHttpOptions;
+  /** Revoca sessioni per utente tramite store memory/Redis. */
+  sessionRevocation?: SessionRevocationOptions;
+  /** Refresh token monouso tramite rotazione memory/Redis. */
+  refreshTokenRotation?: RefreshTokenRotationOptions;
 }
 
 @Global()
@@ -286,11 +314,12 @@ export interface AccessiOptions {
     FederatedAuthController,
     AccessiConsoleController,
     ConsoleEntryController,
+    FederatedAuthExchangeController,
     ServiceTokenController,
     SchemaController,
     AccessiIntrospectionController,
   ],
-  providers: [AuthService, TwoFactorService, UserService, EmailService, PermissionService, FiltriService, ConfiguratorService, JwtSimpleGuard, AuthenticateGenService, AccessiDatabaseUpdater, FederatedAuthService, ServiceTokenService, ServiceTokenGuard, SchemaExportService, AdminBootstrapService],
+  providers: [AuthService, TwoFactorService, UserService, EmailService, PermissionService, FiltriService, ConfiguratorService, JwtSimpleGuard, AuthenticateGenService, AccessiDatabaseUpdater, FederatedAuthService, ServiceTokenService, ServiceTokenGuard, SchemaExportService, AdminBootstrapService, AccessiJwksBootstrapService],
   exports: [AuthService, UserService, EmailService, PermissionService, FiltriService, ConfiguratorService, JwtSimpleGuard, AuthenticateGenService, FederatedAuthService, ServiceTokenService, ServiceTokenGuard, SchemaExportService, AdminBootstrapService],
 })
 export class AccessiModule {
@@ -323,7 +352,7 @@ export class AccessiModule {
         AccessiDatabaseUpdater,
         FederatedAuthService,
         ServiceTokenService,
-        ServiceTokenGuard, SchemaExportService, AdminBootstrapService],
+        ServiceTokenGuard, SchemaExportService, AdminBootstrapService, AccessiJwksBootstrapService],
       exports: [
         'ACCESSI_OPTIONS',
         AuthService,

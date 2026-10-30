@@ -1,17 +1,42 @@
-import { Controller, Get, Param, Res } from '@nestjs/common';
+import { Controller, Get, Inject, Param, Res } from '@nestjs/common';
 import { ApiExcludeController } from '@nestjs/swagger';
 import { Response } from 'express';
+import { readFileSync } from 'fs';
 import { join } from 'path';
+import type { AccessiOptions } from '../AccessiModule';
 
 /** Serves the framework-free administrative console bundled with Accessi. API authorization remains on each API endpoint. */
 @ApiExcludeController()
 @Controller('accessi/console')
 export class AccessiConsoleController {
+  private htmlCache?: { baseUrl: string; content: string };
+
+  constructor(@Inject('ACCESSI_OPTIONS') private readonly options: AccessiOptions) {}
+
+  private indexHtml(): string | undefined {
+    const baseUrl = this.options.consoleApiBaseUrl?.replace(/\/+$/, '');
+    if (!baseUrl) return undefined;
+    if (this.htmlCache?.baseUrl === baseUrl) return this.htmlCache.content;
+
+    const content = readFileSync(join(__dirname, '..', 'Console', 'index.html'), 'utf8')
+      .replace(
+        '</head>',
+        `<script>window.__ACCESSI_API_BASE_URL__=${JSON.stringify(baseUrl)};</script></head>`,
+      );
+    this.htmlCache = { baseUrl, content };
+    return content;
+  }
+
   @Get()
   index(@Res() res: Response) {
     res.setHeader('Cache-Control', 'no-store, max-age=0');
     res.setHeader('Referrer-Policy', 'no-referrer');
     res.setHeader('X-Content-Type-Options', 'nosniff');
+    const html = this.indexHtml();
+    if (html) {
+      res.setHeader('Content-Type', 'text/html; charset=utf-8');
+      return res.send(html);
+    }
     return res.sendFile(join(__dirname, '..', 'Console', 'index.html'));
   }
 

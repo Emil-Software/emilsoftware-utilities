@@ -11,7 +11,7 @@ interface PasswordResetTokenPayload extends jwt.JwtPayload {
 }
 
 /** Scopo della chiave derivata: separa le chiavi di access token, reset password e 2FA. */
-export type AccessiJwtPurpose = 'access' | 'reset' | '2fa';
+export type AccessiJwtPurpose = 'access' | 'refresh' | 'reset' | '2fa';
 
 /**
  * Deriva una chiave JWT per scopo dal segreto configurato (key separation senza nuova configurazione).

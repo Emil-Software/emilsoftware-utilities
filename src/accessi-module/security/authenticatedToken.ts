@@ -27,9 +27,12 @@ export function extractAccessiBearerToken(header: unknown): string | undefined {
 }
 
 /** Estrae il codice utente sia dai JWT Accessi moderni sia dai payload legacy compatibili. */
-export function resolveCodiceUtenteFromTokenPayload(decoded: unknown): number | undefined {
-  // `typ` obbligatorio: un token senza tipo non e un access token Accessi.
-  if (!isRecord(decoded) || decoded.typ !== 'access') {
+export function resolveCodiceUtenteFromTokenPayload(
+  decoded: unknown,
+  expectedType: 'access' | 'refresh' = 'access',
+): number | undefined {
+  // `typ` obbligatorio: un token senza tipo non e un token Accessi valido.
+  if (!isRecord(decoded) || decoded.typ !== expectedType) {
     return undefined;
   }
 

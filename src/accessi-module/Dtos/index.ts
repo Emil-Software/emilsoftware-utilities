@@ -11,6 +11,7 @@ export * from "./UpdateEnabledStatusRequest"
 
 export * from "./FiltriUtente";
 export * from "./FederatedIdentityDtos";
+export * from "./FederatedExchangeDtos";
 export * from "./GetUserByTokenRequest";
 export * from "./GetUserByTokenResponse";
 export * from "./IntrospectionDtos";
@@ -19,6 +20,7 @@ export * from "./LoginRequest";
 export * from "./LoginResponse";
 export * from "./Permission";
 export * from "./PublicRegisterRequest";
+export * from "./RefreshTokenDtos";
 export * from "./Role";
 export * from "./SchemaDtos";
 export * from "./ScopeDtos";

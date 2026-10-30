@@ -1,4 +1,5 @@
 import type { NextFunction, Request, Response } from "express";
+import { auditAccessi } from "../../accessi-module/security/audit";
 import { AccessiResourceServerError, accessiAuthError } from "./errors";
 import { authenticateAccessiRequest, createAccessiResourceServer } from "./runtime";
 import type { AccessiResourceServerRuntime } from "./runtime";
@@ -39,6 +40,16 @@ export function createAccessiAuthMiddleware(
       await authenticateAccessiRequest(req, runtime);
       next();
     } catch (error) {
+      const normalized = toAccessiResourceServerError(error);
+      if (runtime.options.audit !== false) {
+        auditAccessi("auth_failure", {
+          code: normalized.code,
+          status: normalized.status,
+          method: req.method,
+          path: req.path,
+          ip: req.ip,
+        });
+      }
       sendAccessiResourceServerError(res, error);
     }
   };
@@ -53,6 +64,16 @@ export function createAccessiAuthMiddlewareFromRuntime(
       await authenticateAccessiRequest(req, runtime);
       next();
     } catch (error) {
+      const normalized = toAccessiResourceServerError(error);
+      if (runtime.options.audit !== false) {
+        auditAccessi("auth_failure", {
+          code: normalized.code,
+          status: normalized.status,
+          method: req.method,
+          path: req.path,
+          ip: req.ip,
+        });
+      }
       sendAccessiResourceServerError(res, error);
     }
   };

@@ -12,6 +12,7 @@ export type PublicAuthRateLimitScope =
   | 'register'
   | 'passwordResetEmail'
   | 'passwordResetConfirm'
+  | 'refresh'
   | 'getUserByToken'
   | 'adminBootstrap'
   | 'consoleEntry';
@@ -26,6 +27,7 @@ const DEFAULT_PUBLIC_AUTH_RATE_LIMITS: Record<
   register: { windowMs: 60 * 60 * 1000, maxAttempts: 5 },
   passwordResetEmail: { windowMs: 60 * 60 * 1000, maxAttempts: 5 },
   passwordResetConfirm: { windowMs: 15 * 60 * 1000, maxAttempts: 10 },
+  refresh: { windowMs: 5 * 60 * 1000, maxAttempts: 60 },
   getUserByToken: { windowMs: 5 * 60 * 1000, maxAttempts: 30 },
   adminBootstrap: { windowMs: 15 * 60 * 1000, maxAttempts: 10 },
   consoleEntry: { windowMs: 5 * 60 * 1000, maxAttempts: 30 },

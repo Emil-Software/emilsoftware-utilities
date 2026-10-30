@@ -21,6 +21,7 @@ import {
   resolveCodiceUtenteFromTokenPayload,
 } from "../security/authenticatedToken";
 import { getAccessiAccessTokenVerificationConfig } from "../security/jwtTokenOptions";
+import { isAccessiTokenRevoked } from "../security/sessionRevocation";
 
 const logger = new Logger("AuthenticateGen");
 const ACCESSI_AUTH_SERVICE_LOCALS_KEY = "accessiAuthService";
@@ -155,6 +156,9 @@ async function authorizeWithDependencies(
         "AUTH_USER_CODE_MISSING",
         "codiceUtente not found in token payload"
       );
+    }
+    if (await isAccessiTokenRevoked(accessiOptions, decoded as Record<string, unknown>, codiceUtente)) {
+      throw authError(401, "AUTH_TOKEN_REVOKED", "Session revoked");
     }
 
     const currentUser = await userService.getAuthenticatedUserSnapshot(codiceUtente);

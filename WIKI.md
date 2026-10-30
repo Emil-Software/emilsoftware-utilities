@@ -200,6 +200,8 @@ Accessi non va montato per forza in ogni backend. La distribuzione consigliata s
 
 Topologia consigliata: un solo Accessi Service possiede database, encryptionKey, SMTP, chiavi JWT e console. Gli altri backend usano resource-server e client, senza credenziali del database Accessi.
 
+Per avviare Accessi come servizio autonomo usare startAccessiService: espone /health/live, /health/ready, /health/metrics, valida la configurazione e gestisce SIGTERM/SIGINT.
+
 **Esempio corretto — Import corretti per ruolo**
 
 ```ts
@@ -238,10 +240,11 @@ _Ogni campo di configurazione con tipo, obbligo e note._
 | passwordExpirationDays | number | no | Valore predefinito: 90 giorni. |
 | legacyPasswordMigrationOnStartup | boolean | no | Predefinito true: converte le password legacy. |
 | autoUpdateDatabase | boolean | no | Predefinito true: riconcilia lo schema al boot. |
-| jwtOptions | \{ secret, expiresIn, algorithm, issuer, audience, privateKey, publicKey, keyId, jwksPath, previousPublicKeys \} | sì | Firma, durata e JWKS. Default HS256; RS/ES consigliati per resource server multi-servizio. |
+| jwtOptions | \{ secret, expiresIn, refreshExpiresIn, algorithm, issuer, audience, privateKey, publicKey, keyId, jwksPath, previousPublicKeys \} | sì | Firma, durata, refresh token e JWKS. Default HS256; RS/ES consigliati per resource server multi-servizio. |
 | emailOptions | EmailOptions | sì | SMTP per reset e codici email. |
 | publicAuthRateLimit | PublicAuthRateLimitOptions | no | Limiti per endpoint pubblici; store condiviso opzionale (Redis) per il cluster. |
 | edgeRateLimit | AccessiEdgeRateLimitOptions | no | Limite grossolano per IP davanti alle rotte Accessi; opzionale, store condiviso supportato. |
+| http | \{ cors, trustProxy, securityHeaders \} | no | CORS, IP reali dietro proxy e header di sicurezza del servizio. |
 | publicRegistration | \{ enabled \} | no | Registrazione pubblica: disattivata per impostazione predefinita. |
 | federatedAuthentication | FederatedAuthenticationOptions | no | Abilita l'SSO generico. |
 | extensionFieldsOptions | ExtensionFieldsOptions\[\] | no | Tabelle esterne allegate al profilo. |
@@ -249,8 +252,11 @@ _Ogni campo di configurazione con tipo, obbligo e note._
 | catalogScripts | \{ enabled, folder, ... \} | no | Catalog migrations SQL eseguite dopo la riconciliazione dello schema. |
 | adminBootstrap | \{ enabled, superUser \} | no | Token casuale a ogni avvio per creare il primo admin dalla console. |
 | publicBaseUrl | string | no | Base URL usata solo per loggare console/OpenAPI/API. |
+| consoleApiBaseUrl | string | no | Base URL API per la console quando UI e API sono su domini diversi. |
 | openapi | OpenApiSetupOptions | no | Path, titolo, descrizione e enabled della documentazione OpenAPI. Default invariati. |
 | consoleEntry | \{ ttlMs, store \} | no | TTL e store condiviso dei ticket console (Redis per multi-istanza). Default in memoria. |
+| sessionRevocation | \{ enabled, store, ttlMs \} | no | Revoca sessioni per utente tramite store memory/Redis; abilita POST /api/accessi/auth/revoke-sessions. |
+| refreshTokenRotation | \{ enabled, store \} | no | Refresh token monouso tramite store memory/Redis; consigliato in multi-istanza. |
 | logger | LoggerService | no | Logger Nest del sotto-app; se assente Nest usa il proprio logger. |
 | bufferLogs | boolean | no | Buffer dei log di bootstrap del sotto-app. Default true. |
 
@@ -632,6 +638,10 @@ list(@Req() req: Request) { return req.user; }
 > **JWKS**
 > Con RS256/ES256 Accessi pubblica la JWKS su /accessi/.well-known/jwks.json (configurabile con jwtOptions.jwksPath). Il resource server puo usare jwks.url e ruotare le chiavi con previousPublicKeys.
 
+> [!NOTE]
+> **Audit**
+> I fallimenti di autenticazione del resource server e i blocchi edge producono eventi strutturati tramite auditAccessi; i token e i segreti vengono redatti dal Logger.
+
 ---
 
 ## Requisiti e livelli di abilitazione
@@ -866,6 +876,10 @@ if (result.login.challenge) {
 }
 return res.json({ login: result.login, token: result.token });
 ```
+
+> [!NOTE]
+> **Scambio service-to-service**
+> Se il backend fratello valida il provider SSO, può scambiare \{ provider, subject \} con POST /api/accessi/federated-auth/exchange usando un service token con scope accessi:federated:exchange. Accessi non riceve il token del provider.
 
 ### API amministrative (superutente)
 

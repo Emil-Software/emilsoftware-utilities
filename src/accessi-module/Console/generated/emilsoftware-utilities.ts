@@ -26,6 +26,8 @@ import type {
   CreateServiceTokenRequest,
   CreateServiceTokenResponse,
   ErrorResponse,
+  ExchangeFederatedIdentityRequest,
+  FederatedExchangeResponse,
   FederatedIdentityListResponse,
   FederatedIdentityResponse,
   FederatedProviderListResponse,
@@ -57,6 +59,8 @@ import type {
   LoginRequest,
   LoginResponse,
   PublicRegisterRequest,
+  RefreshTokenRequest,
+  RefreshTokenResponse,
   RegisterRequest,
   RegisterResponse,
   ResendTwoFactorRequest,
@@ -195,6 +199,31 @@ return accessiFetch<Promise<getUserByTokenResponse>>(getGetUserByTokenUrl(),
 
 
 /**
+ * Invalida i token emessi prima di questa chiamata. Richiede sessionRevocation.store configurato. I token emessi dopo la revoca restano validi.
+ * @summary Revoca tutte le sessioni dell utente corrente
+ */
+export type revokeSessionsResponse = {
+  data: ActionResponse;
+  status: number;
+}
+
+export const getRevokeSessionsUrl = () => {
+
+
+  return `/api/accessi/auth/revoke-sessions`
+}
+
+export const revokeSessions = async ( options?: RequestInit): Promise<revokeSessionsResponse> => {
+return accessiFetch<Promise<revokeSessionsResponse>>(getRevokeSessionsUrl(),
+  {      
+    ...options,
+    method: 'POST'
+    
+  }
+);}
+
+
+/**
  * Con sola email restituisce passwordRequired oppure avvia il codice per utenti passwordless. Con password valida restituisce il login completo o challenge se la 2FA e attiva. Nessun JWT viene emesso prima della verifica del codice.
  * @summary Effettua il login utente
  */
@@ -216,6 +245,32 @@ return accessiFetch<Promise<loginResponse>>(getLoginUrl(),
     method: 'POST',
     body: JSON.stringify(
       loginRequest,)
+  }
+);}
+
+
+/**
+ * Richiede jwtOptions.refreshExpiresIn. Il refresh token ha typ=refresh e non e accettato dai guard API.
+ * @summary Scambia un refresh token con un nuovo access token
+ */
+export type refreshAccessTokenResponse = {
+  data: RefreshTokenResponse;
+  status: number;
+}
+
+export const getRefreshAccessTokenUrl = () => {
+
+
+  return `/api/accessi/auth/refresh`
+}
+
+export const refreshAccessToken = async (refreshTokenRequest: RefreshTokenRequest, options?: RequestInit): Promise<refreshAccessTokenResponse> => {
+return accessiFetch<Promise<refreshAccessTokenResponse>>(getRefreshAccessTokenUrl(),
+  {      
+    ...options,
+    method: 'POST',
+    body: JSON.stringify(
+      refreshTokenRequest,)
   }
 );}
 
@@ -1891,6 +1946,32 @@ return accessiFetch<Promise<exchangeConsoleEntryTicketResponse>>(getExchangeCons
     method: 'POST',
     body: JSON.stringify(
       consoleEntryExchangeRequest,)
+  }
+);}
+
+
+/**
+ * Richiede un service token con scope accessi:federated:exchange. Il backend chiamante deve avere gia verificato il token del provider.
+ * @summary Scambia un identita esterna verificata con una sessione Accessi
+ */
+export type exchangeFederatedIdentityResponse = {
+  data: FederatedExchangeResponse;
+  status: number;
+}
+
+export const getExchangeFederatedIdentityUrl = () => {
+
+
+  return `/api/accessi/federated-auth/exchange`
+}
+
+export const exchangeFederatedIdentity = async (exchangeFederatedIdentityRequest: ExchangeFederatedIdentityRequest, options?: RequestInit): Promise<exchangeFederatedIdentityResponse> => {
+return accessiFetch<Promise<exchangeFederatedIdentityResponse>>(getExchangeFederatedIdentityUrl(),
+  {      
+    ...options,
+    method: 'POST',
+    body: JSON.stringify(
+      exchangeFederatedIdentityRequest,)
   }
 );}
 

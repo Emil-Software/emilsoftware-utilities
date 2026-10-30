@@ -21,6 +21,8 @@
 !/test/openapi-config.cjs
 !/test/resource-server.cjs
 !/test/accessi-security-standards.cjs
+!/test/accessi-service.cjs
+!/test/refresh-token.cjs
 !/test/integration/
 !/test/integration/**
 

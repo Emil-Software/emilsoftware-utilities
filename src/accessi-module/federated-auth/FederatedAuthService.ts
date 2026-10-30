@@ -91,10 +91,15 @@ export class FederatedAuthService implements OnModuleInit {
     );
 
     const login = await this.authService.getLoginResultForUser(linkedIdentity.codiceUtente);
+    const tokens = typeof this.authService.createTokenPair === 'function'
+      ? this.authService.createTokenPair(login.utente, ['federated'])
+      : { access: this.authService.createAccessiToken(login.utente, ['federated']), refresh: undefined };
+    login.token = tokens.access;
+    if (tokens.refresh) login.refreshToken = tokens.refresh;
     return {
       codiceUtente: linkedIdentity.codiceUtente,
       login,
-      token: this.authService.createAccessiToken(login.utente, ['federated']),
+      token: tokens.access,
     };
   }
 

@@ -1,4 +1,5 @@
 import type { NextFunction, Request, Response } from 'express';
+import { auditAccessi } from './audit';
 import { getDefaultRateLimitStore } from './rateLimitStore';
 import type { RateLimitStore } from './rateLimitStore';
 
@@ -14,6 +15,8 @@ export interface AccessiEdgeRateLimitOptions {
   store?: RateLimitStore;
   /** Prefisso delle chiavi. Default: `edge`. */
   keyPrefix?: string;
+  /** Audit strutturato degli eventi di blocco. Default: true. */
+  audit?: boolean;
   /**
    * Decide se applicare il limite alla richiesta.
    *
@@ -68,6 +71,13 @@ export function createAccessiEdgeRateLimitMiddleware(
         maxAttempts,
       );
       if (!decision.allowed) {
+        if (options.audit !== false) {
+          auditAccessi('edge_rate_limited', {
+            ip,
+            path: req.path,
+            retryAfterSeconds: decision.retryAfterSeconds,
+          });
+        }
         res.setHeader('Retry-After', String(decision.retryAfterSeconds));
         res.status(429).json({
           severity: 'error',
@@ -81,6 +91,9 @@ export function createAccessiEdgeRateLimitMiddleware(
       }
       next();
     } catch {
+      if (options.audit !== false) {
+        auditAccessi('rate_limit_unavailable', { ip, path: req.path });
+      }
       res.status(503).json({
         severity: 'error',
         status: 503,

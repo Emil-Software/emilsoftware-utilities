@@ -13,6 +13,19 @@ Novità e modifiche rilevanti della libreria `emilsoftware-utilities` (modulo Ac
 - Console ticket: introdotto `ConsoleEntryStore`. Default in memoria; `createRedisConsoleEntryStore` salva il JWT cifrato in Redis, usa TTL e consume atomico per il monouso multi-istanza. Configurazione in `consoleEntry.store` e `consoleEntry.ttlMs`.
 - Rate limit: introdotto `RateLimitStore`. `createRedisRateLimitStore` usa `INCR` + `PEXPIRE` atomici per contatori condivisi in cluster. Configurazione in `publicAuthRateLimit.store` e `serviceTokens.rateLimitStore`; default in memoria invariato.
 - Edge rate limit: aggiunto `createAccessiEdgeRateLimitMiddleware` e `AccessiOptions.edgeRateLimit` per una soglia grossolana per IP davanti alle rotte Accessi. Fail closed se lo store non risponde; supporta lo stesso store Redis.
+- Servizio standalone: aggiunti `createAccessiService`, `startAccessiService`, `/health/live`, `/health/ready`, `/health/metrics` e shutdown graceful. Aggiunti gli script `accessi:serve` e `accessi:serve:dist` per l'esecuzione come processo Node.
+- Configurazione: aggiunti `validateAccessiOptions` e `assertValidAccessiOptions`; il servizio standalone li applica al bootstrap.
+- HTTP: aggiunte opzioni `http.cors`, `http.trustProxy`, `http.securityHeaders`. La JWKS viene montata automaticamente anche con `AccessiModule.forRoot` tramite `HttpAdapterHost`.
+- SSO: aggiunto `POST /api/accessi/federated-auth/exchange` protetto da service token con scope `accessi:federated:exchange` per scambiare `{ provider, subject }` verificati da un backend fratello.
+- Audit: aggiunto `auditAccessi` per eventi di sicurezza strutturati; resource server ed edge rate limit registrano fallimenti di autenticazione, blocchi e rate limit non disponibile.
+- Contratto: aggiunto `npm run check:accessi-openapi`, eseguito nel build, che blocca path fuori prefisso, operationId duplicati/mancanti, $ref rotti, path legacy e rimozioni di operation/schema rispetto al fingerprint versionato.
+- Contratto: aggiunto `npm run accessi:update-openapi-fingerprint` per aggiornare intenzionalmente il fingerprint dopo una modifica breaking approvata.
+- Console: aggiunto `consoleApiBaseUrl` per servire UI e API su domini diversi; il valore viene iniettato in `window.__ACCESSI_API_BASE_URL__`.
+- Chiavi: aggiunto `npm run accessi:generate-jwt-keys` per generare coppia RS256/ES256, `keyId` e JWKS pubblica.
+- Sessioni: aggiunta la revoca per utente con `SessionRevocationStore` memory/Redis e `POST /api/accessi/auth/revoke-sessions`. Resource server e guard controllano il cutoff `iat`.
+- Refresh token: con `jwtOptions.refreshExpiresIn` login, 2FA e SSO emettono anche `refreshToken` (typ=refresh) e `POST /api/accessi/auth/refresh` restituisce una nuova coppia access+refresh. Gli access token hanno ora `jti`.
+- Refresh rotation: con `refreshTokenRotation.store` il refresh token e monouso e la rotazione e atomica tra istanze; due refresh concorrenti producono un solo successo.
+- Contratto: il fingerprint OpenAPI ora blocca anche la rimozione di operation/schema rispetto alla baseline versionata.
 - OpenAPI: aggiunto `mergeOpenApiDocuments` per unire il documento Accessi nel documento unico dell'host con conflitti espliciti.
 - Console: aggiunto `buildAccessiConsoleUrl` per linkare la console centrale senza mettere JWT nell'URL.
 - Rinomina: la configurazione e gli helper della documentazione usano `openapi`/`OpenApi` (`AccessiOptions.openapi`, `OpenApiSetupOptions`, `setupOpenApi`, `DEFAULT_ACCESSI_OPENAPI`); i vecchi nomi `swagger` non sono piu esportati.

@@ -17,6 +17,7 @@ import {
   resolveCodiceUtenteFromTokenPayload,
 } from '../security/authenticatedToken';
 import { getAccessiAccessTokenVerificationConfig } from '../security/jwtTokenOptions';
+import { isAccessiTokenRevoked } from '../security/sessionRevocation';
 
 @Injectable()
 export class JwtSimpleGuard implements CanActivate {
@@ -50,6 +51,9 @@ export class JwtSimpleGuard implements CanActivate {
       const codiceUtente = resolveCodiceUtenteFromTokenPayload(payload);
       if (!codiceUtente) {
         throw new UnauthorizedException('Token privo di un utente valido.');
+      }
+      if (await isAccessiTokenRevoked(this.accessiOptions, payload as Record<string, unknown>, codiceUtente)) {
+        throw new UnauthorizedException('Sessione revocata.');
       }
 
       const currentUser = await this.userService.getAuthenticatedUserSnapshot(codiceUtente);

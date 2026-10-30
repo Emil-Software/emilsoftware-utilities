@@ -1,7 +1,8 @@
-import { Body, Controller, Get, HttpException, HttpStatus, Inject, Param, Post, Req, Res } from '@nestjs/common';
+import { Body, Controller, Get, HttpException, HttpStatus, Inject, Param, Post, Req, Res, UseGuards } from '@nestjs/common';
 import { ResendTwoFactorRequest, VerifyTwoFactorRequest } from '../Dtos/TwoFactorDtos';
-import { ApiBody, ApiOperation, ApiParam, ApiResponse, ApiTags } from '@nestjs/swagger';
+import { ApiBody, ApiOkResponse, ApiOperation, ApiParam, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { Request, Response } from 'express';
+import { createHash } from 'crypto';
 import { Logger } from '../../Logger';
 import { RestUtilities } from '../../Utilities';
 import type { AccessiOptions } from '../AccessiModule';
@@ -17,9 +18,17 @@ import {
   LoginRequest,
   LoginResponse,
   PasswordExpiredResponse,
+  RefreshTokenRequest,
+  RefreshTokenResponse,
 } from '../Dtos';
 import { AuthService, PASSWORD_LOGIN_DISABLED } from '../Services/AuthService/AuthService';
 import { AdminBootstrapService } from '../Services/AdminBootstrapService/AdminBootstrapService';
+import { JwtSimpleGuard } from '../jwt/jwt.strategy';
+import { getAuthenticatedAccessiUser } from '../security/accessControl';
+import {
+  getSessionRevocationStore,
+  revokeAccessiUserSessions,
+} from '../security/sessionRevocation';
 import {
   checkPublicAuthRateLimit,
   sendPublicAuthRateLimitExceeded,
@@ -132,6 +141,41 @@ export class AuthController {
   }
 
   @ApiOperation({
+    summary: 'Revoca tutte le sessioni dell utente corrente',
+    operationId: 'revokeSessions',
+    description:
+      'Invalida i token emessi prima di questa chiamata. Richiede sessionRevocation.store configurato. I token emessi dopo la revoca restano validi.',
+  })
+  @ApiOkResponse({ type: ActionResponse })
+  @ApiResponse({ status: 401, type: ErrorResponse, description: 'Token Accessi mancante o non valido.' })
+  @ApiResponse({ status: 501, type: ErrorResponse, description: 'Revoca sessioni non configurata.' })
+  @UseGuards(JwtSimpleGuard)
+  @Post('revoke-sessions')
+  async revokeSessions(@Req() request: Request, @Res() res: Response) {
+    try {
+      const user = getAuthenticatedAccessiUser(request);
+      if (!getSessionRevocationStore(this.options)) {
+        throw new HttpException(
+          {
+            code: 'ACCESSI_SESSION_REVOCATION_DISABLED',
+            message: 'La revoca sessioni non e configurata su questa istanza.',
+          },
+          HttpStatus.NOT_IMPLEMENTED,
+        );
+      }
+      await revokeAccessiUserSessions(this.options, user.codiceUtente);
+      return RestUtilities.sendOKMessage(res, 'Sessioni revocate con successo.');
+    } catch (error) {
+      return RestUtilities.sendErrorMessage(
+        res,
+        error,
+        AuthController.name,
+        error instanceof HttpException ? error.getStatus() : HttpStatus.BAD_REQUEST,
+      );
+    }
+  }
+
+  @ApiOperation({
     summary: 'Effettua il login utente',
     description:
       "Con sola email restituisce passwordRequired oppure avvia il codice per utenti passwordless. Con password valida restituisce il login completo o challenge se la 2FA e attiva. Nessun JWT viene emesso prima della verifica del codice.",
@@ -172,7 +216,11 @@ export class AuthController {
         return RestUtilities.sendInvalidCredentials(res);
       }
 
-      if (!userData.challenge && !userData.passwordRequired) userData.token = this.authService.createAccessiToken(userData.utente, ['password']);
+      if (!userData.challenge && !userData.passwordRequired) {
+        const tokens = this.authService.createTokenPair(userData.utente, ['password']);
+        userData.token = tokens.access;
+        if (tokens.refresh) userData.refreshToken = tokens.refresh;
+      }
 
       return RestUtilities.sendBaseResponse(res, userData);
     } catch (error) {
@@ -204,6 +252,54 @@ export class AuthController {
         );
       }
       return RestUtilities.sendInvalidCredentials(res);
+    }
+  }
+
+  @ApiOperation({
+    summary: 'Scambia un refresh token con un nuovo access token',
+    operationId: 'refreshAccessToken',
+    description:
+      'Richiede jwtOptions.refreshExpiresIn. Il refresh token ha typ=refresh e non e accettato dai guard API.',
+  })
+  @ApiBody({ type: RefreshTokenRequest })
+  @ApiOkResponse({ type: RefreshTokenResponse })
+  @ApiResponse({ status: 401, description: 'Refresh token non valido, scaduto o revocato.', type: ErrorResponse })
+  @ApiResponse({ status: 429, description: 'Troppi tentativi.', type: ErrorResponse })
+  @Post('refresh')
+  async refresh(
+    @Req() request: Request,
+    @Body() body: RefreshTokenRequest,
+    @Res() res: Response,
+  ) {
+    try {
+      const tokenKey = typeof body?.refreshToken === 'string'
+        ? createHash('sha256').update(body.refreshToken).digest('hex').slice(0, 32)
+        : undefined;
+      const decision = await checkPublicAuthRateLimit(
+        this.options,
+        'refresh',
+        request,
+        tokenKey ? [tokenKey] : [],
+      );
+      if (!decision.allowed) {
+        return sendPublicAuthRateLimitExceeded(res, decision.retryAfterSeconds);
+      }
+
+      const result = await this.authService.refreshAccessToken(body?.refreshToken);
+      if (!result.token) {
+        throw new HttpException('Refresh token non valido.', HttpStatus.UNAUTHORIZED);
+      }
+      return RestUtilities.sendBaseResponse(res, {
+        token: result.token,
+        ...(result.refreshToken ? { refreshToken: result.refreshToken } : {}),
+      });
+    } catch (error) {
+      return RestUtilities.sendErrorMessage(
+        res,
+        error,
+        AuthController.name,
+        error instanceof HttpException ? error.getStatus() : HttpStatus.UNAUTHORIZED,
+      );
     }
   }
 
