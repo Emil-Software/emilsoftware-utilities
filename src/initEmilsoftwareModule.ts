@@ -22,6 +22,7 @@ import { createAccessiValidationPipe } from './accessi-module/security/accessiVa
 import { AccessiHttpExceptionFilter } from './accessi-module/security/AccessiHttpExceptionFilter';
 import { getAccessiJwksPath, setupAccessiJwks } from './accessi-module/security/jwks';
 import { createAccessiEdgeRateLimitMiddleware } from './accessi-module/security/edgeRateLimit';
+import { createAccessiSecurityHeadersMiddleware } from './accessi-module/security/securityHeaders';
 
 /** Esito del bootstrap del modulo unificato. */
 export interface EmilsoftwareModuleInitializationResult {
@@ -80,17 +81,15 @@ export async function initEmilsoftwareModule(
         if (edgeRateLimit) {
             app.use(edgeRateLimit);
         }
-        if (options?.accessiOptions?.http?.securityHeaders !== false) {
-            app.use((req: Request, res, next) => {
-                if (!isNestRoute(req.path)) {
-                    return next();
-                }
-                res.setHeader('X-Content-Type-Options', 'nosniff');
-                res.setHeader('X-Frame-Options', 'SAMEORIGIN');
-                res.setHeader('Referrer-Policy', 'no-referrer');
-                res.setHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
-                return next();
-            });
+        if (options?.accessiOptions && options.accessiOptions.http?.securityHeaders !== false) {
+            const securityHeaders = createAccessiSecurityHeadersMiddleware(
+                options.accessiOptions.http?.securityHeaders,
+                isNestRoute,
+                { isOpenApiUi: (path) => isOpenApiRequestPath(path, resolvedOpenApi) },
+            );
+            if (securityHeaders) {
+                app.use(securityHeaders);
+            }
         }
 
         app.use((req: Request, res, next) => {

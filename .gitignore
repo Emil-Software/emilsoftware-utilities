@@ -30,6 +30,7 @@
 !/test/proxy-ip.cjs
 !/test/readiness.cjs
 !/test/jwt-key-rotation.cjs
+!/test/security-headers.cjs
 !/test/integration/
 !/test/integration/**
 

@@ -24,6 +24,7 @@ import { AccessiHttpExceptionFilter } from './security/AccessiHttpExceptionFilte
 import { assertEmailConfigured } from './security/emailConfiguration';
 import { getAccessiJwksPath, setupAccessiJwks } from './security/jwks';
 import { createAccessiEdgeRateLimitMiddleware } from './security/edgeRateLimit';
+import { createAccessiSecurityHeadersMiddleware } from './security/securityHeaders';
 
 /** Esito del bootstrap Express di Accessi. */
 export interface AccessiModuleInitializationResult {
@@ -95,16 +96,14 @@ export async function initializeAccessiModule(
             app.use(edgeRateLimit);
         }
         if (options.http?.securityHeaders !== false) {
-            app.use((req: Request, res, next) => {
-                if (!isAccessiRoute(req.path)) {
-                    return next();
-                }
-                res.setHeader('X-Content-Type-Options', 'nosniff');
-                res.setHeader('X-Frame-Options', 'SAMEORIGIN');
-                res.setHeader('Referrer-Policy', 'no-referrer');
-                res.setHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
-                return next();
-            });
+            const securityHeaders = createAccessiSecurityHeadersMiddleware(
+                options.http?.securityHeaders,
+                isAccessiRoute,
+                { isOpenApiUi: (path) => isOpenApiRequestPath(path, resolvedOpenApi) },
+            );
+            if (securityHeaders) {
+                app.use(securityHeaders);
+            }
         }
 
         app.use((req: Request, res, next) => {
@@ -300,6 +299,22 @@ export {
     setupAccessiJwks
 } from './security/jwks';
 export type { AccessiJwksDocument, AccessiJwksKey } from './security/jwks';
+export {
+    applyAccessiBaseSecurityHeaders,
+    applyAccessiContentSecurityPolicy,
+    buildAccessiContentSecurityPolicy,
+    createAccessiSecurityHeadersMiddleware,
+    resolveAccessiSecurityHeaders
+} from './security/securityHeaders';
+export type {
+    AccessiCspDirectives,
+    AccessiCspOptions,
+    AccessiCspSurface,
+    AccessiSecurityHeadersOptions,
+    AccessiSecurityHeadersSetting,
+    ResolvedAccessiCsp,
+    ResolvedAccessiSecurityHeaders
+} from './security/securityHeaders';
 export {
     getAccessiAccessTokenSigningConfig,
     getAccessiAccessTokenVerificationConfig,

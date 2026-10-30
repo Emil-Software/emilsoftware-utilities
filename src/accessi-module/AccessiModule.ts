@@ -96,6 +96,8 @@ export interface ConsoleEntryOptions {
   store?: ConsoleEntryStore;
 }
 
+import type { AccessiSecurityHeadersSetting } from './security/securityHeaders';
+
 /** Impostazioni HTTP del servizio Accessi. */
 export interface AccessiHttpOptions {
   /** Opzioni CORS Nest. `false` disabilita CORS. Default: exposedHeaders ['X-Total-Count']. */
@@ -103,7 +105,7 @@ export interface AccessiHttpOptions {
   /** Trust proxy per IP reali dietro load balancer/reverse proxy. */
   trustProxy?: boolean | number | string;
   /** Header di sicurezza di base su console/OpenAPI. Default: true. */
-  securityHeaders?: boolean;
+  securityHeaders?: AccessiSecurityHeadersSetting;
 }
 
 /** Parametri SMTP usati esclusivamente per impostazione e reset della password. */
