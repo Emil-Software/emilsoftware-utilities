@@ -14,6 +14,7 @@ import type { ConsoleEntryStore } from './security/consoleEntry';
 import type { RateLimitStore } from './security/rateLimitStore';
 import type { AccessiEdgeRateLimitOptions } from './security/edgeRateLimit';
 import type { SessionRevocationOptions } from './security/sessionRevocation';
+import type { AccessTokenRevocationOptions } from './security/accessTokenRevocation';
 import type { RefreshTokenRotationOptions } from './security/refreshTokenRotation';
 import { AuthService } from './Services/AuthService/AuthService';
 import { EmailService } from './Services/EmailService/EmailService';
@@ -298,7 +299,9 @@ export interface AccessiOptions {
   http?: AccessiHttpOptions;
   /** Revoca sessioni per utente tramite store memory/Redis. */
   sessionRevocation?: SessionRevocationOptions;
-  /** Refresh token monouso tramite rotazione memory/Redis. */
+  /** Revoca dei singoli access token tramite `jti`, memory/Redis. */
+  accessTokenRevocation?: AccessTokenRevocationOptions;
+  /** Refresh token monouso tramite rotazione memory/Redis; rileva il riuso e revoca la famiglia. */
   refreshTokenRotation?: RefreshTokenRotationOptions;
 }
 

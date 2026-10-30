@@ -115,6 +115,7 @@ function collectHealthStores(options: AccessiOptions): Array<{ name: string; sto
   add('consoleEntry', options.consoleEntry?.store);
   add('edgeRateLimit', options.edgeRateLimit?.store);
   add('sessionRevocation', options.sessionRevocation?.store);
+  add('accessTokenRevocation', options.accessTokenRevocation?.store);
   add('refreshTokenRotation', options.refreshTokenRotation?.store);
   return stores;
 }
