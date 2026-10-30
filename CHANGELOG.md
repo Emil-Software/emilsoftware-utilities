@@ -1,3 +1,10 @@
+# [2.0.0-dev.78](https://github.com/Emil-Software/emilsoftware-utilities/compare/v2.0.0-dev.77...v2.0.0-dev.78) (2026-10-30)
+
+
+### Features
+
+* **accessi:** metriche Prometheus di dominio e alert suggeriti ([30f0af3](https://github.com/Emil-Software/emilsoftware-utilities/commit/30f0af337252de8bd9be03745b17b7fb9005ce51))
+
 # [2.0.0-dev.77](https://github.com/Emil-Software/emilsoftware-utilities/compare/v2.0.0-dev.76...v2.0.0-dev.77) (2026-10-30)
 
 
