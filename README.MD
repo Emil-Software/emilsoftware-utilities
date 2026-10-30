@@ -82,6 +82,7 @@ temi light/dark e i token Bootstrap 5.3.
 | `npm run test:coverage` | Test unitari con report e **soglie minime** di copertura |
 | `npm run test:integration` | Integration test su Firebird reale (default: porta 3055) |
 | `npm run test:integration:fb5` / `:fb3` / `:fb25` | Integration test su Firebird 5 / 3 / 2.5 |
+| `npm run test:integration:redis` | Integration test degli store Redis (opt-in, salta senza `ACCESSI_TEST_REDIS_URL`) |
 | `npm run test:accessi-console` | Test end-to-end della console (richiede un browser Chromium e la build) |
 
 ### Integration test su Firebird reale
@@ -114,6 +115,33 @@ locale spesso in ascolto sulla 3050. Per cambiare porta/percorso, modifica i map
 La CI (`.github/workflows/ci.yml`) esegue typecheck, test con coverage e build, piu un job di
 integration test in matrice su Firebird 5 e 3. Il workflow di release (`publish.yml`) esegue
 typecheck e test prima di build e pubblicazione.
+
+### Integration test su Redis reale
+
+Gli store condivisi (rate limit, ticket console, revoca sessioni, revoca `jti`, rotazione refresh
+token) hanno adapter Redis che nei test unitari girano su fake in memoria. La suite di integrazione
+li verifica contro un Redis reale, inclusi i `consume` atomici in concorrenza e gli `healthCheck()`.
+
+E' **opt-in**: senza la variabile `ACCESSI_TEST_REDIS_URL` i test vengono marcati come `skip`.
+
+```bash
+docker run --rm -d --name accessi-test-redis -p 6380:6379 redis:7-alpine
+npm run test:integration:redis
+docker stop accessi-test-redis
+```
+
+Su PowerShell:
+
+```powershell
+$env:ACCESSI_TEST_REDIS_URL = 'redis://127.0.0.1:6380'
+npm run test:integration:redis
+```
+
+Variabili: `ACCESSI_TEST_REDIS_URL` (formato `redis://[:password@]host:port[/db]`) e
+`ACCESSI_TEST_REQUIRE_REDIS=1` per fallire invece di saltare quando Redis non e raggiungibile
+(usato dalla CI). I test usano chiavi con prefisso per processo e cancellano solo quelle, quindi
+possono girare anche su un Redis condiviso. `docker-compose.test.yml` resta dedicato solo a
+Firebird: la CI avvia Redis come service del job `Redis stores`.
 
 ## Firebird: drop-in di `es-node-firebird`
 

@@ -28,7 +28,7 @@ export interface MemoryAccessTokenRevocationStore extends AccessTokenRevocationS
 }
 
 const REVOKE_SCRIPT =
-  "if tonumber(ARGV[2]) > 0 then return redis.call('SET', KEYS[1], '1', 'PX', ARGV[2]) else return redis.call('SET', KEYS[1], '1') end";
+  "if tonumber(ARGV[1]) > 0 then return redis.call('SET', KEYS[1], '1', 'PX', ARGV[1]) else return redis.call('SET', KEYS[1], '1') end";
 const IS_REVOKED_SCRIPT = "return redis.call('EXISTS', KEYS[1])";
 
 export function createMemoryAccessTokenRevocationStore(): MemoryAccessTokenRevocationStore {
@@ -87,8 +87,11 @@ export function createRedisAccessTokenRevocationStore(
 
   return {
     async revoke(jti, expiresAtMs) {
+      // Se il token e gia scaduto non serve conservare la revoca a lungo: una
+      // chiave senza TTL resterebbe per sempre. Il minimo di 1 ms la fa sparire
+      // subito, come nello store in memoria.
       const ttl = Number.isFinite(expiresAtMs)
-        ? Math.max(0, Math.trunc(expiresAtMs - Date.now()))
+        ? Math.max(1, Math.trunc(expiresAtMs - Date.now()))
         : ttlMs;
       await options.client.eval(REVOKE_SCRIPT, 1, `${keyPrefix}${jti}`, ttl);
     },
