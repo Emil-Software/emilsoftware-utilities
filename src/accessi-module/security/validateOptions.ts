@@ -1,3 +1,4 @@
+import { createPublicKey } from 'crypto';
 import type { AccessiOptions } from '../AccessiModule';
 
 export interface AccessiOptionsValidationIssue {
@@ -78,6 +79,43 @@ export function validateAccessiOptions(options: AccessiOptions): AccessiOptionsV
         'jwksPath non configurato: verra usato accessi/.well-known/jwks.json.',
       );
     }
+  }
+
+  const previousKeys = jwt?.previousPublicKeys ?? [];
+  if (previousKeys.length > 0 && algorithm.startsWith('HS')) {
+    addWarning(
+      'ACCESSI_JWT_PREVIOUS_KEYS_WITH_HMAC',
+      'previousPublicKeys e configurato ma algorithm e HS*: le chiavi verranno ignorate.',
+    );
+  }
+  if (!algorithm.startsWith('HS') && previousKeys.length > 0) {
+    const knownKeyIds = new Set<string>();
+    if (jwt?.keyId) knownKeyIds.add(jwt.keyId);
+    previousKeys.forEach((previous, index) => {
+      try {
+        createPublicKey(previous.publicKey);
+      } catch {
+        addError(
+          'ACCESSI_JWT_PREVIOUS_KEY_INVALID',
+          `previousPublicKeys[${index}] non e una chiave pubblica PEM valida.`,
+        );
+      }
+      if (!previous.keyId) {
+        addWarning(
+          'ACCESSI_JWT_PREVIOUS_KEY_ID_MISSING',
+          `previousPublicKeys[${index}] non ha keyId: verra usato il fingerprint della chiave.`,
+        );
+        return;
+      }
+      if (knownKeyIds.has(previous.keyId)) {
+        addWarning(
+          'ACCESSI_JWT_PREVIOUS_KEY_DUPLICATE_KID',
+          `previousPublicKeys[${index}].keyId "${previous.keyId}" e duplicato: vince la chiave corrente.`,
+        );
+        return;
+      }
+      knownKeyIds.add(previous.keyId);
+    });
   }
 
   if (!jwt?.issuer) {

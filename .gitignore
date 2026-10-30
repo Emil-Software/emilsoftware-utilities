@@ -29,6 +29,7 @@
 !/test/openapi-semantic-diff.cjs
 !/test/proxy-ip.cjs
 !/test/readiness.cjs
+!/test/jwt-key-rotation.cjs
 !/test/integration/
 !/test/integration/**
 

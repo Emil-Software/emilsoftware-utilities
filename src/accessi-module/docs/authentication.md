@@ -57,7 +57,7 @@ Un backend che non possiede il database Accessi non deve usare `authorizeAccessi
 
 L'endpoint `POST /api/accessi/auth/introspect` richiede un service token con scope `accessi:introspect` e restituisce `active`, profilo e grant. Il resource server applica una cache breve ai risultati attivi e fallisce chiuso se Accessi Service non e raggiungibile.
 
-Con RS/ES Accessi pubblica la JWKS su `/accessi/.well-known/jwks.json` (configurabile con `jwtOptions.jwksPath`). La JWKS include la chiave corrente e `previousPublicKeys`, cosi la rotazione non interrompe i token gia emessi.
+Con RS/ES Accessi pubblica la JWKS su `/accessi/.well-known/jwks.json` (configurabile con `jwtOptions.jwksPath`). La JWKS include la chiave corrente e `previousPublicKeys`, cosi la rotazione non interrompe i token gia emessi. La verifica lato Accessi accetta anch'essa le chiavi precedenti; un token con `kid` sconosciuto produce l'evento `jwtOptions.onUnknownKeyId`. Il resource server aggiorna la cache JWKS al primo `kid` nuovo e segnala i `kid` assenti con `jwt.onUnknownKeyId`. Procedura operativa completa in `docs/jwt-key-rotation.md`.
 
 I ticket di ingresso console sono in memoria per default. In multi-istanza configurare `consoleEntry.store` con `createRedisConsoleEntryStore`: il JWT viene cifrato, il TTL e applicato da Redis e il consume e atomico.
 

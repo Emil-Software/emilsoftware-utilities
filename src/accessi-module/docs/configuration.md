@@ -16,7 +16,7 @@ Il modulo non legge direttamente il file `.env`: riceve un oggetto `AccessiOptio
 - `jwtOptions.expiresIn`: durata JWT
 - `jwtOptions.algorithm`, `issuer`, `audience`, `privateKey`, `publicKey`, `keyId`: firma e verifica degli access token. Default `HS256`; usare RS/ES in una topologia multi-servizio
 - `jwtOptions.refreshExpiresIn`: abilita refresh token di lunga durata (es. `30d`)
-- `jwtOptions.jwksPath`, `previousPublicKeys`: JWKS pubblica e rotazione chiavi con algoritmi asimmetrici
+- `jwtOptions.jwksPath`, `previousPublicKeys`: JWKS pubblica e rotazione chiavi con algoritmi asimmetrici. Le chiavi precedenti sono accettate anche in verifica e leggibili da `ACCESSI_JWT_PREVIOUS_PUBLIC_KEYS`; `onUnknownKeyId` emette l'alert per `kid` non riconosciuti
 - `openapi`: path, titolo, descrizione e `enabled` della documentazione OpenAPI
 - `consoleEntry.ttlMs`, `consoleEntry.store`: TTL e store condiviso dei ticket console; usare `createRedisConsoleEntryStore` in multi-istanza
 - `publicAuthRateLimit.store`, `serviceTokens.rateLimitStore`: rate limit condiviso con `createRedisRateLimitStore` in cluster; default in memoria

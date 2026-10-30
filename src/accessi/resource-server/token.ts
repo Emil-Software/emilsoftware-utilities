@@ -1,11 +1,11 @@
-import { createPublicKey } from "crypto";
+import { createHash, createPublicKey } from "crypto";
 import type { JsonWebKey } from "crypto";
 import * as jwt from "jsonwebtoken";
 import type { AccessiAccessTokenPayload } from "../contracts";
 import { extractAccessiBearerToken, resolveCodiceUtenteFromTokenPayload } from "../contracts";
 import { accessiAuthError } from "./errors";
 import { deriveAccessiAccessSecret } from "./keys";
-import type { AccessiJwtAlgorithm, AccessiResourceServerJwtOptions } from "./types";
+import type { AccessiJwtAlgorithm, AccessiResourceServerJwtOptions, AccessiUnknownKeyIdEvent } from "./types";
 
 /** Esito della verifica locale di un access token. */
 export interface AccessiTokenVerification {
@@ -24,6 +24,7 @@ export interface AccessiTokenVerifier {
 interface JwksCacheEntry {
   keys: Array<Record<string, unknown>>;
   expiresAt: number;
+  fetchedAt: number;
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -97,19 +98,37 @@ function selectJwk(
   keys: Array<Record<string, unknown>>,
   kid: string | undefined,
   algorithm: string,
-): JsonWebKey {
-  const candidates = keys.filter((key) => {
+): Record<string, unknown> | undefined {
+  return keys.find((key) => {
     const keyAlg = typeof key.alg === "string" ? key.alg : undefined;
-    const keyKid = typeof key.kid === "string" ? key.kid : undefined;
     if (keyAlg && keyAlg !== algorithm) return false;
-    if (kid && keyKid && keyKid !== kid) return false;
-    return true;
+    if (!kid) return true;
+    return typeof key.kid === "string" && key.kid === kid;
   });
-  const selected = candidates[0];
-  if (!selected) {
-    throw accessiAuthError(401, "AUTH_TOKEN_INVALID", "Chiave JWKS non trovata per il token.");
+}
+
+/** Fingerprint della chiave pubblica, identico a quello usato dalla JWKS Accessi. */
+function fingerprintPublicKey(publicKey: string | Buffer): string {
+  const der = createPublicKey(publicKey).export({ type: "spki", format: "der" });
+  return createHash("sha256").update(der).digest("base64url").slice(0, 16);
+}
+
+function jwkToPem(jwk: Record<string, unknown>): string {
+  return createPublicKey({ key: jwk as unknown as JsonWebKey, format: "jwk" })
+    .export({ type: "spki", format: "pem" })
+    .toString();
+}
+
+/** L'alert non deve mai cambiare l'esito dell'autenticazione. */
+function notifyUnknownKeyId(
+  options: AccessiResourceServerJwtOptions,
+  event: AccessiUnknownKeyIdEvent,
+): void {
+  try {
+    options.onUnknownKeyId?.(event);
+  } catch {
+    // Un logger o webhook guasto non trasforma un 401 in un 500.
   }
-  return selected as unknown as JsonWebKey;
 }
 
 /**
@@ -132,14 +151,21 @@ export function createAccessiTokenVerifier(options: AccessiResourceServerJwtOpti
   const hmacSecret = options.secret
     ?? (options.serverSecret ? deriveAccessiAccessSecret(options.serverSecret) : undefined);
   let jwksCache: JwksCacheEntry | undefined;
+  const jwksMinRefreshInterval = Math.max(0, options.jwks?.minRefreshIntervalMs ?? 5_000);
 
-  const getJwksKeys = async (): Promise<Array<Record<string, unknown>>> => {
+  const getJwksKeys = async (forceRefresh = false): Promise<Array<Record<string, unknown>>> => {
     if (!options.jwks) return [];
-    if (jwksCache && jwksCache.expiresAt > Date.now()) return jwksCache.keys;
+    const now = Date.now();
+    if (!forceRefresh && jwksCache && jwksCache.expiresAt > now) return jwksCache.keys;
+    // Refresh forzato ma troppo ravvicinato: riusa la cache per non martellare la JWKS.
+    if (forceRefresh && jwksCache && now - jwksCache.fetchedAt < jwksMinRefreshInterval) {
+      return jwksCache.keys;
+    }
     const keys = await fetchJwks(options.jwks);
     jwksCache = {
       keys,
-      expiresAt: Date.now() + Math.max(1_000, options.jwks.cacheTtlMs ?? 300_000),
+      expiresAt: now + Math.max(1_000, options.jwks.cacheTtlMs ?? 300_000),
+      fetchedAt: now,
     };
     return keys;
   };
@@ -155,7 +181,11 @@ export function createAccessiTokenVerifier(options: AccessiResourceServerJwtOpti
       throw accessiAuthError(401, "AUTH_TOKEN_INVALID", "Algoritmo JWT non consentito.");
     }
 
+    const kid = typeof decoded.header.kid === "string" && decoded.header.kid !== ""
+      ? decoded.header.kid
+      : undefined;
     let key: jwt.Secret;
+    let kidMismatch = false;
     if (algorithmFamily(algorithm) === "hmac") {
       if (!hmacSecret) {
         throw accessiAuthError(
@@ -167,11 +197,30 @@ export function createAccessiTokenVerifier(options: AccessiResourceServerJwtOpti
       key = hmacSecret;
     } else if (options.publicKey) {
       key = options.publicKey;
+      if (kid) {
+        const expectedKeyId = options.keyId ?? fingerprintPublicKey(options.publicKey);
+        kidMismatch = kid !== expectedKeyId;
+      }
     } else if (options.jwks) {
-      const keys = await getJwksKeys();
-      const kid = typeof decoded.header.kid === "string" ? decoded.header.kid : undefined;
-      key = createPublicKey({ key: selectJwk(keys, kid, algorithm), format: "jwk" })
-        .export({ type: "spki", format: "pem" });
+      let keys = await getJwksKeys();
+      let selected = selectJwk(keys, kid, algorithm);
+      if (!selected && kid) {
+        // La JWKS in cache potrebbe precedere una rotazione appena avvenuta.
+        keys = await getJwksKeys(true);
+        selected = selectJwk(keys, kid, algorithm);
+      }
+      if (!selected) {
+        if (kid) {
+          notifyUnknownKeyId(options, { kid, algorithm, source: "jwks" });
+          throw accessiAuthError(
+            401,
+            "AUTH_TOKEN_INVALID",
+            `Chiave JWKS non trovata per kid "${kid}".`,
+          );
+        }
+        throw accessiAuthError(401, "AUTH_TOKEN_INVALID", "Chiave JWKS non trovata per il token.");
+      }
+      key = jwkToPem(selected);
     } else {
       throw accessiAuthError(500, "AUTH_CONFIG_INVALID", "jwt.publicKey/jwt.jwks non configurati.");
     }
@@ -187,6 +236,9 @@ export function createAccessiTokenVerifier(options: AccessiResourceServerJwtOpti
         clockTolerance,
       });
     } catch {
+      if (kidMismatch && kid) {
+        notifyUnknownKeyId(options, { kid, algorithm, source: "publicKey" });
+      }
       throw accessiAuthError(401, "AUTH_TOKEN_INVALID", "Token non valido o scaduto.");
     }
 

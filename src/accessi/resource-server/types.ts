@@ -19,6 +19,14 @@ export type AccessiJwtAlgorithm =
   | "ES384"
   | "ES512";
 
+/** Evento emesso quando un token usa un `kid` assente dalla configurazione. */
+export interface AccessiUnknownKeyIdEvent {
+  kid: string;
+  algorithm?: string;
+  /** Fonte della chiave: JWKS remota o chiave pubblica statica. */
+  source: "jwks" | "publicKey";
+}
+
 /** Opzioni di verifica locale del JWT. Almeno una tra `secret`, `publicKey` e `jwks` e obbligatoria. */
 export interface AccessiResourceServerJwtOptions {
   /** Chiave HMAC gia derivata (access key). Alternativa a `serverSecret`. */
@@ -37,8 +45,23 @@ export interface AccessiResourceServerJwtOptions {
     url: string;
     cacheTtlMs?: number;
     timeoutMs?: number;
+    /**
+     * Distanza minima tra due refresh forzati quando arriva un `kid` sconosciuto.
+     * Default: 5000 ms. Evita che token con `kid` inventati martellino la JWKS.
+     */
+    minRefreshIntervalMs?: number;
     fetch?: typeof fetch;
   };
+  /**
+   * `kid` della chiave statica in `publicKey`. Se assente si usa il fingerprint
+   * della chiave, lo stesso calcolato dalla JWKS Accessi.
+   */
+  keyId?: string;
+  /**
+   * Alert quando un token non e verificabile per un `kid` non presente nella
+   * chiave configurata o nella JWKS. Utile per intercettare rotazioni incomplete.
+   */
+  onUnknownKeyId?: (event: AccessiUnknownKeyIdEvent) => void;
   /** Default: HS256 con `secret`, altrimenti RS/ES con `publicKey`/`jwks`. */
   algorithms?: AccessiJwtAlgorithm[];
   /** Issuer atteso (`iss`). */

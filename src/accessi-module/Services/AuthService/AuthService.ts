@@ -37,6 +37,7 @@ import {
   getAccessiAccessTokenVerificationConfig,
   getAccessiRefreshTokenSigningConfig,
   getAccessiRefreshTokenVerificationConfig,
+  verifyAccessiJwt,
 } from "../../security/jwtTokenOptions";
 import { assertStrongPassword } from '../../security/passwordPolicy';
 import { Logger } from "../../../Logger";
@@ -364,7 +365,7 @@ export class AuthService {
     const verification = getAccessiAccessTokenVerificationConfig(this.accessiOptions);
     let decoded: unknown;
     try {
-      decoded = jwt.verify(token.trim(), verification.key, verification.verifyOptions);
+      decoded = verifyAccessiJwt(token.trim(), verification);
     } catch {
       return { active: false };
     }
@@ -426,7 +427,7 @@ export class AuthService {
     const verification = getAccessiRefreshTokenVerificationConfig(this.accessiOptions);
     let decoded: unknown;
     try {
-      decoded = jwt.verify(refreshToken.trim(), verification.key, verification.verifyOptions);
+      decoded = verifyAccessiJwt(refreshToken.trim(), verification);
     } catch {
       throw new UnauthorizedException('Refresh token non valido o scaduto.');
     }

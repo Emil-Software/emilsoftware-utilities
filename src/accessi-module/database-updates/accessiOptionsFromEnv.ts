@@ -1,4 +1,4 @@
-import type { AccessiOptions, CatalogScriptsOptions } from '../AccessiModule';
+import type { AccessiOptions, CatalogScriptsOptions, JwtOptions } from '../AccessiModule';
 import { DatabaseUtilities } from '../../Utilities';
 
 function getEnv(names: string | string[], fallback?: string): string {
@@ -27,6 +27,70 @@ const JWT_ALGORITHMS = [
 function getJwtAlgorithm(): (typeof JWT_ALGORITHMS)[number] | undefined {
   const value = process.env.ACCESSI_JWT_ALGORITHM?.trim().toUpperCase();
   return JWT_ALGORITHMS.find((algorithm) => algorithm === value);
+}
+
+/** Normalizza una chiave PEM incollata in una variabile a riga singola. */
+function normalizePem(value: string): string {
+  return value.includes('\\n') ? value.replace(/\\n/g, '\n') : value;
+}
+
+/**
+ * Legge `ACCESSI_JWT_PREVIOUS_PUBLIC_KEYS`: array JSON di chiavi pubbliche.
+ *
+ * Sono accettate sia stringhe PEM sia oggetti `{ publicKey, keyId, algorithm }`.
+ * Gli errori indicano l'indice e il nome della variabile, perché una rotazione
+ * malformata deve fermare il boot invece di lasciare token non verificabili.
+ */
+export function parseAccessiPreviousPublicKeys(
+  value: string | undefined,
+  variableName = 'ACCESSI_JWT_PREVIOUS_PUBLIC_KEYS',
+): NonNullable<JwtOptions['previousPublicKeys']> | undefined {
+  if (value === undefined || value.trim() === '') return undefined;
+
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(value);
+  } catch (error) {
+    const detail = error instanceof Error ? error.message : String(error);
+    throw new Error(`${variableName}: JSON non valido (${detail}).`);
+  }
+
+  if (!Array.isArray(parsed)) {
+    throw new Error(`${variableName}: atteso un array JSON di chiavi pubbliche.`);
+  }
+
+  return parsed.map((entry, index) => {
+    const position = `${variableName}[${index}]`;
+
+    if (typeof entry === 'string') {
+      if (entry.trim() === '') {
+        throw new Error(`${position}: chiave pubblica PEM vuota.`);
+      }
+      return { publicKey: normalizePem(entry) };
+    }
+
+    if (typeof entry !== 'object' || entry === null || Array.isArray(entry)) {
+      throw new Error(`${position}: atteso un PEM oppure un oggetto { publicKey, keyId, algorithm }.`);
+    }
+
+    const record = entry as Record<string, unknown>;
+    if (typeof record.publicKey !== 'string' || record.publicKey.trim() === '') {
+      throw new Error(`${position}: publicKey deve essere una stringa PEM non vuota.`);
+    }
+    if (record.keyId !== undefined && (typeof record.keyId !== 'string' || record.keyId.trim() === '')) {
+      throw new Error(`${position}: keyId, se presente, deve essere una stringa non vuota.`);
+    }
+    const algorithm = typeof record.algorithm === 'string' ? record.algorithm.trim().toUpperCase() : undefined;
+    if (algorithm !== undefined && !JWT_ALGORITHMS.some((supported) => supported === algorithm)) {
+      throw new Error(`${position}: algoritmo ${algorithm} non supportato.`);
+    }
+
+    return {
+      publicKey: normalizePem(record.publicKey),
+      ...(typeof record.keyId === 'string' ? { keyId: record.keyId.trim() } : {}),
+      ...(algorithm ? { algorithm: algorithm as (typeof JWT_ALGORITHMS)[number] } : {}),
+    };
+  });
 }
 
 /** Catalog migrations lette dall'ambiente: cartella in ACCESSI_CATALOG_FOLDER. */
@@ -63,6 +127,10 @@ export function createAccessiOptionsFromEnv(): AccessiOptions {
   if (wireCrypt) (databaseOptions as { wireCrypt?: string }).wireCrypt = wireCrypt;
   if (authPlugin) (databaseOptions as { pluginName?: string }).pluginName = authPlugin;
 
+  const previousPublicKeys = parseAccessiPreviousPublicKeys(
+    process.env.ACCESSI_JWT_PREVIOUS_PUBLIC_KEYS,
+  );
+
   return {
     databaseOptions,
     confirmationEmailUrl: getEnv("ACCESSI_CONFIRMATION_EMAIL_URL", "http://localhost"),
@@ -86,6 +154,7 @@ export function createAccessiOptionsFromEnv(): AccessiOptions {
       ...(process.env.ACCESSI_JWT_PUBLIC_KEY ? { publicKey: process.env.ACCESSI_JWT_PUBLIC_KEY } : {}),
       ...(process.env.ACCESSI_JWT_KEY_ID ? { keyId: process.env.ACCESSI_JWT_KEY_ID } : {}),
       ...(process.env.ACCESSI_JWKS_PATH ? { jwksPath: process.env.ACCESSI_JWKS_PATH } : {}),
+      ...(previousPublicKeys ? { previousPublicKeys } : {}),
     },
     emailOptions: {
       host: getEnv("ACCESSI_EMAIL_HOST", "localhost"),

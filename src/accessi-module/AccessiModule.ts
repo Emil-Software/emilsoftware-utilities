@@ -9,7 +9,7 @@ import { Options } from 'node-firebird';
 import { DynamicModule, Global, Module } from '@nestjs/common';
 import type { INestApplication, LoggerService } from '@nestjs/common';
 import type { OpenApiSetupOptions } from '../openapi/OpenApiConfig';
-import type { AccessiAccessTokenAlgorithm } from './security/jwtTokenOptions';
+import type { AccessiAccessTokenAlgorithm, AccessiUnknownKeyIdEvent } from './security/jwtTokenOptions';
 import type { ConsoleEntryStore } from './security/consoleEntry';
 import type { RateLimitStore } from './security/rateLimitStore';
 import type { AccessiEdgeRateLimitOptions } from './security/edgeRateLimit';
@@ -64,12 +64,21 @@ export interface JwtOptions {
   keyId?: string;
   /** Path pubblico della JWKS. Default `accessi/.well-known/jwks.json` con algoritmi asimmetrici. */
   jwksPath?: string;
-  /** Chiavi pubbliche precedenti, esposte in JWKS durante la rotazione. */
+  /**
+   * Chiavi pubbliche precedenti, esposte in JWKS e accettate in verifica
+   * durante la rotazione. Se `keyId` e assente si usa il fingerprint della
+   * chiave, lo stesso calcolato dalla JWKS.
+   */
   previousPublicKeys?: Array<{
     publicKey: string;
-    keyId: string;
+    keyId?: string;
     algorithm?: AccessiAccessTokenAlgorithm;
   }>;
+  /**
+   * Alert quando un token presenta un `kid` assente da chiave corrente e
+   * chiavi precedenti (tipico di una rotazione non completata).
+   */
+  onUnknownKeyId?: (event: AccessiUnknownKeyIdEvent) => void;
   /** Durata compatibile con `jsonwebtoken`, per esempio `24h` o `3600s`. */
   expiresIn: string;
   /**

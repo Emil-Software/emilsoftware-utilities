@@ -300,6 +300,18 @@ export {
     setupAccessiJwks
 } from './security/jwks';
 export type { AccessiJwksDocument, AccessiJwksKey } from './security/jwks';
+export {
+    getAccessiAccessTokenSigningConfig,
+    getAccessiAccessTokenVerificationConfig,
+    getAccessiRefreshTokenSigningConfig,
+    getAccessiRefreshTokenVerificationConfig,
+    resolveAccessiVerificationKeys,
+    verifyAccessiJwt
+} from './security/jwtTokenOptions';
+export type {
+    AccessiJwtVerificationConfig,
+    AccessiUnknownKeyIdEvent
+} from './security/jwtTokenOptions';
 export { FederatedAuthService } from './federated-auth/FederatedAuthService';
 export type { FederatedAuthenticationResult, FederatedIdentity, FederatedProvider, VerifiedFederatedIdentity } from './federated-auth/FederatedAuthTypes';
 export * from "./Dtos";

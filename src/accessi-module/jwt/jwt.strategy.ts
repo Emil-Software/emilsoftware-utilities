@@ -6,7 +6,6 @@ import {
   InternalServerErrorException,
   UnauthorizedException,
 } from '@nestjs/common';
-import * as jwt from 'jsonwebtoken';
 import type { AccessiOptions } from '../AccessiModule';
 import { UserService } from '../Services/UserService/UserService';
 import {
@@ -16,7 +15,7 @@ import {
   isAccessiTokenAllowedForUser,
   resolveCodiceUtenteFromTokenPayload,
 } from '../security/authenticatedToken';
-import { getAccessiAccessTokenVerificationConfig } from '../security/jwtTokenOptions';
+import { getAccessiAccessTokenVerificationConfig, verifyAccessiJwt } from '../security/jwtTokenOptions';
 import { isAccessiTokenRevoked } from '../security/sessionRevocation';
 
 @Injectable()
@@ -42,9 +41,9 @@ export class JwtSimpleGuard implements CanActivate {
       } catch {
         throw new InternalServerErrorException('Chiave JWT non configurata.');
       }
-      let payload: jwt.JwtPayload | string;
+      let payload: unknown;
       try {
-        payload = jwt.verify(token, verification.key, verification.verifyOptions);
+        payload = verifyAccessiJwt(token, verification);
       } catch {
         throw new UnauthorizedException('Token non valido o scaduto.');
       }

@@ -11,4 +11,5 @@ export type { AccessiOptions as AccessiServerOptions } from "../../accessi-modul
 export {
   createAccessiOptionsFromEnv,
   createCatalogScriptsOptionsFromEnv,
+  parseAccessiPreviousPublicKeys,
 } from "../../accessi-module/database-updates/accessiOptionsFromEnv";

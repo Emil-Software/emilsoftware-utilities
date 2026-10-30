@@ -1,5 +1,4 @@
 import { NextFunction, Request, Response } from "express";
-import * as jwt from "jsonwebtoken";
 import { Inject, Injectable } from "@nestjs/common";
 import type { AccessiOptions } from "../AccessiModule";
 import { PermissionService } from "../Services/PermissionService/PermissionService";
@@ -20,7 +19,7 @@ import {
   isAccessiTokenAllowedForUser,
   resolveCodiceUtenteFromTokenPayload,
 } from "../security/authenticatedToken";
-import { getAccessiAccessTokenVerificationConfig } from "../security/jwtTokenOptions";
+import { getAccessiAccessTokenVerificationConfig, verifyAccessiJwt } from "../security/jwtTokenOptions";
 import { isAccessiTokenRevoked } from "../security/sessionRevocation";
 
 const logger = new Logger("AuthenticateGen");
@@ -144,7 +143,7 @@ async function authorizeWithDependencies(
 
     let decoded: unknown;
     try {
-      decoded = jwt.verify(token, verification.key, verification.verifyOptions);
+      decoded = verifyAccessiJwt(token, verification);
     } catch {
       throw authError(401, "AUTH_TOKEN_INVALID", "Invalid JWT token");
     }
