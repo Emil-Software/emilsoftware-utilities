@@ -5,7 +5,7 @@ Novità e modifiche rilevanti della libreria `emilsoftware-utilities` (modulo Ac
 ## Non rilasciato
 
 ### Cambiamenti
-- Distribuzione: nuovi entry point `accessi/server`, `accessi/resource-server`, `accessi/client`, `accessi/contracts`, `accessi/contracts/dtos`, `accessi/openapi`, `accessi/console` e `accessi/ui`. Gli entry point sono dichiarati in `package.json#exports`; il root export resta per retrocompatibilita.
+- Import: gli entry point (`accessi/server`, `accessi/resource-server`, `accessi/client*`, `accessi/contracts*`, `accessi/openapi`, `accessi/console`, `accessi/ui`) sono la via consigliata. Root barrel e deep import restano supportati fino alla prossima major; mappa di migrazione in `docs/import-migration.md`.
 - Resource server: aggiunti `createAccessiAuthMiddleware`, `createAccessiAuthGuard`, `createAccessiTokenVerifier` e `createAccessiIntrospectionClient` per backend fratelli che non possiedono il database Accessi. Supporta HS256, RS/ES con chiave pubblica PEM e JWKS con cache.
 - Introspection: nuovo `POST /api/accessi/auth/introspect` protetto da service token con scope `accessi:introspect`. Restituisce `active`, profilo utente e grant correnti.
 - JWT: `jwtOptions` accetta `algorithm`, `issuer`, `audience`, `privateKey`, `publicKey`, `keyId`, `jwksPath` e `previousPublicKeys`. Default HS256 invariato; RS/ES sono consigliati per la topologia multi-servizio.

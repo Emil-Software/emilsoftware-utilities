@@ -205,6 +205,10 @@ Accessi non va montato per forza in ogni backend. La distribuzione consigliata s
 
 Topologia consigliata: un solo Accessi Service possiede database, encryptionKey, SMTP, chiavi JWT e console. Gli altri backend usano resource-server e client, senza credenziali del database Accessi.
 
+> [!WARNING]
+> **Root barrel legacy**
+> Il root barrel e i deep import restano supportati fino alla prossima major. I nuovi consumer devono usare gli entry point della tabella; la mappa di migrazione e in docs/import-migration.md.
+
 Per avviare Accessi come servizio autonomo usare startAccessiService: espone /health/live, /health/ready, /health/metrics, valida la configurazione e gestisce SIGTERM/SIGINT.
 
 Per parlare con piu Accessi Service o tenant dallo stesso processo usare createAccessiClient: ogni istanza ha base URL e token propri, isolati anche tra richieste concorrenti. configureAccessiClient resta il default globale per le funzioni esportate dal package.

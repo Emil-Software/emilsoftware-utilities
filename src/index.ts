@@ -1,3 +1,12 @@
+/**
+ * Root barrel legacy.
+ *
+ * Supportato fino alla prossima major per retrocompatibilita. I nuovi consumer
+ * devono usare gli entry point dichiarati in `package.json#exports`
+ * (`accessi/server`, `accessi/resource-server`, `accessi/client*`,
+ * `accessi/contracts*`, `accessi/openapi`, `accessi/console`, `accessi/ui`).
+ * Migrazione: `docs/import-migration.md`.
+ */
 import { DatabaseUpdater } from "./DatabaseUpdater";
 import { ExecutionTimeLogger } from "./ExecutionTimeLogger"
 import * as Firebird from "node-firebird";

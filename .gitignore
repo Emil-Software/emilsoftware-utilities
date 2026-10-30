@@ -34,6 +34,7 @@
 !/test/auth-cookies.cjs
 !/test/metrics.cjs
 !/test/audit.cjs
+!/test/import-entrypoints.cjs
 !/test/integration/
 !/test/integration/**
 
