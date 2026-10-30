@@ -1,17 +1,17 @@
 import type { AccessiOptions, CatalogScriptsOptions, JwtOptions } from '../AccessiModule';
 import { DatabaseUtilities } from '../../Utilities';
 
-function getEnv(names: string | string[], fallback?: string): string {
+function getEnv(env: NodeJS.ProcessEnv, names: string | string[], fallback?: string): string {
   const candidates = Array.isArray(names) ? names : [names];
-  const value = candidates.map((name) => process.env[name]).find((candidate) => candidate !== undefined && candidate !== "") ?? fallback;
+  const value = candidates.map((name) => env[name]).find((candidate) => candidate !== undefined && candidate !== "") ?? fallback;
   if (!value) {
     throw new Error(`Variabile ambiente mancante: ${candidates.join(" oppure ")}`);
   }
   return value;
 }
 
-function getOptionalBoolean(name: string, fallback: boolean): boolean {
-  const value = process.env[name];
+function getOptionalBoolean(env: NodeJS.ProcessEnv, name: string, fallback: boolean): boolean {
+  const value = env[name];
   if (value === undefined) {
     return fallback;
   }
@@ -24,8 +24,8 @@ const JWT_ALGORITHMS = [
   "ES256", "ES384", "ES512",
 ] as const;
 
-function getJwtAlgorithm(): (typeof JWT_ALGORITHMS)[number] | undefined {
-  const value = process.env.ACCESSI_JWT_ALGORITHM?.trim().toUpperCase();
+function getJwtAlgorithm(env: NodeJS.ProcessEnv): (typeof JWT_ALGORITHMS)[number] | undefined {
+  const value = env.ACCESSI_JWT_ALGORITHM?.trim().toUpperCase();
   return JWT_ALGORITHMS.find((algorithm) => algorithm === value);
 }
 
@@ -94,90 +94,96 @@ export function parseAccessiPreviousPublicKeys(
 }
 
 /** Catalog migrations lette dall'ambiente: cartella in ACCESSI_CATALOG_FOLDER. */
-export function createCatalogScriptsOptionsFromEnv(): CatalogScriptsOptions | undefined {
-  const folder = process.env.ACCESSI_CATALOG_FOLDER;
+export function createCatalogScriptsOptionsFromEnv(
+  env: NodeJS.ProcessEnv = process.env,
+): CatalogScriptsOptions | undefined {
+  const folder = env.ACCESSI_CATALOG_FOLDER;
   if (!folder) {
     return undefined;
   }
 
-  const policy = process.env.ACCESSI_CATALOG_CHECKSUM_POLICY;
+  const policy = env.ACCESSI_CATALOG_CHECKSUM_POLICY;
   const checksumPolicy = policy === 'warn' || policy === 'reapply' || policy === 'error' ? policy : undefined;
 
   return {
     enabled: true,
     folder,
     onChecksumMismatch: checksumPolicy,
-    stopOnError: getOptionalBoolean('ACCESSI_CATALOG_STOP_ON_ERROR', true),
+    stopOnError: getOptionalBoolean(env, 'ACCESSI_CATALOG_STOP_ON_ERROR', true),
   };
 }
 
-/** Costruisce `AccessiOptions` dalle variabili ambiente (stesse di runAccessiDbUpdate). */
-export function createAccessiOptionsFromEnv(): AccessiOptions {
+/**
+ * Costruisce `AccessiOptions` dalle variabili ambiente (stesse di runAccessiDbUpdate).
+ *
+ * `env` permette di leggere un file tenant senza mutare `process.env`.
+ */
+export function createAccessiOptionsFromEnv(env: NodeJS.ProcessEnv = process.env): AccessiOptions {
   const databaseOptions = DatabaseUtilities.createOption(
-    getEnv(["ACCESSI_DB_HOST", "ACCESSI_FIREBIRD_HOST"]),
-    Number(getEnv(["ACCESSI_DB_PORT", "ACCESSI_FIREBIRD_PORT"], "3050")),
-    getEnv(["ACCESSI_DB_DATABASE", "ACCESSI_FIREBIRD_DATABASE"]),
-    getEnv(["ACCESSI_DB_USER", "ACCESSI_FIREBIRD_USER"], "SYSDBA"),
-    getEnv(["ACCESSI_DB_PASSWORD", "ACCESSI_FIREBIRD_PASSWORD"], "masterkey")
+    getEnv(env, ["ACCESSI_DB_HOST", "ACCESSI_FIREBIRD_HOST"]),
+    Number(getEnv(env, ["ACCESSI_DB_PORT", "ACCESSI_FIREBIRD_PORT"], "3050")),
+    getEnv(env, ["ACCESSI_DB_DATABASE", "ACCESSI_FIREBIRD_DATABASE"]),
+    getEnv(env, ["ACCESSI_DB_USER", "ACCESSI_FIREBIRD_USER"], "SYSDBA"),
+    getEnv(env, ["ACCESSI_DB_PASSWORD", "ACCESSI_FIREBIRD_PASSWORD"], "masterkey")
   );
 
   // Firebird 2.5 richiede Legacy_Auth e non supporta la cifratura del wire: override opzionale via env.
-  const wireCrypt = process.env.ACCESSI_DB_WIRE_CRYPT;
-  const authPlugin = process.env.ACCESSI_DB_AUTH_PLUGIN;
+  const wireCrypt = env.ACCESSI_DB_WIRE_CRYPT;
+  const authPlugin = env.ACCESSI_DB_AUTH_PLUGIN;
   if (wireCrypt) (databaseOptions as { wireCrypt?: string }).wireCrypt = wireCrypt;
   if (authPlugin) (databaseOptions as { pluginName?: string }).pluginName = authPlugin;
 
   const previousPublicKeys = parseAccessiPreviousPublicKeys(
-    process.env.ACCESSI_JWT_PREVIOUS_PUBLIC_KEYS,
+    env.ACCESSI_JWT_PREVIOUS_PUBLIC_KEYS,
   );
 
   return {
     databaseOptions,
-    confirmationEmailUrl: getEnv("ACCESSI_CONFIRMATION_EMAIL_URL", "http://localhost"),
-    confirmationEmailReturnUrl: getEnv("ACCESSI_CONFIRMATION_RETURN_EMAIL_URL", "http://localhost"),
-    confirmationEmailPrefix: process.env.ACCESSI_CONFIRMATION_EMAIL_PREFIX,
-    customResetPage: process.env.ACCESSI_CUSTOM_RESET_PAGE,
-    consoleApiBaseUrl: process.env.ACCESSI_CONSOLE_API_BASE_URL,
-    publicBaseUrl: process.env.ACCESSI_PUBLIC_BASE_URL,
-    encryptionKey: getEnv("ACCESSI_ENCRYPTION_KEY", "1234567890ABCDEF"),
-    mockDemoUser: getOptionalBoolean("ACCESSI_MOCK_DEMO_USER", false),
-    passwordExpiration: getOptionalBoolean("ACCESSI_PASSWORD_EXPIRATION", false),
+    confirmationEmailUrl: getEnv(env, "ACCESSI_CONFIRMATION_EMAIL_URL", "http://localhost"),
+    confirmationEmailReturnUrl: getEnv(env, "ACCESSI_CONFIRMATION_RETURN_EMAIL_URL", "http://localhost"),
+    confirmationEmailPrefix: env.ACCESSI_CONFIRMATION_EMAIL_PREFIX,
+    customResetPage: env.ACCESSI_CUSTOM_RESET_PAGE,
+    consoleApiBaseUrl: env.ACCESSI_CONSOLE_API_BASE_URL,
+    publicBaseUrl: env.ACCESSI_PUBLIC_BASE_URL,
+    encryptionKey: getEnv(env, "ACCESSI_ENCRYPTION_KEY", "1234567890ABCDEF"),
+    mockDemoUser: getOptionalBoolean(env, "ACCESSI_MOCK_DEMO_USER", false),
+    passwordExpiration: getOptionalBoolean(env, "ACCESSI_PASSWORD_EXPIRATION", false),
     autoUpdateDatabase: true,
     jwtOptions: {
-      secret: getEnv("ACCESSI_JWT_SECRET", "local-accessi-update"),
-      expiresIn: getEnv("ACCESSI_JWT_EXPIRES", "24h"),
-      ...(process.env.ACCESSI_JWT_REFRESH_EXPIRES ? { refreshExpiresIn: process.env.ACCESSI_JWT_REFRESH_EXPIRES } : {}),
-      ...(process.env.ACCESSI_JWT_ISSUER ? { issuer: process.env.ACCESSI_JWT_ISSUER } : {}),
-      ...(process.env.ACCESSI_JWT_AUDIENCE ? { audience: process.env.ACCESSI_JWT_AUDIENCE } : {}),
-      ...(getJwtAlgorithm() ? { algorithm: getJwtAlgorithm() } : {}),
-      ...(process.env.ACCESSI_JWT_PRIVATE_KEY ? { privateKey: process.env.ACCESSI_JWT_PRIVATE_KEY } : {}),
-      ...(process.env.ACCESSI_JWT_PUBLIC_KEY ? { publicKey: process.env.ACCESSI_JWT_PUBLIC_KEY } : {}),
-      ...(process.env.ACCESSI_JWT_KEY_ID ? { keyId: process.env.ACCESSI_JWT_KEY_ID } : {}),
-      ...(process.env.ACCESSI_JWKS_PATH ? { jwksPath: process.env.ACCESSI_JWKS_PATH } : {}),
+      secret: getEnv(env, "ACCESSI_JWT_SECRET", "local-accessi-update"),
+      expiresIn: getEnv(env, "ACCESSI_JWT_EXPIRES", "24h"),
+      ...(env.ACCESSI_JWT_REFRESH_EXPIRES ? { refreshExpiresIn: env.ACCESSI_JWT_REFRESH_EXPIRES } : {}),
+      ...(env.ACCESSI_JWT_ISSUER ? { issuer: env.ACCESSI_JWT_ISSUER } : {}),
+      ...(env.ACCESSI_JWT_AUDIENCE ? { audience: env.ACCESSI_JWT_AUDIENCE } : {}),
+      ...(getJwtAlgorithm(env) ? { algorithm: getJwtAlgorithm(env) } : {}),
+      ...(env.ACCESSI_JWT_PRIVATE_KEY ? { privateKey: env.ACCESSI_JWT_PRIVATE_KEY } : {}),
+      ...(env.ACCESSI_JWT_PUBLIC_KEY ? { publicKey: env.ACCESSI_JWT_PUBLIC_KEY } : {}),
+      ...(env.ACCESSI_JWT_KEY_ID ? { keyId: env.ACCESSI_JWT_KEY_ID } : {}),
+      ...(env.ACCESSI_JWKS_PATH ? { jwksPath: env.ACCESSI_JWKS_PATH } : {}),
       ...(previousPublicKeys ? { previousPublicKeys } : {}),
     },
     emailOptions: {
-      host: getEnv("ACCESSI_EMAIL_HOST", "localhost"),
-      port: Number(getEnv("ACCESSI_EMAIL_PORT", "25")),
-      secure: getOptionalBoolean("ACCESSI_EMAIL_SECURE", false),
-      requireTLS: getOptionalBoolean("ACCESSI_EMAIL_REQUIRE_TLS", false),
+      host: getEnv(env, "ACCESSI_EMAIL_HOST", "localhost"),
+      port: Number(getEnv(env, "ACCESSI_EMAIL_PORT", "25")),
+      secure: getOptionalBoolean(env, "ACCESSI_EMAIL_SECURE", false),
+      requireTLS: getOptionalBoolean(env, "ACCESSI_EMAIL_REQUIRE_TLS", false),
       tls: {
-        rejectUnauthorized: getOptionalBoolean("ACCESSI_EMAIL_TLS_REJECT_UNAUTHORIZED", false),
+        rejectUnauthorized: getOptionalBoolean(env, "ACCESSI_EMAIL_TLS_REJECT_UNAUTHORIZED", false),
       },
-      from: getEnv("ACCESSI_EMAIL_FROM", "noreply@example.local"),
+      from: getEnv(env, "ACCESSI_EMAIL_FROM", "noreply@example.local"),
       auth: {
-        user: getEnv("ACCESSI_EMAIL_USER", "local-user"),
-        pass: getEnv("ACCESSI_EMAIL_PASSWORD", "local-password"),
+        user: getEnv(env, "ACCESSI_EMAIL_USER", "local-user"),
+        pass: getEnv(env, "ACCESSI_EMAIL_PASSWORD", "local-password"),
       },
     },
-    ...(process.env.ACCESSI_CONSOLE_ENTRY_TTL_MS
+    ...(env.ACCESSI_CONSOLE_ENTRY_TTL_MS
       ? {
           consoleEntry: {
-            ttlMs: Number(process.env.ACCESSI_CONSOLE_ENTRY_TTL_MS),
+            ttlMs: Number(env.ACCESSI_CONSOLE_ENTRY_TTL_MS),
           },
         }
       : {}),
     extensionFieldsOptions: [],
-    catalogScripts: createCatalogScriptsOptionsFromEnv(),
+    catalogScripts: createCatalogScriptsOptionsFromEnv(env),
   };
 }

@@ -294,8 +294,12 @@ export interface AccessiOptions {
   systemSeeds?: SystemSeedsOptions;
   /** Bootstrap del primo admin tramite token casuale stampato a ogni avvio. */
   adminBootstrap?: AdminBootstrapOptions;
-  /** Audit persistente: sink, retention ed endpoint amministrativi di query/export. */
+  /**
+   * Audit persistente: sink, retention ed endpoint amministrativi di query/export.
+   */
   audit?: AccessiAuditOptions;
+  /** Identificativo del tenant quando la configurazione arriva da una cartella multi-tenant. */
+  tenantId?: string;
   /** Base URL pubblica usata solo per loggare gli indirizzi (console, OpenAPI, API). */
   publicBaseUrl?: string;
   /** Base URL API per la console quando UI e API sono su domini diversi. */
@@ -362,7 +366,11 @@ export class AccessiModule {
   static forRoot(options: AccessiOptions): DynamicModule {
     // Il servizio email e obbligatorio: reset password, 2FA e creazione utente ne dipendono.
     assertEmailConfigured(options);
-    configureAccessiAudit(options.audit);
+    configureAccessiAudit(
+      options.tenantId
+        ? { ...(options.audit ?? {}), tenantId: options.audit?.tenantId ?? options.tenantId }
+        : options.audit,
+    );
     return {
       module: AccessiModule,
       providers: [

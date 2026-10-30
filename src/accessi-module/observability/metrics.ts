@@ -265,7 +265,10 @@ export function countAccessiMetric(
   labels?: AccessiMetricLabels,
   value = 1,
 ): void {
-  getAccessiMetricsSink(options)?.increment(accessiMetricName(options, name), value, labels);
+  const withTenant = options?.tenantId
+    ? { tenant: options.tenantId, ...labels }
+    : labels;
+  getAccessiMetricsSink(options)?.increment(accessiMetricName(options, name), value, withTenant);
 }
 
 /** Registra una durata di dominio in millisecondi. */
@@ -275,6 +278,9 @@ export function observeAccessiMetric(
   valueMs: number,
   labels?: AccessiMetricLabels,
 ): void {
+  const withTenant = options?.tenantId
+    ? { tenant: options.tenantId, ...labels }
+    : labels;
   const sink = getAccessiMetricsSink(options);
-  sink?.observe?.(accessiMetricName(options, name), valueMs, labels);
+  sink?.observe?.(accessiMetricName(options, name), valueMs, withTenant);
 }

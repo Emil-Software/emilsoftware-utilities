@@ -50,6 +50,8 @@ export interface AccessiAuditOptions {
   retentionDays?: number;
   /** Chiavi aggiuntive da redigere, oltre a quelle predefinite. */
   redact?: string[];
+  /** Etichetta tenant aggiunta a ogni record (multi-tenancy). */
+  tenantId?: string;
   /** Scrivi anche sul Logger strutturato. Default: true. */
   logger?: boolean;
 }
@@ -89,6 +91,7 @@ let sinks: AccessiAuditSink[] = [];
 let redactedKeys = new Set(DEFAULT_REDACTED_KEYS);
 let retentionDays: number | undefined;
 let loggerEnabled = true;
+let auditTenantId: string | undefined;
 let lastPurgeAt = 0;
 
 function normalizedKey(key: string): string {
@@ -184,6 +187,7 @@ export function configureAccessiAudit(options: AccessiAuditOptions | undefined):
   redactedKeys = new Set(DEFAULT_REDACTED_KEYS);
   retentionDays = undefined;
   loggerEnabled = true;
+  auditTenantId = options?.tenantId;
   lastPurgeAt = 0;
 
   for (const key of options?.redact ?? []) redactedKeys.add(normalizedKey(key));
@@ -222,6 +226,7 @@ export function auditAccessi(event: string, details: Record<string, unknown> = {
   const record: AccessiAuditRecord = {
     event,
     timestamp: new Date().toISOString(),
+    ...(auditTenantId ? { tenant: auditTenantId } : {}),
     ...redactDetails(details ?? {}),
   };
 

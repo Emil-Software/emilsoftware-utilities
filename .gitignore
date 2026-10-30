@@ -35,6 +35,7 @@
 !/test/metrics.cjs
 !/test/audit.cjs
 !/test/import-entrypoints.cjs
+!/test/tenants.cjs
 !/test/integration/
 !/test/integration/**
 
