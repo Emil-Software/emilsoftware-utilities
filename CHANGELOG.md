@@ -1,3 +1,10 @@
+# [2.0.0-dev.76](https://github.com/Emil-Software/emilsoftware-utilities/compare/v2.0.0-dev.75...v2.0.0-dev.76) (2026-10-30)
+
+
+### Features
+
+* **accessi:** CSP a nonce per console e header configurabili ([6b3df3e](https://github.com/Emil-Software/emilsoftware-utilities/commit/6b3df3e64c8c9b17cb93a22ad4d0f05ab4d1c436))
+
 # [2.0.0-dev.75](https://github.com/Emil-Software/emilsoftware-utilities/compare/v2.0.0-dev.74...v2.0.0-dev.75) (2026-10-30)
 
 
