@@ -208,7 +208,8 @@ export const WIKI_SECTIONS: WikiSection[] = [
           ['openapi', 'OpenApiSetupOptions', 'no', 'Path, titolo, descrizione e enabled della documentazione OpenAPI. Default invariati.'],
           ['consoleEntry', '{ ttlMs, store }', 'no', 'TTL e store condiviso dei ticket console (Redis per multi-istanza). Default in memoria.'],
           ['sessionRevocation', '{ enabled, store, ttlMs }', 'no', 'Revoca sessioni per utente tramite store memory/Redis; abilita POST /api/accessi/auth/revoke-sessions.'],
-          ['refreshTokenRotation', '{ enabled, store }', 'no', 'Refresh token monouso tramite store memory/Redis; consigliato in multi-istanza.'],
+          ['accessTokenRevocation', '{ enabled, store, ttlMs }', 'no', 'Revoca dei singoli access token tramite jti (memory/Redis); abilita POST /api/accessi/auth/revoke-token.'],
+          ['refreshTokenRotation', '{ enabled, store, reuseGraceMs, revokeUserSessionsOnReuse }', 'no', 'Refresh token monouso tramite store memory/Redis; al riuso oltre la finestra di grazia revoca la famiglia di token. Consigliato in multi-istanza.'],
           ['logger', 'LoggerService', 'no', 'Logger Nest del sotto-app; se assente Nest usa il proprio logger.'],
           ['bufferLogs', 'boolean', 'no', 'Buffer dei log di bootstrap del sotto-app. Default true.'],
         ],
@@ -465,7 +466,8 @@ export const WIKI_SECTIONS: WikiSection[] = [
       note('warn', `Fail closed`, `Se introspection e configurata ma non raggiungibile, il resource server risponde 503. Non autorizza la richiesta.`),
       note('info', `Introspection`, `POST /api/accessi/auth/introspect restituisce active=false per token invalido, scaduto o utente disabilitato. I risultati attivi sono cachati lato resource server per 30 secondi per default.`),
       note('info', `JWKS`, `Con RS256/ES256 Accessi pubblica la JWKS su /accessi/.well-known/jwks.json (configurabile con jwtOptions.jwksPath). Il resource server puo usare jwks.url e ruotare le chiavi con previousPublicKeys.`),
-      note('info', `Audit`, `I fallimenti di autenticazione del resource server e i blocchi edge producono eventi strutturati tramite auditAccessi; i token e i segreti vengono redatti dal Logger.`),
+      note('info', `Revoca`, `revocation.store applica la revoca per utente; revocation.accessTokenStore rifiuta i singoli jti revocati e revocation.familyStore invalida le famiglie di refresh token revocate per riuso sospetto.`),
+      note('info', `Audit`, `I fallimenti di autenticazione del resource server, i blocchi edge, il riuso dei refresh token e le revoche di sessione producono eventi strutturati tramite auditAccessi; i token e i segreti vengono redatti dal Logger.`),
     ],
   },
   // -------------------------------------------------------------------------
@@ -794,7 +796,7 @@ export const WIKI_SECTIONS: WikiSection[] = [
       table(
         ['Area', 'Endpoint principali'],
         [
-          ['Auth', 'POST auth/login, auth/get-user-by-token, auth/confirm-reset-password/:token, auth/two-factor/verify, auth/two-factor/resend'],
+          ['Auth', 'POST auth/login, auth/get-user-by-token, auth/confirm-reset-password/:token, auth/refresh, auth/revoke-sessions, auth/revoke-token, auth/two-factor/verify, auth/two-factor/resend'],
           ['Email', 'POST email/send-reset-password-email, GET email/reset-password-page/:token'],
           ['Utenti', 'GET user/get-users, POST user/create-managed-user, PUT user/update-user/:codiceUtente, DELETE user/delete-user/:codiceUtente, DELETE user/delete-user-permanent/:codiceUtente, POST user/set-password/:codiceUtente, POST user/set-stato, PATCH user/set-gdpr/:codiceUtente, POST user/register, POST user/login-as/:codiceUtente'],
           ['Permessi', 'GET permission/roles, POST permission/create-role, PUT permission/update-role/:codiceRuolo, DELETE permission/delete-role/:codiceRuolo, POST permission/assign-roles/:codiceUtente, POST permission/assign-permissions/:codiceUtente, GET permission/grants/:codiceUtente, GET permission/menus, GET permission/menu-types, GET permission/groups-with-menus'],

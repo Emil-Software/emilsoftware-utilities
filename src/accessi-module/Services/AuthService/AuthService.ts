@@ -20,8 +20,18 @@ import {
   getAccessiJwtSecret,
   verifyPasswordResetToken,
 } from "../../security/passwordResetToken";
-import { isAccessiTokenRevoked } from "../../security/sessionRevocation";
-import { getRefreshTokenRotationStore } from "../../security/refreshTokenRotation";
+import {
+  isAccessiTokenRevoked,
+  revokeAccessiUserSessions,
+  revokeAccessiUserSessionsIfConfigured,
+} from "../../security/sessionRevocation";
+import {
+  consumeRefreshToken,
+  getRefreshTokenRotationStore,
+  isRefreshTokenFamilyRevoked,
+  revokeRefreshTokenFamily,
+} from "../../security/refreshTokenRotation";
+import { auditAccessi } from "../../security/audit";
 import {
   getAccessiAccessTokenSigningConfig,
   getAccessiAccessTokenVerificationConfig,
@@ -118,6 +128,9 @@ export class AuthService {
         typ: type,
         amr: methods,
         jti: randomUUID(),
+        // Millisecondi: rende deterministica la revoca sessioni anche quando
+        // il token e emesso nello stesso secondo del cambio password.
+        iatMs: Date.now(),
       },
       signing.key,
       {
@@ -159,19 +172,27 @@ export class AuthService {
   public createRefreshToken(
     utente: LoginResult['utente'],
     methods: string[] = [],
+    tokenOptions: AccessiTokenIssueOptions = {},
   ): TokenResult | undefined {
     const expiresIn = this.accessiOptions.jwtOptions.refreshExpiresIn;
     if (!expiresIn) return undefined;
-    return this.createToken(utente, methods, 'refresh', { expiresIn });
+    return this.createToken(utente, methods, 'refresh', {
+      ...tokenOptions,
+      expiresIn,
+    });
   }
 
   /** Crea la coppia access + refresh token usata da login, 2FA e SSO. */
   public createTokenPair(
     utente: LoginResult['utente'],
     methods: string[] = [],
+    options?: { familyId?: string },
   ): { access: TokenResult; refresh?: TokenResult } {
-    const access = this.createAccessiToken(utente, methods);
-    const refresh = this.createRefreshToken(utente, methods);
+    // La famiglia identifica il login: access e refresh condividono lo stesso
+    // `fid`, cosi la revoca per riuso sospetto invalida entrambi.
+    const familyId = options?.familyId ?? randomUUID();
+    const access = this.createAccessiToken(utente, methods, { extraClaims: { fid: familyId } });
+    const refresh = this.createRefreshToken(utente, methods, { extraClaims: { fid: familyId } });
     return { access, ...(refresh ? { refresh } : {}) };
   }
 
@@ -414,6 +435,23 @@ export class AuthService {
     if (!codiceUtente) {
       throw new UnauthorizedException('Refresh token privo di un utente valido.');
     }
+
+    const decodedRecord = decoded as { jti?: unknown; fid?: unknown; exp?: unknown };
+    const familyId = typeof decodedRecord.fid === 'string' && decodedRecord.fid.trim() !== ''
+      ? decodedRecord.fid
+      : undefined;
+    const jti = typeof decodedRecord.jti === 'string' ? decodedRecord.jti : undefined;
+    const expiresAt = Number(decodedRecord.exp);
+
+    // La famiglia va controllata per prima: un token appena emesso da uno store
+    // compromesso deve produrre un codice stabile, non il generico 401 utente.
+    if (await isRefreshTokenFamilyRevoked(this.accessiOptions, familyId)) {
+      throw new UnauthorizedException({
+        code: 'ACCESSI_REFRESH_FAMILY_REVOKED',
+        message: 'Sessione revocata per riuso sospetto del refresh token.',
+      });
+    }
+
     if (await isAccessiTokenRevoked(this.accessiOptions, decoded as Record<string, unknown>, codiceUtente)) {
       throw new UnauthorizedException('Sessione revocata.');
     }
@@ -425,22 +463,29 @@ export class AuthService {
 
     const rotationStore = getRefreshTokenRotationStore(this.accessiOptions);
     if (rotationStore) {
-      const decodedRecord = decoded as { jti?: unknown; exp?: unknown };
-      const jti = typeof decodedRecord.jti === 'string' ? decodedRecord.jti : undefined;
-      const expiresAt = Number(decodedRecord.exp);
       if (!jti || !Number.isFinite(expiresAt)) {
         throw new UnauthorizedException('Refresh token privo di jti o scadenza.');
       }
+      let outcome;
       try {
-        const consumed = await rotationStore.consume(jti, expiresAt * 1000);
-        if (!consumed) {
-          throw new UnauthorizedException('Refresh token gia utilizzato.');
-        }
-      } catch (error) {
-        if (error instanceof UnauthorizedException) throw error;
+        outcome = await consumeRefreshToken(this.accessiOptions, jti, expiresAt * 1000);
+      } catch {
         throw new ServiceUnavailableException({
           code: 'ACCESSI_REFRESH_ROTATION_UNAVAILABLE',
           message: 'Rotazione refresh token non disponibile. Riprova piu tardi.',
+        });
+      }
+      if (outcome && !outcome.consumed) {
+        await this.handleRefreshTokenReuse({
+          codiceUtente,
+          jti,
+          familyId,
+          consumedAtMs: outcome.consumedAtMs,
+          expiresAtMs: expiresAt * 1000,
+        });
+        throw new UnauthorizedException({
+          code: 'ACCESSI_REFRESH_TOKEN_REUSE',
+          message: 'Refresh token gia utilizzato.',
         });
       }
     }
@@ -449,10 +494,63 @@ export class AuthService {
     const methods = Array.isArray((decoded as { amr?: unknown }).amr)
       ? ((decoded as { amr: unknown[] }).amr.filter((method): method is string => typeof method === 'string'))
       : [];
-    const pair = this.createTokenPair(login.utente, methods);
+    const pair = this.createTokenPair(login.utente, methods, { familyId });
     login.token = pair.access;
     if (pair.refresh) login.refreshToken = pair.refresh;
     return login;
+  }
+
+  /**
+   * Gestisce il riuso di un refresh token gia consumato.
+   *
+   * Il riuso entro `reuseGraceMs` e trattato come retry concorrente del client e
+   * non revoca nulla. Oltre la finestra e considerato un possibile furto: viene
+   * revocata l'intera famiglia (stesso login) e, solo se esplicitamente
+   * configurato, anche le altre sessioni dell'utente.
+   */
+  private async handleRefreshTokenReuse(params: {
+    codiceUtente: number;
+    jti: string;
+    familyId?: string;
+    consumedAtMs?: number;
+    expiresAtMs: number;
+  }): Promise<void> {
+    const configuredGrace = Number(this.accessiOptions.refreshTokenRotation?.reuseGraceMs ?? 10_000);
+    const graceMs = Number.isFinite(configuredGrace) ? Math.max(0, configuredGrace) : 10_000;
+    const consumedAtMs = params.consumedAtMs;
+    if (
+      graceMs > 0
+      && consumedAtMs !== undefined
+      && Number.isFinite(consumedAtMs)
+      && Date.now() - consumedAtMs <= graceMs
+    ) {
+      return;
+    }
+
+    auditAccessi('accessi_refresh_token_reuse', {
+      codiceUtente: params.codiceUtente,
+      jti: params.jti,
+      familyId: params.familyId,
+      consumedAtMs,
+    });
+
+    try {
+      if (params.familyId) {
+        await revokeRefreshTokenFamily(
+          this.accessiOptions,
+          params.familyId,
+          params.expiresAtMs,
+        );
+      }
+      if (this.accessiOptions.refreshTokenRotation?.revokeUserSessionsOnReuse === true) {
+        await revokeAccessiUserSessions(this.accessiOptions, params.codiceUtente, Date.now(), 'refresh_token_reuse');
+      }
+    } catch (error) {
+      // La revoca e best effort: il token presentato resta comunque rifiutato.
+      this.logger.error(
+        `Revoca famiglia refresh token fallita: ${error instanceof Error ? error.message : String(error)}`,
+      );
+    }
   }
 
   /** Starts a second-factor challenge after the hosting backend has verified an SSO identity. */
@@ -501,11 +599,13 @@ export class AuthService {
    * Persiste una password hashata e aggiorna la scadenza, se la policy password e attiva. Non invia email.
    * Con `enforcePolicy` (default true) valida la password secondo la policy moderna; i flussi di
    * migrazione delle password legacy passano `enforcePolicy: false` per non bloccare password storiche.
+   * Con `revokeSessions` (default true) invalida le sessioni precedenti: un cambio password deve
+   * interrompere i token gia emessi.
    */
   public async setPassword(
     codiceUtente: number,
     nuovaPassword: string,
-    options?: { enforcePolicy?: boolean },
+    options?: { enforcePolicy?: boolean; revokeSessions?: boolean },
   ) {
     if (options?.enforcePolicy !== false) {
       assertStrongPassword(nuovaPassword);
@@ -519,9 +619,27 @@ export class AuthService {
         hashedPassword,
       ]);
       await this.refreshPasswordExpiration(codiceUtente);
+      if (options?.revokeSessions !== false) {
+        await this.revokeSessionsAfterSecurityChange(codiceUtente, 'password_change');
+      }
       return result;
     } catch (error) {
       throw error;
+    }
+  }
+
+  /**
+   * Revoca le sessioni dopo un evento che deve invalidare i token esistenti.
+   * Best effort: un errore dello store non deve annullare l'operazione gia
+   * persistita (cambio password, blocco, cancellazione).
+   */
+  private async revokeSessionsAfterSecurityChange(codiceUtente: number, reason: string): Promise<void> {
+    try {
+      await revokeAccessiUserSessionsIfConfigured(this.accessiOptions, codiceUtente, reason);
+    } catch (error) {
+      this.logger.error(
+        `Revoca sessioni fallita per l'utente ${codiceUtente} (${reason}): ${error instanceof Error ? error.message : String(error)}`,
+      );
     }
   }
 
@@ -613,7 +731,10 @@ export class AuthService {
         );
 
       if (isMigratedLegacyPasswordValid) {
-        await this.setPassword(codiceUtente, plainPassword, { enforcePolicy: false });
+        await this.setPassword(codiceUtente, plainPassword, {
+          enforcePolicy: false,
+          revokeSessions: false,
+        });
       }
 
       return isMigratedLegacyPasswordValid;
@@ -625,7 +746,10 @@ export class AuthService {
     );
 
     if (isLegacyPasswordValid) {
-      await this.setPassword(codiceUtente, plainPassword, { enforcePolicy: false });
+      await this.setPassword(codiceUtente, plainPassword, {
+        enforcePolicy: false,
+        revokeSessions: false,
+      });
     }
 
     return isLegacyPasswordValid;
@@ -734,6 +858,9 @@ export class AuthService {
           );
         }
       });
+
+      // Il reset e un cambio password: i token emessi prima non devono piu valere.
+      await this.revokeSessionsAfterSecurityChange(codiceUtente, 'password_reset');
     } catch (error) {
       throw error;
     }

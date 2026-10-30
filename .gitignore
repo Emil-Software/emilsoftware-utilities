@@ -23,6 +23,7 @@
 !/test/accessi-security-standards.cjs
 !/test/accessi-service.cjs
 !/test/refresh-token.cjs
+!/test/token-revocation.cjs
 !/test/integration/
 !/test/integration/**
 

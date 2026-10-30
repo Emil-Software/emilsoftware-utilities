@@ -9,6 +9,7 @@ import { StatoRegistrazione } from '../Dtos/StatoRegistrazione';
 import { AuthService } from '../Services/AuthService/AuthService';
 import { UserService } from '../Services/UserService/UserService';
 import { isAuthenticatedUserEnabledForJwt } from '../security/authenticatedToken';
+import { revokeAccessiUserSessionsIfConfigured } from '../security/sessionRevocation';
 import { FederatedAuthenticationResult, FederatedIdentity, FederatedProvider, VerifiedFederatedIdentity } from './FederatedAuthTypes';
 
 type IdentityRow = {
@@ -302,6 +303,7 @@ export class FederatedAuthService implements OnModuleInit {
   async setPasswordLoginEnabled(codiceUtente: number, enabled: boolean): Promise<void> {
     this.assertEnabled();
     await this.assertUserExists(codiceUtente);
+    const previous = await this.isPasswordLoginEnabled(codiceUtente);
     // Upsert: per utenti legacy senza riga in UTENTI_CONFIG una UPDATE a vuoto
     // lasciava la policy al default, rendendo la disattivazione un no-op silenzioso.
     await Orm.execute(
@@ -309,6 +311,9 @@ export class FederatedAuthService implements OnModuleInit {
       'UPDATE OR INSERT INTO UTENTI_CONFIG (CODUTE, FLGPASSWORD) VALUES (?, ?) MATCHING (CODUTE)',
       [codiceUtente, enabled ? 1 : 0],
     );
+    if (previous !== enabled) {
+      await revokeAccessiUserSessionsIfConfigured(this.options, codiceUtente, 'login_policy_change');
+    }
   }
 
   /** Returns the effective local password policy. Users without a policy row retain the historic enabled default. */

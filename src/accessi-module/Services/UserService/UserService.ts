@@ -3,6 +3,7 @@ import { getTableColumns, optionalColumn } from '../../database-updates/optional
 import { autobind } from '../../../autobind';
 import { Orm } from '../../../Orm';
 import { RestUtilities } from '../../../Utilities';
+import { Logger } from '../../../Logger';
 import type { AccessiOptions } from '../../AccessiModule';
 import { FILTRI_UTENTE_DB_MAPPING, FiltriUtente } from '../../Dtos/FiltriUtente';
 import { GetUsersResult } from '../../Dtos/GetUsersResponse';
@@ -12,6 +13,7 @@ import { UserDto } from '../../Dtos/UserDto';
 import { UserGrantsDto } from '../../Dtos/UserGrantsDto';
 import { AccessiAuthenticatedUserSnapshot } from '../../security/authenticatedToken';
 import { assertEmailConfigured } from '../../security/emailConfiguration';
+import { revokeAccessiUserSessionsIfConfigured } from '../../security/sessionRevocation';
 import { EmailService } from '../EmailService/EmailService';
 import { FiltriService } from '../FiltriService/FiltriService';
 import { PermissionService } from '../PermissionService/PermissionService';
@@ -43,6 +45,21 @@ export class UserService {
 
   private normalizeDatabaseBoolean(value: unknown): boolean {
     return value === true || value === 1 || value === '1';
+  }
+
+  /**
+   * Revoca best effort delle sessioni dopo un evento che deve invalidare i
+   * token gia emessi. Lo store e opzionale: se non configurato (o non
+   * raggiungibile) l'operazione principale non deve fallire.
+   */
+  private async revokeSessionsBestEffort(codiceUtente: number, reason: string): Promise<void> {
+    try {
+      await revokeAccessiUserSessionsIfConfigured(this.accessiOptions, codiceUtente, reason);
+    } catch (error) {
+      new Logger(UserService.name).error(
+        `Revoca sessioni fallita per l'utente ${codiceUtente} (${reason}): ${error instanceof Error ? error.message : String(error)}`,
+      );
+    }
   }
 
   private normalizeUserFlags(user: UserDto): UserDto {
@@ -648,14 +665,48 @@ export class UserService {
         throw new Error('Non e consentito modificare campi privilegiati.');
       }
 
+      let currentSnapshot: AccessiAuthenticatedUserSnapshot | null | undefined;
+      const getCurrentSnapshot = async (): Promise<AccessiAuthenticatedUserSnapshot> => {
+        if (currentSnapshot === undefined) {
+          currentSnapshot = await this.getAuthenticatedUserSnapshot(codiceUtente);
+        }
+        if (!currentSnapshot) throw new BadRequestException('Utente non trovato.');
+        return currentSnapshot;
+      };
+
       if (user.flagDueFattori !== undefined || user.passwordlessLoginEnabled !== undefined || user.email !== undefined) {
-        const current = await this.getAuthenticatedUserSnapshot(codiceUtente);
-        if (!current) throw new BadRequestException('Utente non trovato.');
+        const current = await getCurrentSnapshot();
         const twoFactor = user.flagDueFattori ?? current.flagDueFattori;
         const passwordless = user.passwordlessLoginEnabled ?? current.passwordlessLoginEnabled;
         if (passwordless && !twoFactor) throw new BadRequestException('Il login senza password richiede il codice di accesso attivo.');
         if (twoFactor && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test((user.email ?? current.email ?? '').trim())) {
           throw new BadRequestException('Per attivare i codici di accesso serve un indirizzo email valido.');
+        }
+      }
+
+      // Ogni modifica a stato o policy di autenticazione deve invalidare i token emessi.
+      let revocationReason: string | undefined;
+      if (
+        user.statoRegistrazione !== undefined
+        || user.flagDueFattori !== undefined
+        || user.passwordlessLoginEnabled !== undefined
+        || user.passwordLoginEnabled !== undefined
+      ) {
+        const before = await getCurrentSnapshot();
+        if (user.statoRegistrazione !== undefined && Number(before.statoRegistrazione) !== Number(user.statoRegistrazione)) {
+          revocationReason = 'user_state_change';
+        } else if (user.flagDueFattori !== undefined && Boolean(before.flagDueFattori) !== user.flagDueFattori) {
+          revocationReason = 'two_factor_policy_change';
+        } else if (
+          user.passwordlessLoginEnabled !== undefined
+          && Boolean(before.passwordlessLoginEnabled) !== user.passwordlessLoginEnabled
+        ) {
+          revocationReason = 'login_policy_change';
+        } else if (
+          user.passwordLoginEnabled !== undefined
+          && Boolean(before.passwordLoginEnabled) !== user.passwordLoginEnabled
+        ) {
+          revocationReason = 'login_policy_change';
         }
       }
 
@@ -741,6 +792,10 @@ export class UserService {
       if (hasFilterPayload(user)) {
         await this.filtriService.upsertFiltriUtente(codiceUtente, user);
       }
+
+      if (revocationReason) {
+        await this.revokeSessionsBestEffort(codiceUtente, revocationReason);
+      }
     } catch (error) {
       throw error;
     }
@@ -758,6 +813,7 @@ export class UserService {
         StatoRegistrazione.DELETE,
         codiceCliente,
       ]);
+      await this.revokeSessionsBestEffort(codiceCliente, 'user_soft_delete');
     } catch (error) {
       throw error;
     }
@@ -792,6 +848,7 @@ export class UserService {
         { query: 'DELETE FROM UTENTI_GDPR WHERE CODUTE = ?', params },
         { query: 'DELETE FROM UTENTI WHERE CODUTE = ?', params },
       ]);
+      await this.revokeSessionsBestEffort(codiceUtente, 'user_delete');
     } catch (error) {
       if (this.isForeignKeyViolation(error)) {
         throw new BadRequestException({
@@ -820,6 +877,12 @@ export class UserService {
         statoRegistrazione,
         codiceCliente,
       ]);
+      if (
+        statoRegistrazione === StatoRegistrazione.BLOCC
+        || statoRegistrazione === StatoRegistrazione.DELETE
+      ) {
+        await this.revokeSessionsBestEffort(codiceCliente, 'user_disabled');
+      }
     } catch (error) {
       throw error;
     }
