@@ -1,3 +1,10 @@
+# [2.0.0-dev.79](https://github.com/Emil-Software/emilsoftware-utilities/compare/v2.0.0-dev.78...v2.0.0-dev.79) (2026-10-30)
+
+
+### Features
+
+* **accessi:** audit persistente con sink, retention e export ([a5fb529](https://github.com/Emil-Software/emilsoftware-utilities/commit/a5fb529a7842ecfb3d3eac675cb0f08b590fb516))
+
 # [2.0.0-dev.78](https://github.com/Emil-Software/emilsoftware-utilities/compare/v2.0.0-dev.77...v2.0.0-dev.78) (2026-10-30)
 
 
