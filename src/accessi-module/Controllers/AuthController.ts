@@ -20,6 +20,7 @@ import {
   PasswordExpiredResponse,
   RefreshTokenRequest,
   RefreshTokenResponse,
+  RevokeTokenRequest,
 } from '../Dtos';
 import { AuthService, PASSWORD_LOGIN_DISABLED } from '../Services/AuthService/AuthService';
 import { AdminBootstrapService } from '../Services/AdminBootstrapService/AdminBootstrapService';
@@ -29,6 +30,11 @@ import {
   getSessionRevocationStore,
   revokeAccessiUserSessions,
 } from '../security/sessionRevocation';
+import {
+  getAccessTokenRevocationStore,
+  revokeAccessiAccessToken,
+} from '../security/accessTokenRevocation';
+import { auditAccessi } from '../security/audit';
 import {
   checkPublicAuthRateLimit,
   sendPublicAuthRateLimitExceeded,
@@ -165,6 +171,83 @@ export class AuthController {
       }
       await revokeAccessiUserSessions(this.options, user.codiceUtente);
       return RestUtilities.sendOKMessage(res, 'Sessioni revocate con successo.');
+    } catch (error) {
+      return RestUtilities.sendErrorMessage(
+        res,
+        error,
+        AuthController.name,
+        error instanceof HttpException ? error.getStatus() : HttpStatus.BAD_REQUEST,
+      );
+    }
+  }
+
+  @ApiOperation({
+    summary: 'Revoca un singolo access token tramite jti',
+    operationId: 'revokeToken',
+    description:
+      'Annulla un solo token (logout del dispositivo corrente o token compromesso) senza toccare le altre sessioni. ' +
+      'Se il body non contiene jti viene revocato il token della richiesta. Richiede accessTokenRevocation.store configurato.',
+  })
+  @ApiBody({ type: RevokeTokenRequest })
+  @ApiOkResponse({ type: ActionResponse })
+  @ApiResponse({ status: 401, type: ErrorResponse, description: 'Token Accessi mancante o non valido.' })
+  @ApiResponse({ status: 403, type: ErrorResponse, description: 'Non autorizzato a revocare il token indicato.' })
+  @ApiResponse({ status: 501, type: ErrorResponse, description: 'Revoca token non configurata.' })
+  @UseGuards(JwtSimpleGuard)
+  @Post('revoke-token')
+  async revokeToken(
+    @Req() request: Request,
+    @Body() body: RevokeTokenRequest,
+    @Res() res: Response,
+  ) {
+    try {
+      const user = getAuthenticatedAccessiUser(request);
+      if (!getAccessTokenRevocationStore(this.options)) {
+        throw new HttpException(
+          {
+            code: 'ACCESSI_ACCESS_TOKEN_REVOCATION_DISABLED',
+            message: 'La revoca dei singoli token non e configurata su questa istanza.',
+          },
+          HttpStatus.NOT_IMPLEMENTED,
+        );
+      }
+
+      const payload = ((request as Request & { user?: unknown }).user ?? {}) as Record<string, unknown>;
+      const currentJti = typeof payload.jti === 'string' ? payload.jti : undefined;
+      const requestedJti = typeof body?.jti === 'string' ? body.jti.trim() : '';
+      const targetJti = requestedJti !== '' ? requestedJti : currentJti;
+
+      if (!targetJti) {
+        throw new HttpException(
+          { code: 'ACCESSI_TOKEN_JTI_MISSING', message: 'Il token non contiene un jti revocabile.' },
+          HttpStatus.BAD_REQUEST,
+        );
+      }
+
+      const isCurrentToken = targetJti === currentJti;
+      if (!isCurrentToken && !user.flagAdmin && !user.flagSuper) {
+        throw new HttpException(
+          {
+            code: 'ACCESSI_TOKEN_REVOKE_FORBIDDEN',
+            message: 'Solo gli amministratori possono revocare il token di un altro utente.',
+          },
+          HttpStatus.FORBIDDEN,
+        );
+      }
+
+      const expiresAt = Number(payload.exp);
+      await revokeAccessiAccessToken(
+        this.options,
+        targetJti,
+        isCurrentToken && Number.isFinite(expiresAt) ? expiresAt * 1000 : undefined,
+      );
+      auditAccessi('access_token_revoked', {
+        codiceUtente: user.codiceUtente,
+        actor: user.codiceUtente,
+        jti: targetJti,
+        self: isCurrentToken,
+      });
+      return RestUtilities.sendOKMessage(res, 'Token revocato con successo.');
     } catch (error) {
       return RestUtilities.sendErrorMessage(
         res,

@@ -77,6 +77,59 @@ function mergeIntrospectionUser(
   };
 }
 
+/** Issued-at in millisecondi, con fallback su `iat` per i token legacy. */
+function resolveIssuedAtMs(payload: Record<string, unknown> | undefined): number | null {
+  const issuedAtMs = Number(payload?.iatMs);
+  if (Number.isFinite(issuedAtMs) && issuedAtMs > 0) return issuedAtMs;
+  const issuedAt = Number(payload?.iat);
+  if (!Number.isFinite(issuedAt)) return null;
+  return issuedAt * 1000;
+}
+
+/**
+ * Applica gli store di revoca configurati: famiglia refresh, singolo `jti` e
+ * cutoff per utente. Il resource server non interroga mai il database Accessi.
+ */
+async function assertTokenNotRevoked(
+  payload: AccessiAccessTokenPayload,
+  codiceUtente: number,
+  options: AccessiResourceServerOptions,
+): Promise<void> {
+  const revocation = options.revocation;
+  if (!revocation) return;
+
+  const familyId = typeof payload.fid === "string" ? payload.fid : undefined;
+  if (familyId && revocation.familyStore?.isFamilyRevoked) {
+    if (await revocation.familyStore.isFamilyRevoked(familyId)) {
+      throw accessiAuthError(401, "AUTH_TOKEN_REVOKED", "Sessione revocata per riuso sospetto del refresh token.");
+    }
+  }
+
+  const jti = typeof payload.jti === "string" ? payload.jti : undefined;
+  if (jti && revocation.accessTokenStore) {
+    if (await revocation.accessTokenStore.isRevoked(jti)) {
+      throw accessiAuthError(401, "AUTH_TOKEN_REVOKED", "Token revocato.");
+    }
+  }
+
+  if (revocation.store) {
+    const issuedAtMs = resolveIssuedAtMs(payload as Record<string, unknown>);
+    if (issuedAtMs === null) {
+      throw accessiAuthError(401, "AUTH_TOKEN_INVALID", "Token privo di iat.");
+    }
+    const revokedAt = await revocation.store.getUserRevocation(codiceUtente);
+    const preciseIssuedAtMs = Number(payload.iatMs);
+    const isRevoked = revokedAt !== null && (
+      Number.isFinite(preciseIssuedAtMs) && preciseIssuedAtMs > 0
+        ? issuedAtMs <= revokedAt
+        : issuedAtMs < Math.floor(revokedAt / 1000) * 1000
+    );
+    if (isRevoked) {
+      throw accessiAuthError(401, "AUTH_TOKEN_REVOKED", "Sessione revocata.");
+    }
+  }
+}
+
 /**
  * Autentica la request e applica l'eventuale policy di autorizzazione.
  *
@@ -124,15 +177,8 @@ export async function authenticateAccessiRequest(
     throw accessiAuthError(401, "AUTH_USER_CODE_MISSING", "Token privo di un utente valido.");
   }
 
-  if (mode === "local" && runtime.options.revocation?.store) {
-    const issuedAt = Number(payload?.iat);
-    if (!Number.isFinite(issuedAt)) {
-      throw accessiAuthError(401, "AUTH_TOKEN_INVALID", "Token privo di iat.");
-    }
-    const revokedAt = await runtime.options.revocation.store.getUserRevocation(codiceUtente);
-    if (revokedAt !== null && issuedAt < Math.floor(revokedAt / 1000)) {
-      throw accessiAuthError(401, "AUTH_TOKEN_REVOKED", "Sessione revocata.");
-    }
+  if (mode === "local" && runtime.options.revocation) {
+    await assertTokenNotRevoked(payload as AccessiAccessTokenPayload, codiceUtente, runtime.options);
   }
 
   const requirementTree = buildRequirementTree(runtime.options.authorization);

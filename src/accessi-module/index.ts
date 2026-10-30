@@ -216,6 +216,7 @@ export {
     createMemorySessionRevocationStore,
     createRedisSessionRevocationStore,
     revokeAccessiUserSessions,
+    revokeAccessiUserSessionsIfConfigured,
     isAccessiTokenRevoked,
     getSessionRevocationStore
 } from './security/sessionRevocation';
@@ -229,15 +230,34 @@ export type {
 export {
     createMemoryRefreshTokenRotationStore,
     createRedisRefreshTokenRotationStore,
-    getRefreshTokenRotationStore
+    consumeRefreshToken,
+    getRefreshTokenRotationStore,
+    isRefreshTokenFamilyRevoked,
+    revokeRefreshTokenFamily
 } from './security/refreshTokenRotation';
 export type {
     MemoryRefreshTokenRotationStore,
     RedisRefreshTokenRotationStoreOptions,
+    RefreshTokenConsumeResult,
     RefreshTokenRotationOptions,
     RefreshTokenRotationRedisClient,
     RefreshTokenRotationStore
 } from './security/refreshTokenRotation';
+export {
+    createMemoryAccessTokenRevocationStore,
+    createRedisAccessTokenRevocationStore,
+    getAccessTokenRevocationStore,
+    isAccessiAccessTokenRevoked,
+    revokeAccessiAccessToken,
+    revokeAccessiAccessTokenIfConfigured
+} from './security/accessTokenRevocation';
+export type {
+    AccessTokenRevocationOptions,
+    AccessTokenRevocationRedisClient,
+    AccessTokenRevocationStore,
+    MemoryAccessTokenRevocationStore,
+    RedisAccessTokenRevocationStoreOptions
+} from './security/accessTokenRevocation';
 export type {
     AccessiOptionsValidationIssue,
     AccessiOptionsValidationResult

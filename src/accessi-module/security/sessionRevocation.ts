@@ -1,12 +1,16 @@
 import type { AccessiOptions } from '../AccessiModule';
+import { auditAccessi } from './audit';
+import { isAccessiAccessTokenRevoked } from './accessTokenRevocation';
+import { isRefreshTokenFamilyRevoked } from './refreshTokenRotation';
 
 /**
  * Revoca delle sessioni per utente.
  *
- * La revoca e un timestamp: un token con `iat` precedente al cutoff viene
- * rifiutato. I token emessi dopo il cutoff restano validi. La granularita di
- * `iat` e in secondi, quindi un token emesso nello stesso secondo della revoca
- * puo sopravvivere: e una finestra massima di 1 secondo.
+ * La revoca e un timestamp: un token emesso prima del cutoff viene rifiutato.
+ * I token emessi dopo il cutoff restano validi. I token includono `iatMs`
+ * (millisecondi) per rendere la revoca deterministica anche quando il cambio
+ * password e il login avvengono nello stesso secondo; per i token legacy senza
+ * `iatMs` si usa `iat` in secondi.
  */
 export interface SessionRevocationStore {
   revokeUser(codiceUtente: number, revokedAtMs: number): Promise<void>;
@@ -120,22 +124,48 @@ export function getSessionRevocationStore(options: AccessiOptions): SessionRevoc
   return options.sessionRevocation?.enabled === true ? defaultMemoryStore : undefined;
 }
 
-/** True se il token e stato emesso prima dell'ultima revoca sessioni dell'utente. */
+/**
+ * Issued-at in millisecondi. I token emessi da questa versione includono `iatMs`;
+ * per quelli legacy si ricade su `iat` (secondi) per restare compatibili.
+ */
+export function resolveAccessiTokenIssuedAtMs(payload: Record<string, unknown>): number | null {
+  const issuedAtMs = Number(payload.iatMs);
+  if (Number.isFinite(issuedAtMs) && issuedAtMs > 0) return issuedAtMs;
+
+  const issuedAt = Number(payload.iat);
+  if (!Number.isFinite(issuedAt)) return null;
+  return issuedAt * 1000;
+}
+
+/**
+ * True se il token e stato revocato: famiglia refresh revocata, `jti` revocato
+ * oppure sessione utente revocata prima dell'emissione del token.
+ */
 export async function isAccessiTokenRevoked(
   options: AccessiOptions,
   payload: Record<string, unknown>,
   codiceUtente: number,
 ): Promise<boolean> {
+  if (await isRefreshTokenFamilyRevoked(options, payload.fid)) return true;
+  if (await isAccessiAccessTokenRevoked(options, payload)) return true;
+
   const store = getSessionRevocationStore(options);
   if (!store) return false;
 
-  const issuedAt = Number(payload.iat);
-  if (!Number.isFinite(issuedAt)) return true;
+  const issuedAtMs = resolveAccessiTokenIssuedAtMs(payload);
+  if (issuedAtMs === null) return true;
 
   const revokedAt = await store.getUserRevocation(codiceUtente);
   if (revokedAt === null) return false;
 
-  return issuedAt < Math.floor(revokedAt / 1000);
+  // I token emessi da questa versione hanno `iatMs`: un token emesso nello
+  // stesso millisecondo della revoca e considerato revocato. Per i token
+  // legacy (solo `iat`, secondi) si mantiene il confronto per secondo.
+  const preciseIssuedAtMs = Number(payload.iatMs);
+  if (Number.isFinite(preciseIssuedAtMs) && preciseIssuedAtMs > 0) {
+    return issuedAtMs <= revokedAt;
+  }
+  return issuedAtMs < Math.floor(revokedAt / 1000) * 1000;
 }
 
 /** Revoca tutte le sessioni dell'utente. Richiede uno store configurato. */
@@ -143,12 +173,30 @@ export async function revokeAccessiUserSessions(
   options: AccessiOptions,
   codiceUtente: number,
   revokedAtMs: number = Date.now(),
+  reason: string = 'manual',
 ): Promise<void> {
   const store = getSessionRevocationStore(options);
   if (!store) {
     throw new Error('Session revocation store non configurato.');
   }
   await store.revokeUser(codiceUtente, revokedAtMs);
+  auditAccessi('accessi_sessions_revoked', { codiceUtente, revokedAtMs, reason });
+}
+
+/**
+ * Variante per i flussi applicativi (cambio password, blocco, cancellazione):
+ * se la revoca non e configurata non fallisce, perche quei flussi devono
+ * continuare a funzionare anche senza store condiviso.
+ */
+export async function revokeAccessiUserSessionsIfConfigured(
+  options: AccessiOptions,
+  codiceUtente: number,
+  reason: string = 'manual',
+  revokedAtMs: number = Date.now(),
+): Promise<boolean> {
+  if (!getSessionRevocationStore(options)) return false;
+  await revokeAccessiUserSessions(options, codiceUtente, revokedAtMs, reason);
+  return true;
 }
 
 /** Solo per test: azzera lo store in memoria di default. */

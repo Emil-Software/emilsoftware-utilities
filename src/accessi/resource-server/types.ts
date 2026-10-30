@@ -4,6 +4,8 @@ import type {
   GrantsResult,
 } from "../contracts";
 import type { SessionRevocationStore } from "../../accessi-module/security/sessionRevocation";
+import type { AccessTokenRevocationStore } from "../../accessi-module/security/accessTokenRevocation";
+import type { RefreshTokenRotationStore } from "../../accessi-module/security/refreshTokenRotation";
 
 /** Algoritmi JWT supportati dal resource server. */
 export type AccessiJwtAlgorithm =
@@ -85,9 +87,14 @@ export interface AccessiResourceServerOptions {
   introspection?: AccessiIntrospectionOptions;
   /** Policy di autorizzazione opzionale applicata dopo l'autenticazione. */
   authorization?: AccessiAuthorizationOptions;
-  /** Store condiviso di revoca sessioni. Opzionale. */
+  /** Store condiviso di revoca. Opzionale. */
   revocation?: {
-    store: SessionRevocationStore;
+    /** Revoca per utente: invalida tutti i token emessi prima del cutoff. */
+    store?: SessionRevocationStore;
+    /** Revoca dei singoli access token tramite `jti`. */
+    accessTokenStore?: AccessTokenRevocationStore;
+    /** Store di rotazione refresh: applica la revoca delle famiglie sospette. */
+    familyStore?: RefreshTokenRotationStore;
   };
   /** Audit strutturato degli errori di autenticazione. Default: true. */
   audit?: boolean;

@@ -91,6 +91,7 @@ export * from './refreshTokenResult';
 export * from './registerRequest';
 export * from './registerResponse';
 export * from './resendTwoFactorRequest';
+export * from './revokeTokenRequest';
 export * from './role';
 export * from './ruoliMenu';
 export * from './ruoliMenuTipoAbilitazione';

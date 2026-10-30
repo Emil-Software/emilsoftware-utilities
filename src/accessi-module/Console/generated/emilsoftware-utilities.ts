@@ -64,6 +64,7 @@ import type {
   RegisterRequest,
   RegisterResponse,
   ResendTwoFactorRequest,
+  RevokeTokenRequest,
   Role,
   SendResetPasswordEmailRequest,
   ServeResetPasswordPageParams,
@@ -219,6 +220,32 @@ return accessiFetch<Promise<revokeSessionsResponse>>(getRevokeSessionsUrl(),
     ...options,
     method: 'POST'
     
+  }
+);}
+
+
+/**
+ * Annulla un solo token (logout del dispositivo corrente o token compromesso) senza toccare le altre sessioni. Se il body non contiene jti viene revocato il token della richiesta. Richiede accessTokenRevocation.store configurato.
+ * @summary Revoca un singolo access token tramite jti
+ */
+export type revokeTokenResponse = {
+  data: ActionResponse;
+  status: number;
+}
+
+export const getRevokeTokenUrl = () => {
+
+
+  return `/api/accessi/auth/revoke-token`
+}
+
+export const revokeToken = async (revokeTokenRequest: RevokeTokenRequest, options?: RequestInit): Promise<revokeTokenResponse> => {
+return accessiFetch<Promise<revokeTokenResponse>>(getRevokeTokenUrl(),
+  {      
+    ...options,
+    method: 'POST',
+    body: JSON.stringify(
+      revokeTokenRequest,)
   }
 );}
 

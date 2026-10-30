@@ -21,6 +21,7 @@ export * from "./LoginResponse";
 export * from "./Permission";
 export * from "./PublicRegisterRequest";
 export * from "./RefreshTokenDtos";
+export * from "./RevokeTokenRequest";
 export * from "./Role";
 export * from "./SchemaDtos";
 export * from "./ScopeDtos";
