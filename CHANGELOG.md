@@ -1,3 +1,10 @@
+# [2.0.0-dev.69](https://github.com/Emil-Software/emilsoftware-utilities/compare/v2.0.0-dev.68...v2.0.0-dev.69) (2026-10-30)
+
+
+### Features
+
+* prepare accessi service for deployment ([3ee2559](https://github.com/Emil-Software/emilsoftware-utilities/commit/3ee2559abc1ef874e5ad96a20c817f5495b785b7))
+
 # [2.0.0-dev.68](https://github.com/Emil-Software/emilsoftware-utilities/compare/v2.0.0-dev.67...v2.0.0-dev.68) (2026-10-29)
 
 
