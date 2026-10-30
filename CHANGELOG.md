@@ -1,3 +1,12 @@
+# [2.0.0-dev.70](https://github.com/Emil-Software/emilsoftware-utilities/compare/v2.0.0-dev.69...v2.0.0-dev.70) (2026-10-30)
+
+
+### Features
+
+* **accessi:** revoca per jti in guard, introspection e resource server ([0ec129e](https://github.com/Emil-Software/emilsoftware-utilities/commit/0ec129e09961f3c0d1e9fde8efbf28d1d3f5ceda)), closes [#3](https://github.com/Emil-Software/emilsoftware-utilities/issues/3)
+* **accessi:** revoca sessioni su eventi di sicurezza e riuso refresh ([5ef4ac4](https://github.com/Emil-Software/emilsoftware-utilities/commit/5ef4ac45629263403c1f1ec85c17044f8b1a8697)), closes [#4](https://github.com/Emil-Software/emilsoftware-utilities/issues/4) [#5](https://github.com/Emil-Software/emilsoftware-utilities/issues/5)
+* **accessi:** store memory/Redis per revoca jti e famiglie refresh ([a230643](https://github.com/Emil-Software/emilsoftware-utilities/commit/a230643ac2d1581175b3d3e935c76c7172d2fbe2)), closes [#3](https://github.com/Emil-Software/emilsoftware-utilities/issues/3) [#5](https://github.com/Emil-Software/emilsoftware-utilities/issues/5)
+
 # [2.0.0-dev.69](https://github.com/Emil-Software/emilsoftware-utilities/compare/v2.0.0-dev.68...v2.0.0-dev.69) (2026-10-30)
 
 
