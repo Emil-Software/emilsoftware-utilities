@@ -24,6 +24,7 @@
 !/test/accessi-service.cjs
 !/test/refresh-token.cjs
 !/test/token-revocation.cjs
+!/test/accessi-client.cjs
 !/test/integration/
 !/test/integration/**
 

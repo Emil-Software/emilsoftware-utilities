@@ -225,6 +225,7 @@ lista utenti apre un pannello in cui inserire l'URL dell'applicazione e generare
 | Backend Express esistente | `await initializeAccessiModule(app, accessiOptions)` monta le rotte `/api/accessi` su un host Nest isolato |
 | Applicazione NestJS | importa `AccessiModule.forRoot(accessiOptions)` (e/o `AllegatiModule.forRoot(allegatiOptions)`) |
 | Accessi + Allegati insieme | `EmilsoftwareModule.forRoot({ accessiOptions, allegatiOptions })` |
+| Client multi-istanza / multi-tenant | `createAccessiClient({ baseUrl, getToken })` isola base URL e token per istanza (concorrenza sicura); `configureAccessiClient` resta il default globale |
 
 Tutta la configurazione e riservata al backend: segreti JWT/SMTP/DB non devono mai raggiungere il browser.
 

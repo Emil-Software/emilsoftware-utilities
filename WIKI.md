@@ -202,6 +202,8 @@ Topologia consigliata: un solo Accessi Service possiede database, encryptionKey,
 
 Per avviare Accessi come servizio autonomo usare startAccessiService: espone /health/live, /health/ready, /health/metrics, valida la configurazione e gestisce SIGTERM/SIGINT.
 
+Per parlare con piu Accessi Service o tenant dallo stesso processo usare createAccessiClient: ogni istanza ha base URL e token propri, isolati anche tra richieste concorrenti. configureAccessiClient resta il default globale per le funzioni esportate dal package.
+
 **Esempio corretto — Import corretti per ruolo**
 
 ```ts
@@ -210,7 +212,11 @@ import { initializeAccessiModule } from 'emilsoftware-utilities/accessi/server';
 
 // Backend fratello: nessun AccessiModule, nessun DB Accessi
 import { createAccessiAuthMiddleware } from 'emilsoftware-utilities/accessi/resource-server';
-import { configureAccessiClient, login } from 'emilsoftware-utilities/accessi/client';
+import { createAccessiClient } from 'emilsoftware-utilities/accessi/client';
+
+const milano = createAccessiClient({ baseUrl: 'https://accessi-milano.example.com', getToken });
+const roma = createAccessiClient({ baseUrl: 'https://accessi-roma.example.com', token: tokenRoma });
+const [utentiMilano, utentiRoma] = await Promise.all([milano.getUsers(), roma.getUsers()]);
 ```
 
 > [!WARNING]

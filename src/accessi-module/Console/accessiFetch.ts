@@ -1,6 +1,22 @@
 let accessToken: string | null = null;
 let baseUrl: string | null = null;
 let tokenProvider: (() => string | null | Promise<string | null>) | null = null;
+let scopedConfig: AccessiClientConfig | null = null;
+
+/**
+ * Configurazione di un client Accessi.
+ *
+ * Usata sia dalla configurazione globale (`configureAccessiClient`) sia dalle
+ * istanze isolate create con `createAccessiClient`.
+ */
+export interface AccessiClientConfig {
+  /** Base URL di Accessi Service, es. `https://accessi.example.com`. */
+  baseUrl?: string | null;
+  /** Token statico. Preferire `getToken` per token che cambiano nel tempo. */
+  token?: string | null;
+  /** Provider asincrono/sincrono del token corrente. */
+  getToken?: () => string | null | Promise<string | null>;
+}
 
 declare global {
   interface Window {
@@ -44,6 +60,31 @@ export function setAccessiFetchTokenProvider(
   tokenProvider = provider;
 }
 
+/** Configurazione isolata attiva in questo momento, se una chiamata e in corso. */
+export function getAccessiClientConfig(): AccessiClientConfig | null {
+  return scopedConfig;
+}
+
+/**
+ * Esegue `callback` con una configurazione del client isolata.
+ *
+ * Le funzioni generate da Orval invocano il trasporto in modo sincrono, quindi
+ * la configurazione viene letta all'inizio della richiesta: due client diversi
+ * possono chiamare in concorrenza senza sovrascriversi a vicenda.
+ *
+ * Per un uso continuativo preferire `createAccessiClient`, che applica il
+ * contesto a ogni metodo.
+ */
+export function runWithAccessiClient<T>(config: AccessiClientConfig, callback: () => T): T {
+  const previous = scopedConfig;
+  scopedConfig = config;
+  try {
+    return callback();
+  } finally {
+    scopedConfig = previous;
+  }
+}
+
 /** Legge una stringa non vuota dal payload di errore Accessi, ignorando tipi inattesi. */
 function payloadString(payload: unknown, key: string): string | undefined {
   if (!payload || typeof payload !== 'object') return undefined;
@@ -56,16 +97,24 @@ function payloadString(payload: unknown, key: string): string | undefined {
  * risposte di errore Accessi in Error JavaScript leggibili dalla console.
  */
 export async function accessiFetch<T>(url: string, options: RequestInit): Promise<T> {
+  // Il contesto va letto prima di ogni await: la funzione generata invoca il
+  // trasporto in modo sincrono, quindi la configurazione appartiene a questa call.
+  const config = scopedConfig;
   const headers = new Headers(options.headers);
   headers.set('Accept', 'application/json');
   if (options.body !== undefined && !headers.has('Content-Type')) {
     headers.set('Content-Type', 'application/json');
   }
-  const resolvedToken = tokenProvider ? await tokenProvider() : accessToken;
+  const resolvedToken = config
+    ? (config.getToken ? await config.getToken() : config.token ?? null)
+    : tokenProvider
+      ? await tokenProvider()
+      : accessToken;
   const authenticatedRequest = resolvedToken !== null && resolvedToken !== undefined;
   if (resolvedToken) headers.set('Authorization', `Bearer ${resolvedToken}`);
-  const runtimeBaseUrl = baseUrl
-    ?? (typeof window !== 'undefined' ? window.__ACCESSI_API_BASE_URL__ ?? null : null);
+  const runtimeBaseUrl = config?.baseUrl !== undefined
+    ? config.baseUrl
+    : baseUrl ?? (typeof window !== 'undefined' ? window.__ACCESSI_API_BASE_URL__ ?? null : null);
   const requestUrl = runtimeBaseUrl && url.startsWith('/')
     ? `${runtimeBaseUrl.replace(/\/+$/, '')}${url}`
     : url;

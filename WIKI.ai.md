@@ -102,13 +102,18 @@ Accessi non va montato per forza in ogni backend. La distribuzione consigliata s
 | accessi/ui | Percorsi degli asset Web Component frameworkless. | no |
 Topologia consigliata: un solo Accessi Service possiede database, encryptionKey, SMTP, chiavi JWT e console. Gli altri backend usano resource-server e client, senza credenziali del database Accessi.
 Per avviare Accessi come servizio autonomo usare startAccessiService: espone /health/live, /health/ready, /health/metrics, valida la configurazione e gestisce SIGTERM/SIGINT.
+Per parlare con piu Accessi Service o tenant dallo stesso processo usare createAccessiClient: ogni istanza ha base URL e token propri, isolati anche tra richieste concorrenti. configureAccessiClient resta il default globale per le funzioni esportate dal package.
 ```ts
 // Backend che ospita Accessi
 import { initializeAccessiModule } from 'emilsoftware-utilities/accessi/server';
 
 // Backend fratello: nessun AccessiModule, nessun DB Accessi
 import { createAccessiAuthMiddleware } from 'emilsoftware-utilities/accessi/resource-server';
-import { configureAccessiClient, login } from 'emilsoftware-utilities/accessi/client';
+import { createAccessiClient } from 'emilsoftware-utilities/accessi/client';
+
+const milano = createAccessiClient({ baseUrl: 'https://accessi-milano.example.com', getToken });
+const roma = createAccessiClient({ baseUrl: 'https://accessi-roma.example.com', token: tokenRoma });
+const [utentiMilano, utentiRoma] = await Promise.all([milano.getUsers(), roma.getUsers()]);
 ```
 [WARN] Un solo proprietario: Non montare AccessiModule in due backend puntati allo stesso database: migrazioni, bootstrap admin, ticket console e rate limit diventano ambigui.
 [INFO] Prompt di integrazione: Il file integration-prompt.md nella root del repository contiene il contesto completo per frontend, backend e agenti AI.
