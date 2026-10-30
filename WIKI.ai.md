@@ -121,6 +121,7 @@ const [utentiMilano, utentiRoma] = await Promise.all([milano.getUsers(), roma.ge
 ```
 [WARN] Un solo proprietario: Non montare AccessiModule in due backend puntati allo stesso database: migrazioni, bootstrap admin, ticket console e rate limit diventano ambigui.
 [INFO] Client per scope: Usare accessi/client/public nei frontend pubblici, accessi/client/admin nella console e nei tool amministrativi, accessi/client/service solo nei backend fratelli. Gli scope partizionano il client completo e condividono gli stessi tipi; il client completo resta disponibile per compatibilita.
+[INFO] Split in pacchetti: Il package resta unico con entry point per scope: decisione, soglie per rivalutarla e piano di migrazione sono nell'ADR docs/adr/0001-split-package.md.
 [INFO] Prompt di integrazione: Il file integration-prompt.md nella root del repository contiene il contesto completo per frontend, backend e agenti AI.
 
 ## Configurazione

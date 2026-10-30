@@ -130,6 +130,9 @@ il pacchetto gira in host Nest/Express e non esiste un bundle ESM separato da ma
   `console`, `ui`), l'assenza di dipendenze server-side in `contracts` e l'interop ESM. La CI lo
   esegue in un job dedicato dopo la build.
 
+La decisione di mantenere un pacchetto singolo (con entry point per scope) e il piano per un
+eventuale split futuro sono documentati nell'[ADR 0001](docs/adr/0001-split-package.md).
+
 ### Integration test su Redis reale
 
 Gli store condivisi (rate limit, ticket console, revoca sessioni, revoca `jti`, rotazione refresh
