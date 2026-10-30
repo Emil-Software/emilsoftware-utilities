@@ -237,6 +237,10 @@ const [utentiMilano, utentiRoma] = await Promise.all([milano.getUsers(), roma.ge
 > Il package resta unico con entry point per scope: decisione, soglie per rivalutarla e piano di migrazione sono nell'ADR docs/adr/0001-split-package.md.
 
 > [!NOTE]
+> **IP reali dietro proxy**
+> Imposta http.trustProxy sul numero di proxy davanti al servizio (1 per Nginx/Traefik/ALB, 2 con Cloudflare + ingress) e lascialo false se il servizio e esposto direttamente. Rate limit e audit usano req.ip: dettagli in docs/proxy-ip.md.
+
+> [!NOTE]
 > **Prompt di integrazione**
 > Il file integration-prompt.md nella root del repository contiene il contesto completo per frontend, backend e agenti AI.
 

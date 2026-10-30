@@ -27,6 +27,7 @@
 !/test/accessi-client.cjs
 !/test/accessi-client-scopes.cjs
 !/test/openapi-semantic-diff.cjs
+!/test/proxy-ip.cjs
 !/test/integration/
 !/test/integration/**
 

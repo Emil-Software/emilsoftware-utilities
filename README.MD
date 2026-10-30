@@ -259,6 +259,7 @@ lista utenti apre un pannello in cui inserire l'URL dell'applicazione e generare
 - La backdoor mock `admin`/`demo` non e mai attiva quando `NODE_ENV=production`.
 - Gli allegati sono **protetti di default**: senza `allegatiOptions.authorize` le richieste rispondono 403. Per la migrazione da versioni precedenti impostare `requireAuthorization: false` (sconsigliato in produzione).
 - Upload allegati: limite di 1 file / 90 MB applicato da Multer e validazione dei magic byte oltre al mimetype dichiarato.
+- **IP reali dietro proxy**: `http.trustProxy` deve corrispondere al numero di proxy davanti al servizio (default `false`). Rate limit e audit usano `req.ip`: un valore errato rende i bucket inefficaci o aggirabili via `X-Forwarded-For`. Guida per Nginx/Traefik/Cloudflare: [docs/proxy-ip.md](docs/proxy-ip.md).
 
 ## Integrazione
 

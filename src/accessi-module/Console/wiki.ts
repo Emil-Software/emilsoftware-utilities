@@ -179,6 +179,7 @@ export const WIKI_SECTIONS: WikiSection[] = [
       note('warn', `Un solo proprietario`, `Non montare AccessiModule in due backend puntati allo stesso database: migrazioni, bootstrap admin, ticket console e rate limit diventano ambigui.`),
       note('info', `Client per scope`, `Usare accessi/client/public nei frontend pubblici, accessi/client/admin nella console e nei tool amministrativi, accessi/client/service solo nei backend fratelli. Gli scope partizionano il client completo e condividono gli stessi tipi; il client completo resta disponibile per compatibilita.`),
       note('info', `Split in pacchetti`, `Il package resta unico con entry point per scope: decisione, soglie per rivalutarla e piano di migrazione sono nell'ADR docs/adr/0001-split-package.md.`),
+      note('info', `IP reali dietro proxy`, `Imposta http.trustProxy sul numero di proxy davanti al servizio (1 per Nginx/Traefik/ALB, 2 con Cloudflare + ingress) e lascialo false se il servizio e esposto direttamente. Rate limit e audit usano req.ip: dettagli in docs/proxy-ip.md.`),
       note('info', `Prompt di integrazione`, `Il file integration-prompt.md nella root del repository contiene il contesto completo per frontend, backend e agenti AI.`),
     ],
   },
