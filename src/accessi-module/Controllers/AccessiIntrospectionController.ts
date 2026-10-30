@@ -25,7 +25,7 @@ import { RequireServiceTokenScopes, ServiceTokenGuard } from '../security/servic
  * `accessi:introspect`. I backend fratelli lo usano per autorizzare richieste
  * senza accedere al database Accessi.
  */
-@ApiTags('Auth')
+@ApiTags('ServiceToken')
 @ApiBearerAuth()
 @Controller('accessi/auth')
 @UseGuards(ServiceTokenGuard)

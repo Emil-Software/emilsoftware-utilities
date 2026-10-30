@@ -226,6 +226,7 @@ lista utenti apre un pannello in cui inserire l'URL dell'applicazione e generare
 | Applicazione NestJS | importa `AccessiModule.forRoot(accessiOptions)` (e/o `AllegatiModule.forRoot(allegatiOptions)`) |
 | Accessi + Allegati insieme | `EmilsoftwareModule.forRoot({ accessiOptions, allegatiOptions })` |
 | Client multi-istanza / multi-tenant | `createAccessiClient({ baseUrl, getToken })` isola base URL e token per istanza (concorrenza sicura); `configureAccessiClient` resta il default globale |
+| Client per scope | `accessi/client/public` (frontend), `accessi/client/admin` (tool admin), `accessi/client/service` (backend fratelli): stesse tipi del client completo, nessuna operazione fuori scope |
 
 Tutta la configurazione e riservata al backend: segreti JWT/SMTP/DB non devono mai raggiungere il browser.
 

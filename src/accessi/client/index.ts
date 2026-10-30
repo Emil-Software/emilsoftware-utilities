@@ -3,12 +3,16 @@
  *
  * Il client e pensato per essere usato da backend fratelli, frontend e tool
  * amministrativi. Configurare base URL e token provider prima della prima call.
+ *
+ * Per limitare le operazioni disponibili usare gli entry point per scope:
+ * `accessi/client/public`, `accessi/client/admin` e `accessi/client/service`.
  */
 import * as generated from "../../accessi-module/Console/generated/emilsoftware-utilities";
+import type { AccessiClientConfig } from "../../accessi-module/Console/accessiFetch";
 import {
-  runWithAccessiClient,
-  type AccessiClientConfig,
-} from "../../accessi-module/Console/accessiFetch";
+  createAccessiClientFromModule,
+  type AccessiScopedClient,
+} from "./createAccessiClient";
 
 export * from "../../accessi-module/Console/generated/emilsoftware-utilities";
 export * from "../../accessi-module/Console/generated/model";
@@ -27,18 +31,8 @@ import {
   setAccessiFetchTokenProvider,
 } from "../../accessi-module/Console/accessiFetch";
 
-/**
- * Client completo generato, con la configurazione isolata per istanza.
- *
- * Ogni metodo e lo stesso del client globale, ma base URL e token vengono presi
- * dalla configurazione dell'istanza e non interferiscono con altri client.
- */
-export type AccessiClient = typeof generated & {
-  /** Sostituisce la configurazione dell'istanza senza toccare quella globale. */
-  configure(config: AccessiClientConfig): void;
-  /** Copia della configurazione corrente dell'istanza. */
-  getConfig(): AccessiClientConfig;
-};
+/** Client completo: tutte le operazioni, con configurazione isolata per istanza. */
+export type AccessiClient = AccessiScopedClient<typeof generated>;
 
 /**
  * Configura il trasporto del client generato globale.
@@ -73,24 +67,5 @@ export function configureAccessiClient(config: AccessiClientConfig = {}): void {
  * ```
  */
 export function createAccessiClient(config: AccessiClientConfig = {}): AccessiClient {
-  let current: AccessiClientConfig = { ...config };
-
-  return new Proxy(generated as unknown as AccessiClient, {
-    get(target, property, receiver) {
-      if (property === 'configure') {
-        return (next: AccessiClientConfig) => {
-          current = { ...next };
-        };
-      }
-      if (property === 'getConfig') {
-        return () => ({ ...current });
-      }
-
-      const value = Reflect.get(target, property, receiver) as unknown;
-      if (typeof value !== 'function') return value;
-
-      return (...args: unknown[]) =>
-        runWithAccessiClient(current, () => (value as (...callArgs: unknown[]) => unknown)(...args));
-    },
-  });
+  return createAccessiClientFromModule(generated, config);
 }

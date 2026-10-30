@@ -95,6 +95,9 @@ Accessi non va montato per forza in ogni backend. La distribuzione consigliata s
 | accessi/server | Bootstrap completo: DB, SMTP, migrazioni, console, API. | sì |
 | accessi/resource-server | Guard/middleware per backend fratelli: verifica JWT e autorizzazione remota. | no |
 | accessi/client | Client OpenAPI generato per chiamare Accessi Service. | no |
+| accessi/client/public | Solo API pubbliche (login, refresh, 2FA, reset password, registrazione, ticket console). | no |
+| accessi/client/admin | Solo API amministrative (utenti, ruoli, menu, filtri, provider federati, schema). | no |
+| accessi/client/service | Solo API service-to-service (service token e introspezione), mai nei frontend. | no |
 | accessi/contracts | Tipi, enum e helper puri browser-safe. | no |
 | accessi/contracts/dtos | DTO Nest con class-validator e decoratori OpenAPI. | no |
 | accessi/openapi | setupOpenApi e merge del documento OpenAPI. | no |
@@ -116,6 +119,7 @@ const roma = createAccessiClient({ baseUrl: 'https://accessi-roma.example.com', 
 const [utentiMilano, utentiRoma] = await Promise.all([milano.getUsers(), roma.getUsers()]);
 ```
 [WARN] Un solo proprietario: Non montare AccessiModule in due backend puntati allo stesso database: migrazioni, bootstrap admin, ticket console e rate limit diventano ambigui.
+[INFO] Client per scope: Usare accessi/client/public nei frontend pubblici, accessi/client/admin nella console e nei tool amministrativi, accessi/client/service solo nei backend fratelli. Gli scope partizionano il client completo e condividono gli stessi tipi; il client completo resta disponibile per compatibilita.
 [INFO] Prompt di integrazione: Il file integration-prompt.md nella root del repository contiene il contesto completo per frontend, backend e agenti AI.
 
 ## Configurazione

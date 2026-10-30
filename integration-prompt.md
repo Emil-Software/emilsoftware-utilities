@@ -41,7 +41,10 @@ Se per ora Accessi e montato dentro Backend A, va bene: Backend A e il proprieta
 |---|---|
 | `emilsoftware-utilities/accessi/server` | Backend che ospita Accessi: `AccessiModule`, `initializeAccessiModule`, updater DB, migrazioni, console. |
 | `emilsoftware-utilities/accessi/resource-server` | Backend fratello: middleware Express, guard Nest, verifica JWT e introspection. |
-| `emilsoftware-utilities/accessi/client` | Client OpenAPI generato per chiamare Accessi Service. |
+| `emilsoftware-utilities/accessi/client` | Client OpenAPI completo, con configurazione globale o per istanza (`createAccessiClient`). |
+| `emilsoftware-utilities/accessi/client/public` | Solo API pubbliche (login, refresh, 2FA, reset password, ticket console): da preferire nei frontend. |
+| `emilsoftware-utilities/accessi/client/admin` | Solo API amministrative (utenti, ruoli, menu, filtri, provider federati, schema): console e tool admin. |
+| `emilsoftware-utilities/accessi/client/service` | Solo API service-to-service (service token e introspezione): backend fratelli e job. |
 | `emilsoftware-utilities/accessi/contracts` | Tipi, enum e helper puri browser-safe. |
 | `emilsoftware-utilities/accessi/contracts/dtos` | DTO Nest con `class-validator` e decoratori OpenAPI. Solo backend. |
 | `emilsoftware-utilities/accessi/openapi` | `setupOpenApi`, `mergeOpenApiDocuments`. |
@@ -628,6 +631,7 @@ I componenti sono frameworkless e ricevono i dati via proprieta; non fanno chiam
 - `accessi/contracts`: tipi/enum/helper puri, adatti anche al browser.
 - `accessi/contracts/dtos`: DTO Nest con decoratori; non usarli in bundle frontend leggeri.
 - `accessi/client`: tipi generati dall'OpenAPI e funzioni HTTP; e la fonte consigliata per frontend e backend fratelli.
+- `accessi/client/public` / `admin` / `service`: stessi tipi e funzioni, filtrati per scope. Il client pubblico non espone operazioni amministrative; usare `createAccessiPublicClient`, `createAccessiAdminClient` o `createAccessiServiceClient` per isolare base URL e token per istanza.
 
 Non usare i DTO server come contratto pubblico se il frontend non ha `class-validator`, `class-transformer` e `reflect-metadata`.
 
@@ -755,7 +759,7 @@ Checklist:
 
 ### Per un frontend
 
-> Usa `emilsoftware-utilities/accessi/client`: chiama `configureAccessiClient({ baseUrl, token })` dopo il login e `getToken` se il token cambia. Il login, il refresh, il 2FA e il reset password passano da Accessi Service. Verso i backend usa `Authorization: Bearer <access-token>`. Non incorporare il database o il server Accessi. Per la console usa `buildAccessiConsoleUrl` con il ticket monouso restituito da `POST /api/accessi/console/entry`; non mettere mai il JWT nell'URL. Per i componenti UI usa gli asset di `accessi/ui`. Gestisci gli errori 401 (`AUTH_TOKEN_INVALID`) portando l'utente al login e 403 (`AUTH_INSUFFICIENT_PERMISSIONS`) mostrando un messaggio di permessi insufficienti.
+> Usa `emilsoftware-utilities/accessi/client/public` nei frontend (mai il client admin) e `createAccessiClient`/`createAccessiPublicClient` se parli con piu Accessi Service o tenant: chiama `configureAccessiClient({ baseUrl, token })` dopo il login e `getToken` se il token cambia. Il login, il refresh, il 2FA e il reset password passano da Accessi Service. Verso i backend usa `Authorization: Bearer <access-token>`. Non incorporare il database o il server Accessi. Per la console usa `buildAccessiConsoleUrl` con il ticket monouso restituito da `POST /api/accessi/console/entry`; non mettere mai il JWT nell'URL. Per i componenti UI usa gli asset di `accessi/ui`. Gestisci gli errori 401 (`AUTH_TOKEN_INVALID`) portando l'utente al login e 403 (`AUTH_INSUFFICIENT_PERMISSIONS`) mostrando un messaggio di permessi insufficienti.
 
 ### Per un agente AI
 
