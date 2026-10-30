@@ -1,3 +1,10 @@
+# [2.0.0-dev.71](https://github.com/Emil-Software/emilsoftware-utilities/compare/v2.0.0-dev.70...v2.0.0-dev.71) (2026-10-30)
+
+
+### Features
+
+* **accessi:** client OpenAPI multi-istanza con contesto isolato ([7639534](https://github.com/Emil-Software/emilsoftware-utilities/commit/7639534f2cababd860e4c663198f9601e38b6808)), closes [#6](https://github.com/Emil-Software/emilsoftware-utilities/issues/6)
+
 # [2.0.0-dev.70](https://github.com/Emil-Software/emilsoftware-utilities/compare/v2.0.0-dev.69...v2.0.0-dev.70) (2026-10-30)
 
 
