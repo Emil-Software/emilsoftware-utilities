@@ -4,6 +4,7 @@ import { RestUtilities } from '../../Utilities';
 import type { AccessiOptions, PublicAuthRateLimitRuleOptions } from '../AccessiModule';
 import { getDefaultRateLimitStore } from './rateLimitStore';
 import type { RateLimitDecision, RateLimitStore } from './rateLimitStore';
+import { countAccessiMetric } from '../observability/metrics';
 
 export type PublicAuthRateLimitScope =
   | 'login'
@@ -107,6 +108,7 @@ export async function checkPublicAuthRateLimit(
   // evitando crescita di memoria con identificatori sempre diversi.
   const ipDecision = await consumeRateLimit(store, `${scope}|ip|${ipAddress}`, rule);
   if (!ipDecision.allowed) {
+    countAccessiMetric(options, 'rate_limit_blocked_total', { scope, layer: 'public' });
     return ipDecision;
   }
 
@@ -128,6 +130,7 @@ export async function checkPublicAuthRateLimit(
   }
 
   if (retryAfterSeconds > 0) {
+    countAccessiMetric(options, 'rate_limit_blocked_total', { scope, layer: 'public' });
     return { allowed: false, retryAfterSeconds };
   }
 

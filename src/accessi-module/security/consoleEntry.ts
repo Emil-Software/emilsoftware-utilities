@@ -1,4 +1,5 @@
 import { createCipheriv, createDecipheriv, createHash, randomBytes } from 'crypto';
+import { instrumentAccessiRedisClient } from '../observability/redisMetrics';
 
 /**
  * Ticket di ingresso alla console, monouso e a breve scadenza.
@@ -216,6 +217,7 @@ export function createRedisConsoleEntryStore(
   const key = deriveEncryptionKey(options.encryptionKey);
   const keyPrefix = (options.keyPrefix ?? 'accessi:console-entry:').replace(/:+$/, ':');
   const maxAttempts = Math.max(1, options.maxIssueAttempts ?? 5);
+  const client = instrumentAccessiRedisClient('console_entry', options.client);
 
   return {
     async issue(record, ttlMs) {
@@ -224,7 +226,7 @@ export function createRedisConsoleEntryStore(
 
       for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
         const ticket = createTicket();
-        const result = await options.client.eval(
+        const result = await client.eval(
           SET_SCRIPT,
           1,
           `${keyPrefix}${ticket}`,
@@ -243,7 +245,7 @@ export function createRedisConsoleEntryStore(
       if (typeof ticket !== 'string' || !TICKET_PATTERN.test(ticket)) {
         return null;
       }
-      const value = await options.client.eval(
+      const value = await client.eval(
         CONSUME_SCRIPT,
         1,
         `${keyPrefix}${ticket}`,
@@ -254,7 +256,7 @@ export function createRedisConsoleEntryStore(
 
     async healthCheck() {
       try {
-        const result = await options.client.eval("return redis.call('PING')", 0);
+        const result = await client.eval("return redis.call('PING')", 0);
         return String(result).toUpperCase() === 'PONG';
       } catch {
         return false;

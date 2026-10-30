@@ -2,6 +2,7 @@ import { createHash, createPublicKey } from "crypto";
 import type { JsonWebKey } from "crypto";
 import type { Request, Response } from "express";
 import type { AccessiOptions } from "../AccessiModule";
+import { recordAccessiMetric } from '../observability/metrics';
 
 /** Chiave pubblica in formato JWK, pronta per una risposta JWKS. */
 export type AccessiJwksKey = JsonWebKey & {
@@ -84,6 +85,7 @@ export function createAccessiJwksHandler(
   return (_req: Request, res: Response): Response | void => {
     const document = buildAccessiJwks(options);
     if (!document) {
+      recordAccessiMetric('accessi_jwks_requests_total', 1, { result: 'unavailable' });
       return res.status(404).json({
         severity: "error",
         status: 404,
@@ -96,6 +98,7 @@ export function createAccessiJwksHandler(
 
     res.setHeader("Content-Type", "application/json");
     res.setHeader("Cache-Control", "public, max-age=300");
+    recordAccessiMetric('accessi_jwks_requests_total', 1, { result: 'ok' });
     return res.status(200).send(document);
   };
 }

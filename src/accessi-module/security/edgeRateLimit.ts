@@ -2,6 +2,7 @@ import type { NextFunction, Request, Response } from 'express';
 import { auditAccessi } from './audit';
 import { getDefaultRateLimitStore } from './rateLimitStore';
 import type { RateLimitStore } from './rateLimitStore';
+import { recordAccessiMetric } from '../observability/metrics';
 
 /** Opzioni del limite grossolano per IP applicato davanti alle rotte Accessi. */
 export interface AccessiEdgeRateLimitOptions {
@@ -71,6 +72,7 @@ export function createAccessiEdgeRateLimitMiddleware(
         maxAttempts,
       );
       if (!decision.allowed) {
+        recordAccessiMetric('accessi_rate_limit_blocked_total', 1, { layer: 'edge' });
         if (options.audit !== false) {
           auditAccessi('edge_rate_limited', {
             ip,
@@ -91,6 +93,7 @@ export function createAccessiEdgeRateLimitMiddleware(
       }
       next();
     } catch {
+      recordAccessiMetric('accessi_store_errors_total', 1, { store: 'edge_rate_limit' });
       if (options.audit !== false) {
         auditAccessi('rate_limit_unavailable', { ip, path: req.path });
       }

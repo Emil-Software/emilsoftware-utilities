@@ -36,6 +36,7 @@ import {
   resolveAccessiAuthCookieOptions,
   setAccessiAuthCookies,
 } from '../security/authCookies';
+import { countAccessiMetric } from '../observability/metrics';
 
 /**
  * Auto-ingresso alla console amministrativa da un frontend gia autenticato.
@@ -80,8 +81,10 @@ export class ConsoleEntryController {
         { token: tokenValue, codiceUtente: user.codiceUtente },
         this.ttlMs,
       );
+      countAccessiMetric(this.options, 'console_ticket_total', { action: 'create', result: 'issued' });
       return RestUtilities.sendBaseResponse(res, issued);
     } catch (error) {
+      countAccessiMetric(this.options, 'console_ticket_total', { action: 'create', result: 'error' });
       return RestUtilities.sendErrorMessage(
         res,
         error,
@@ -109,6 +112,7 @@ export class ConsoleEntryController {
     try {
       const decision = await checkPublicAuthRateLimit(this.options, 'consoleEntry', request, [body?.ticket ?? '']);
       if (!decision.allowed) {
+        countAccessiMetric(this.options, 'console_ticket_total', { action: 'exchange', result: 'rate_limited' });
         return sendPublicAuthRateLimitExceeded(res, decision.retryAfterSeconds);
       }
 
@@ -120,6 +124,7 @@ export class ConsoleEntryController {
         });
       }
 
+      countAccessiMetric(this.options, 'console_ticket_total', { action: 'exchange', result: 'consumed' });
       const cookieConfig = resolveAccessiAuthCookieOptions(this.options);
       if (cookieConfig) {
         setAccessiAuthCookies(res, cookieConfig, { access: entry.token });
@@ -129,6 +134,10 @@ export class ConsoleEntryController {
       }
       return RestUtilities.sendBaseResponse(res, { token: { value: entry.token, type: 'Bearer' } });
     } catch (error) {
+      countAccessiMetric(this.options, 'console_ticket_total', {
+        action: 'exchange',
+        result: error instanceof UnauthorizedException ? 'invalid' : 'error',
+      });
       return RestUtilities.sendErrorMessage(
         res,
         error,

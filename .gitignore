@@ -32,6 +32,7 @@
 !/test/jwt-key-rotation.cjs
 !/test/security-headers.cjs
 !/test/auth-cookies.cjs
+!/test/metrics.cjs
 !/test/integration/
 !/test/integration/**
 

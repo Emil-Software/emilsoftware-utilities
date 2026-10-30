@@ -98,6 +98,7 @@ export interface ConsoleEntryOptions {
 
 import type { AccessiSecurityHeadersSetting } from './security/securityHeaders';
 import type { AccessiAuthCookieOptions } from './security/authCookies';
+import type { AccessiMetricsOptions } from './observability/metrics';
 
 /** Impostazioni HTTP del servizio Accessi. */
 export interface AccessiHttpOptions {
@@ -314,6 +315,8 @@ export interface AccessiOptions {
    * la modalita si abilita passando questo oggetto (o `enabled: true`).
    */
   authCookie?: AccessiAuthCookieOptions;
+  /** Metriche di dominio (login, 2FA, refresh, rate limit, store, ...). */
+  metrics?: AccessiMetricsOptions;
   /** Revoca sessioni per utente tramite store memory/Redis. */
   sessionRevocation?: SessionRevocationOptions;
   /** Revoca dei singoli access token tramite `jti`, memory/Redis. */

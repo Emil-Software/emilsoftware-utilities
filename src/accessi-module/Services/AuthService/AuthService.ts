@@ -7,6 +7,7 @@ import { CryptUtilities, PasswordUtilities, RestUtilities } from "../../../Utili
 import type { AccessiOptions } from "../../AccessiModule";
 import { LoginRequest } from "../../Dtos/LoginRequest";
 import { LoginResult } from "../../Dtos/LoginResponse";
+import { countAccessiMetric, recordAccessiMetric } from "../../observability/metrics";
 import { StatoRegistrazione } from "../../Dtos/StatoRegistrazione";
 import { UserService } from "../UserService/UserService";
 import { FiltriService } from "../FiltriService/FiltriService";
@@ -534,6 +535,9 @@ export class AuthService {
       familyId: params.familyId,
       consumedAtMs,
     });
+    countAccessiMetric(this.accessiOptions, 'refresh_reuse_total', {
+      user_sessions_revoked: this.accessiOptions.refreshTokenRotation?.revokeUserSessionsOnReuse === true,
+    });
 
     try {
       if (params.familyId) {
@@ -542,11 +546,13 @@ export class AuthService {
           params.familyId,
           params.expiresAtMs,
         );
+        countAccessiMetric(this.accessiOptions, 'refresh_family_revoked_total', { reason: 'reuse' });
       }
       if (this.accessiOptions.refreshTokenRotation?.revokeUserSessionsOnReuse === true) {
         await revokeAccessiUserSessions(this.accessiOptions, params.codiceUtente, Date.now(), 'refresh_token_reuse');
       }
     } catch (error) {
+      recordAccessiMetric('accessi_store_errors_total', 1, { store: 'refresh_token_rotation' });
       // La revoca e best effort: il token presentato resta comunque rifiutato.
       this.logger.error(
         `Revoca famiglia refresh token fallita: ${error instanceof Error ? error.message : String(error)}`,

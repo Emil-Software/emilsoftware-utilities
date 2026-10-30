@@ -17,6 +17,7 @@ import {
 import { PermissionService } from '../Services/PermissionService/PermissionService';
 import { AuthService } from '../Services/AuthService/AuthService';
 import { RequireServiceTokenScopes, ServiceTokenGuard } from '../security/serviceTokenGuard';
+import { recordAccessiDuration, recordAccessiMetric } from '../observability/metrics';
 
 /**
  * Endpoint service-to-service per validare un access token Accessi.
@@ -51,8 +52,10 @@ export class AccessiIntrospectionController {
     @Body() body: IntrospectAccessiTokenRequest,
     @Res() res: Response,
   ): Promise<Response> {
+    const startedAt = Date.now();
     try {
       if (!body?.token) {
+        recordAccessiMetric('accessi_introspection_total', 1, { result: 'bad_request' });
         return RestUtilities.sendErrorMessage(
           res,
           'Token non fornito.',
@@ -63,18 +66,23 @@ export class AccessiIntrospectionController {
 
       const introspection = await this.authService.introspectAccessToken(body.token);
       if (!introspection.active || !introspection.codiceUtente) {
+        recordAccessiMetric('accessi_introspection_total', 1, { result: 'inactive' });
         return RestUtilities.sendBaseResponse(res, { active: false });
       }
 
       const user = (introspection.payload as { utente?: unknown } | undefined)?.utente;
       const grants = await this.permissionService.getUserRolesAndGrants(introspection.codiceUtente);
+      recordAccessiMetric('accessi_introspection_total', 1, { result: 'active' });
       return RestUtilities.sendBaseResponse(res, {
         active: true,
         ...(user ? { user } : {}),
         grants,
       });
     } catch (error) {
+      recordAccessiMetric('accessi_introspection_total', 1, { result: 'error' });
       return RestUtilities.sendErrorMessage(res, error, AccessiIntrospectionController.name);
+    } finally {
+      recordAccessiDuration('accessi_introspection_duration_ms', Date.now() - startedAt);
     }
   }
 }

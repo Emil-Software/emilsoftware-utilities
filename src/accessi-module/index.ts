@@ -338,6 +338,28 @@ export type {
     ResolvedAccessiAuthCookieOptions
 } from './security/authCookies';
 export {
+    accessiMetricName,
+    countAccessiMetric,
+    createAccessiMetricsRegistry,
+    getAccessiMetricsRegistry,
+    getAccessiMetricsSink,
+    observeAccessiMetric,
+    recordAccessiDuration,
+    recordAccessiMetric,
+    renderAccessiMetrics,
+    resetAccessiMetrics
+} from './observability/metrics';
+export type {
+    AccessiMetricLabelValue,
+    AccessiMetricLabels,
+    AccessiMetricsOptions,
+    AccessiMetricsRegistry,
+    AccessiMetricsSink,
+    AccessiMetricsSnapshot
+} from './observability/metrics';
+export { instrumentAccessiRedisClient } from './observability/redisMetrics';
+export type { AccessiRedisEvalClient } from './observability/redisMetrics';
+export {
     getAccessiAccessTokenSigningConfig,
     getAccessiAccessTokenVerificationConfig,
     getAccessiRefreshTokenSigningConfig,

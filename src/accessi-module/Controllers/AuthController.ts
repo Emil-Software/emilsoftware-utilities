@@ -34,6 +34,10 @@ import {
   resolveAccessiAuthCookieOptions,
 } from '../security/authCookies';
 import {
+  countAccessiMetric,
+  observeAccessiMetric,
+} from '../observability/metrics';
+import {
   getSessionRevocationStore,
   revokeAccessiUserSessions,
 } from '../security/sessionRevocation';
@@ -47,9 +51,21 @@ import {
   sendPublicAuthRateLimitExceeded,
 } from '../security/publicAuthRateLimit';
 
+/** Estrae il codice stabile di un errore Nest `{ code, message }`. */
+function authErrorCode(error: unknown): string | undefined {
+  if (!error || typeof error !== 'object') return undefined;
+  const response = typeof (error as { getResponse?: unknown }).getResponse === 'function'
+    ? (error as { getResponse: () => unknown }).getResponse()
+    : (error as { response?: unknown }).response;
+  if (response && typeof response === 'object') {
+    const code = (response as { code?: unknown }).code;
+    return typeof code === 'string' ? code : undefined;
+  }
+  return undefined;
+}
+
 @ApiTags('Auth')
-@Controller('accessi/auth')
-/**
+@Controller('accessi/auth')/**
  * Endpoint pubblici di autenticazione locale e verifica sessione.
  * Il login SSO non riceve token esterni qui: il backend validante usa `FederatedAuthService.authenticate`.
  */
@@ -299,6 +315,7 @@ export class AuthController {
   @ApiResponse({ status: 403, description: 'Utente abilitato solo a SSO.', type: ErrorResponse })
   @Post('login')
   async login(@Req() request: Request, @Body() loginRequest: LoginRequest, @Res() res: Response) {
+    const startedAt = Date.now();
     try {
       const rateLimitDecision = await checkPublicAuthRateLimit(
         this.options,
@@ -307,11 +324,13 @@ export class AuthController {
         [loginRequest?.email],
       );
       if (!rateLimitDecision.allowed) {
+        countAccessiMetric(this.options, 'auth_login_total', { result: 'rate_limited' });
         return sendPublicAuthRateLimitExceeded(res, rateLimitDecision.retryAfterSeconds);
       }
 
       const userData = await this.authService.login(loginRequest);
       if (!userData) {
+        countAccessiMetric(this.options, 'auth_login_total', { result: 'failure' });
         return RestUtilities.sendInvalidCredentials(res);
       }
 
@@ -322,9 +341,22 @@ export class AuthController {
         applyAccessiAuthCookies(res, resolveAccessiAuthCookieOptions(this.options), userData);
       }
 
+      const result = userData.challenge
+        ? 'challenge'
+        : userData.passwordRequired
+          ? 'password_required'
+          : 'success';
+      countAccessiMetric(this.options, 'auth_login_total', { result });
       return RestUtilities.sendBaseResponse(res, userData);
     } catch (error) {
-      if ((error as Error)?.message === 'PASSWORD_EXPIRED') {
+      const message = (error as Error)?.message;
+      const result = message === 'PASSWORD_EXPIRED'
+        ? 'password_expired'
+        : message === PASSWORD_LOGIN_DISABLED
+          ? 'sso_only'
+          : 'error';
+      countAccessiMetric(this.options, 'auth_login_total', { result });
+      if (message === 'PASSWORD_EXPIRED') {
         this.logger.warning('Password scaduta, cambiare password ', error);
         return RestUtilities.sendPasswordExpired(res);
       }
@@ -352,6 +384,8 @@ export class AuthController {
         );
       }
       return RestUtilities.sendInvalidCredentials(res);
+    } finally {
+      observeAccessiMetric(this.options, 'auth_login_duration_ms', Date.now() - startedAt);
     }
   }
 
@@ -371,6 +405,7 @@ export class AuthController {
     @Body() body: RefreshTokenRequest,
     @Res() res: Response,
   ) {
+    const startedAt = Date.now();
     try {
       const cookieConfig = resolveAccessiAuthCookieOptions(this.options);
       const cookieRefreshToken = cookieConfig?.refreshFromCookie
@@ -389,6 +424,7 @@ export class AuthController {
         tokenKey ? [tokenKey] : [],
       );
       if (!decision.allowed) {
+        countAccessiMetric(this.options, 'auth_refresh_total', { result: 'rate_limited' });
         return sendPublicAuthRateLimitExceeded(res, decision.retryAfterSeconds);
       }
 
@@ -405,14 +441,26 @@ export class AuthController {
         ...(result.refreshToken ? { refreshToken: result.refreshToken } : {}),
       };
       applyAccessiAuthCookies(res, cookieConfig, response);
+      countAccessiMetric(this.options, 'auth_refresh_total', { result: 'success' });
       return RestUtilities.sendBaseResponse(res, response);
     } catch (error) {
+      const code = authErrorCode(error);
+      const result = code === 'ACCESSI_REFRESH_TOKEN_REUSE'
+        ? 'reuse'
+        : code === 'ACCESSI_REFRESH_FAMILY_REVOKED'
+          ? 'family_revoked'
+          : code === 'ACCESSI_REFRESH_ROTATION_UNAVAILABLE'
+            ? 'store_unavailable'
+            : 'invalid';
+      countAccessiMetric(this.options, 'auth_refresh_total', { result });
       return RestUtilities.sendErrorMessage(
         res,
         error,
         AuthController.name,
         error instanceof HttpException ? error.getStatus() : HttpStatus.UNAUTHORIZED,
       );
+    } finally {
+      observeAccessiMetric(this.options, 'auth_refresh_duration_ms', Date.now() - startedAt);
     }
   }
 
@@ -423,14 +471,22 @@ export class AuthController {
   @ApiResponse({ status: 401, type: ErrorResponse })
   @ApiResponse({ status: 429, type: ErrorResponse })
   async verifyTwoFactor(@Req() request: Request, @Body() body: VerifyTwoFactorRequest, @Res() res: Response) {
+    const startedAt = Date.now();
     try {
       const limit = await checkPublicAuthRateLimit(this.options, 'twoFactorVerify', request, [body.challengeId]);
-      if (!limit.allowed) return sendPublicAuthRateLimitExceeded(res, limit.retryAfterSeconds);
+      if (!limit.allowed) {
+        countAccessiMetric(this.options, 'auth_two_factor_total', { action: 'verify', result: 'rate_limited' });
+        return sendPublicAuthRateLimitExceeded(res, limit.retryAfterSeconds);
+      }
       const result = await this.authService.verifyTwoFactor(body.challengeId, body.code, body.scope);
       applyAccessiAuthCookies(res, resolveAccessiAuthCookieOptions(this.options), result);
+      countAccessiMetric(this.options, 'auth_two_factor_total', { action: 'verify', result: 'success' });
       return RestUtilities.sendBaseResponse(res, result);
     } catch (error) {
+      countAccessiMetric(this.options, 'auth_two_factor_total', { action: 'verify', result: 'failure' });
       return RestUtilities.sendErrorMessage(res, error, AuthController.name, error instanceof HttpException ? error.getStatus() : 500);
+    } finally {
+      observeAccessiMetric(this.options, 'auth_two_factor_duration_ms', Date.now() - startedAt, { action: 'verify' });
     }
   }
 
@@ -443,9 +499,15 @@ export class AuthController {
   async resendTwoFactor(@Req() request: Request, @Body() body: ResendTwoFactorRequest, @Res() res: Response) {
     try {
       const limit = await checkPublicAuthRateLimit(this.options, 'twoFactorResend', request, [body.challengeId]);
-      if (!limit.allowed) return sendPublicAuthRateLimitExceeded(res, limit.retryAfterSeconds);
-      return RestUtilities.sendBaseResponse(res, await this.authService.resendTwoFactor(body.challengeId));
+      if (!limit.allowed) {
+        countAccessiMetric(this.options, 'auth_two_factor_total', { action: 'resend', result: 'rate_limited' });
+        return sendPublicAuthRateLimitExceeded(res, limit.retryAfterSeconds);
+      }
+      const result = await this.authService.resendTwoFactor(body.challengeId);
+      countAccessiMetric(this.options, 'auth_two_factor_total', { action: 'resend', result: 'success' });
+      return RestUtilities.sendBaseResponse(res, result);
     } catch (error) {
+      countAccessiMetric(this.options, 'auth_two_factor_total', { action: 'resend', result: 'failure' });
       return RestUtilities.sendErrorMessage(res, error, AuthController.name, error instanceof HttpException ? error.getStatus() : 500);
     }
   }

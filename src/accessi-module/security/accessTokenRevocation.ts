@@ -1,4 +1,5 @@
 import type { AccessiOptions } from '../AccessiModule';
+import { instrumentAccessiRedisClient } from '../observability/redisMetrics';
 
 /**
  * Revoca dei singoli access token tramite `jti`.
@@ -84,6 +85,7 @@ export function createRedisAccessTokenRevocationStore(
 
   const keyPrefix = (options.keyPrefix ?? 'accessi:revoked-token:').replace(/:+$/, ':');
   const ttlMs = Math.max(0, Math.trunc(options.ttlMs ?? 24 * 60 * 60 * 1000));
+  const client = instrumentAccessiRedisClient('access_token_revocation', options.client);
 
   return {
     async revoke(jti, expiresAtMs) {
@@ -93,17 +95,17 @@ export function createRedisAccessTokenRevocationStore(
       const ttl = Number.isFinite(expiresAtMs)
         ? Math.max(1, Math.trunc(expiresAtMs - Date.now()))
         : ttlMs;
-      await options.client.eval(REVOKE_SCRIPT, 1, `${keyPrefix}${jti}`, ttl);
+      await client.eval(REVOKE_SCRIPT, 1, `${keyPrefix}${jti}`, ttl);
     },
 
     async isRevoked(jti) {
-      const result = await options.client.eval(IS_REVOKED_SCRIPT, 1, `${keyPrefix}${jti}`);
+      const result = await client.eval(IS_REVOKED_SCRIPT, 1, `${keyPrefix}${jti}`);
       return Number(result) > 0;
     },
 
     async healthCheck() {
       try {
-        const result = await options.client.eval("return redis.call('PING')", 0);
+        const result = await client.eval("return redis.call('PING')", 0);
         return String(result).toUpperCase() === 'PONG';
       } catch {
         return false;

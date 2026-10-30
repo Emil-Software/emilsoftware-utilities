@@ -1,4 +1,5 @@
 import type { AccessiOptions } from '../AccessiModule';
+import { instrumentAccessiRedisClient } from '../observability/redisMetrics';
 
 /**
  * Store di rotazione refresh token.
@@ -158,11 +159,12 @@ export function createRedisRefreshTokenRotationStore(
 
   const keyPrefix = (options.keyPrefix ?? 'accessi:refresh-used:').replace(/:+$/, ':');
   const familyKeyPrefix = (options.familyKeyPrefix ?? 'accessi:refresh-family-revoked:').replace(/:+$/, ':');
+  const client = instrumentAccessiRedisClient('refresh_token_rotation', options.client);
 
   return {
     async consume(jti, expiresAtMs) {
       const ttlMs = Math.max(1, Math.trunc(expiresAtMs - Date.now()));
-      const result = await options.client.eval(
+      const result = await client.eval(
         CONSUME_SCRIPT,
         1,
         `${keyPrefix}${jti}`,
@@ -174,7 +176,7 @@ export function createRedisRefreshTokenRotationStore(
 
     async consumeWithMetadata(jti, expiresAtMs) {
       const ttlMs = Math.max(1, Math.trunc(expiresAtMs - Date.now()));
-      const result = await options.client.eval(
+      const result = await client.eval(
         CONSUME_SCRIPT,
         1,
         `${keyPrefix}${jti}`,
@@ -186,17 +188,17 @@ export function createRedisRefreshTokenRotationStore(
 
     async revokeFamily(familyId, expiresAtMs) {
       const ttlMs = Math.max(0, Math.trunc(expiresAtMs - Date.now()));
-      await options.client.eval(REVOKE_FAMILY_SCRIPT, 1, `${familyKeyPrefix}${familyId}`, ttlMs);
+      await client.eval(REVOKE_FAMILY_SCRIPT, 1, `${familyKeyPrefix}${familyId}`, ttlMs);
     },
 
     async isFamilyRevoked(familyId) {
-      const result = await options.client.eval(IS_FAMILY_REVOKED_SCRIPT, 1, `${familyKeyPrefix}${familyId}`);
+      const result = await client.eval(IS_FAMILY_REVOKED_SCRIPT, 1, `${familyKeyPrefix}${familyId}`);
       return Number(result) > 0;
     },
 
     async healthCheck() {
       try {
-        const result = await options.client.eval("return redis.call('PING')", 0);
+        const result = await client.eval("return redis.call('PING')", 0);
         return String(result).toUpperCase() === 'PONG';
       } catch {
         return false;

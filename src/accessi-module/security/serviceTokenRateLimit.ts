@@ -1,6 +1,7 @@
 import { HttpException, HttpStatus } from '@nestjs/common';
 import { getDefaultRateLimitStore } from './rateLimitStore';
 import type { RateLimitStore } from './rateLimitStore';
+import { recordAccessiMetric } from '../observability/metrics';
 
 /**
  * Limite anti-abuso per la verifica dei token di servizio.
@@ -20,6 +21,7 @@ export async function checkServiceTokenRateLimit(
   try {
     return await store.consume(`service-token|${key}`, WINDOW_MS, MAX_ATTEMPTS);
   } catch {
+    recordAccessiMetric('accessi_store_errors_total', 1, { store: 'service_token_rate_limit' });
     throw new HttpException(
       {
         code: 'ACCESSI_RATE_LIMIT_UNAVAILABLE',
@@ -42,6 +44,7 @@ export async function assertServiceTokenRateLimit(
 ): Promise<void> {
   const decision = await checkServiceTokenRateLimit(identifier, store);
   if (!decision.allowed) {
+    recordAccessiMetric('accessi_rate_limit_blocked_total', 1, { layer: 'service_token' });
     throw new HttpException(
       { code: 'ACCESSI_SERVICE_TOKEN_RATE_LIMITED', message: 'Troppi tentativi. Riprova piu tardi.' },
       HttpStatus.TOO_MANY_REQUESTS,

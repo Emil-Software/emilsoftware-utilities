@@ -103,6 +103,8 @@ export function getDefaultRateLimitStore(): MemoryRateLimitStore {
   return defaultStore;
 }
 
+import { instrumentAccessiRedisClient } from '../observability/redisMetrics';
+
 /** Client Redis minimale: compatibile con ioredis (`redis.eval(script, numKeys, ...args)`). */
 export interface RateLimitRedisClient {
   eval(script: string, numKeys: number, ...args: Array<string | number>): Promise<unknown>;
@@ -140,11 +142,12 @@ export function createRedisRateLimitStore(
   }
 
   const keyPrefix = (options.keyPrefix ?? 'accessi:rate:').replace(/:+$/, ':');
+  const client = instrumentAccessiRedisClient('rate_limit', options.client);
 
   return {
     async consume(key, windowMs, maxAttempts) {
       const limits = normalizeLimits(windowMs, maxAttempts);
-      const raw = await options.client.eval(
+      const raw = await client.eval(
         REDIS_SCRIPT,
         1,
         `${keyPrefix}${key}`,
@@ -167,7 +170,7 @@ export function createRedisRateLimitStore(
     },
     async healthCheck() {
       try {
-        const result = await options.client.eval("return redis.call('PING')", 0);
+        const result = await client.eval("return redis.call('PING')", 0);
         return String(result).toUpperCase() === 'PONG';
       } catch {
         return false;

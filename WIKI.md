@@ -269,6 +269,7 @@ _Ogni campo di configurazione con tipo, obbligo e note._
 | edgeRateLimit | AccessiEdgeRateLimitOptions | no | Limite grossolano per IP davanti alle rotte Accessi; opzionale, store condiviso supportato. |
 | http | \{ cors, trustProxy, securityHeaders \} | no | CORS, IP reali dietro proxy e header di sicurezza con CSP a nonce per la console e direttive configurabili. |
 | authCookie | \{ enabled, secure, sameSite, csrf, ... \} | no | Cookie HttpOnly e CSRF double-submit al posto del Bearer. Default disattivato. |
+| metrics | \{ enabled, sink, prefix \} | no | Metriche Prometheus di dominio (login, 2FA, refresh, rate limit, store) e sink esterno opzionale. |
 | publicRegistration | \{ enabled \} | no | Registrazione pubblica: disattivata per impostazione predefinita. |
 | federatedAuthentication | FederatedAuthenticationOptions | no | Abilita l'SSO generico. |
 | extensionFieldsOptions | ExtensionFieldsOptions\[\] | no | Tabelle esterne allegate al profilo. |

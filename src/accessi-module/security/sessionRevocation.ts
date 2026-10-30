@@ -1,5 +1,7 @@
 import type { AccessiOptions } from '../AccessiModule';
+import { instrumentAccessiRedisClient } from '../observability/redisMetrics';
 import { auditAccessi } from './audit';
+import { countAccessiMetric } from '../observability/metrics';
 import { isAccessiAccessTokenRevoked } from './accessTokenRevocation';
 import { isRefreshTokenFamilyRevoked } from './refreshTokenRotation';
 
@@ -81,10 +83,11 @@ export function createRedisSessionRevocationStore(
 
   const keyPrefix = (options.keyPrefix ?? 'accessi:revoked-user:').replace(/:+$/, ':');
   const ttlMs = Math.max(0, Math.trunc(options.ttlMs ?? 365 * 24 * 60 * 60 * 1000));
+  const client = instrumentAccessiRedisClient('session_revocation', options.client);
 
   return {
     async revokeUser(codiceUtente, revokedAtMs) {
-      await options.client.eval(
+      await client.eval(
         REVOKE_USER_SCRIPT,
         1,
         `${keyPrefix}${codiceUtente}`,
@@ -94,7 +97,7 @@ export function createRedisSessionRevocationStore(
     },
 
     async getUserRevocation(codiceUtente) {
-      const value = await options.client.eval(
+      const value = await client.eval(
         GET_USER_SCRIPT,
         1,
         `${keyPrefix}${codiceUtente}`,
@@ -106,7 +109,7 @@ export function createRedisSessionRevocationStore(
 
     async healthCheck() {
       try {
-        const result = await options.client.eval("return redis.call('PING')", 0);
+        const result = await client.eval("return redis.call('PING')", 0);
         return String(result).toUpperCase() === 'PONG';
       } catch {
         return false;
@@ -181,6 +184,7 @@ export async function revokeAccessiUserSessions(
   }
   await store.revokeUser(codiceUtente, revokedAtMs);
   auditAccessi('accessi_sessions_revoked', { codiceUtente, revokedAtMs, reason });
+  countAccessiMetric(options, 'sessions_revoked_total', { reason });
 }
 
 /**

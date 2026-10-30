@@ -16,6 +16,7 @@ import {
 } from '../../accessi-module/health/readiness';
 import type { AccessiReadinessCheck } from '../../accessi-module/health/readiness';
 import { assertValidAccessiOptions, validateAccessiOptions } from '../../accessi-module/security/validateOptions';
+import { renderAccessiMetrics } from '../../accessi-module/observability/metrics';
 
 export type { AccessiReadinessCheck } from '../../accessi-module/health/readiness';
 
@@ -142,7 +143,7 @@ export async function createAccessiService(
   if (options.metrics !== false) {
     app.get(`${healthPath}/metrics`, (_req: Request, res: Response) => {
       res.setHeader('Content-Type', 'text/plain; version=0.0.4');
-      res.status(200).send(metrics.render());
+      res.status(200).send(`${metrics.render()}${renderAccessiMetrics()}`);
     });
   }
 
