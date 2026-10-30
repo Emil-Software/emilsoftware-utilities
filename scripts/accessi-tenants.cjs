@@ -6,11 +6,10 @@
 //   node scripts/accessi-tenants.cjs --dir ./tenants --resolve app.example.com /api/accessi
 //   node scripts/accessi-tenants.cjs --dir ./tenants --serve --base-port 3200
 //
-// Ogni file `<id>.env` contiene le normali variabili ACCESSI_* del tenant piu':
-//   ACCESSI_TENANT_HOSTS=app.example.com,www.example.com
-//   ACCESSI_TENANT_PATH=/tenant-a
-//   ACCESSI_TENANT_PORT=3201
-//   ACCESSI_TENANT_ENABLED=true
+// Ogni file `<id>.environment.ts` esporta un oggetto AccessiTenantEnvironment:
+//   tenant, database, jwt, email, encryptionKey, URL e opzioni Accessi tipizzate.
+// I segreti possono essere letti da process.env dentro il file.
+//   ACCESSI_TENANT_HOSTS non serve: usare tenant.hosts/path/port nel file.
 require('ts-node/register/transpile-only');
 require('reflect-metadata');
 const fs = require('node:fs');
@@ -67,13 +66,13 @@ async function main() {
 
   if (flag('serve')) {
     const repository = path.resolve(__dirname, '..');
-    const distRunner = path.join(repository, 'dist', 'scripts', 'startAccessiService.js');
+    const distRunner = path.join(repository, 'dist', 'scripts', 'startAccessiTenantService.js');
     const useDist = fs.existsSync(distRunner);
     const runner = useDist
       ? { command: process.execPath, args: [distRunner] }
       : {
           command: process.execPath,
-          args: ['-r', 'ts-node/register/transpile-only', path.join(repository, 'src', 'scripts', 'startAccessiService.ts')],
+          args: ['-r', 'ts-node/register/transpile-only', path.join(repository, 'src', 'scripts', 'startAccessiTenantService.ts')],
         };
     const host = arg('host', '127.0.0.1');
     const basePort = Number(arg('base-port', '3200'));
@@ -87,8 +86,8 @@ async function main() {
         stdio: 'inherit',
         env: {
           ...process.env,
-          ...tenant.env,
           PORT: String(port),
+          ACCESSI_TENANT_ENVIRONMENT: tenant.environmentFile,
           ACCESSI_TENANT_ID: tenant.id,
         },
       });

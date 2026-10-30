@@ -205,7 +205,7 @@ Accessi non va montato per forza in ogni backend. La distribuzione consigliata s
 
 Topologia consigliata: un solo Accessi Service possiede database, encryptionKey, SMTP, chiavi JWT e console. Gli altri backend usano resource-server e client, senza credenziali del database Accessi.
 
-Multi-tenancy: un database per tenant, configurato in una cartella di file \<id\>.env. Il database resta invariato (nessuna colonna tenant); ogni tenant gira in un processo separato con chiavi, issuer e store propri. Validazione e avvio con npm run accessi:tenants; dettagli in docs/multi-tenancy.md.
+Multi-tenancy: un database per tenant, configurato da file \<id\>.environment.ts tipizzati (AccessiTenantEnvironment). Il database resta invariato (nessuna colonna tenant); ogni tenant gira in un processo separato con chiavi, issuer e store propri. Validazione e avvio con npm run accessi:tenants; dettagli in docs/multi-tenancy.md.
 
 > [!WARNING]
 > **Root barrel legacy**

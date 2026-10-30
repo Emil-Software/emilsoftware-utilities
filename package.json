@@ -187,6 +187,7 @@
     "class-transformer": "^0.5.1",
     "class-validator": "^0.14.1",
     "colorette": "^2.0.20",
+    "jiti": "^2.7.0",
     "jsonwebtoken": "^9.0.2",
     "jspdf": "^3.0.0",
     "jspdf-autotable": "^5.0.2",

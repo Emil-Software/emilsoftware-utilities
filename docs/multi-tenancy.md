@@ -1,62 +1,98 @@
 # Multi-tenancy operativa
 
 Accessi supporta più tenant con **un database per tenant** e un processo di
-servizio per tenant. La configurazione sta in una cartella di file `.env`; la
-decisione architetturale è in `docs/adr/0002-multi-tenancy.md`.
+servizio per tenant. La configurazione sta in una cartella di file
+`*.environment.ts` tipizzati; la decisione architetturale è in
+`docs/adr/0002-multi-tenancy.md`.
 
 ## Layout
 
 ```
 tenants/
-  acme.env
-  beta.env
+  acme.environment.ts
+  beta.environment.ts
 ```
 
-`acme.env`:
+`acme.environment.ts`:
 
-```dotenv
-ACCESSI_TENANT_HOSTS=accessi.acme.example.com,*.acme.example.com
-ACCESSI_TENANT_PATH=/acme
-ACCESSI_TENANT_PORT=3201
-ACCESSI_TENANT_ENABLED=true
+```ts
+import type { AccessiTenantEnvironment } from 'emilsoftware-utilities/accessi/server';
+import { defineAccessiTenantEnvironment } from 'emilsoftware-utilities/accessi/server';
 
-ACCESSI_DB_HOST=db-acme
-ACCESSI_DB_PORT=3050
-ACCESSI_DB_DATABASE=/data/acme.fdb
-ACCESSI_DB_USER=SYSDBA
-ACCESSI_DB_PASSWORD=...
+export default defineAccessiTenantEnvironment({
+  tenant: {
+    id: 'acme',
+    hosts: ['accessi.acme.example.com', '*.acme.example.com'],
+    path: '/acme',
+    port: 3201,
+    enabled: true,
+    description: 'Tenant ACME',
+  },
 
-ACCESSI_PUBLIC_BASE_URL=https://accessi.acme.example.com
-ACCESSI_CONFIRMATION_EMAIL_URL=https://accessi.acme.example.com
-ACCESSI_CONFIRMATION_RETURN_EMAIL_URL=https://accessi.acme.example.com
+  database: {
+    host: 'db-acme',
+    port: 3050,
+    database: '/data/acme.fdb',
+    user: 'SYSDBA',
+    password: process.env.ACME_DB_PASSWORD!,
+  },
 
-ACCESSI_JWT_ALGORITHM=RS256
-ACCESSI_JWT_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----"
-ACCESSI_JWT_PUBLIC_KEY="-----BEGIN PUBLIC KEY-----\n...\n-----END PUBLIC KEY-----"
-ACCESSI_JWT_KEY_ID=acme-2026-10
-ACCESSI_JWT_ISSUER=https://accessi.acme.example.com
-ACCESSI_JWT_AUDIENCE=accessi-api
-ACCESSI_JWT_EXPIRES=1h
-ACCESSI_JWT_REFRESH_EXPIRES=30d
+  jwt: {
+    algorithm: 'RS256',
+    secret: process.env.ACME_JWT_SECRET!,
+    privateKey: process.env.ACME_JWT_PRIVATE_KEY!,
+    publicKey: process.env.ACME_JWT_PUBLIC_KEY!,
+    keyId: 'acme-2026-10',
+    issuer: 'https://accessi.acme.example.com',
+    audience: 'accessi-api',
+    expiresIn: '1h',
+    refreshExpiresIn: '30d',
+  },
 
-ACCESSI_ENCRYPTION_KEY=...32+ caratteri casuali...
-ACCESSI_EMAIL_HOST=smtp.acme.example.com
-ACCESSI_EMAIL_USER=...
-ACCESSI_EMAIL_PASSWORD=...
-ACCESSI_EMAIL_FROM=noreply@acme.example.com
+  email: {
+    host: process.env.ACME_SMTP_HOST!,
+    port: 587,
+    secure: false,
+    requireTLS: true,
+    tls: { rejectUnauthorized: true },
+    from: 'noreply@acme.example.com',
+    auth: {
+      user: process.env.ACME_SMTP_USER!,
+      pass: process.env.ACME_SMTP_PASSWORD!,
+    },
+  },
+
+  encryptionKey: process.env.ACME_ENCRYPTION_KEY!,
+  confirmationEmailUrl: 'https://accessi.acme.example.com',
+  confirmationEmailReturnUrl: 'https://accessi.acme.example.com',
+  publicBaseUrl: 'https://accessi.acme.example.com',
+
+  // Opzionali, tutti tipizzati da AccessiTenantEnvironment:
+  http: { trustProxy: 1 },
+  authCookie: { enabled: true, secure: true, sameSite: 'lax' },
+  publicAuthRateLimit: { login: { windowMs: 900_000, maxAttempts: 10 } },
+  metrics: { enabled: true, prefix: 'accessi' },
+  audit: { retentionDays: 90, logger: true },
+} satisfies AccessiTenantEnvironment);
 ```
 
 Regole:
 
-- `ACCESSI_TENANT_ID` è opzionale: se assente vale il nome del file.
-- Almeno uno tra `ACCESSI_TENANT_HOSTS` e `ACCESSI_TENANT_PATH`.
-- `ACCESSI_TENANT_HOSTS` accetta più host separati da virgola e wildcard
-  `*.example.com`.
-- `ACCESSI_TENANT_PATH` è un prefisso (`/acme`), non un host.
-- Ogni tenant deve avere chiave JWT e database propri. La validazione blocca
-  chiavi condivise: un token di un tenant non deve essere accettato da un altro.
-- I file contengono segreti: non committarli. Permessi `0600`, secret manager o
-  volumi montati a runtime.
+- `tenant.id` è obbligatorio (minuscole, numeri, `-`, `_`, max 63). Non serve
+  derivarlo dal nome file, ma dovrebbe coincidere per leggibilità.
+- Almeno uno tra `tenant.hosts` e `tenant.path`.
+- `tenant.hosts` accetta host esatti e wildcard `*.example.com`.
+- `tenant.path` è un prefisso (`/acme`), non un host.
+- Ogni tenant deve avere database, chiave JWT e `encryptionKey` propri. La
+  validazione blocca chiavi JWT condivise: un token di un tenant non deve essere
+  accettato da un altro.
+- I segreti vanno letti da `process.env` o dal secret manager: il file
+  `.environment.ts` può essere versionato senza contenere credenziali.
+- `store`, `sink`, `match`, `onDocument` e `logger` non sono nel tipo: sono
+  oggetti runtime e vanno collegati dal backend ospitante.
+
+Il loader usa **jiti** per eseguire TypeScript anche dal pacchetto compilato:
+non serve compilare i file tenant separatamente.
 
 ## Validazione
 
@@ -66,9 +102,9 @@ npm run accessi:tenants -- --dir ./tenants --list
 npm run accessi:tenants -- --dir ./tenants --resolve accessi.acme.example.com /api/accessi
 ```
 
-`--check` esce con codice 1 e stampa tutti gli errori (file, variabile,
-duplicati, chiavi condivise). `--list` stampa un summary **senza segreti**:
-host, path, database, issuer, audience, algoritmo e porta.
+`--check` esce con codice 1 e stampa tutti gli errori (file, campo, duplicati,
+chiavi condivise). `--list` stampa un summary **senza segreti**: host, path,
+database, issuer, audience, algoritmo e porta.
 
 La validazione avviene prima di aprire qualsiasi connessione: un tenant rotto
 non deve avviarsi a metà.
@@ -83,8 +119,9 @@ npm run accessi:tenants -- --dir ./tenants --serve --base-port 3200
 
 Avvia un processo figlio per ogni tenant abilitato:
 
-- `ACCESSI_TENANT_PORT` se presente, altrimenti `base-port + indice`;
-- passa `PORT`, `ACCESSI_TENANT_ID` e tutte le variabili del file;
+- `tenant.port` se presente, altrimenti `base-port + indice`;
+- passa `PORT`, `ACCESSI_TENANT_ENVIRONMENT` (path assoluto del file) e
+  `ACCESSI_TENANT_ID`;
 - inoltra `SIGTERM`/`SIGINT` e termina i figli dopo 10 secondi;
 - non riavvia automaticamente un figlio: un loop su configurazione rotta è
   peggio di un processo che resta giù; usare systemd/docker/Kubernetes.
@@ -93,8 +130,6 @@ Il supervisore legge la cartella all'avvio: **aggiungere o rimuovere un tenant
 richiede un riavvio**. Non c'è hot reload (Nest non smonta moduli a caldo).
 
 ### systemd (consigliato in produzione)
-
-Un'unità template, una istanza per tenant:
 
 ```ini
 # /etc/systemd/system/accessi@.service
@@ -105,10 +140,10 @@ After=network-online.target
 [Service]
 Type=simple
 WorkingDirectory=/opt/accessi
-EnvironmentFile=/etc/accessi/tenants/%i.env
-Environment=PORT=%i
-# assegnare una porta per tenant in un drop-in o in un file separato
-ExecStart=/usr/bin/node dist/scripts/startAccessiService.js
+EnvironmentFile=/etc/accessi/%i.secrets
+Environment=ACCESSI_TENANT_ENVIRONMENT=/etc/accessi/tenants/%i.environment.ts
+Environment=PORT=3201
+ExecStart=/usr/bin/node dist/scripts/startAccessiTenantService.js
 Restart=on-failure
 RestartSec=5
 User=accessi
@@ -122,9 +157,8 @@ ReadWritePaths=/var/lib/accessi
 WantedBy=multi-user.target
 ```
 
-Con `PORT` derivato dal nome istanza non è possibile: usare un file
-`/etc/accessi/ports/%i` o un drop-in `Environment=PORT=3201`. In alternativa
-lasciare che il supervisore includa gestisca le porte.
+`EnvironmentFile` contiene solo i segreti (`ACME_DB_PASSWORD`, ...), non il
+manifest: il manifest tipizzato resta nel file `.environment.ts`.
 
 ### Docker Compose
 
@@ -132,23 +166,14 @@ lasciare che il supervisore includa gestisca le porte.
 services:
   accessi-acme:
     image: emilsoftware/accessi:2
-    env_file: ./tenants/acme.env
     environment:
+      ACCESSI_TENANT_ENVIRONMENT: /config/acme.environment.ts
       PORT: "3201"
-      ACCESSI_TENANT_ID: acme
+    env_file: ./secrets/acme.env
     volumes:
-      - ./secrets/acme:/run/secrets:ro
+      - ./tenants:/config:ro
     ports:
       - "127.0.0.1:3201:3201"
-
-  accessi-beta:
-    image: emilsoftware/accessi:2
-    env_file: ./tenants/beta.env
-    environment:
-      PORT: "3202"
-      ACCESSI_TENANT_ID: beta
-    ports:
-      - "127.0.0.1:3202:3202"
 ```
 
 ## Reverse proxy
@@ -162,7 +187,7 @@ Non fidarsi di un header inviato dal client.
 map $host $accessi_upstream {
     accessi.acme.example.com  http://127.0.0.1:3201;
     accessi.beta.example.com  http://127.0.0.1:3202;
-    default                   http://127.0.0.1:3201; # o 444
+    default                   http://127.0.0.1:3201;
 }
 
 server {
@@ -201,9 +226,9 @@ http:
 
 ### Path
 
-Con `ACCESSI_TENANT_PATH=/acme`, il proxy deve rimuovere il prefisso prima di
+Con `tenant.path = '/acme'`, il proxy deve rimuovere il prefisso prima di
 inoltrare (Accessi non lo conosce) oppure il tenant deve essere servito alla
-radice. Esempio Nginx:
+radice:
 
 ```nginx
 location /acme/ {
@@ -218,12 +243,12 @@ Se si usa la risoluzione via header, impostarlo solo nel proxy:
 proxy_set_header X-Accessi-Tenant acme;
 ```
 
-e avviare Accessi con `allowHeader: true` solo nel router che si fida del proxy.
+e avviare il router con `allowHeader: true` solo nel servizio che si fida del
+proxy.
 
 ## Store Redis condivisi
 
-Con Redis condiviso ogni tenant deve avere un prefisso distinto. Nel codice che
-costruisce gli store:
+Con Redis condiviso ogni tenant deve avere un prefisso distinto:
 
 ```ts
 const prefix = getAccessiTenantRedisPrefix(tenant.id); // accessi:acme:
@@ -252,7 +277,7 @@ va testato.
 ## Metriche e audit
 
 - Ogni processo espone `/health/metrics` sulla propria porta: Prometheus può
-  scrapare per tenant oppure usare un label `tenant` aggiunto dai child process.
+  scrapare per tenant.
 - `countAccessiMetric` aggiunge `tenant` quando `options.tenantId` è presente.
 - `audit.tenantId` aggiunge `tenant` a ogni record; configurare un sink per
   tenant o un sink condiviso che conserva il label.
@@ -262,19 +287,19 @@ va testato.
 
 **Aggiungere un tenant**
 
-1. Creare `tenants/<id>.env` con DB e chiavi propri.
+1. Creare `tenants/<id>.environment.ts` con DB e chiavi propri.
 2. `npm run accessi:tenants -- --dir ./tenants --check`.
 3. Creare il database, eseguire le migrazioni (`db:update:accessi`,
-   `db:catalog:accessi`) con l'env del tenant.
+   `db:catalog:accessi`) con la configurazione del tenant.
 4. Avviare/riavviare il supervisore o l'unità systemd del tenant.
 5. Aggiungere la rotta al proxy e verificare `/health/ready`.
 
 **Rimuovere un tenant**
 
 1. Rimuovere la rotta dal proxy (il traffico si ferma).
-2. Disabilitare `ACCESSI_TENANT_ENABLED=false` e riavviare.
+2. Impostare `tenant.enabled: false` e riavviare.
 3. Conservare database e backup secondo la retention; solo dopo eliminare il
-   file `.env` e i segreti.
+   file `.environment.ts` e i segreti.
 
 **Ruotare le chiavi**
 
@@ -283,8 +308,8 @@ chiavi tra tenant; la validazione blocca chiavi JWT condivise.
 
 ## Migrazione da single-tenant
 
-1. Copiare il `.env` attuale in `tenants/<id>.env`; aggiungere
-   `ACCESSI_TENANT_HOSTS`/`ACCESSI_TENANT_PATH` e `ACCESSI_TENANT_ID`.
+1. Creare `tenants/<id>.environment.ts` partendo dal `.env` attuale, usando
+   `process.env` per i segreti.
 2. Validare con `--check`.
 3. Avviare il tenant sulla nuova porta mantenendo il servizio vecchio.
 4. Verificare login, refresh, JWKS, console, health e metriche sul nuovo.
@@ -303,3 +328,5 @@ schema.
 - La risoluzione via header è ammessa solo dietro proxy fidato; il client non
   deve poter scegliere il tenant.
 - Un tenant con path `/` senza host non può convivere con altri (validazione).
+- I file `.environment.ts` sono eseguiti: trattarli come codice fidato e non
+  caricarli da input HTTP.

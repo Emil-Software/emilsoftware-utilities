@@ -1,19 +1,102 @@
-import { readdirSync, readFileSync } from 'fs';
+import { readdirSync } from 'fs';
 import { basename, join, resolve } from 'path';
-import type { AccessiOptions } from '../../accessi-module/AccessiModule';
-import { createAccessiOptionsFromEnv } from '../../accessi-module/database-updates/accessiOptionsFromEnv';
+import { WIRE_CRYPT_DISABLE, WIRE_CRYPT_ENABLE } from 'node-firebird';
+import type { Options } from 'node-firebird';
+import type {
+  AccessiOptions,
+  AccessiHttpOptions,
+  AdminBootstrapOptions,
+  CatalogScriptsOptions,
+  ConsoleEntryOptions,
+  EmailOptions,
+  ExtensionFieldsOptions,
+  FederatedAuthenticationOptions,
+  JwtOptions,
+  PublicAuthRateLimitOptions,
+  PublicRegistrationOptions,
+  ServiceTokenOptions,
+  SystemSeedsOptions,
+} from '../../accessi-module/AccessiModule';
+import type { AccessiEdgeRateLimitOptions } from '../../accessi-module/security/edgeRateLimit';
+import type { AccessiAuthCookieOptions } from '../../accessi-module/security/authCookies';
+import type { AccessiMetricsOptions } from '../../accessi-module/observability/metrics';
+import type { AccessiAuditOptions } from '../../accessi-module/security/audit';
+import type { SessionRevocationOptions } from '../../accessi-module/security/sessionRevocation';
+import type { AccessTokenRevocationOptions } from '../../accessi-module/security/accessTokenRevocation';
+import type { RefreshTokenRotationOptions } from '../../accessi-module/security/refreshTokenRotation';
+import type { OpenApiSetupOptions } from '../../openapi/OpenApiConfig';
+import { validateAccessiOptions } from '../../accessi-module/security/validateOptions';
 
-/** Variabili usate dal manifest del tenant (oltre alle normali `ACCESSI_*`). */
-export interface AccessiTenantEnv extends NodeJS.ProcessEnv {
-  ACCESSI_TENANT_ID?: string;
-  /** Host separati da virgola; supporta `*.example.com`. */
-  ACCESSI_TENANT_HOSTS?: string;
-  /** Prefisso path, es. `/tenant-a`. */
-  ACCESSI_TENANT_PATH?: string;
-  ACCESSI_TENANT_ENABLED?: string;
-  /** Porta del servizio quando si usa `startAccessiTenants`. */
-  ACCESSI_TENANT_PORT?: string;
-  ACCESSI_TENANT_DESCRIPTION?: string;
+/** Identita e routing del tenant. */
+export interface AccessiTenantSettings {
+  /** Minuscole, numeri, `-` e `_`; max 63 caratteri. */
+  id: string;
+  /** Host esatti o wildcard `*.example.com`. */
+  hosts?: string[];
+  /** Prefisso path, es. `/acme`. */
+  path?: string;
+  /** Porta del processo quando si usa il supervisore. */
+  port?: number;
+  /** Default `true`. */
+  enabled?: boolean;
+  description?: string;
+}
+
+/** Connessione Firebird del tenant, tipizzata senza callback. */
+export interface AccessiTenantDatabaseOptions {
+  host: string;
+  port?: number;
+  database: string;
+  user?: string;
+  password?: string;
+  /** `disabled`/`optional`; `required` e il default del driver. */
+  wireCrypt?: 'required' | 'optional' | 'disabled';
+  pluginName?: string;
+}
+
+/**
+ * Configurazione serializzabile di un tenant.
+ *
+ * I campi che contengono store, callback o logger (`store`, `sink`, `match`,
+ * `onDocument`, `logger`, ...) sono esclusi: vanno collegati dal backend
+ * ospitante, non da un file di configurazione.
+ */
+export interface AccessiTenantEnvironment {
+  tenant: AccessiTenantSettings;
+  database: AccessiTenantDatabaseOptions;
+  jwt: JwtOptions;
+  email: EmailOptions;
+  encryptionKey: string;
+  confirmationEmailUrl: string;
+  confirmationEmailReturnUrl: string;
+  confirmationEmailPrefix?: string;
+  customResetPage?: string;
+  publicBaseUrl?: string;
+  consoleApiBaseUrl?: string;
+  mockDemoUser?: boolean;
+  passwordExpiration?: boolean;
+  passwordExpirationDays?: number;
+  legacyPasswordMigrationOnStartup?: boolean;
+  autoUpdateDatabase?: boolean;
+  http?: AccessiHttpOptions;
+  authCookie?: AccessiAuthCookieOptions;
+  publicAuthRateLimit?: Omit<PublicAuthRateLimitOptions, 'store'>;
+  publicRegistration?: PublicRegistrationOptions;
+  federatedAuthentication?: FederatedAuthenticationOptions;
+  extensionFieldsOptions?: ExtensionFieldsOptions[];
+  serviceTokens?: Omit<ServiceTokenOptions, 'rateLimitStore'>;
+  catalogScripts?: CatalogScriptsOptions;
+  systemSeeds?: SystemSeedsOptions;
+  adminBootstrap?: AdminBootstrapOptions;
+  openapi?: Omit<OpenApiSetupOptions, 'onDocument'>;
+  consoleEntry?: Omit<ConsoleEntryOptions, 'store'>;
+  edgeRateLimit?: Omit<AccessiEdgeRateLimitOptions, 'store' | 'match'>;
+  sessionRevocation?: Omit<SessionRevocationOptions, 'store'>;
+  accessTokenRevocation?: Omit<AccessTokenRevocationOptions, 'store'>;
+  refreshTokenRotation?: Omit<RefreshTokenRotationOptions, 'store'>;
+  metrics?: Omit<AccessiMetricsOptions, 'sink'>;
+  audit?: Omit<AccessiAuditOptions, 'sinks' | 'store' | 'tenantId'>;
+  bufferLogs?: boolean;
 }
 
 export interface AccessiTenant {
@@ -23,10 +106,9 @@ export interface AccessiTenant {
   enabled: boolean;
   description?: string;
   port?: number;
-  /** Nome del file `.env` di origine (mai il contenuto). */
+  /** Nome del file `*.environment.ts` di origine (mai il contenuto). */
   file: string;
-  /** Variabili risolte del tenant (base + file); non serializzarle nei log. */
-  env: NodeJS.ProcessEnv;
+  environmentFile: string;
   options: AccessiOptions;
 }
 
@@ -66,10 +148,8 @@ export interface AccessiTenantRegistry {
 }
 
 export interface LoadAccessiTenantsOptions {
-  /** Cartella con `<tenant>.env`. */
+  /** Cartella con `<id>.environment.ts`. */
   directory: string;
-  /** Variabili base (default `process.env`); il file tenant vince. */
-  env?: NodeJS.ProcessEnv;
   /** Abilita la risoluzione via header `x-accessi-tenant`. Default: false. */
   allowHeader?: boolean;
   /** Consente issuer/audience uguali tra tenant (sconsigliato). Default: false. */
@@ -88,47 +168,27 @@ export class AccessiTenantConfigurationError extends Error {
 }
 
 /**
- * Parser minimale di un file `.env`.
+ * Helper di tipizzazione per i file tenant.
  *
- * Supporta commenti, `export KEY=...`, valori tra apici singoli o doppi e le
- * sequenze `\n`, `\r`, `\t`, `\"` e `\\` nei valori tra doppi apici. Non
- * interpreta variabili annidate: la configurazione tenant deve restare esplicita.
+ * ```ts
+ * import type { AccessiTenantEnvironment } from 'emilsoftware-utilities/accessi/server';
+ * import { defineAccessiTenantEnvironment } from 'emilsoftware-utilities/accessi/server';
+ *
+ * export default defineAccessiTenantEnvironment({
+ *   tenant: { id: 'acme', hosts: ['accessi.acme.example.com'] },
+ *   database: { host: 'db-acme', database: '/data/acme.fdb' },
+ *   jwt: { secret: process.env.ACME_JWT_SECRET!, expiresIn: '1h' },
+ *   email: { ... },
+ *   encryptionKey: process.env.ACME_ENCRYPTION_KEY!,
+ *   confirmationEmailUrl: 'https://accessi.acme.example.com',
+ *   confirmationEmailReturnUrl: 'https://accessi.acme.example.com',
+ * });
+ * ```
  */
-export function parseAccessiTenantEnvFile(content: string): Record<string, string> {
-  const env: Record<string, string> = {};
-  for (const rawLine of content.split(/\r?\n/)) {
-    const line = rawLine.trim();
-    if (line === '' || line.startsWith('#')) continue;
-    const match = /^(?:export\s+)?([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(.*)$/.exec(line);
-    if (!match) throw new Error(`Riga .env non valida: "${rawLine}"`);
-    const key = match[1] ?? '';
-    let value = match[2] ?? '';
-    if (value.startsWith('"')) {
-      if (!value.endsWith('"') || value.length < 2) throw new Error(`${key}: virgolette non chiuse.`);
-      value = value.slice(1, -1)
-        .replace(/\\n/g, '\n')
-        .replace(/\\r/g, '\r')
-        .replace(/\\t/g, '\t')
-        .replace(/\\"/g, '"')
-        .replace(/\\\\/g, '\\');
-    } else if (value.startsWith("'")) {
-      if (!value.endsWith("'") || value.length < 2) throw new Error(`${key}: virgolette non chiuse.`);
-      value = value.slice(1, -1);
-    } else {
-      const comment = value.indexOf(' #');
-      if (comment >= 0) value = value.slice(0, comment);
-      value = value.trim();
-    }
-    env[key] = value;
-  }
-  return env;
-}
-
-function splitList(value: string | undefined): string[] {
-  return (value ?? '')
-    .split(',')
-    .map((entry) => entry.trim().toLowerCase())
-    .filter(Boolean);
+export function defineAccessiTenantEnvironment<const T extends AccessiTenantEnvironment>(
+  environment: T,
+): T {
+  return environment;
 }
 
 function normalizeHost(host: string): string {
@@ -163,54 +223,224 @@ export function getAccessiTenantRedisPrefix(tenantId: string): string {
   return `accessi:${tenantId}:`;
 }
 
-function tenantSummary(tenant: AccessiTenant): AccessiTenantSummary {
-  const database = tenant.options.databaseOptions as {
-    host?: string;
-    port?: number;
-    database?: string;
-    user?: string;
+/**
+ * Converte la configurazione tipizzata in `AccessiOptions`.
+ *
+ * Applica i default di Firebird e collega `tenantId`; non crea store o sink,
+ * che restano responsabilita del backend ospitante.
+ */
+export function accessiOptionsFromTenantEnvironment(
+  environment: AccessiTenantEnvironment,
+): AccessiOptions {
+  const database = environment.database;
+  const databaseOptions: Options = {
+    host: database.host,
+    port: database.port ?? 3050,
+    database: database.database,
+    user: database.user ?? 'SYSDBA',
+    password: database.password ?? 'masterkey',
+    ...(database.pluginName ? { pluginName: database.pluginName } : {}),
+    ...(database.wireCrypt === 'disabled'
+      ? { wireCrypt: WIRE_CRYPT_DISABLE }
+      : database.wireCrypt === 'optional'
+        ? { wireCrypt: WIRE_CRYPT_ENABLE }
+        : {}),
   };
+
   return {
-    id: tenant.id,
-    hosts: [...tenant.hosts],
-    ...(tenant.path ? { path: tenant.path } : {}),
-    enabled: tenant.enabled,
-    ...(tenant.description ? { description: tenant.description } : {}),
-    ...(tenant.port ? { port: tenant.port } : {}),
-    file: tenant.file,
-    database: {
-      host: database.host,
-      port: database.port,
-      database: database.database,
-      user: database.user,
-    },
-    issuer: tenant.options.jwtOptions.issuer,
-    ...(tenant.options.jwtOptions.audience
-      ? { audience: typeof tenant.options.jwtOptions.audience === 'string' ? tenant.options.jwtOptions.audience : tenant.options.jwtOptions.audience.join(',') }
+    databaseOptions,
+    confirmationEmailUrl: environment.confirmationEmailUrl,
+    confirmationEmailReturnUrl: environment.confirmationEmailReturnUrl,
+    ...(environment.confirmationEmailPrefix ? { confirmationEmailPrefix: environment.confirmationEmailPrefix } : {}),
+    ...(environment.customResetPage ? { customResetPage: environment.customResetPage } : {}),
+    ...(environment.publicBaseUrl ? { publicBaseUrl: environment.publicBaseUrl } : {}),
+    ...(environment.consoleApiBaseUrl ? { consoleApiBaseUrl: environment.consoleApiBaseUrl } : {}),
+    encryptionKey: environment.encryptionKey,
+    mockDemoUser: environment.mockDemoUser ?? false,
+    ...(environment.passwordExpiration !== undefined ? { passwordExpiration: environment.passwordExpiration } : {}),
+    ...(environment.passwordExpirationDays !== undefined ? { passwordExpirationDays: environment.passwordExpirationDays } : {}),
+    ...(environment.legacyPasswordMigrationOnStartup !== undefined
+      ? { legacyPasswordMigrationOnStartup: environment.legacyPasswordMigrationOnStartup }
       : {}),
-    jwtAlgorithm: tenant.options.jwtOptions.algorithm ?? 'HS256',
-    refreshEnabled: Boolean(tenant.options.jwtOptions.refreshExpiresIn),
+    ...(environment.autoUpdateDatabase !== undefined ? { autoUpdateDatabase: environment.autoUpdateDatabase } : {}),
+    jwtOptions: environment.jwt,
+    emailOptions: environment.email,
+    ...(environment.http ? { http: environment.http } : {}),
+    ...(environment.authCookie ? { authCookie: environment.authCookie } : {}),
+    ...(environment.publicAuthRateLimit ? { publicAuthRateLimit: environment.publicAuthRateLimit } : {}),
+    ...(environment.publicRegistration ? { publicRegistration: environment.publicRegistration } : {}),
+    ...(environment.federatedAuthentication ? { federatedAuthentication: environment.federatedAuthentication } : {}),
+    ...(environment.extensionFieldsOptions ? { extensionFieldsOptions: environment.extensionFieldsOptions } : {}),
+    ...(environment.serviceTokens ? { serviceTokens: environment.serviceTokens } : {}),
+    ...(environment.catalogScripts ? { catalogScripts: environment.catalogScripts } : {}),
+    ...(environment.systemSeeds ? { systemSeeds: environment.systemSeeds } : {}),
+    ...(environment.adminBootstrap ? { adminBootstrap: environment.adminBootstrap } : {}),
+    ...(environment.openapi ? { openapi: environment.openapi } : {}),
+    ...(environment.consoleEntry ? { consoleEntry: environment.consoleEntry } : {}),
+    ...(environment.edgeRateLimit ? { edgeRateLimit: environment.edgeRateLimit } : {}),
+    ...(environment.sessionRevocation ? { sessionRevocation: environment.sessionRevocation } : {}),
+    ...(environment.accessTokenRevocation ? { accessTokenRevocation: environment.accessTokenRevocation } : {}),
+    ...(environment.refreshTokenRotation ? { refreshTokenRotation: environment.refreshTokenRotation } : {}),
+    ...(environment.metrics ? { metrics: environment.metrics } : {}),
+    ...(environment.audit ? { audit: environment.audit } : {}),
+    ...(environment.bufferLogs !== undefined ? { bufferLogs: environment.bufferLogs } : {}),
+    tenantId: environment.tenant.id,
   };
 }
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+function runtimeIssues(environment: unknown, file: string): string[] {
+  const issues: string[] = [];
+  if (!isRecord(environment)) {
+    return [`${file}: il file deve esportare un oggetto (default export o export environment).`];
+  }
+  const tenant = environment.tenant;
+  if (!isRecord(tenant)) {
+    issues.push(`${file}: tenant mancante.`);
+  } else {
+    if (typeof tenant.id !== 'string' || !/^[a-z0-9][a-z0-9_-]{0,62}$/.test(tenant.id)) {
+      issues.push(`${file}: tenant.id non valido (minuscole, numeri, - e _, max 63).`);
+    }
+    if (tenant.hosts !== undefined && (!Array.isArray(tenant.hosts) || tenant.hosts.some((host) => typeof host !== 'string'))) {
+      issues.push(`${file}: tenant.hosts deve essere un array di stringhe.`);
+    }
+    if (tenant.path !== undefined && typeof tenant.path !== 'string') {
+      issues.push(`${file}: tenant.path deve essere una stringa.`);
+    }
+    if (
+      tenant.port !== undefined
+      && (typeof tenant.port !== 'number' || !Number.isInteger(tenant.port) || tenant.port < 1 || tenant.port > 65535)
+    ) {
+      issues.push(`${file}: tenant.port non valida.`);
+    }
+  }
+
+  const database = environment.database;
+  if (!isRecord(database)) {
+    issues.push(`${file}: database mancante.`);
+  } else {
+    if (typeof database.host !== 'string' || database.host.trim() === '') {
+      issues.push(`${file}: database.host obbligatorio.`);
+    }
+    if (typeof database.database !== 'string' || database.database.trim() === '') {
+      issues.push(`${file}: database.database obbligatorio.`);
+    }
+    if (
+      database.port !== undefined
+      && (typeof database.port !== 'number' || !Number.isInteger(database.port) || database.port < 1 || database.port > 65535)
+    ) {
+      issues.push(`${file}: database.port non valida.`);
+    }
+  }
+
+  if (!isRecord(environment.jwt)) issues.push(`${file}: jwt mancante.`);
+  else {
+    if (typeof environment.jwt.secret !== 'string' || environment.jwt.secret === '') {
+      issues.push(`${file}: jwt.secret obbligatorio.`);
+    }
+    if (typeof environment.jwt.expiresIn !== 'string' || environment.jwt.expiresIn === '') {
+      issues.push(`${file}: jwt.expiresIn obbligatorio.`);
+    }
+  }
+
+  if (!isRecord(environment.email)) issues.push(`${file}: email mancante.`);
+  if (typeof environment.encryptionKey !== 'string' || environment.encryptionKey === '') {
+    issues.push(`${file}: encryptionKey obbligatoria.`);
+  }
+  if (typeof environment.confirmationEmailUrl !== 'string') {
+    issues.push(`${file}: confirmationEmailUrl obbligatoria.`);
+  }
+  if (typeof environment.confirmationEmailReturnUrl !== 'string') {
+    issues.push(`${file}: confirmationEmailReturnUrl obbligatoria.`);
+  }
+  return issues;
+}
+
+function loadEnvironmentModule(file: string): unknown {
+  if (/\.(ts|mts|cts)$/i.test(file)) {
+    // Caricamento lazy: jiti serve solo ai file tenant TypeScript.
+    const { createJiti } = require('jiti') as {
+      createJiti: (
+        id: string,
+        options?: { interopDefault?: boolean; moduleCache?: boolean; fsCache?: boolean },
+      ) => (id: string) => unknown;
+    };
+    const jiti = createJiti(file, { interopDefault: true, moduleCache: false, fsCache: false });
+    return jiti(file);
+  }
+  return require(file);
+}
+
 /**
- * Carica i tenant da una cartella di file `<id>.env`.
+ * Carica un singolo file `*.environment.ts`.
  *
- * Non modifica `process.env`: ogni tenant riceve una copia isolata delle
- * variabili. Un errore in un file blocca l'intero caricamento, cosi non si
- * avvia un tenant con configurazione parziale.
+ * Usa jiti per eseguire TypeScript anche nel pacchetto compilato, senza
+ * richiedere un passo di build separato per i file tenant.
+ */
+export function loadAccessiTenantEnvironmentFile(file: string): { tenant: AccessiTenant; environment: AccessiTenantEnvironment } {
+  const absolute = resolve(file);
+  let loaded: unknown;
+  try {
+    loaded = loadEnvironmentModule(absolute);
+  } catch (error) {
+    throw new AccessiTenantConfigurationError([
+      `${basename(file)}: impossibile caricare il file (${error instanceof Error ? error.message : String(error)}).`,
+    ]);
+  }
+
+  const record = isRecord(loaded) ? loaded : {};
+  const environment = (record.default ?? record.environment ?? loaded) as unknown;
+  const issues = runtimeIssues(environment, basename(file));
+  if (issues.length > 0) throw new AccessiTenantConfigurationError(issues);
+
+  const typed = environment as AccessiTenantEnvironment;
+  const settings = typed.tenant;
+  const options = accessiOptionsFromTenantEnvironment(typed);
+  const validation = validateAccessiOptions(options);
+  const validationIssues = validation.errors.map((issue) => `${basename(file)}: ${issue.code}: ${issue.message}`);
+  if (validationIssues.length > 0) throw new AccessiTenantConfigurationError(validationIssues);
+
+  const hosts = (settings.hosts ?? []).map(normalizeHost).filter(Boolean);
+  const path = normalizeTenantPath(settings.path);
+  if (hosts.length === 0 && !path) {
+    throw new AccessiTenantConfigurationError([
+      `${basename(file)}: configurare tenant.hosts oppure tenant.path.`,
+    ]);
+  }
+
+  const tenant: AccessiTenant = {
+    id: settings.id,
+    hosts,
+    ...(path ? { path } : {}),
+    enabled: settings.enabled !== false,
+    ...(settings.description ? { description: settings.description } : {}),
+    ...(settings.port ? { port: settings.port } : {}),
+    file: basename(file),
+    environmentFile: absolute,
+    options,
+  };
+  return { tenant, environment: typed };
+}
+
+/**
+ * Carica i tenant da una cartella di file `<id>.environment.ts`.
+ *
+ * La validazione e aggregata: un errore blocca l'intera cartella, cosi non si
+ * avvia un tenant con configurazione parziale. Nessun segreto viene stampato.
  */
 export function loadAccessiTenants(options: LoadAccessiTenantsOptions): AccessiTenantRegistry {
   if (!options?.directory) throw new Error('loadAccessiTenants: directory obbligatoria.');
   const directory = resolve(options.directory);
-  const baseEnv = options.env ?? process.env;
   const issues: string[] = [];
   const warnings: string[] = [];
 
   let files: string[];
   try {
     files = readdirSync(directory, { withFileTypes: true })
-      .filter((entry) => entry.isFile() && entry.name.endsWith('.env'))
+      .filter((entry) => entry.isFile() && /\.environment\.(ts|mts|cts|js|mjs|cjs)$/.test(entry.name))
       .map((entry) => entry.name)
       .sort();
   } catch (error) {
@@ -219,53 +449,16 @@ export function loadAccessiTenants(options: LoadAccessiTenantsOptions): AccessiT
     ]);
   }
   if (files.length === 0) {
-    throw new AccessiTenantConfigurationError([`Nessun file .env nella cartella ${directory}.`]);
+    throw new AccessiTenantConfigurationError([`Nessun file *.environment.ts nella cartella ${directory}.`]);
   }
 
   const tenants: AccessiTenant[] = [];
   for (const file of files) {
-    let fileEnv: Record<string, string>;
     try {
-      fileEnv = parseAccessiTenantEnvFile(readFileSync(join(directory, file), 'utf8'));
+      tenants.push(loadAccessiTenantEnvironmentFile(join(directory, file)).tenant);
     } catch (error) {
-      issues.push(`${file}: ${error instanceof Error ? error.message : String(error)}`);
-      continue;
-    }
-
-    const env: NodeJS.ProcessEnv = { ...baseEnv, ...fileEnv };
-    const id = (env.ACCESSI_TENANT_ID ?? basename(file, '.env')).trim();
-    if (!/^[a-z0-9][a-z0-9_-]{0,62}$/.test(id)) {
-      issues.push(`${file}: ACCESSI_TENANT_ID "${id}" non valido (minuscole, numeri, - e _, max 63).`);
-      continue;
-    }
-    const hosts = splitList(env.ACCESSI_TENANT_HOSTS).map(normalizeHost);
-    const path = normalizeTenantPath(env.ACCESSI_TENANT_PATH);
-    if (hosts.length === 0 && !path) {
-      issues.push(`${file}: configurare ACCESSI_TENANT_HOSTS oppure ACCESSI_TENANT_PATH.`);
-      continue;
-    }
-    const portValue = env.ACCESSI_TENANT_PORT;
-    const port = portValue ? Number(portValue) : undefined;
-    if (port !== undefined && (!Number.isInteger(port) || port < 1 || port > 65535)) {
-      issues.push(`${file}: ACCESSI_TENANT_PORT non valida ("${portValue}").`);
-      continue;
-    }
-
-    try {
-      const accessiOptions = createAccessiOptionsFromEnv(env);
-      tenants.push({
-        id,
-        hosts,
-        ...(path ? { path } : {}),
-        enabled: env.ACCESSI_TENANT_ENABLED !== 'false',
-        ...(env.ACCESSI_TENANT_DESCRIPTION ? { description: env.ACCESSI_TENANT_DESCRIPTION } : {}),
-        ...(port ? { port } : {}),
-        file,
-        env,
-        options: { ...accessiOptions, tenantId: id },
-      });
-    } catch (error) {
-      issues.push(`${file}: ${error instanceof Error ? error.message : String(error)}`);
+      if (error instanceof AccessiTenantConfigurationError) issues.push(...error.issues);
+      else issues.push(`${file}: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 
@@ -354,10 +547,41 @@ export function loadAccessiTenants(options: LoadAccessiTenantsOptions): AccessiT
       return undefined;
     },
     summary() {
-      return tenants.map(tenantSummary);
+      return tenants.map((tenant) => {
+        const database = tenant.options.databaseOptions as {
+          host?: string;
+          port?: number;
+          database?: string;
+          user?: string;
+        };
+        return {
+          id: tenant.id,
+          hosts: [...tenant.hosts],
+          ...(tenant.path ? { path: tenant.path } : {}),
+          enabled: tenant.enabled,
+          ...(tenant.description ? { description: tenant.description } : {}),
+          ...(tenant.port ? { port: tenant.port } : {}),
+          file: tenant.file,
+          database: {
+            host: database.host,
+            port: database.port,
+            database: database.database,
+            user: database.user,
+          },
+          issuer: tenant.options.jwtOptions.issuer,
+          ...(tenant.options.jwtOptions.audience
+            ? {
+                audience: typeof tenant.options.jwtOptions.audience === 'string'
+                  ? tenant.options.jwtOptions.audience
+                  : tenant.options.jwtOptions.audience.join(','),
+              }
+            : {}),
+          jwtAlgorithm: tenant.options.jwtOptions.algorithm ?? 'HS256',
+          refreshEnabled: Boolean(tenant.options.jwtOptions.refreshExpiresIn),
+        };
+      });
     },
   };
 
   return registry;
 }
-

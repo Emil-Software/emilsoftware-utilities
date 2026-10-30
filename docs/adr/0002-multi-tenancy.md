@@ -28,31 +28,64 @@ schema.** Un tenant è una cartella di configurazione:
 
 ```
 tenants/
-  acme.env
-  beta.env
+  acme.environment.ts
+  beta.environment.ts
 ```
 
-Ogni file contiene le normali variabili `ACCESSI_*` già lette da
-`createAccessiOptionsFromEnv`, più un manifest minimo:
+Ogni file esporta un oggetto tipizzato `AccessiTenantEnvironment`; i segreti
+possono essere letti da `process.env` o dal secret manager:
 
-```dotenv
-ACCESSI_TENANT_HOSTS=accessi.acme.example.com,*.acme.example.com
-ACCESSI_TENANT_PATH=/acme
-ACCESSI_TENANT_PORT=3201
-ACCESSI_TENANT_ENABLED=true
+```ts
+import type { AccessiTenantEnvironment } from 'emilsoftware-utilities/accessi/server';
+import { defineAccessiTenantEnvironment } from 'emilsoftware-utilities/accessi/server';
 
-ACCESSI_DB_HOST=db-acme
-ACCESSI_DB_DATABASE=/data/acme.fdb
-ACCESSI_JWT_ISSUER=https://accessi.acme.example.com
-ACCESSI_JWT_AUDIENCE=accessi-api
-ACCESSI_JWT_SECRET=...
-ACCESSI_ENCRYPTION_KEY=...
+export default defineAccessiTenantEnvironment({
+  tenant: {
+    id: 'acme',
+    hosts: ['accessi.acme.example.com', '*.acme.example.com'],
+    path: '/acme',
+    port: 3201,
+    enabled: true,
+  },
+  database: {
+    host: 'db-acme',
+    database: '/data/acme.fdb',
+    user: process.env.ACME_DB_USER ?? 'SYSDBA',
+    password: process.env.ACME_DB_PASSWORD!,
+  },
+  jwt: {
+    secret: process.env.ACME_JWT_SECRET!,
+    expiresIn: '1h',
+    refreshExpiresIn: '30d',
+    issuer: 'https://accessi.acme.example.com',
+    audience: 'accessi-api',
+  },
+  email: {
+    host: process.env.ACME_SMTP_HOST!,
+    port: 587,
+    secure: false,
+    requireTLS: true,
+    tls: { rejectUnauthorized: true },
+    from: 'noreply@acme.example.com',
+    auth: { user: process.env.ACME_SMTP_USER!, pass: process.env.ACME_SMTP_PASSWORD! },
+  },
+  encryptionKey: process.env.ACME_ENCRYPTION_KEY!,
+  confirmationEmailUrl: 'https://accessi.acme.example.com',
+  confirmationEmailReturnUrl: 'https://accessi.acme.example.com',
+} satisfies AccessiTenantEnvironment);
 ```
 
-`loadAccessiTenants({ directory })` valida l'intera cartella prima di avviare
-qualsiasi cosa:
+`defineAccessiTenantEnvironment` è solo un helper di tipizzazione: non esegue
+logica. Il loader usa jiti per eseguire il TypeScript anche nel pacchetto
+compilato, quindi non serve compilare i file tenant separatamente.
 
-- `ACCESSI_TENANT_ID` (o nome file) univoco, minuscole/numeri/`-`/`_`;
+Campi runtime come `store`, `sink`, `match`, `onDocument` e `logger` sono
+volutamente esclusi dal tipo: vanno collegati dal backend ospitante. Il file
+tenant descrive solo configurazione serializzabile.
+
+La validazione controlla:
+
+- `tenant.id` (o nome file) univoco, minuscole/numeri/`-`/`_`;
 - almeno host o path; host e path non duplicati;
 - chiave JWT distinta per tenant (un token non deve valere su due tenant);
 - issuer/audience condivisi producono un warning;
@@ -73,8 +106,8 @@ dal router, non servita dal "primo" tenant.
 
 Ogni tenant gira in un **processo Accessi separato** con il proprio environment,
 database, pool, chiavi, store Redis e logger. Il supervisore
-`node scripts/accessi-tenants.cjs --serve` avvia un figlio per ogni file `.env`
-abilitato e passa `PORT`, `ACCESSI_TENANT_ID` e le variabili del file.
+`node scripts/accessi-tenants.cjs --serve` avvia un figlio per ogni file `.environment.ts`
+abilitato e passa `PORT`, `ACCESSI_TENANT_ENVIRONMENT` (path assoluto) e `ACCESSI_TENANT_ID`.
 
 Questo evita di condividere:
 
@@ -116,7 +149,7 @@ prefissi e per le etichette di metriche e audit.
 | Schema per tenant | Firebird non offre schema/search_path; sarebbe un database separato con altro nome. |
 | Due `AccessiModule` nello stesso processo | La configurazione Nest è globale; audit/metriche/logger condividono stato. |
 | Selezione tenant da header non fidato | Permetterebbe a un client di cambiare tenant e tentare leakage; consentito solo dietro proxy che sovrascrive l'header. |
-| Hot reload dei file `.env` | Nest non smonta moduli a caldo; il riavvio del supervisore è più semplice e sicuro. |
+| Hot reload dei file `.environment.ts` | Nest non smonta moduli a caldo; il riavvio del supervisore è più semplice e sicuro. |
 
 ## Conseguenze
 
@@ -124,7 +157,7 @@ Positive:
 
 - isolamento forte: database, chiavi e processi separati;
 - nessuna migrazione dello schema esistente;
-- aggiunta tenant = nuovo file `.env` + riavvio del supervisore;
+- aggiunta tenant = nuovo file `.environment.ts` + riavvio del supervisore;
 - rollback per tenant indipendente.
 
 Negative:
@@ -143,7 +176,7 @@ Negative:
 2. **Fase 2**: template systemd/docker e reverse proxy host/path; health check
    per tenant nel supervisore.
 3. **Fase 3**: migrazione del deployment single-tenant esistente: creare
-   `tenants/<id>.env` dal `.env` attuale, avviare in parallelo, spostare il DNS,
+   `tenants/<id>.environment.ts` dalla configurazione attuale, avviare in parallelo, spostare il DNS,
    spegnere il vecchio servizio.
 4. **Fase 4 (opzionale)**: router in-process con `createAccessiTenantRouter`
    solo se il costo dei processi diventa un problema e dopo test di leakage

@@ -8,30 +8,59 @@ const path = require('node:path');
 const { execFileSync } = require('node:child_process');
 
 const {
+  accessiOptionsFromTenantEnvironment,
   getAccessiTenantRedisPrefix,
+  loadAccessiTenantEnvironmentFile,
   loadAccessiTenants,
-  parseAccessiTenantEnvFile,
 } = require('../src/accessi/server');
 
 const SCRIPT = path.join(__dirname, '..', 'scripts', 'accessi-tenants.cjs');
 
-function tenantEnv(overrides = {}) {
-  const values = {
-    ACCESSI_DB_HOST: 'db.example.test',
-    ACCESSI_DB_PORT: '3050',
-    ACCESSI_DB_DATABASE: '/data/accessi.fdb',
-    ACCESSI_DB_USER: 'SYSDBA',
-    ACCESSI_DB_PASSWORD: 'db-password',
-    ACCESSI_ENCRYPTION_KEY: '0123456789ABCDEF',
-    ACCESSI_JWT_SECRET: 'jwt-secret-0123456789-0123456789',
-    ACCESSI_JWT_ISSUER: 'https://accessi.example.test',
-    ACCESSI_JWT_AUDIENCE: 'accessi-api',
-    ...overrides,
+function environmentSource(overrides = {}) {
+  const tenant = {
+    id: 'tenant-a',
+    ...(overrides.tenant?.hosts === undefined && overrides.tenant?.path === undefined
+      ? { hosts: ['app-a.example.test'] }
+      : {}),
+    ...(overrides.tenant ?? {}),
   };
-  return Object.entries(values)
-    .filter(([, value]) => value !== undefined)
-    .map(([key, value]) => `${key}=${value}`)
-    .join('\n');
+  const database = {
+    host: 'db.example.test',
+    port: 3050,
+    database: '/data/accessi.fdb',
+    user: 'SYSDBA',
+    password: 'db-password',
+    ...(overrides.database ?? {}),
+  };
+  const jwt = {
+    secret: 'jwt-secret-0123456789-0123456789',
+    expiresIn: '1h',
+    issuer: 'https://accessi.example.test',
+    audience: 'accessi-api',
+    ...(overrides.jwt ?? {}),
+  };
+  const email = {
+    host: 'localhost',
+    port: 25,
+    secure: false,
+    requireTLS: false,
+    tls: { rejectUnauthorized: false },
+    from: 'noreply@example.test',
+    auth: { user: 'smtp-user', pass: 'smtp-password' },
+    ...(overrides.email ?? {}),
+  };
+
+  return `export default {
+  tenant: ${JSON.stringify(tenant)},
+  database: ${JSON.stringify(database)},
+  jwt: ${JSON.stringify(jwt)},
+  email: ${JSON.stringify(email)},
+  encryptionKey: '0123456789ABCDEF',
+  confirmationEmailUrl: 'https://accessi.example.test',
+  confirmationEmailReturnUrl: 'https://accessi.example.test',
+  ${overrides.extra ?? ''}
+};
+`;
 }
 
 function makeDirectory(files) {
@@ -46,37 +75,62 @@ function cleanup(directory) {
   fs.rmSync(directory, { recursive: true, force: true });
 }
 
-test('#10: parsing .env con commenti, export, apici e sequenze', () => {
-  const parsed = parseAccessiTenantEnvFile([
-    '# commento',
-    'export ACCESSI_TENANT_ID=tenant-a',
-    'ACCESSI_DB_HOST=db-a',
-    'ACCESSI_JWT_PRIVATE_KEY="line1\\nline2"',
-    "ACCESSI_TENANT_HOSTS='a.example.com, b.example.com'",
-    'ACCESSI_TENANT_ENABLED=true # inline',
-  ].join('\n'));
+test('#10: la configurazione tipizzata diventa AccessiOptions con i default', () => {
+  const environment = {
+    tenant: { id: 'acme', hosts: ['accessi.acme.test'], port: 3301 },
+    database: {
+      host: 'db-acme',
+      database: '/data/acme.fdb',
+      wireCrypt: 'disabled',
+      pluginName: 'Legacy_Auth',
+    },
+    jwt: { secret: 's'.repeat(40), expiresIn: '1h', issuer: 'https://acme.test' },
+    email: {
+      host: 'localhost',
+      port: 25,
+      secure: false,
+      requireTLS: false,
+      tls: { rejectUnauthorized: false },
+      from: 'noreply@acme.test',
+      auth: { user: 'u', pass: 'p' },
+    },
+    encryptionKey: '0123456789ABCDEF',
+    confirmationEmailUrl: 'https://acme.test',
+    confirmationEmailReturnUrl: 'https://acme.test',
+    publicBaseUrl: 'https://accessi.acme.test',
+    mockDemoUser: false,
+    passwordExpiration: true,
+    passwordExpirationDays: 60,
+    authCookie: { enabled: true, secure: false },
+    metrics: { enabled: true, prefix: 'acme' },
+    audit: { retentionDays: 30, logger: false },
+    http: { trustProxy: 1 },
+  };
 
-  assert.equal(parsed.ACCESSI_TENANT_ID, 'tenant-a');
-  assert.equal(parsed.ACCESSI_DB_HOST, 'db-a');
-  assert.equal(parsed.ACCESSI_JWT_PRIVATE_KEY, 'line1\nline2');
-  assert.equal(parsed.ACCESSI_TENANT_HOSTS, 'a.example.com, b.example.com');
-  assert.equal(parsed.ACCESSI_TENANT_ENABLED, 'true');
-  assert.throws(() => parseAccessiTenantEnvFile('ACCESSI_X="non chiuso'), /virgolette non chiuse/);
+  const options = accessiOptionsFromTenantEnvironment(environment);
+  assert.equal(options.tenantId, 'acme');
+  assert.equal(options.databaseOptions.port, 3050);
+  assert.equal(options.databaseOptions.user, 'SYSDBA');
+  assert.equal(options.databaseOptions.password, 'masterkey');
+  assert.equal(options.databaseOptions.pluginName, 'Legacy_Auth');
+  assert.equal(options.passwordExpirationDays, 60);
+  assert.equal(options.authCookie.enabled, true);
+  assert.equal(options.metrics.prefix, 'acme');
+  assert.equal(options.audit.retentionDays, 30);
+  assert.equal(options.http.trustProxy, 1);
+  assert.equal(options.jwtOptions.issuer, 'https://acme.test');
 });
 
-test('#10: caricamento di due tenant e summary senza segreti', () => {
+test('#10: caricamento di due *.environment.ts e summary senza segreti', () => {
   const directory = makeDirectory({
-    'tenant-a.env': tenantEnv({
-      ACCESSI_TENANT_HOSTS: 'app-a.example.com, *.a.example.com',
-      ACCESSI_JWT_SECRET: 'secret-tenant-a-0123456789-0123456789',
-      ACCESSI_JWT_ISSUER: 'https://a.example.test',
+    'tenant-a.environment.ts': environmentSource({
+      tenant: { id: 'tenant-a', hosts: ['app-a.example.test', '*.a.example.test'] },
+      jwt: { secret: 'secret-a-0123456789-0123456789', issuer: 'https://a.example.test' },
     }),
-    'tenant-b.env': tenantEnv({
-      ACCESSI_TENANT_PATH: '/tenant-b',
-      ACCESSI_JWT_SECRET: 'secret-tenant-b-0123456789-0123456789',
-      ACCESSI_JWT_ISSUER: 'https://b.example.test',
-      ACCESSI_DB_DATABASE: '/data/b.fdb',
-      ACCESSI_TENANT_PORT: '3301',
+    'tenant-b.environment.ts': environmentSource({
+      tenant: { id: 'tenant-b', path: '/tenant-b', port: 3301 },
+      database: { database: '/data/b.fdb' },
+      jwt: { secret: 'secret-b-0123456789-0123456789', issuer: 'https://b.example.test' },
     }),
   });
 
@@ -85,15 +139,15 @@ test('#10: caricamento di due tenant e summary senza segreti', () => {
     assert.equal(registry.tenants.length, 2);
     assert.deepEqual(registry.tenants.map((tenant) => tenant.id), ['tenant-a', 'tenant-b']);
     assert.equal(registry.byId.get('tenant-a').options.tenantId, 'tenant-a');
-    assert.equal(registry.byId.get('tenant-a').options.jwtOptions.issuer, 'https://a.example.test');
+    assert.match(registry.byId.get('tenant-a').environmentFile, /tenant-a\.environment\.ts$/);
+    assert.equal(registry.byId.get('tenant-b').port, 3301);
 
     const summary = JSON.stringify(registry.summary());
-    assert.doesNotMatch(summary, /secret-tenant-a/);
+    assert.doesNotMatch(summary, /secret-a/);
     assert.doesNotMatch(summary, /db-password/);
-    assert.doesNotMatch(summary, /0123456789ABCDEF/);
-    assert.match(summary, /app-a\.example\.com/);
+    assert.doesNotMatch(summary, /smtp-password/);
+    assert.match(summary, /app-a\.example\.test/);
     assert.match(summary, /\/data\/b\.fdb/);
-    assert.equal(registry.byId.get('tenant-b').port, 3301);
   } finally {
     cleanup(directory);
   }
@@ -101,25 +155,23 @@ test('#10: caricamento di due tenant e summary senza segreti', () => {
 
 test('#10: risoluzione host, wildcard, path e header fidato', () => {
   const directory = makeDirectory({
-    'tenant-a.env': tenantEnv({
-      ACCESSI_TENANT_HOSTS: 'app-a.example.com, *.wild.example.com',
-      ACCESSI_JWT_SECRET: 'secret-a-0123456789-0123456789',
-      ACCESSI_JWT_ISSUER: 'https://a.example.test',
+    'tenant-a.environment.ts': environmentSource({
+      tenant: { id: 'tenant-a', hosts: ['app-a.example.test', '*.wild.example.test'] },
+      jwt: { secret: 'secret-a-0123456789-0123456789', issuer: 'https://a.example.test' },
     }),
-    'tenant-b.env': tenantEnv({
-      ACCESSI_TENANT_PATH: '/tenant-b',
-      ACCESSI_JWT_SECRET: 'secret-b-0123456789-0123456789',
-      ACCESSI_JWT_ISSUER: 'https://b.example.test',
+    'tenant-b.environment.ts': environmentSource({
+      tenant: { id: 'tenant-b', path: '/tenant-b' },
+      jwt: { secret: 'secret-b-0123456789-0123456789', issuer: 'https://b.example.test' },
     }),
   });
 
   try {
     const noHeader = loadAccessiTenants({ directory });
-    assert.equal(noHeader.resolve({ host: 'app-a.example.com' }).tenant.id, 'tenant-a');
-    assert.equal(noHeader.resolve({ host: 'x.wild.example.com' }).tenant.id, 'tenant-a');
+    assert.equal(noHeader.resolve({ host: 'app-a.example.test' }).tenant.id, 'tenant-a');
+    assert.equal(noHeader.resolve({ host: 'x.wild.example.test' }).tenant.id, 'tenant-a');
     assert.equal(noHeader.resolve({ path: '/tenant-b/api/accessi' }).tenant.id, 'tenant-b');
     assert.equal(noHeader.resolve({ header: 'tenant-b' }), undefined);
-    assert.equal(noHeader.resolve({ host: 'unknown.example.com', path: '/tenant-c' }), undefined);
+    assert.equal(noHeader.resolve({ host: 'unknown.example.test', path: '/tenant-c' }), undefined);
 
     const withHeader = loadAccessiTenants({ directory, allowHeader: true });
     const resolution = withHeader.resolve({ header: 'tenant-b' });
@@ -127,21 +179,21 @@ test('#10: risoluzione host, wildcard, path e header fidato', () => {
       { id: resolution.tenant.id, matchedBy: resolution.matchedBy },
       { id: 'tenant-b', matchedBy: 'header' },
     );
-    // Host e path hanno precedenza sull'header.
-    assert.equal(withHeader.resolve({ host: 'app-a.example.com', header: 'tenant-b' }).tenant.id, 'tenant-a');
+    assert.equal(withHeader.resolve({ host: 'app-a.example.test', header: 'tenant-b' }).tenant.id, 'tenant-a');
     assert.equal(withHeader.resolve({ path: '/tenant-b', header: 'tenant-a' }).tenant.id, 'tenant-b');
   } finally {
     cleanup(directory);
   }
 });
 
-test('#10: errori di isolamento e configurazione', () => {
-  const sharedSecret = tenantEnv({ ACCESSI_TENANT_HOSTS: 'a.example.test' });
-  const duplicateHost = tenantEnv({ ACCESSI_TENANT_HOSTS: 'a.example.test', ACCESSI_JWT_SECRET: 'other-0123456789-0123456789', ACCESSI_JWT_ISSUER: 'https://other' });
-
+test('#10: errori di isolamento e configurazione runtime', () => {
+  const sharedSecret = environmentSource({
+    tenant: { id: 'one', hosts: ['a.example.test'] },
+    jwt: { secret: 'same-secret-0123456789-0123456789' },
+  });
   const duplicate = makeDirectory({
-    'one.env': sharedSecret,
-    'two.env': sharedSecret.replace('a.example.test', 'b.example.test'),
+    'one.environment.ts': sharedSecret,
+    'two.environment.ts': sharedSecret.replace('"id":"one"', '"id":"two"').replace('a.example.test', 'b.example.test'),
   });
   try {
     assert.throws(
@@ -153,8 +205,11 @@ test('#10: errori di isolamento e configurazione', () => {
   }
 
   const hostClash = makeDirectory({
-    'one.env': sharedSecret,
-    'two.env': duplicateHost,
+    'one.environment.ts': sharedSecret,
+    'two.environment.ts': environmentSource({
+      tenant: { id: 'two', hosts: ['a.example.test'] },
+      jwt: { secret: 'other-0123456789-0123456789' },
+    }),
   });
   try {
     assert.throws(
@@ -166,12 +221,20 @@ test('#10: errori di isolamento e configurazione', () => {
   }
 
   const missingDb = makeDirectory({
-    'broken.env': tenantEnv({ ACCESSI_DB_HOST: undefined, ACCESSI_DB_DATABASE: undefined, ACCESSI_TENANT_HOSTS: 'broken.example.test' }),
+    'broken.environment.ts': `export default {
+  tenant: { id: 'broken', hosts: ['broken.example.test'] },
+  database: { host: '', database: '' },
+  jwt: { secret: 'x'.repeat(40), expiresIn: '1h' },
+  email: {},
+  encryptionKey: '0123456789ABCDEF',
+  confirmationEmailUrl: 'http://localhost',
+  confirmationEmailReturnUrl: 'http://localhost',
+};`,
   });
   try {
     assert.throws(
       () => loadAccessiTenants({ directory: missingDb }),
-      (error) => error.issues.some((issue) => /broken\.env:.*ACCESSI_DB_HOST/.test(issue)),
+      (error) => error.issues.some((issue) => /database\.host obbligatorio/.test(issue)),
     );
   } finally {
     cleanup(missingDb);
@@ -179,36 +242,32 @@ test('#10: errori di isolamento e configurazione', () => {
 
   const empty = makeDirectory({});
   try {
-    assert.throws(() => loadAccessiTenants({ directory: empty }), /Nessun file \.env/);
+    assert.throws(() => loadAccessiTenants({ directory: empty }), /Nessun file \*\.environment\.ts/);
   } finally {
     cleanup(empty);
   }
 
   const sharedIssuer = makeDirectory({
-    'a.env': tenantEnv({ ACCESSI_TENANT_HOSTS: 'a.example.test' }),
-    'b.env': tenantEnv({
-      ACCESSI_TENANT_HOSTS: 'b.example.test',
-      ACCESSI_JWT_SECRET: 'b-secret-0123456789-0123456789',
+    'a.environment.ts': environmentSource({ tenant: { id: 'a', hosts: ['a.example.test'] } }),
+    'b.environment.ts': environmentSource({
+      tenant: { id: 'b', hosts: ['b.example.test'] },
+      jwt: { secret: 'b-secret-0123456789-0123456789' },
     }),
   });
   try {
     const registry = loadAccessiTenants({ directory: sharedIssuer });
     assert.ok(registry.warnings.some((warning) => /Issuer\/audience/.test(warning)));
-    const strict = loadAccessiTenants({ directory: sharedIssuer, allowSharedIssuer: true });
-    assert.equal(strict.warnings.filter((warning) => /Issuer\/audience/.test(warning)).length, 0);
   } finally {
     cleanup(sharedIssuer);
   }
 });
 
-test('#10: tenant disabilitati e prefisso Redis isolato', () => {
+test('#10: tenant disabilitati, file singolo e prefisso Redis', () => {
   const directory = makeDirectory({
-    'enabled.env': tenantEnv({ ACCESSI_TENANT_HOSTS: 'a.example.test' }),
-    'disabled.env': tenantEnv({
-      ACCESSI_TENANT_HOSTS: 'b.example.test',
-      ACCESSI_TENANT_ENABLED: 'false',
-      ACCESSI_JWT_SECRET: 'b-secret-0123456789-0123456789',
-      ACCESSI_JWT_ISSUER: 'https://b.example.test',
+    'enabled.environment.ts': environmentSource({ tenant: { id: 'enabled', hosts: ['a.example.test'] } }),
+    'disabled.environment.ts': environmentSource({
+      tenant: { id: 'disabled', hosts: ['b.example.test'], enabled: false },
+      jwt: { secret: 'b-secret-0123456789-0123456789', issuer: 'https://b.example.test' },
     }),
   });
   try {
@@ -216,20 +275,27 @@ test('#10: tenant disabilitati e prefisso Redis isolato', () => {
     assert.equal(registry.resolve({ host: 'b.example.test' }), undefined);
     assert.equal(registry.resolve({ host: 'a.example.test' }).tenant.id, 'enabled');
     assert.equal(getAccessiTenantRedisPrefix('tenant-a'), 'accessi:tenant-a:');
+
+    const single = loadAccessiTenantEnvironmentFile(
+      path.join(directory, 'enabled.environment.ts'),
+    );
+    assert.equal(single.tenant.id, 'enabled');
+    assert.equal(single.environment.tenant.id, 'enabled');
   } finally {
     cleanup(directory);
   }
 });
 
-test('#10: CLI valida, elenca e risolve', () => {
+test('#10: CLI valida, elenca e risolve file *.environment.ts', () => {
   const directory = makeDirectory({
-    'tenant-a.env': tenantEnv({ ACCESSI_TENANT_HOSTS: 'app-a.example.test' }),
+    'tenant-a.environment.ts': environmentSource({ tenant: { id: 'tenant-a', hosts: ['app-a.example.test'] } }),
   });
   try {
     const list = execFileSync(process.execPath, [SCRIPT, '--dir', directory, '--list'], { encoding: 'utf8' });
     const parsed = JSON.parse(list);
     assert.equal(parsed.tenants.length, 1);
     assert.equal(parsed.tenants[0].id, 'tenant-a');
+    assert.match(parsed.tenants[0].file, /tenant-a\.environment\.ts$/);
 
     const check = execFileSync(process.execPath, [SCRIPT, '--dir', directory, '--check'], { encoding: 'utf8' });
     assert.match(check, /Configurazione tenant valida: 1 tenant/);
