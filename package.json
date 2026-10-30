@@ -145,6 +145,7 @@
     "test:all": "npm test && npm run test:integration && npm run test:integration:redis",
     "test:integration": "node test/integration/run-firebird.cjs 5",
     "test:integration:redis": "node --test test/integration/redis-stores.integration.cjs",
+    "test:load:redis": "node --test --test-concurrency=1 test/integration/redis-load.integration.cjs",
     "test:integration:fb5": "node test/integration/run-firebird.cjs 5",
     "test:integration:fb3": "node test/integration/run-firebird.cjs 3",
     "test:integration:fb25": "node test/integration/run-firebird.cjs 2.5",

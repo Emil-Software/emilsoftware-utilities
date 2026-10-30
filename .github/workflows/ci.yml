@@ -89,6 +89,21 @@ jobs:
           ACCESSI_TEST_REDIS_URL: redis://127.0.0.1:6379
           ACCESSI_TEST_REQUIRE_REDIS: "1"
 
+      - name: Redis load and concurrency tests
+        run: npm run test:load:redis
+        env:
+          ACCESSI_TEST_REDIS_URL: redis://127.0.0.1:6379
+          ACCESSI_TEST_REQUIRE_REDIS: "1"
+          ACCESSI_TEST_REPORT_FILE: redis-load-report.md
+
+      - name: Upload Redis load report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: redis-load-report
+          path: redis-load-report.md
+          if-no-files-found: ignore
+
   integration:
     runs-on: ubuntu-latest
     strategy:
