@@ -1,3 +1,10 @@
+# [2.0.0-dev.77](https://github.com/Emil-Software/emilsoftware-utilities/compare/v2.0.0-dev.76...v2.0.0-dev.77) (2026-10-30)
+
+
+### Features
+
+* **accessi:** modalita cookie httpOnly con CSRF double-submit ([86abe80](https://github.com/Emil-Software/emilsoftware-utilities/commit/86abe80368bbc91922f0cf05bf2732cfc6731d35))
+
 # [2.0.0-dev.76](https://github.com/Emil-Software/emilsoftware-utilities/compare/v2.0.0-dev.75...v2.0.0-dev.76) (2026-10-30)
 
 
