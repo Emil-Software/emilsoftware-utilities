@@ -1,3 +1,10 @@
+# [2.0.0-dev.72](https://github.com/Emil-Software/emilsoftware-utilities/compare/v2.0.0-dev.71...v2.0.0-dev.72) (2026-10-30)
+
+
+### Features
+
+* **accessi:** client OpenAPI separati per pubblico, admin e service ([7014a67](https://github.com/Emil-Software/emilsoftware-utilities/commit/7014a67e4fccba87f5558a33c47a76d3c0277ef9)), closes [#7](https://github.com/Emil-Software/emilsoftware-utilities/issues/7)
+
 # [2.0.0-dev.71](https://github.com/Emil-Software/emilsoftware-utilities/compare/v2.0.0-dev.70...v2.0.0-dev.71) (2026-10-30)
 
 
