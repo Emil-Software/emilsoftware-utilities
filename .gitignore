@@ -26,6 +26,7 @@
 !/test/token-revocation.cjs
 !/test/accessi-client.cjs
 !/test/accessi-client-scopes.cjs
+!/test/openapi-semantic-diff.cjs
 !/test/integration/
 !/test/integration/**
 

@@ -133,6 +133,31 @@ il pacchetto gira in host Nest/Express e non esiste un bundle ESM separato da ma
 La decisione di mantenere un pacchetto singolo (con entry point per scope) e il piano per un
 eventuale split futuro sono documentati nell'[ADR 0001](docs/adr/0001-split-package.md).
 
+### OpenAPI semantic diff
+
+`docs/accessi-openapi-fingerprint.json` blocca la rimozione di operation e schema, ma non i cambi
+di tipo o le nuove restrizioni. Il build esegue anche un diff semantico contro
+`docs/accessi-openapi-baseline.json`:
+
+```bash
+npm run check:accessi-openapi-diff     # verifica (eseguita dal build e dalla CI)
+npm run accessi:update-openapi-baseline  # accetta il contratto corrente come nuova baseline
+```
+
+Sono **breaking**: operation/parametri/risposte rimosse, cambi di tipo o formato, `required` aggiunto
+in input o rimosso in output, valori enum rimossi, `security` cambiata e vincoli piu stretti
+sull'input. Aggiungere campi opzionali (input o output) non e breaking.
+
+Un breaking change intenzionale va dichiarato in
+`docs/accessi-openapi-breaking-allowlist.json` con `id`, `reason` (obbligatoria) e, se esiste, `issue`:
+
+```json
+[{ "id": "operation:legacyLogin:removed", "reason": "Rimosso nella major 3.0", "issue": "#123" }]
+```
+
+La CI fallisce se un breaking change non e coperto, se un'eccezione non ha `reason` o se l'eccezione
+e diventata obsoleta (il cambio non esiste piu).
+
 ### Integration test su Redis reale
 
 Gli store condivisi (rate limit, ticket console, revoca sessioni, revoca `jti`, rotazione refresh

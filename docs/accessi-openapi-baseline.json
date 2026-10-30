@@ -1,0 +1,4500 @@
+{
+  "operations": {
+    "serveResetPasswordPage": {
+      "method": "GET",
+      "path": "/api/accessi/email/reset-password-page/{token}",
+      "security": [],
+      "parameters": {
+        "path:token": {
+          "required": true,
+          "schema": {
+            "type": "string"
+          }
+        },
+        "query:returnUrl": {
+          "required": false,
+          "schema": {
+            "type": "string"
+          }
+        }
+      },
+      "requestBody": null,
+      "responses": {
+        "200": {
+          "type": "none"
+        }
+      }
+    },
+    "sendPasswordResetEmail": {
+      "method": "POST",
+      "path": "/api/accessi/email/send-reset-password-email",
+      "security": [],
+      "parameters": {},
+      "requestBody": {
+        "required": true,
+        "schema": {
+          "ref": "SendResetPasswordEmailRequest"
+        }
+      },
+      "responses": {
+        "200": {
+          "ref": "ActionResponse"
+        },
+        "500": {
+          "ref": "ErrorResponse"
+        }
+      }
+    },
+    "resetPassword": {
+      "method": "POST",
+      "path": "/api/accessi/auth/confirm-reset-password/{token}",
+      "security": [],
+      "parameters": {
+        "path:token": {
+          "required": true,
+          "schema": {
+            "type": "string"
+          }
+        }
+      },
+      "requestBody": {
+        "required": true,
+        "schema": {
+          "ref": "ConfirmResetPasswordRequest"
+        }
+      },
+      "responses": {
+        "200": {
+          "ref": "ActionResponse"
+        },
+        "400": {
+          "ref": "ErrorResponse"
+        }
+      }
+    },
+    "getUserByToken": {
+      "method": "POST",
+      "path": "/api/accessi/auth/get-user-by-token",
+      "security": [],
+      "parameters": {},
+      "requestBody": {
+        "required": true,
+        "schema": {
+          "ref": "GetUserByTokenRequest"
+        }
+      },
+      "responses": {
+        "200": {
+          "ref": "GetUserByTokenResponse"
+        },
+        "401": {
+          "ref": "ErrorResponse"
+        }
+      }
+    },
+    "revokeSessions": {
+      "method": "POST",
+      "path": "/api/accessi/auth/revoke-sessions",
+      "security": [],
+      "parameters": {},
+      "requestBody": null,
+      "responses": {
+        "200": {
+          "ref": "ActionResponse"
+        },
+        "401": {
+          "ref": "ErrorResponse"
+        },
+        "501": {
+          "ref": "ErrorResponse"
+        }
+      }
+    },
+    "revokeToken": {
+      "method": "POST",
+      "path": "/api/accessi/auth/revoke-token",
+      "security": [],
+      "parameters": {},
+      "requestBody": {
+        "required": true,
+        "schema": {
+          "ref": "RevokeTokenRequest"
+        }
+      },
+      "responses": {
+        "200": {
+          "ref": "ActionResponse"
+        },
+        "401": {
+          "ref": "ErrorResponse"
+        },
+        "403": {
+          "ref": "ErrorResponse"
+        },
+        "501": {
+          "ref": "ErrorResponse"
+        }
+      }
+    },
+    "login": {
+      "method": "POST",
+      "path": "/api/accessi/auth/login",
+      "security": [],
+      "parameters": {},
+      "requestBody": {
+        "required": true,
+        "schema": {
+          "ref": "LoginRequest"
+        }
+      },
+      "responses": {
+        "200": {
+          "ref": "LoginResponse"
+        },
+        "401": {
+          "ref": "ErrorResponse"
+        },
+        "403": {
+          "ref": "PasswordExpiredResponse"
+        }
+      }
+    },
+    "refreshAccessToken": {
+      "method": "POST",
+      "path": "/api/accessi/auth/refresh",
+      "security": [],
+      "parameters": {},
+      "requestBody": {
+        "required": true,
+        "schema": {
+          "ref": "RefreshTokenRequest"
+        }
+      },
+      "responses": {
+        "200": {
+          "ref": "RefreshTokenResponse"
+        },
+        "401": {
+          "ref": "ErrorResponse"
+        },
+        "429": {
+          "ref": "ErrorResponse"
+        }
+      }
+    },
+    "verifyTwoFactor": {
+      "method": "POST",
+      "path": "/api/accessi/auth/two-factor/verify",
+      "security": [],
+      "parameters": {},
+      "requestBody": {
+        "required": true,
+        "schema": {
+          "ref": "VerifyTwoFactorRequest"
+        }
+      },
+      "responses": {
+        "200": {
+          "ref": "LoginResponse"
+        },
+        "401": {
+          "ref": "ErrorResponse"
+        },
+        "429": {
+          "ref": "ErrorResponse"
+        }
+      }
+    },
+    "resendTwoFactor": {
+      "method": "POST",
+      "path": "/api/accessi/auth/two-factor/resend",
+      "security": [],
+      "parameters": {},
+      "requestBody": {
+        "required": true,
+        "schema": {
+          "ref": "ResendTwoFactorRequest"
+        }
+      },
+      "responses": {
+        "200": {
+          "ref": "LoginResponse"
+        },
+        "401": {
+          "ref": "ErrorResponse"
+        },
+        "429": {
+          "ref": "ErrorResponse"
+        }
+      }
+    },
+    "bootstrapAdmin": {
+      "method": "POST",
+      "path": "/api/accessi/auth/bootstrap-admin",
+      "security": [],
+      "parameters": {},
+      "requestBody": {
+        "required": true,
+        "schema": {
+          "ref": "BootstrapAdminRequest"
+        }
+      },
+      "responses": {
+        "200": {
+          "ref": "BootstrapAdminResponse"
+        },
+        "401": {
+          "ref": "ErrorResponse"
+        },
+        "403": {
+          "ref": "ErrorResponse"
+        },
+        "429": {
+          "ref": "ErrorResponse"
+        }
+      }
+    },
+    "getAdminBootstrapStatus": {
+      "method": "GET",
+      "path": "/api/accessi/auth/bootstrap-admin/status",
+      "security": [],
+      "parameters": {},
+      "requestBody": null,
+      "responses": {
+        "200": {
+          "ref": "AdminBootstrapStatusResponse"
+        }
+      }
+    },
+    "getRoles": {
+      "method": "GET",
+      "path": "/api/accessi/permission/roles",
+      "security": [
+        "bearer"
+      ],
+      "parameters": {},
+      "requestBody": null,
+      "responses": {
+        "200": {
+          "ref": "GetRolesResponse"
+        },
+        "500": {
+          "ref": "ErrorResponse"
+        }
+      }
+    },
+    "updateRole": {
+      "method": "PUT",
+      "path": "/api/accessi/permission/update-role/{codiceRuolo}",
+      "security": [
+        "bearer"
+      ],
+      "parameters": {
+        "path:codiceRuolo": {
+          "required": true,
+          "schema": {
+            "type": "number"
+          }
+        }
+      },
+      "requestBody": {
+        "required": true,
+        "schema": {
+          "ref": "Role"
+        }
+      },
+      "responses": {
+        "200": {
+          "ref": "ActionResponse"
+        },
+        "400": {
+          "ref": "ErrorResponse"
+        },
+        "500": {
+          "ref": "ErrorResponse"
+        }
+      }
+    },
+    "createRole": {
+      "method": "POST",
+      "path": "/api/accessi/permission/create-role",
+      "security": [
+        "bearer"
+      ],
+      "parameters": {},
+      "requestBody": {
+        "required": true,
+        "schema": {
+          "ref": "Role"
+        }
+      },
+      "responses": {
+        "201": {
+          "ref": "ActionResponse"
+        },
+        "400": {
+          "ref": "ErrorResponse"
+        },
+        "500": {
+          "ref": "ErrorResponse"
+        }
+      }
+    },
+    "assignRolesToUser": {
+      "method": "POST",
+      "path": "/api/accessi/permission/assign-roles/{codiceUtente}",
+      "security": [
+        "bearer"
+      ],
+      "parameters": {
+        "path:codiceUtente": {
+          "required": true,
+          "schema": {
+            "type": "number"
+          }
+        }
+      },
+      "requestBody": {
+        "required": true,
+        "schema": {
+          "ref": "AssignRolesToUserRequest"
+        }
+      },
+      "responses": {
+        "200": {
+          "ref": "ActionResponse"
+        },
+        "400": {
+          "ref": "ErrorResponse"
+        },
+        "500": {
+          "ref": "ErrorResponse"
+        }
+      }
+    },
+    "assignPermissionsToUser": {
+      "method": "POST",
+      "path": "/api/accessi/permission/assign-permissions/{codiceUtente}",
+      "security": [
+        "bearer"
+      ],
+      "parameters": {
+        "path:codiceUtente": {
+          "required": true,
+          "schema": {
+            "type": "number"
+          }
+        }
+      },
+      "requestBody": {
+        "required": true,
+        "schema": {
+          "ref": "AssignPermissionsToUserRequest"
+        }
+      },
+      "responses": {
+        "200": {
+          "ref": "ActionResponse"
+        },
+        "400": {
+          "ref": "ErrorResponse"
+        },
+        "500": {
+          "ref": "ErrorResponse"
+        }
+      }
+    },
+    "deleteRole": {
+      "method": "DELETE",
+      "path": "/api/accessi/permission/delete-role/{codiceRuolo}",
+      "security": [
+        "bearer"
+      ],
+      "parameters": {
+        "path:codiceRuolo": {
+          "required": true,
+          "schema": {
+            "type": "number"
+          }
+        }
+      },
+      "requestBody": null,
+      "responses": {
+        "200": {
+          "ref": "ActionResponse"
+        },
+        "400": {
+          "ref": "ErrorResponse"
+        },
+        "500": {
+          "ref": "ErrorResponse"
+        }
+      }
+    },
+    "getMenus": {
+      "method": "GET",
+      "path": "/api/accessi/permission/menus",
+      "security": [
+        "bearer"
+      ],
+      "parameters": {
+        "query:scope": {
+          "required": false,
+          "schema": {
+            "type": "string"
+          }
+        }
+      },
+      "requestBody": null,
+      "responses": {
+        "200": {
+          "ref": "GetMenusResponse"
+        },
+        "500": {
+          "ref": "ErrorResponse"
+        }
+      }
+    },
+    "createMenu": {
+      "method": "POST",
+      "path": "/api/accessi/permission/menus",
+      "security": [
+        "bearer"
+      ],
+      "parameters": {},
+      "requestBody": {
+        "required": true,
+        "schema": {
+          "ref": "CreateMenuRequest"
+        }
+      },
+      "responses": {
+        "201": {
+          "ref": "ActionResponse"
+        },
+        "400": {
+          "ref": "ErrorResponse"
+        },
+        "500": {
+          "ref": "ErrorResponse"
+        }
+      }
+    },
+    "getGroupsWithMenus": {
+      "method": "GET",
+      "path": "/api/accessi/permission/groups-with-menus",
+      "security": [
+        "bearer"
+      ],
+      "parameters": {
+        "query:includeDisabled": {
+          "required": false,
+          "schema": {
+            "type": "boolean"
+          }
+        },
+        "query:scope": {
+          "required": false,
+          "schema": {
+            "type": "string"
+          }
+        }
+      },
+      "requestBody": null,
+      "responses": {
+        "200": {
+          "ref": "GetGroupsWithMenusResponse"
+        },
+        "500": {
+          "ref": "ErrorResponse"
+        }
+      }
+    },
+    "getMenuTypes": {
+      "method": "GET",
+      "path": "/api/accessi/permission/menu-types",
+      "security": [
+        "bearer"
+      ],
+      "parameters": {},
+      "requestBody": null,
+      "responses": {
+        "200": {
+          "ref": "GetMenuTypesResponse"
+        },
+        "500": {
+          "ref": "ErrorResponse"
+        }
+      }
+    },
+    "createMenuType": {
+      "method": "POST",
+      "path": "/api/accessi/permission/menu-types",
+      "security": [
+        "bearer"
+      ],
+      "parameters": {},
+      "requestBody": {
+        "required": true,
+        "schema": {
+          "ref": "CreateMenuTypeRequest"
+        }
+      },
+      "responses": {
+        "201": {
+          "ref": "ActionResponse"
+        },
+        "400": {
+          "ref": "ErrorResponse"
+        },
+        "500": {
+          "ref": "ErrorResponse"
+        }
+      }
+    },
+    "updateMenu": {
+      "method": "PUT",
+      "path": "/api/accessi/permission/menus/{codiceMenu}",
+      "security": [
+        "bearer"
+      ],
+      "parameters": {
+        "path:codiceMenu": {
+          "required": true,
+          "schema": {
+            "type": "string"
+          }
+        }
+      },
+      "requestBody": {
+        "required": true,
+        "schema": {
+          "ref": "UpdateMenuRequest"
+        }
+      },
+      "responses": {
+        "200": {
+          "ref": "ActionResponse"
+        },
+        "400": {
+          "ref": "ErrorResponse"
+        },
+        "500": {
+          "ref": "ErrorResponse"
+        }
+      }
+    },
+    "deleteMenu": {
+      "method": "DELETE",
+      "path": "/api/accessi/permission/menus/{codiceMenu}",
+      "security": [
+        "bearer"
+      ],
+      "parameters": {
+        "path:codiceMenu": {
+          "required": true,
+          "schema": {
+            "type": "string"
+          }
+        }
+      },
+      "requestBody": null,
+      "responses": {
+        "200": {
+          "ref": "ActionResponse"
+        },
+        "400": {
+          "ref": "ErrorResponse"
+        },
+        "500": {
+          "ref": "ErrorResponse"
+        }
+      }
+    },
+    "createMenuGroup": {
+      "method": "POST",
+      "path": "/api/accessi/permission/menu-groups",
+      "security": [
+        "bearer"
+      ],
+      "parameters": {},
+      "requestBody": {
+        "required": true,
+        "schema": {
+          "ref": "CreateMenuGroupRequest"
+        }
+      },
+      "responses": {
+        "201": {
+          "ref": "ActionResponse"
+        },
+        "400": {
+          "ref": "ErrorResponse"
+        },
+        "500": {
+          "ref": "ErrorResponse"
+        }
+      }
+    },
+    "updateMenuGroup": {
+      "method": "PUT",
+      "path": "/api/accessi/permission/menu-groups/{codiceGruppo}",
+      "security": [
+        "bearer"
+      ],
+      "parameters": {
+        "path:codiceGruppo": {
+          "required": true,
+          "schema": {
+            "type": "string"
+          }
+        }
+      },
+      "requestBody": {
+        "required": true,
+        "schema": {
+          "ref": "UpdateMenuGroupRequest"
+        }
+      },
+      "responses": {
+        "200": {
+          "ref": "ActionResponse"
+        },
+        "400": {
+          "ref": "ErrorResponse"
+        },
+        "500": {
+          "ref": "ErrorResponse"
+        }
+      }
+    },
+    "deleteMenuGroup": {
+      "method": "DELETE",
+      "path": "/api/accessi/permission/menu-groups/{codiceGruppo}",
+      "security": [
+        "bearer"
+      ],
+      "parameters": {
+        "path:codiceGruppo": {
+          "required": true,
+          "schema": {
+            "type": "string"
+          }
+        }
+      },
+      "requestBody": null,
+      "responses": {
+        "200": {
+          "ref": "ActionResponse"
+        },
+        "400": {
+          "ref": "ErrorResponse"
+        },
+        "500": {
+          "ref": "ErrorResponse"
+        }
+      }
+    },
+    "updateMenuType": {
+      "method": "PUT",
+      "path": "/api/accessi/permission/menu-types/{codiceTipo}",
+      "security": [
+        "bearer"
+      ],
+      "parameters": {
+        "path:codiceTipo": {
+          "required": true,
+          "schema": {
+            "type": "string"
+          }
+        }
+      },
+      "requestBody": {
+        "required": true,
+        "schema": {
+          "ref": "UpdateMenuTypeRequest"
+        }
+      },
+      "responses": {
+        "200": {
+          "ref": "ActionResponse"
+        },
+        "400": {
+          "ref": "ErrorResponse"
+        },
+        "500": {
+          "ref": "ErrorResponse"
+        }
+      }
+    },
+    "deleteMenuType": {
+      "method": "DELETE",
+      "path": "/api/accessi/permission/menu-types/{codiceTipo}",
+      "security": [
+        "bearer"
+      ],
+      "parameters": {
+        "path:codiceTipo": {
+          "required": true,
+          "schema": {
+            "type": "string"
+          }
+        }
+      },
+      "requestBody": null,
+      "responses": {
+        "200": {
+          "ref": "ActionResponse"
+        },
+        "400": {
+          "ref": "ErrorResponse"
+        },
+        "500": {
+          "ref": "ErrorResponse"
+        }
+      }
+    },
+    "getUserRolesAndGrants": {
+      "method": "GET",
+      "path": "/api/accessi/permission/grants/{codiceUtente}",
+      "security": [
+        "bearer"
+      ],
+      "parameters": {
+        "path:codiceUtente": {
+          "required": true,
+          "schema": {
+            "type": "number"
+          }
+        },
+        "query:scope": {
+          "required": false,
+          "schema": {
+            "type": "string"
+          }
+        }
+      },
+      "requestBody": null,
+      "responses": {
+        "200": {
+          "ref": "UserGrantsResponse"
+        },
+        "500": {
+          "ref": "ErrorResponse"
+        }
+      }
+    },
+    "getScopes": {
+      "method": "GET",
+      "path": "/api/accessi/permission/scopes",
+      "security": [
+        "bearer"
+      ],
+      "parameters": {},
+      "requestBody": null,
+      "responses": {
+        "200": {
+          "ref": "GetScopesResponse"
+        },
+        "500": {
+          "ref": "ErrorResponse"
+        }
+      }
+    },
+    "createScope": {
+      "method": "POST",
+      "path": "/api/accessi/permission/scopes",
+      "security": [
+        "bearer"
+      ],
+      "parameters": {},
+      "requestBody": {
+        "required": true,
+        "schema": {
+          "ref": "CreateScopeRequest"
+        }
+      },
+      "responses": {
+        "201": {
+          "ref": "ActionResponse"
+        },
+        "400": {
+          "ref": "ErrorResponse"
+        }
+      }
+    },
+    "updateScope": {
+      "method": "PUT",
+      "path": "/api/accessi/permission/scopes/{codiceScope}",
+      "security": [
+        "bearer"
+      ],
+      "parameters": {
+        "path:codiceScope": {
+          "required": true,
+          "schema": {
+            "type": "string"
+          }
+        }
+      },
+      "requestBody": {
+        "required": true,
+        "schema": {
+          "ref": "UpdateScopeRequest"
+        }
+      },
+      "responses": {
+        "200": {
+          "ref": "ActionResponse"
+        },
+        "400": {
+          "ref": "ErrorResponse"
+        }
+      }
+    },
+    "deleteScope": {
+      "method": "DELETE",
+      "path": "/api/accessi/permission/scopes/{codiceScope}",
+      "security": [
+        "bearer"
+      ],
+      "parameters": {
+        "path:codiceScope": {
+          "required": true,
+          "schema": {
+            "type": "string"
+          }
+        }
+      },
+      "requestBody": null,
+      "responses": {
+        "200": {
+          "ref": "ActionResponse"
+        }
+      }
+    },
+    "getMenuScopes": {
+      "method": "GET",
+      "path": "/api/accessi/permission/menus/{codiceMenu}/scopes",
+      "security": [
+        "bearer"
+      ],
+      "parameters": {
+        "path:codiceMenu": {
+          "required": true,
+          "schema": {
+            "type": "string"
+          }
+        }
+      },
+      "requestBody": null,
+      "responses": {
+        "200": {
+          "ref": "GetMenuScopesResponse"
+        }
+      }
+    },
+    "setMenuScopes": {
+      "method": "PUT",
+      "path": "/api/accessi/permission/menus/{codiceMenu}/scopes",
+      "security": [
+        "bearer"
+      ],
+      "parameters": {
+        "path:codiceMenu": {
+          "required": true,
+          "schema": {
+            "type": "string"
+          }
+        }
+      },
+      "requestBody": {
+        "required": true,
+        "schema": {
+          "ref": "SetMenuScopesRequest"
+        }
+      },
+      "responses": {
+        "200": {
+          "ref": "ActionResponse"
+        }
+      }
+    },
+    "setScopeMenus": {
+      "method": "PUT",
+      "path": "/api/accessi/permission/scopes/{codiceScope}/menus",
+      "security": [
+        "bearer"
+      ],
+      "parameters": {
+        "path:codiceScope": {
+          "required": true,
+          "schema": {
+            "type": "string"
+          }
+        }
+      },
+      "requestBody": {
+        "required": true,
+        "schema": {
+          "ref": "SetScopeMenusRequest"
+        }
+      },
+      "responses": {
+        "200": {
+          "ref": "ActionResponse"
+        }
+      }
+    },
+    "serveResetPasswordPageUser": {
+      "method": "GET",
+      "path": "/api/accessi/user/reset-password/{token}",
+      "security": [],
+      "parameters": {
+        "path:token": {
+          "required": true,
+          "schema": {
+            "type": "string"
+          }
+        }
+      },
+      "requestBody": null,
+      "responses": {
+        "200": {
+          "type": "none"
+        }
+      }
+    },
+    "getUsers": {
+      "method": "GET",
+      "path": "/api/accessi/user/get-users",
+      "security": [
+        "bearer"
+      ],
+      "parameters": {
+        "query:email": {
+          "required": false,
+          "schema": {
+            "type": "string"
+          }
+        },
+        "query:codiceUtente": {
+          "required": false,
+          "schema": {
+            "type": "number"
+          }
+        },
+        "query:includeExtensionFields": {
+          "required": false,
+          "schema": {
+            "type": "boolean"
+          }
+        },
+        "query:includeGrants": {
+          "required": false,
+          "schema": {
+            "type": "boolean"
+          }
+        },
+        "query:limit": {
+          "required": false,
+          "schema": {
+            "type": "number"
+          }
+        },
+        "query:offset": {
+          "required": false,
+          "schema": {
+            "type": "number"
+          }
+        }
+      },
+      "requestBody": null,
+      "responses": {
+        "200": {
+          "ref": "GetUsersResponse"
+        },
+        "401": {
+          "ref": "ErrorResponse"
+        },
+        "403": {
+          "ref": "ErrorResponse"
+        },
+        "500": {
+          "ref": "ErrorResponse"
+        }
+      }
+    },
+    "deleteUser": {
+      "method": "DELETE",
+      "path": "/api/accessi/user/delete-user/{codiceUtente}",
+      "security": [
+        "bearer"
+      ],
+      "parameters": {
+        "path:codiceUtente": {
+          "required": true,
+          "schema": {
+            "type": "number"
+          }
+        }
+      },
+      "requestBody": null,
+      "responses": {
+        "200": {
+          "ref": "ActionResponse"
+        },
+        "400": {
+          "ref": "ErrorResponse"
+        },
+        "500": {
+          "ref": "ErrorResponse"
+        }
+      }
+    },
+    "deleteUserPermanently": {
+      "method": "DELETE",
+      "path": "/api/accessi/user/delete-user-permanent/{codiceUtente}",
+      "security": [
+        "bearer"
+      ],
+      "parameters": {
+        "path:codiceUtente": {
+          "required": true,
+          "schema": {
+            "type": "number"
+          }
+        }
+      },
+      "requestBody": null,
+      "responses": {
+        "200": {
+          "ref": "ActionResponse"
+        },
+        "400": {
+          "ref": "ErrorResponse"
+        },
+        "403": {
+          "ref": "ErrorResponse"
+        },
+        "404": {
+          "ref": "ErrorResponse"
+        },
+        "500": {
+          "ref": "ErrorResponse"
+        }
+      }
+    },
+    "forcePasswordReset": {
+      "method": "POST",
+      "path": "/api/accessi/user/force-password-reset/{codiceUtente}",
+      "security": [
+        "bearer"
+      ],
+      "parameters": {
+        "path:codiceUtente": {
+          "required": true,
+          "schema": {
+            "type": "number"
+          }
+        }
+      },
+      "requestBody": null,
+      "responses": {
+        "200": {
+          "ref": "ActionResponse"
+        },
+        "400": {
+          "ref": "ErrorResponse"
+        },
+        "404": {
+          "ref": "ErrorResponse"
+        }
+      }
+    },
+    "forcePasswordResetLegacy": {
+      "method": "POST",
+      "path": "/api/accessi/user/force-password-reset-legacy",
+      "security": [
+        "bearer"
+      ],
+      "parameters": {},
+      "requestBody": null,
+      "responses": {
+        "200": {
+          "ref": "ActionResponse"
+        },
+        "400": {
+          "ref": "ErrorResponse"
+        }
+      }
+    },
+    "createLoginAsUrl": {
+      "method": "POST",
+      "path": "/api/accessi/user/login-as/{codiceUtente}",
+      "security": [
+        "bearer"
+      ],
+      "parameters": {
+        "path:codiceUtente": {
+          "required": true,
+          "schema": {
+            "type": "number"
+          }
+        }
+      },
+      "requestBody": {
+        "required": true,
+        "schema": {
+          "ref": "LoginAsRequest"
+        }
+      },
+      "responses": {
+        "200": {
+          "ref": "LoginAsResponse"
+        },
+        "400": {
+          "ref": "ErrorResponse"
+        },
+        "403": {
+          "ref": "ErrorResponse"
+        },
+        "404": {
+          "ref": "ErrorResponse"
+        }
+      }
+    },
+    "setUserPassword": {
+      "method": "POST",
+      "path": "/api/accessi/user/set-password/{codiceUtente}",
+      "security": [
+        "bearer"
+      ],
+      "parameters": {
+        "path:codiceUtente": {
+          "required": true,
+          "schema": {
+            "type": "number"
+          }
+        }
+      },
+      "requestBody": {
+        "required": true,
+        "schema": {
+          "ref": "SetUserPasswordRequest"
+        }
+      },
+      "responses": {
+        "200": {
+          "ref": "ActionResponse"
+        },
+        "400": {
+          "ref": "ErrorResponse"
+        },
+        "403": {
+          "ref": "ErrorResponse"
+        }
+      }
+    },
+    "setStatoRegistrazione": {
+      "method": "POST",
+      "path": "/api/accessi/user/set-stato",
+      "security": [
+        "bearer"
+      ],
+      "parameters": {},
+      "requestBody": {
+        "required": true,
+        "schema": {
+          "ref": "SetStatoRegistrazioneDto"
+        }
+      },
+      "responses": {
+        "200": {
+          "ref": "ActionResponse"
+        },
+        "400": {
+          "ref": "ErrorResponse"
+        },
+        "500": {
+          "ref": "ErrorResponse"
+        }
+      }
+    },
+    "register": {
+      "method": "POST",
+      "path": "/api/accessi/user/register",
+      "security": [],
+      "parameters": {},
+      "requestBody": {
+        "required": true,
+        "schema": {
+          "ref": "PublicRegisterRequest"
+        }
+      },
+      "responses": {
+        "201": {
+          "ref": "RegisterResponse"
+        },
+        "400": {
+          "ref": "ErrorResponse"
+        },
+        "500": {
+          "ref": "ErrorResponse"
+        }
+      }
+    },
+    "createManagedUser": {
+      "method": "POST",
+      "path": "/api/accessi/user/create-managed-user",
+      "security": [
+        "bearer"
+      ],
+      "parameters": {},
+      "requestBody": {
+        "required": true,
+        "schema": {
+          "ref": "RegisterRequest"
+        }
+      },
+      "responses": {
+        "201": {
+          "ref": "RegisterResponse"
+        }
+      }
+    },
+    "updateUtente": {
+      "method": "PUT",
+      "path": "/api/accessi/user/update-user/{codiceUtente}",
+      "security": [
+        "bearer"
+      ],
+      "parameters": {
+        "path:codiceUtente": {
+          "required": true,
+          "schema": {
+            "type": "number"
+          }
+        }
+      },
+      "requestBody": {
+        "required": true,
+        "schema": {
+          "ref": "UserDto"
+        }
+      },
+      "responses": {
+        "200": {
+          "ref": "ActionResponse"
+        },
+        "400": {
+          "ref": "ErrorResponse"
+        },
+        "403": {
+          "ref": "ErrorResponse"
+        },
+        "500": {
+          "ref": "ErrorResponse"
+        }
+      }
+    },
+    "setGdpr": {
+      "method": "PATCH",
+      "path": "/api/accessi/user/set-gdpr/{codiceUtente}",
+      "security": [
+        "bearer"
+      ],
+      "parameters": {
+        "path:codiceUtente": {
+          "required": true,
+          "schema": {
+            "type": "number"
+          }
+        }
+      },
+      "requestBody": null,
+      "responses": {
+        "200": {
+          "ref": "ActionResponse"
+        },
+        "400": {
+          "ref": "ErrorResponse"
+        },
+        "403": {
+          "ref": "ErrorResponse"
+        }
+      }
+    },
+    "getTipiFiltro": {
+      "method": "GET",
+      "path": "/api/accessi/filtri/tipi",
+      "security": [
+        "bearer"
+      ],
+      "parameters": {},
+      "requestBody": null,
+      "responses": {
+        "200": {
+          "ref": "GetFiltriResponse"
+        },
+        "500": {
+          "ref": "ErrorResponse"
+        }
+      }
+    },
+    "createTipoFiltro": {
+      "method": "POST",
+      "path": "/api/accessi/filtri/tipi",
+      "security": [
+        "bearer"
+      ],
+      "parameters": {},
+      "requestBody": {
+        "required": true,
+        "schema": {
+          "ref": "CreateFilterTypeRequest"
+        }
+      },
+      "responses": {
+        "201": {
+          "ref": "ActionResponse"
+        },
+        "400": {
+          "ref": "ErrorResponse"
+        },
+        "500": {
+          "ref": "ErrorResponse"
+        }
+      }
+    },
+    "updateTipoFiltro": {
+      "method": "PUT",
+      "path": "/api/accessi/filtri/tipi/{tipFil}",
+      "security": [
+        "bearer"
+      ],
+      "parameters": {
+        "path:tipFil": {
+          "required": true,
+          "schema": {
+            "type": "number"
+          }
+        }
+      },
+      "requestBody": {
+        "required": true,
+        "schema": {
+          "ref": "UpdateFilterTypeRequest"
+        }
+      },
+      "responses": {
+        "200": {
+          "ref": "ActionResponse"
+        },
+        "400": {
+          "ref": "ErrorResponse"
+        },
+        "500": {
+          "ref": "ErrorResponse"
+        }
+      }
+    },
+    "deleteTipoFiltro": {
+      "method": "DELETE",
+      "path": "/api/accessi/filtri/tipi/{tipFil}",
+      "security": [
+        "bearer"
+      ],
+      "parameters": {
+        "path:tipFil": {
+          "required": true,
+          "schema": {
+            "type": "number"
+          }
+        }
+      },
+      "requestBody": null,
+      "responses": {
+        "200": {
+          "ref": "ActionResponse"
+        },
+        "400": {
+          "ref": "ErrorResponse"
+        },
+        "500": {
+          "ref": "ErrorResponse"
+        }
+      }
+    },
+    "getFiltriUtente": {
+      "method": "GET",
+      "path": "/api/accessi/filtri/utente",
+      "security": [
+        "bearer"
+      ],
+      "parameters": {
+        "query:codUte": {
+          "required": false,
+          "schema": {
+            "type": "number"
+          }
+        }
+      },
+      "requestBody": null,
+      "responses": {
+        "200": {
+          "ref": "GetFiltriUtenteResponse"
+        },
+        "400": {
+          "ref": "ErrorResponse"
+        },
+        "403": {
+          "ref": "ErrorResponse"
+        },
+        "500": {
+          "ref": "ErrorResponse"
+        }
+      }
+    },
+    "saveFiltriUtente": {
+      "method": "POST",
+      "path": "/api/accessi/filtri/utente",
+      "security": [
+        "bearer"
+      ],
+      "parameters": {},
+      "requestBody": {
+        "required": true,
+        "schema": {
+          "ref": "FiltriUtente"
+        }
+      },
+      "responses": {
+        "200": {
+          "ref": "ActionResponse"
+        },
+        "400": {
+          "ref": "ErrorResponse"
+        },
+        "403": {
+          "ref": "ErrorResponse"
+        },
+        "500": {
+          "ref": "ErrorResponse"
+        }
+      }
+    },
+    "setMenuEnabled": {
+      "method": "PATCH",
+      "path": "/api/accessi/configurator/menus/{codiceMenu}/enabled",
+      "security": [
+        "bearer"
+      ],
+      "parameters": {
+        "path:codiceMenu": {
+          "required": true,
+          "schema": {
+            "type": "string"
+          }
+        }
+      },
+      "requestBody": {
+        "required": true,
+        "schema": {
+          "ref": "UpdateEnabledStatusRequest"
+        }
+      },
+      "responses": {
+        "200": {
+          "ref": "ActionResponse"
+        },
+        "400": {
+          "ref": "ErrorResponse"
+        },
+        "401": {
+          "ref": "ErrorResponse"
+        },
+        "403": {
+          "ref": "ErrorResponse"
+        },
+        "500": {
+          "ref": "ErrorResponse"
+        }
+      }
+    },
+    "setGroupEnabled": {
+      "method": "PATCH",
+      "path": "/api/accessi/configurator/groups/{codiceGruppo}/enabled",
+      "security": [
+        "bearer"
+      ],
+      "parameters": {
+        "path:codiceGruppo": {
+          "required": true,
+          "schema": {
+            "type": "string"
+          }
+        }
+      },
+      "requestBody": {
+        "required": true,
+        "schema": {
+          "ref": "UpdateEnabledStatusRequest"
+        }
+      },
+      "responses": {
+        "200": {
+          "ref": "ActionResponse"
+        },
+        "400": {
+          "ref": "ErrorResponse"
+        },
+        "401": {
+          "ref": "ErrorResponse"
+        },
+        "403": {
+          "ref": "ErrorResponse"
+        },
+        "500": {
+          "ref": "ErrorResponse"
+        }
+      }
+    },
+    "getFederatedProviders": {
+      "method": "GET",
+      "path": "/api/accessi/federated-auth/providers",
+      "security": [
+        "bearer"
+      ],
+      "parameters": {},
+      "requestBody": null,
+      "responses": {
+        "200": {
+          "ref": "FederatedProviderListResponse"
+        }
+      }
+    },
+    "createFederatedProvider": {
+      "method": "POST",
+      "path": "/api/accessi/federated-auth/providers",
+      "security": [
+        "bearer"
+      ],
+      "parameters": {},
+      "requestBody": {
+        "required": true,
+        "schema": {
+          "ref": "CreateFederatedProviderRequest"
+        }
+      },
+      "responses": {
+        "201": {
+          "ref": "FederatedProviderResponse"
+        }
+      }
+    },
+    "updateFederatedProvider": {
+      "method": "PATCH",
+      "path": "/api/accessi/federated-auth/providers/{provider}",
+      "security": [
+        "bearer"
+      ],
+      "parameters": {
+        "path:provider": {
+          "required": true,
+          "schema": {
+            "type": "string"
+          }
+        }
+      },
+      "requestBody": {
+        "required": true,
+        "schema": {
+          "ref": "UpdateFederatedProviderRequest"
+        }
+      },
+      "responses": {
+        "200": {
+          "ref": "FederatedProviderResponse"
+        }
+      }
+    },
+    "deleteFederatedProvider": {
+      "method": "DELETE",
+      "path": "/api/accessi/federated-auth/providers/{provider}",
+      "security": [
+        "bearer"
+      ],
+      "parameters": {
+        "path:provider": {
+          "required": true,
+          "schema": {
+            "type": "string"
+          }
+        }
+      },
+      "requestBody": null,
+      "responses": {
+        "200": {
+          "ref": "ActionResponse"
+        },
+        "404": {
+          "ref": "ErrorResponse"
+        },
+        "409": {
+          "ref": "ErrorResponse"
+        }
+      }
+    },
+    "getFederatedIdentities": {
+      "method": "GET",
+      "path": "/api/accessi/federated-auth/users/{codiceUtente}/identities",
+      "security": [
+        "bearer"
+      ],
+      "parameters": {
+        "path:codiceUtente": {
+          "required": true,
+          "schema": {
+            "type": "number"
+          }
+        }
+      },
+      "requestBody": null,
+      "responses": {
+        "200": {
+          "ref": "FederatedIdentityListResponse"
+        },
+        "403": {
+          "ref": "ErrorResponse"
+        }
+      }
+    },
+    "linkFederatedIdentity": {
+      "method": "POST",
+      "path": "/api/accessi/federated-auth/users/{codiceUtente}/identities",
+      "security": [
+        "bearer"
+      ],
+      "parameters": {
+        "path:codiceUtente": {
+          "required": true,
+          "schema": {
+            "type": "number"
+          }
+        }
+      },
+      "requestBody": {
+        "required": true,
+        "schema": {
+          "ref": "CreateFederatedIdentityRequest"
+        }
+      },
+      "responses": {
+        "201": {
+          "ref": "FederatedIdentityResponse"
+        }
+      }
+    },
+    "createFederatedUser": {
+      "method": "POST",
+      "path": "/api/accessi/federated-auth/users",
+      "security": [
+        "bearer"
+      ],
+      "parameters": {},
+      "requestBody": {
+        "required": true,
+        "schema": {
+          "ref": "CreateFederatedUserRequest"
+        }
+      },
+      "responses": {
+        "201": {
+          "ref": "FederatedIdentityResponse"
+        },
+        "400": {
+          "ref": "ErrorResponse"
+        },
+        "404": {
+          "ref": "ErrorResponse"
+        },
+        "409": {
+          "ref": "ErrorResponse"
+        },
+        "500": {
+          "ref": "ErrorResponse"
+        },
+        "503": {
+          "ref": "ErrorResponse"
+        }
+      }
+    },
+    "setPasswordLoginPolicy": {
+      "method": "PATCH",
+      "path": "/api/accessi/federated-auth/users/{codiceUtente}/password-login",
+      "security": [
+        "bearer"
+      ],
+      "parameters": {
+        "path:codiceUtente": {
+          "required": true,
+          "schema": {
+            "type": "number"
+          }
+        }
+      },
+      "requestBody": {
+        "required": true,
+        "schema": {
+          "ref": "SetPasswordLoginPolicyRequest"
+        }
+      },
+      "responses": {
+        "200": {
+          "ref": "ActionResponse"
+        }
+      }
+    },
+    "updateFederatedIdentity": {
+      "method": "PATCH",
+      "path": "/api/accessi/federated-auth/identities/{identityKey}",
+      "security": [
+        "bearer"
+      ],
+      "parameters": {
+        "path:identityKey": {
+          "required": true,
+          "schema": {
+            "type": "string"
+          }
+        }
+      },
+      "requestBody": {
+        "required": true,
+        "schema": {
+          "ref": "UpdateFederatedIdentityRequest"
+        }
+      },
+      "responses": {
+        "200": {
+          "ref": "ActionResponse"
+        }
+      }
+    },
+    "disableFederatedIdentity": {
+      "method": "DELETE",
+      "path": "/api/accessi/federated-auth/identities/{identityKey}",
+      "security": [
+        "bearer"
+      ],
+      "parameters": {
+        "path:identityKey": {
+          "required": true,
+          "schema": {
+            "type": "string"
+          }
+        }
+      },
+      "requestBody": null,
+      "responses": {
+        "200": {
+          "ref": "ActionResponse"
+        }
+      }
+    },
+    "deleteFederatedIdentityPermanently": {
+      "method": "DELETE",
+      "path": "/api/accessi/federated-auth/users/{codiceUtente}/identities/{identityKey}",
+      "security": [
+        "bearer"
+      ],
+      "parameters": {
+        "path:codiceUtente": {
+          "required": true,
+          "schema": {
+            "type": "number"
+          }
+        },
+        "path:identityKey": {
+          "required": true,
+          "schema": {
+            "type": "string"
+          }
+        }
+      },
+      "requestBody": null,
+      "responses": {
+        "200": {
+          "ref": "ActionResponse"
+        },
+        "404": {
+          "ref": "ErrorResponse"
+        }
+      }
+    },
+    "createConsoleEntryTicket": {
+      "method": "POST",
+      "path": "/api/accessi/console/entry",
+      "security": [
+        "bearer"
+      ],
+      "parameters": {},
+      "requestBody": null,
+      "responses": {
+        "200": {
+          "ref": "ConsoleEntryTicketResponse"
+        },
+        "401": {
+          "ref": "ErrorResponse"
+        },
+        "403": {
+          "ref": "ErrorResponse"
+        }
+      }
+    },
+    "exchangeConsoleEntryTicket": {
+      "method": "POST",
+      "path": "/api/accessi/console/entry/exchange",
+      "security": [
+        "bearer"
+      ],
+      "parameters": {},
+      "requestBody": {
+        "required": true,
+        "schema": {
+          "ref": "ConsoleEntryExchangeRequest"
+        }
+      },
+      "responses": {
+        "200": {
+          "ref": "ConsoleEntrySessionResponse"
+        },
+        "401": {
+          "ref": "ErrorResponse"
+        },
+        "429": {
+          "ref": "ErrorResponse"
+        }
+      }
+    },
+    "exchangeFederatedIdentity": {
+      "method": "POST",
+      "path": "/api/accessi/federated-auth/exchange",
+      "security": [
+        "bearer"
+      ],
+      "parameters": {},
+      "requestBody": {
+        "required": true,
+        "schema": {
+          "ref": "ExchangeFederatedIdentityRequest"
+        }
+      },
+      "responses": {
+        "200": {
+          "ref": "FederatedExchangeResponse"
+        },
+        "401": {
+          "ref": "ErrorResponse"
+        },
+        "403": {
+          "ref": "ErrorResponse"
+        },
+        "404": {
+          "ref": "ErrorResponse"
+        }
+      }
+    },
+    "getServiceTokens": {
+      "method": "GET",
+      "path": "/api/accessi/service-token",
+      "security": [
+        "bearer"
+      ],
+      "parameters": {
+        "query:includeRevoked": {
+          "required": false,
+          "schema": {
+            "type": "boolean"
+          }
+        }
+      },
+      "requestBody": null,
+      "responses": {
+        "200": {
+          "ref": "GetServiceTokensResponse"
+        },
+        "401": {
+          "ref": "ErrorResponse"
+        },
+        "403": {
+          "ref": "ErrorResponse"
+        }
+      }
+    },
+    "createServiceToken": {
+      "method": "POST",
+      "path": "/api/accessi/service-token",
+      "security": [
+        "bearer"
+      ],
+      "parameters": {},
+      "requestBody": {
+        "required": true,
+        "schema": {
+          "ref": "CreateServiceTokenRequest"
+        }
+      },
+      "responses": {
+        "201": {
+          "ref": "CreateServiceTokenResponse"
+        },
+        "400": {
+          "ref": "ErrorResponse"
+        },
+        "401": {
+          "ref": "ErrorResponse"
+        },
+        "403": {
+          "ref": "ErrorResponse"
+        }
+      }
+    },
+    "revokeServiceToken": {
+      "method": "DELETE",
+      "path": "/api/accessi/service-token/{tokenId}",
+      "security": [
+        "bearer"
+      ],
+      "parameters": {
+        "path:tokenId": {
+          "required": true,
+          "schema": {
+            "type": "string"
+          }
+        }
+      },
+      "requestBody": null,
+      "responses": {
+        "200": {
+          "ref": "ErrorResponse"
+        },
+        "403": {
+          "ref": "ErrorResponse"
+        },
+        "404": {
+          "ref": "ErrorResponse"
+        }
+      }
+    },
+    "rotateServiceToken": {
+      "method": "POST",
+      "path": "/api/accessi/service-token/{tokenId}/rotate",
+      "security": [
+        "bearer"
+      ],
+      "parameters": {
+        "path:tokenId": {
+          "required": true,
+          "schema": {
+            "type": "string"
+          }
+        }
+      },
+      "requestBody": null,
+      "responses": {
+        "201": {
+          "ref": "CreateServiceTokenResponse"
+        },
+        "403": {
+          "ref": "ErrorResponse"
+        },
+        "404": {
+          "ref": "ErrorResponse"
+        }
+      }
+    },
+    "getSchema": {
+      "method": "GET",
+      "path": "/api/accessi/schema",
+      "security": [
+        "bearer"
+      ],
+      "parameters": {},
+      "requestBody": null,
+      "responses": {
+        "200": {
+          "ref": "GetSchemaResponse"
+        },
+        "403": {
+          "ref": "ErrorResponse"
+        }
+      }
+    },
+    "introspectAccessiToken": {
+      "method": "POST",
+      "path": "/api/accessi/auth/introspect",
+      "security": [
+        "bearer"
+      ],
+      "parameters": {},
+      "requestBody": {
+        "required": true,
+        "schema": {
+          "ref": "IntrospectAccessiTokenRequest"
+        }
+      },
+      "responses": {
+        "200": {
+          "ref": "IntrospectAccessiTokenResponse"
+        },
+        "401": {
+          "ref": "ErrorResponse"
+        },
+        "403": {
+          "ref": "ErrorResponse"
+        }
+      }
+    }
+  },
+  "schemas": {
+    "SendResetPasswordEmailRequest": {
+      "type": "object",
+      "required": [
+        "email"
+      ],
+      "properties": {
+        "email": {
+          "type": "string"
+        },
+        "htmlMail": {
+          "type": "string"
+        }
+      }
+    },
+    "ActionResponse": {
+      "type": "object",
+      "required": [
+        "message",
+        "severity",
+        "status",
+        "statusCode"
+      ],
+      "properties": {
+        "severity": {
+          "type": "string"
+        },
+        "status": {
+          "type": "number"
+        },
+        "statusCode": {
+          "type": "number"
+        },
+        "message": {
+          "type": "string"
+        }
+      }
+    },
+    "ErrorResponse": {
+      "type": "object",
+      "required": [
+        "error",
+        "message",
+        "severity",
+        "status",
+        "statusCode"
+      ],
+      "properties": {
+        "severity": {
+          "type": "string"
+        },
+        "status": {
+          "type": "number"
+        },
+        "statusCode": {
+          "type": "number"
+        },
+        "message": {
+          "type": "string"
+        },
+        "code": {
+          "type": "string"
+        },
+        "error": {
+          "type": "string"
+        },
+        "details": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "ConfirmResetPasswordRequest": {
+      "type": "object",
+      "required": [
+        "newPassword"
+      ],
+      "properties": {
+        "newPassword": {
+          "type": "string",
+          "minLength": 8,
+          "maxLength": 100
+        }
+      }
+    },
+    "GetUserByTokenRequest": {
+      "type": "object",
+      "required": [
+        "token"
+      ],
+      "properties": {
+        "token": {
+          "type": "string"
+        }
+      }
+    },
+    "Status": {
+      "type": "object",
+      "required": [
+        "errorCode",
+        "errorDescription"
+      ],
+      "properties": {
+        "errorCode": {
+          "type": "string"
+        },
+        "errorDescription": {
+          "type": "string"
+        }
+      }
+    },
+    "AuthenticatedUserPayloadDto": {
+      "type": "object",
+      "required": [
+        "codiceUtente",
+        "flagAdmin",
+        "flagSuper",
+        "statoRegistrazione"
+      ],
+      "properties": {
+        "codiceUtente": {
+          "type": "number"
+        },
+        "email": {
+          "type": "string"
+        },
+        "flagSuper": {
+          "type": "boolean"
+        },
+        "flagAdmin": {
+          "type": "boolean"
+        },
+        "flagDueFattori": {
+          "type": "boolean"
+        },
+        "passwordlessLoginEnabled": {
+          "type": "boolean"
+        },
+        "passwordLoginEnabled": {
+          "type": "boolean"
+        },
+        "statoRegistrazione": {
+          "type": "number"
+        }
+      }
+    },
+    "AuthenticatedTokenPayloadDto": {
+      "type": "object",
+      "required": [
+        "userData"
+      ],
+      "properties": {
+        "userData": {
+          "ref": "AuthenticatedUserPayloadDto"
+        }
+      }
+    },
+    "GetUserByTokenResponse": {
+      "type": "object",
+      "required": [
+        "Result",
+        "Status"
+      ],
+      "properties": {
+        "Status": {
+          "ref": "Status"
+        },
+        "Message": {
+          "type": "string"
+        },
+        "Result": {
+          "ref": "AuthenticatedTokenPayloadDto"
+        }
+      }
+    },
+    "RevokeTokenRequest": {
+      "type": "object",
+      "properties": {
+        "jti": {
+          "type": "string"
+        }
+      }
+    },
+    "LoginRequest": {
+      "type": "object",
+      "required": [
+        "email"
+      ],
+      "properties": {
+        "email": {
+          "type": "string"
+        },
+        "password": {
+          "type": "string"
+        },
+        "scope": {
+          "type": "string"
+        }
+      }
+    },
+    "TwoFactorChallengeDto": {
+      "type": "object",
+      "required": [
+        "challengeId",
+        "expiresAt",
+        "method",
+        "resendAfterSeconds",
+        "twoFactorRequired"
+      ],
+      "properties": {
+        "twoFactorRequired": {
+          "type": "number",
+          "enum": [
+            "true"
+          ]
+        },
+        "challengeId": {
+          "type": "string"
+        },
+        "expiresAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "resendAfterSeconds": {
+          "type": "number"
+        },
+        "method": {
+          "type": "string",
+          "enum": [
+            "\"email\""
+          ]
+        }
+      }
+    },
+    "Permission": {
+      "type": "object",
+      "required": [
+        "codiceMenu",
+        "tipoAbilitazione"
+      ],
+      "properties": {
+        "codiceMenu": {
+          "type": "string"
+        },
+        "tipoAbilitazione": {
+          "type": "number"
+        }
+      }
+    },
+    "UserDto": {
+      "type": "object",
+      "required": [
+        "codiceUtente",
+        "email"
+      ],
+      "properties": {
+        "progressivo": {
+          "type": "number"
+        },
+        "numRep": {
+          "type": "number"
+        },
+        "idxPers": {
+          "type": "number"
+        },
+        "codCliSuper": {
+          "type": "number"
+        },
+        "codAge": {
+          "type": "number"
+        },
+        "codCliCol": {
+          "type": "number"
+        },
+        "codClienti": {
+          "type": "string"
+        },
+        "tipFil": {
+          "type": "number"
+        },
+        "idxPos": {
+          "type": "number"
+        },
+        "codDip": {
+          "type": "number"
+        },
+        "codVet": {
+          "type": "number"
+        },
+        "codiceUtente": {
+          "type": "number"
+        },
+        "email": {
+          "type": "string"
+        },
+        "flagGdpr": {
+          "type": "boolean"
+        },
+        "dataGdpr": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "dataInserimento": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "dataScadenzaPassword": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "dataLastLogin": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "statoRegistrazione": {
+          "type": "number",
+          "enum": [
+            "0",
+            "10",
+            "20",
+            "5",
+            "50",
+            "99"
+          ]
+        },
+        "keyRegistrazione": {
+          "type": "string"
+        },
+        "cognome": {
+          "type": "string"
+        },
+        "nome": {
+          "type": "string"
+        },
+        "avatar": {
+          "type": "string",
+          "nullable": true
+        },
+        "flagDueFattori": {
+          "type": "boolean"
+        },
+        "passwordlessLoginEnabled": {
+          "type": "boolean"
+        },
+        "codiceLingua": {
+          "type": "string"
+        },
+        "cellulare": {
+          "type": "string",
+          "nullable": true
+        },
+        "paginaDefault": {
+          "type": "string",
+          "nullable": true,
+          "maxLength": 50
+        },
+        "flagSuper": {
+          "type": "boolean"
+        },
+        "flagAdmin": {
+          "type": "boolean"
+        },
+        "passwordLoginEnabled": {
+          "type": "boolean"
+        },
+        "jsonMetadata": {
+          "type": "string"
+        },
+        "roles": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "permissions": {
+          "type": "array",
+          "items": {
+            "ref": "Permission"
+          }
+        }
+      }
+    },
+    "FiltriUtente": {
+      "type": "object",
+      "required": [
+        "codUte"
+      ],
+      "properties": {
+        "codUte": {
+          "type": "number"
+        },
+        "progressivo": {
+          "type": "number"
+        },
+        "numRep": {
+          "type": "number"
+        },
+        "idxPers": {
+          "type": "number"
+        },
+        "codCliSuper": {
+          "type": "number"
+        },
+        "codAge": {
+          "type": "number"
+        },
+        "codCliCol": {
+          "type": "number"
+        },
+        "codClienti": {
+          "type": "string"
+        },
+        "tipFil": {
+          "type": "number"
+        },
+        "idxPos": {
+          "type": "number"
+        },
+        "codDip": {
+          "type": "number"
+        },
+        "codVet": {
+          "type": "number"
+        }
+      }
+    },
+    "AbilitazioneMenu": {
+      "type": "object",
+      "required": [
+        "codiceMenu"
+      ],
+      "properties": {
+        "codiceMenu": {
+          "type": "string"
+        },
+        "tipoAbilitazione": {
+          "type": "number",
+          "enum": [
+            "0",
+            "10",
+            "20",
+            "30"
+          ]
+        },
+        "descrizioneMenu": {
+          "type": "string"
+        },
+        "descrizioneGruppo": {
+          "type": "string"
+        },
+        "codiceGruppo": {
+          "type": "string"
+        },
+        "icona": {
+          "type": "string",
+          "nullable": true
+        },
+        "tipo": {
+          "type": "string",
+          "nullable": true
+        },
+        "pagina": {
+          "type": "string",
+          "nullable": true
+        },
+        "note": {
+          "type": "string",
+          "nullable": true
+        }
+      }
+    },
+    "RuoliMenu": {
+      "type": "object",
+      "required": [
+        "codiceMenu",
+        "tipoAbilitazione"
+      ],
+      "properties": {
+        "codiceRuolo": {
+          "type": "number"
+        },
+        "codiceMenu": {
+          "type": "string"
+        },
+        "tipoAbilitazione": {
+          "type": "number",
+          "enum": [
+            "0",
+            "10",
+            "20",
+            "30"
+          ]
+        }
+      }
+    },
+    "Role": {
+      "type": "object",
+      "required": [
+        "descrizioneRuolo",
+        "menu"
+      ],
+      "properties": {
+        "codiceRuolo": {
+          "type": "number"
+        },
+        "descrizioneRuolo": {
+          "type": "string"
+        },
+        "menu": {
+          "type": "array",
+          "items": {
+            "ref": "RuoliMenu"
+          }
+        }
+      }
+    },
+    "UserGrantsDto": {
+      "type": "object",
+      "required": [
+        "abilitazioni",
+        "grants",
+        "ruoli"
+      ],
+      "properties": {
+        "abilitazioni": {
+          "type": "array",
+          "items": {
+            "ref": "AbilitazioneMenu"
+          }
+        },
+        "ruoli": {
+          "type": "array",
+          "items": {
+            "ref": "Role"
+          }
+        },
+        "grants": {
+          "type": "array",
+          "items": {
+            "ref": "AbilitazioneMenu"
+          }
+        }
+      }
+    },
+    "TokenResult": {
+      "type": "object",
+      "required": [
+        "expiresIn",
+        "type",
+        "value"
+      ],
+      "properties": {
+        "expiresIn": {
+          "type": "string"
+        },
+        "value": {
+          "type": "string"
+        },
+        "type": {
+          "type": "string",
+          "enum": [
+            "\"Basic\"",
+            "\"Bearer\""
+          ]
+        }
+      }
+    },
+    "LoginResult": {
+      "type": "object",
+      "properties": {
+        "passwordRequired": {
+          "type": "number",
+          "enum": [
+            "true"
+          ]
+        },
+        "challenge": {
+          "allOf": [
+            {
+              "ref": "TwoFactorChallengeDto"
+            }
+          ]
+        },
+        "utente": {
+          "allOf": [
+            {
+              "ref": "UserDto"
+            }
+          ]
+        },
+        "filtri": {
+          "type": "array",
+          "nullable": true,
+          "items": {
+            "ref": "FiltriUtente"
+          }
+        },
+        "userGrants": {
+          "allOf": [
+            {
+              "ref": "UserGrantsDto"
+            }
+          ]
+        },
+        "extensionFields": {
+          "type": "object"
+        },
+        "token": {
+          "allOf": [
+            {
+              "ref": "TokenResult"
+            }
+          ]
+        },
+        "refreshToken": {
+          "allOf": [
+            {
+              "ref": "TokenResult"
+            }
+          ]
+        }
+      }
+    },
+    "LoginResponse": {
+      "type": "object",
+      "required": [
+        "Result",
+        "Status"
+      ],
+      "properties": {
+        "Status": {
+          "ref": "Status"
+        },
+        "Message": {
+          "type": "string"
+        },
+        "Result": {
+          "ref": "LoginResult"
+        }
+      }
+    },
+    "PasswordExpiredResponse": {
+      "type": "object",
+      "required": [
+        "code",
+        "message",
+        "severity",
+        "statusCode"
+      ],
+      "properties": {
+        "severity": {
+          "type": "string"
+        },
+        "statusCode": {
+          "type": "number"
+        },
+        "code": {
+          "type": "string"
+        },
+        "message": {
+          "type": "string"
+        }
+      }
+    },
+    "RefreshTokenRequest": {
+      "type": "object",
+      "required": [
+        "refreshToken"
+      ],
+      "properties": {
+        "refreshToken": {
+          "type": "string"
+        }
+      }
+    },
+    "RefreshTokenResult": {
+      "type": "object",
+      "required": [
+        "token"
+      ],
+      "properties": {
+        "token": {
+          "allOf": [
+            {
+              "ref": "TokenResult"
+            }
+          ]
+        },
+        "refreshToken": {
+          "allOf": [
+            {
+              "ref": "TokenResult"
+            }
+          ]
+        }
+      }
+    },
+    "RefreshTokenResponse": {
+      "type": "object",
+      "required": [
+        "Result",
+        "Status"
+      ],
+      "properties": {
+        "Status": {
+          "ref": "Status"
+        },
+        "Message": {
+          "type": "string"
+        },
+        "Result": {
+          "ref": "RefreshTokenResult"
+        }
+      }
+    },
+    "VerifyTwoFactorRequest": {
+      "type": "object",
+      "required": [
+        "challengeId",
+        "code"
+      ],
+      "properties": {
+        "challengeId": {
+          "type": "string",
+          "minLength": 64,
+          "maxLength": 64
+        },
+        "code": {
+          "type": "string",
+          "pattern": "^\\d{6}$"
+        },
+        "scope": {
+          "type": "string"
+        }
+      }
+    },
+    "ResendTwoFactorRequest": {
+      "type": "object",
+      "required": [
+        "challengeId"
+      ],
+      "properties": {
+        "challengeId": {
+          "type": "string",
+          "minLength": 64,
+          "maxLength": 64
+        }
+      }
+    },
+    "BootstrapAdminRequest": {
+      "type": "object",
+      "required": [
+        "email",
+        "token"
+      ],
+      "properties": {
+        "token": {
+          "type": "string"
+        },
+        "email": {
+          "type": "string"
+        },
+        "nome": {
+          "type": "string"
+        },
+        "cognome": {
+          "type": "string"
+        },
+        "password": {
+          "type": "string"
+        },
+        "superUser": {
+          "type": "boolean"
+        }
+      }
+    },
+    "BootstrapAdminResultDto": {
+      "type": "object",
+      "required": [
+        "codiceUtente",
+        "email",
+        "passwordGenerated"
+      ],
+      "properties": {
+        "codiceUtente": {
+          "type": "number"
+        },
+        "email": {
+          "type": "string"
+        },
+        "password": {
+          "type": "string"
+        },
+        "passwordGenerated": {
+          "type": "boolean"
+        }
+      }
+    },
+    "BootstrapAdminResponse": {
+      "type": "object",
+      "required": [
+        "Result",
+        "Status"
+      ],
+      "properties": {
+        "Status": {
+          "ref": "Status"
+        },
+        "Message": {
+          "type": "string"
+        },
+        "Result": {
+          "ref": "BootstrapAdminResultDto"
+        }
+      }
+    },
+    "AdminBootstrapStatusResult": {
+      "type": "object",
+      "required": [
+        "enabled"
+      ],
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        }
+      }
+    },
+    "AdminBootstrapStatusResponse": {
+      "type": "object",
+      "required": [
+        "Result",
+        "Status"
+      ],
+      "properties": {
+        "Status": {
+          "ref": "Status"
+        },
+        "Message": {
+          "type": "string"
+        },
+        "Result": {
+          "ref": "AdminBootstrapStatusResult"
+        }
+      }
+    },
+    "GetRolesResponse": {
+      "type": "object",
+      "required": [
+        "Result",
+        "Status"
+      ],
+      "properties": {
+        "Status": {
+          "ref": "Status"
+        },
+        "Message": {
+          "type": "string"
+        },
+        "Result": {
+          "type": "array",
+          "items": {
+            "ref": "Role"
+          }
+        }
+      }
+    },
+    "AssignRolesToUserRequest": {
+      "type": "object",
+      "required": [
+        "roles"
+      ],
+      "properties": {
+        "roles": {
+          "type": "array",
+          "items": {
+            "type": "number"
+          }
+        }
+      }
+    },
+    "AssignPermissionsToUserRequest": {
+      "type": "object",
+      "required": [
+        "permissions"
+      ],
+      "properties": {
+        "permissions": {
+          "type": "array",
+          "items": {
+            "ref": "Permission"
+          }
+        }
+      }
+    },
+    "MenuEntity": {
+      "type": "object",
+      "required": [
+        "codiceMenu",
+        "descrizioneMenu",
+        "ordineGruppo",
+        "ordineMenu"
+      ],
+      "properties": {
+        "codiceMenu": {
+          "type": "string"
+        },
+        "descrizioneMenu": {
+          "type": "string"
+        },
+        "codiceGruppo": {
+          "type": "string"
+        },
+        "descrizioneGruppo": {
+          "type": "string"
+        },
+        "icona": {
+          "type": "string"
+        },
+        "tipo": {
+          "type": "string"
+        },
+        "pagina": {
+          "type": "string"
+        },
+        "ordineMenu": {
+          "type": "number"
+        },
+        "ordineGruppo": {
+          "type": "number"
+        },
+        "enabled": {
+          "type": "boolean"
+        },
+        "tipoAbilitazione": {
+          "type": "number"
+        },
+        "note": {
+          "type": "string"
+        }
+      }
+    },
+    "GetMenusResponse": {
+      "type": "object",
+      "required": [
+        "Result",
+        "Status"
+      ],
+      "properties": {
+        "Status": {
+          "ref": "Status"
+        },
+        "Message": {
+          "type": "string"
+        },
+        "Result": {
+          "type": "array",
+          "items": {
+            "ref": "MenuEntity"
+          }
+        }
+      }
+    },
+    "GroupWithMenusEntity": {
+      "type": "object",
+      "required": [
+        "codiceGruppo",
+        "descrizioneGruppo",
+        "menus",
+        "ordineGruppo"
+      ],
+      "properties": {
+        "codiceGruppo": {
+          "type": "string"
+        },
+        "descrizioneGruppo": {
+          "type": "string"
+        },
+        "ordineGruppo": {
+          "type": "number"
+        },
+        "enabled": {
+          "type": "boolean"
+        },
+        "menus": {
+          "type": "array",
+          "items": {
+            "ref": "MenuEntity"
+          }
+        }
+      }
+    },
+    "GetGroupsWithMenusResponse": {
+      "type": "object",
+      "required": [
+        "Result",
+        "Status"
+      ],
+      "properties": {
+        "Status": {
+          "ref": "Status"
+        },
+        "Message": {
+          "type": "string"
+        },
+        "Result": {
+          "type": "array",
+          "items": {
+            "ref": "GroupWithMenusEntity"
+          }
+        }
+      }
+    },
+    "MenuTypeEntity": {
+      "type": "object",
+      "required": [
+        "codiceTipo"
+      ],
+      "properties": {
+        "codiceTipo": {
+          "type": "string"
+        },
+        "descrizioneTipo": {
+          "type": "string"
+        }
+      }
+    },
+    "GetMenuTypesResponse": {
+      "type": "object",
+      "required": [
+        "Result",
+        "Status"
+      ],
+      "properties": {
+        "Status": {
+          "ref": "Status"
+        },
+        "Message": {
+          "type": "string"
+        },
+        "Result": {
+          "type": "array",
+          "items": {
+            "ref": "MenuTypeEntity"
+          }
+        }
+      }
+    },
+    "CreateMenuRequest": {
+      "type": "object",
+      "required": [
+        "codiceGruppo",
+        "codiceMenu"
+      ],
+      "properties": {
+        "codiceMenu": {
+          "type": "string",
+          "maxLength": 20
+        },
+        "descrizioneMenu": {
+          "type": "string",
+          "maxLength": 100
+        },
+        "codiceGruppo": {
+          "type": "string",
+          "maxLength": 1
+        },
+        "tipo": {
+          "type": "string",
+          "maxLength": 1
+        },
+        "icona": {
+          "type": "string",
+          "maxLength": 50
+        },
+        "pagina": {
+          "type": "string",
+          "maxLength": 50
+        },
+        "ordineMenu": {
+          "type": "number"
+        },
+        "enabled": {
+          "type": "boolean"
+        },
+        "rifMenu": {
+          "type": "string",
+          "maxLength": 20
+        },
+        "note": {
+          "type": "string",
+          "maxLength": 1000
+        }
+      }
+    },
+    "UpdateMenuRequest": {
+      "type": "object",
+      "properties": {
+        "descrizioneMenu": {
+          "type": "string",
+          "maxLength": 100
+        },
+        "codiceGruppo": {
+          "type": "string",
+          "maxLength": 1
+        },
+        "tipo": {
+          "type": "string",
+          "maxLength": 1
+        },
+        "icona": {
+          "type": "string",
+          "maxLength": 50
+        },
+        "pagina": {
+          "type": "string",
+          "maxLength": 50
+        },
+        "ordineMenu": {
+          "type": "number"
+        },
+        "enabled": {
+          "type": "boolean"
+        },
+        "rifMenu": {
+          "type": "string",
+          "maxLength": 20
+        },
+        "note": {
+          "type": "string",
+          "maxLength": 1000
+        }
+      }
+    },
+    "CreateMenuGroupRequest": {
+      "type": "object",
+      "required": [
+        "codiceGruppo"
+      ],
+      "properties": {
+        "codiceGruppo": {
+          "type": "string",
+          "maxLength": 1
+        },
+        "descrizioneGruppo": {
+          "type": "string",
+          "maxLength": 100
+        },
+        "ordineGruppo": {
+          "type": "number"
+        },
+        "enabled": {
+          "type": "boolean"
+        }
+      }
+    },
+    "UpdateMenuGroupRequest": {
+      "type": "object",
+      "properties": {
+        "descrizioneGruppo": {
+          "type": "string",
+          "maxLength": 100
+        },
+        "ordineGruppo": {
+          "type": "number"
+        },
+        "enabled": {
+          "type": "boolean"
+        }
+      }
+    },
+    "CreateMenuTypeRequest": {
+      "type": "object",
+      "required": [
+        "codiceTipo"
+      ],
+      "properties": {
+        "codiceTipo": {
+          "type": "string",
+          "maxLength": 1
+        },
+        "descrizioneTipo": {
+          "type": "string",
+          "maxLength": 20
+        }
+      }
+    },
+    "UpdateMenuTypeRequest": {
+      "type": "object",
+      "properties": {
+        "descrizioneTipo": {
+          "type": "string",
+          "maxLength": 20
+        }
+      }
+    },
+    "UserGrantsResponse": {
+      "type": "object",
+      "required": [
+        "Result",
+        "Status"
+      ],
+      "properties": {
+        "Status": {
+          "ref": "Status"
+        },
+        "Message": {
+          "type": "string"
+        },
+        "Result": {
+          "ref": "UserGrantsDto"
+        }
+      }
+    },
+    "ScopeEntity": {
+      "type": "object",
+      "required": [
+        "codice",
+        "nome"
+      ],
+      "properties": {
+        "codice": {
+          "type": "string"
+        },
+        "nome": {
+          "type": "string"
+        }
+      }
+    },
+    "GetScopesResponse": {
+      "type": "object",
+      "required": [
+        "Result",
+        "Status"
+      ],
+      "properties": {
+        "Status": {
+          "ref": "Status"
+        },
+        "Message": {
+          "type": "string"
+        },
+        "Result": {
+          "type": "array",
+          "items": {
+            "ref": "ScopeEntity"
+          }
+        }
+      }
+    },
+    "CreateScopeRequest": {
+      "type": "object",
+      "required": [
+        "codice",
+        "nome"
+      ],
+      "properties": {
+        "codice": {
+          "type": "string",
+          "maxLength": 20
+        },
+        "nome": {
+          "type": "string",
+          "maxLength": 100
+        }
+      }
+    },
+    "UpdateScopeRequest": {
+      "type": "object",
+      "properties": {
+        "nome": {
+          "type": "string",
+          "maxLength": 100
+        }
+      }
+    },
+    "GetMenuScopesResponse": {
+      "type": "object",
+      "required": [
+        "Result",
+        "Status"
+      ],
+      "properties": {
+        "Status": {
+          "ref": "Status"
+        },
+        "Message": {
+          "type": "string"
+        },
+        "Result": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "SetMenuScopesRequest": {
+      "type": "object",
+      "required": [
+        "scopes"
+      ],
+      "properties": {
+        "scopes": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "SetScopeMenusRequest": {
+      "type": "object",
+      "required": [
+        "menu"
+      ],
+      "properties": {
+        "menu": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "GetUsersResult": {
+      "type": "object",
+      "required": [
+        "extensionFields",
+        "userGrants",
+        "utente"
+      ],
+      "properties": {
+        "utente": {
+          "allOf": [
+            {
+              "ref": "UserDto"
+            }
+          ]
+        },
+        "userGrants": {
+          "allOf": [
+            {
+              "ref": "UserGrantsDto"
+            }
+          ]
+        },
+        "extensionFields": {
+          "type": "object"
+        }
+      }
+    },
+    "GetUsersResponse": {
+      "type": "object",
+      "required": [
+        "Result",
+        "Status"
+      ],
+      "properties": {
+        "Status": {
+          "ref": "Status"
+        },
+        "Message": {
+          "type": "string"
+        },
+        "Result": {
+          "type": "array",
+          "items": {
+            "ref": "GetUsersResult"
+          }
+        }
+      }
+    },
+    "LoginAsRequest": {
+      "type": "object",
+      "required": [
+        "url"
+      ],
+      "properties": {
+        "url": {
+          "type": "string"
+        }
+      }
+    },
+    "LoginAsResult": {
+      "type": "object",
+      "required": [
+        "expiresAt",
+        "expiresInSeconds",
+        "loginUrl",
+        "token"
+      ],
+      "properties": {
+        "loginUrl": {
+          "type": "string"
+        },
+        "token": {
+          "type": "string"
+        },
+        "expiresInSeconds": {
+          "type": "number"
+        },
+        "expiresAt": {
+          "type": "string"
+        }
+      }
+    },
+    "LoginAsResponse": {
+      "type": "object",
+      "required": [
+        "Result",
+        "Status"
+      ],
+      "properties": {
+        "Status": {
+          "ref": "Status"
+        },
+        "Message": {
+          "type": "string"
+        },
+        "Result": {
+          "ref": "LoginAsResult"
+        }
+      }
+    },
+    "SetUserPasswordRequest": {
+      "type": "object",
+      "required": [
+        "newPassword"
+      ],
+      "properties": {
+        "newPassword": {
+          "type": "string",
+          "minLength": 8,
+          "maxLength": 100
+        }
+      }
+    },
+    "SetStatoRegistrazioneDto": {
+      "type": "object",
+      "required": [
+        "codiceUtente",
+        "statoRegistrazione"
+      ],
+      "properties": {
+        "codiceUtente": {
+          "type": "number"
+        },
+        "statoRegistrazione": {
+          "type": "number",
+          "enum": [
+            "0",
+            "10",
+            "20",
+            "5",
+            "50",
+            "99"
+          ]
+        }
+      }
+    },
+    "PublicRegisterRequest": {
+      "type": "object",
+      "required": [
+        "email"
+      ],
+      "properties": {
+        "progressivo": {
+          "type": "number"
+        },
+        "numRep": {
+          "type": "number"
+        },
+        "idxPers": {
+          "type": "number"
+        },
+        "codCliSuper": {
+          "type": "number"
+        },
+        "codAge": {
+          "type": "number"
+        },
+        "codCliCol": {
+          "type": "number"
+        },
+        "codClienti": {
+          "type": "string"
+        },
+        "tipFil": {
+          "type": "number"
+        },
+        "idxPos": {
+          "type": "number"
+        },
+        "codDip": {
+          "type": "number"
+        },
+        "codVet": {
+          "type": "number"
+        },
+        "email": {
+          "type": "string"
+        },
+        "cognome": {
+          "type": "string"
+        },
+        "nome": {
+          "type": "string"
+        },
+        "cellulare": {
+          "type": "string",
+          "nullable": true
+        },
+        "paginaDefault": {
+          "type": "string",
+          "nullable": true,
+          "maxLength": 50
+        },
+        "avatar": {
+          "type": "string"
+        },
+        "htmlMail": {
+          "type": "string"
+        }
+      }
+    },
+    "RegisterResponse": {
+      "type": "object",
+      "required": [
+        "Result",
+        "Status"
+      ],
+      "properties": {
+        "Status": {
+          "ref": "Status"
+        },
+        "Message": {
+          "type": "string"
+        },
+        "Result": {
+          "type": "number"
+        }
+      }
+    },
+    "RegisterRequest": {
+      "type": "object",
+      "required": [
+        "email"
+      ],
+      "properties": {
+        "progressivo": {
+          "type": "number"
+        },
+        "numRep": {
+          "type": "number"
+        },
+        "idxPers": {
+          "type": "number"
+        },
+        "codCliSuper": {
+          "type": "number"
+        },
+        "codAge": {
+          "type": "number"
+        },
+        "codCliCol": {
+          "type": "number"
+        },
+        "codClienti": {
+          "type": "string"
+        },
+        "tipFil": {
+          "type": "number"
+        },
+        "idxPos": {
+          "type": "number"
+        },
+        "codDip": {
+          "type": "number"
+        },
+        "codVet": {
+          "type": "number"
+        },
+        "email": {
+          "type": "string"
+        },
+        "cognome": {
+          "type": "string"
+        },
+        "nome": {
+          "type": "string"
+        },
+        "cellulare": {
+          "type": "string",
+          "nullable": true
+        },
+        "paginaDefault": {
+          "type": "string",
+          "nullable": true,
+          "maxLength": 50
+        },
+        "flagSuper": {
+          "type": "boolean"
+        },
+        "flagAdmin": {
+          "type": "boolean"
+        },
+        "roles": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "permissions": {
+          "type": "array",
+          "items": {
+            "ref": "Permission"
+          }
+        },
+        "avatar": {
+          "type": "string"
+        },
+        "flagDueFattori": {
+          "type": "boolean"
+        },
+        "htmlMail": {
+          "type": "string"
+        }
+      }
+    },
+    "TipoFiltro": {
+      "type": "object",
+      "required": [
+        "tipFil"
+      ],
+      "properties": {
+        "tipFil": {
+          "type": "number"
+        },
+        "desFil": {
+          "type": "string",
+          "maxLength": 20
+        },
+        "fldFil": {
+          "type": "string",
+          "maxLength": 20
+        },
+        "flgEnabled": {
+          "type": "number",
+          "enum": [
+            "0",
+            "1"
+          ]
+        }
+      }
+    },
+    "GetFiltriResponse": {
+      "type": "object",
+      "required": [
+        "Result",
+        "Status"
+      ],
+      "properties": {
+        "Status": {
+          "ref": "Status"
+        },
+        "Message": {
+          "type": "string"
+        },
+        "Result": {
+          "type": "array",
+          "items": {
+            "ref": "TipoFiltro"
+          }
+        }
+      }
+    },
+    "CreateFilterTypeRequest": {
+      "type": "object",
+      "required": [
+        "tipFil"
+      ],
+      "properties": {
+        "tipFil": {
+          "type": "number"
+        },
+        "desFil": {
+          "type": "string",
+          "maxLength": 20
+        },
+        "fldFil": {
+          "type": "string",
+          "maxLength": 20
+        },
+        "flgEnabled": {
+          "type": "number",
+          "enum": [
+            "0",
+            "1"
+          ]
+        }
+      }
+    },
+    "UpdateFilterTypeRequest": {
+      "type": "object",
+      "properties": {
+        "desFil": {
+          "type": "string",
+          "maxLength": 20
+        },
+        "fldFil": {
+          "type": "string",
+          "maxLength": 20
+        },
+        "flgEnabled": {
+          "type": "number",
+          "enum": [
+            "0",
+            "1"
+          ]
+        }
+      }
+    },
+    "GetFiltriUtenteResponse": {
+      "type": "object",
+      "required": [
+        "Result",
+        "Status"
+      ],
+      "properties": {
+        "Status": {
+          "ref": "Status"
+        },
+        "Message": {
+          "type": "string"
+        },
+        "Result": {
+          "type": "array",
+          "items": {
+            "ref": "FiltriUtente"
+          }
+        }
+      }
+    },
+    "UpdateEnabledStatusRequest": {
+      "type": "object",
+      "required": [
+        "enabled"
+      ],
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        }
+      }
+    },
+    "FederatedProviderResponseDto": {
+      "type": "object",
+      "required": [
+        "active",
+        "description",
+        "provider"
+      ],
+      "properties": {
+        "provider": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        },
+        "active": {
+          "type": "boolean"
+        },
+        "createdAt": {
+          "type": "string"
+        },
+        "note": {
+          "type": "string"
+        }
+      }
+    },
+    "FederatedProviderListResponse": {
+      "type": "object",
+      "required": [
+        "Result",
+        "Status"
+      ],
+      "properties": {
+        "Status": {
+          "ref": "Status"
+        },
+        "Message": {
+          "type": "string"
+        },
+        "Result": {
+          "type": "array",
+          "items": {
+            "ref": "FederatedProviderResponseDto"
+          }
+        }
+      }
+    },
+    "CreateFederatedProviderRequest": {
+      "type": "object",
+      "required": [
+        "description",
+        "provider"
+      ],
+      "properties": {
+        "provider": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        },
+        "note": {
+          "type": "string"
+        }
+      }
+    },
+    "FederatedProviderResponse": {
+      "type": "object",
+      "required": [
+        "Result",
+        "Status"
+      ],
+      "properties": {
+        "Status": {
+          "ref": "Status"
+        },
+        "Message": {
+          "type": "string"
+        },
+        "Result": {
+          "ref": "FederatedProviderResponseDto"
+        }
+      }
+    },
+    "UpdateFederatedProviderRequest": {
+      "type": "object",
+      "properties": {
+        "description": {
+          "type": "string"
+        },
+        "active": {
+          "type": "boolean"
+        },
+        "note": {
+          "type": "string"
+        }
+      }
+    },
+    "FederatedIdentityResponseDto": {
+      "type": "object",
+      "required": [
+        "active",
+        "codiceUtente",
+        "identityKey",
+        "passwordLoginEnabled",
+        "provider",
+        "subject"
+      ],
+      "properties": {
+        "identityKey": {
+          "type": "string"
+        },
+        "codiceUtente": {
+          "type": "number"
+        },
+        "provider": {
+          "type": "string"
+        },
+        "subject": {
+          "type": "string"
+        },
+        "active": {
+          "type": "boolean"
+        },
+        "passwordLoginEnabled": {
+          "type": "boolean"
+        },
+        "createdAt": {
+          "type": "string"
+        },
+        "lastLoginAt": {
+          "type": "string"
+        },
+        "disabledAt": {
+          "type": "string"
+        },
+        "note": {
+          "type": "string"
+        }
+      }
+    },
+    "FederatedIdentityListResponse": {
+      "type": "object",
+      "required": [
+        "Result",
+        "Status"
+      ],
+      "properties": {
+        "Status": {
+          "ref": "Status"
+        },
+        "Message": {
+          "type": "string"
+        },
+        "Result": {
+          "type": "array",
+          "items": {
+            "ref": "FederatedIdentityResponseDto"
+          }
+        }
+      }
+    },
+    "CreateFederatedIdentityRequest": {
+      "type": "object",
+      "required": [
+        "provider",
+        "subject"
+      ],
+      "properties": {
+        "provider": {
+          "type": "string"
+        },
+        "subject": {
+          "type": "string"
+        },
+        "note": {
+          "type": "string"
+        }
+      }
+    },
+    "FederatedIdentityResponse": {
+      "type": "object",
+      "required": [
+        "Result",
+        "Status"
+      ],
+      "properties": {
+        "Status": {
+          "ref": "Status"
+        },
+        "Message": {
+          "type": "string"
+        },
+        "Result": {
+          "ref": "FederatedIdentityResponseDto"
+        }
+      }
+    },
+    "CreateFederatedUserRequest": {
+      "type": "object",
+      "required": [
+        "provider",
+        "subject",
+        "user"
+      ],
+      "properties": {
+        "provider": {
+          "type": "string"
+        },
+        "subject": {
+          "type": "string"
+        },
+        "note": {
+          "type": "string"
+        },
+        "user": {
+          "allOf": [
+            {
+              "ref": "RegisterRequest"
+            }
+          ]
+        },
+        "passwordLoginEnabled": {
+          "type": "boolean"
+        }
+      }
+    },
+    "SetPasswordLoginPolicyRequest": {
+      "type": "object",
+      "required": [
+        "passwordLoginEnabled"
+      ],
+      "properties": {
+        "passwordLoginEnabled": {
+          "type": "boolean"
+        }
+      }
+    },
+    "UpdateFederatedIdentityRequest": {
+      "type": "object",
+      "properties": {
+        "active": {
+          "type": "boolean"
+        },
+        "note": {
+          "type": "string"
+        }
+      }
+    },
+    "ConsoleEntryTicketResult": {
+      "type": "object",
+      "required": [
+        "expiresInSeconds",
+        "ticket"
+      ],
+      "properties": {
+        "ticket": {
+          "type": "string"
+        },
+        "expiresInSeconds": {
+          "type": "number"
+        }
+      }
+    },
+    "ConsoleEntryTicketResponse": {
+      "type": "object",
+      "required": [
+        "Result",
+        "Status"
+      ],
+      "properties": {
+        "Status": {
+          "ref": "Status"
+        },
+        "Message": {
+          "type": "string"
+        },
+        "Result": {
+          "ref": "ConsoleEntryTicketResult"
+        }
+      }
+    },
+    "ConsoleEntryExchangeRequest": {
+      "type": "object",
+      "required": [
+        "ticket"
+      ],
+      "properties": {
+        "ticket": {
+          "type": "string"
+        }
+      }
+    },
+    "ConsoleEntryTokenResult": {
+      "type": "object",
+      "required": [
+        "type",
+        "value"
+      ],
+      "properties": {
+        "value": {
+          "type": "string"
+        },
+        "type": {
+          "type": "string"
+        }
+      }
+    },
+    "ConsoleEntrySessionResult": {
+      "type": "object",
+      "required": [
+        "token"
+      ],
+      "properties": {
+        "token": {
+          "ref": "ConsoleEntryTokenResult"
+        }
+      }
+    },
+    "ConsoleEntrySessionResponse": {
+      "type": "object",
+      "required": [
+        "Result",
+        "Status"
+      ],
+      "properties": {
+        "Status": {
+          "ref": "Status"
+        },
+        "Message": {
+          "type": "string"
+        },
+        "Result": {
+          "ref": "ConsoleEntrySessionResult"
+        }
+      }
+    },
+    "ExchangeFederatedIdentityRequest": {
+      "type": "object",
+      "required": [
+        "provider",
+        "subject"
+      ],
+      "properties": {
+        "provider": {
+          "type": "string"
+        },
+        "subject": {
+          "type": "string"
+        }
+      }
+    },
+    "FederatedAuthenticationResultDto": {
+      "type": "object",
+      "required": [
+        "codiceUtente",
+        "login"
+      ],
+      "properties": {
+        "codiceUtente": {
+          "type": "number"
+        },
+        "login": {
+          "allOf": [
+            {
+              "ref": "LoginResult"
+            }
+          ]
+        },
+        "token": {
+          "allOf": [
+            {
+              "ref": "TokenResult"
+            }
+          ]
+        }
+      }
+    },
+    "FederatedExchangeResponse": {
+      "type": "object",
+      "required": [
+        "Result",
+        "Status"
+      ],
+      "properties": {
+        "Status": {
+          "ref": "Status"
+        },
+        "Message": {
+          "type": "string"
+        },
+        "Result": {
+          "ref": "FederatedAuthenticationResultDto"
+        }
+      }
+    },
+    "CreateServiceTokenRequest": {
+      "type": "object",
+      "required": [
+        "label"
+      ],
+      "properties": {
+        "label": {
+          "type": "string"
+        },
+        "scopes": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "expiresAt": {
+          "type": "string"
+        },
+        "ttlDays": {
+          "type": "number"
+        }
+      }
+    },
+    "IssuedServiceTokenDto": {
+      "type": "object",
+      "required": [
+        "label",
+        "revoked",
+        "scopes",
+        "token",
+        "tokenId"
+      ],
+      "properties": {
+        "tokenId": {
+          "type": "string"
+        },
+        "label": {
+          "type": "string"
+        },
+        "scopes": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "createdAt": {
+          "type": "string"
+        },
+        "expiresAt": {
+          "type": "string"
+        },
+        "lastUsedAt": {
+          "type": "string"
+        },
+        "lastUsedIp": {
+          "type": "string"
+        },
+        "revoked": {
+          "type": "boolean"
+        },
+        "revokedAt": {
+          "type": "string"
+        },
+        "revokedBy": {
+          "type": "number"
+        },
+        "token": {
+          "type": "string"
+        }
+      }
+    },
+    "CreateServiceTokenResponse": {
+      "type": "object",
+      "required": [
+        "Result",
+        "Status"
+      ],
+      "properties": {
+        "Status": {
+          "ref": "Status"
+        },
+        "Message": {
+          "type": "string"
+        },
+        "Result": {
+          "ref": "IssuedServiceTokenDto"
+        }
+      }
+    },
+    "ServiceTokenDto": {
+      "type": "object",
+      "required": [
+        "label",
+        "revoked",
+        "scopes",
+        "tokenId"
+      ],
+      "properties": {
+        "tokenId": {
+          "type": "string"
+        },
+        "label": {
+          "type": "string"
+        },
+        "scopes": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "createdAt": {
+          "type": "string"
+        },
+        "expiresAt": {
+          "type": "string"
+        },
+        "lastUsedAt": {
+          "type": "string"
+        },
+        "lastUsedIp": {
+          "type": "string"
+        },
+        "revoked": {
+          "type": "boolean"
+        },
+        "revokedAt": {
+          "type": "string"
+        },
+        "revokedBy": {
+          "type": "number"
+        }
+      }
+    },
+    "GetServiceTokensResponse": {
+      "type": "object",
+      "required": [
+        "Result",
+        "Status"
+      ],
+      "properties": {
+        "Status": {
+          "ref": "Status"
+        },
+        "Message": {
+          "type": "string"
+        },
+        "Result": {
+          "type": "array",
+          "items": {
+            "ref": "ServiceTokenDto"
+          }
+        }
+      }
+    },
+    "SchemaDdlSection": {
+      "type": "object",
+      "required": [
+        "id",
+        "sql",
+        "title"
+      ],
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "title": {
+          "type": "string"
+        },
+        "sql": {
+          "type": "string"
+        }
+      }
+    },
+    "SchemaDdlResult": {
+      "type": "object",
+      "required": [
+        "extraTables",
+        "presentGenerators",
+        "presentTables",
+        "script",
+        "sections",
+        "version"
+      ],
+      "properties": {
+        "version": {
+          "type": "string"
+        },
+        "sections": {
+          "type": "array",
+          "items": {
+            "ref": "SchemaDdlSection"
+          }
+        },
+        "script": {
+          "type": "string"
+        },
+        "presentTables": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "extraTables": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "presentGenerators": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "GetSchemaResponse": {
+      "type": "object",
+      "required": [
+        "Result",
+        "Status"
+      ],
+      "properties": {
+        "Status": {
+          "ref": "Status"
+        },
+        "Message": {
+          "type": "string"
+        },
+        "Result": {
+          "ref": "SchemaDdlResult"
+        }
+      }
+    },
+    "IntrospectAccessiTokenRequest": {
+      "type": "object",
+      "required": [
+        "token"
+      ],
+      "properties": {
+        "token": {
+          "type": "string"
+        }
+      }
+    },
+    "AccessiIntrospectionResultDto": {
+      "type": "object",
+      "required": [
+        "active"
+      ],
+      "properties": {
+        "active": {
+          "type": "boolean"
+        },
+        "user": {
+          "allOf": [
+            {
+              "ref": "UserDto"
+            }
+          ]
+        },
+        "grants": {
+          "allOf": [
+            {
+              "ref": "UserGrantsDto"
+            }
+          ]
+        }
+      }
+    },
+    "IntrospectAccessiTokenResponse": {
+      "type": "object",
+      "required": [
+        "Result",
+        "Status"
+      ],
+      "properties": {
+        "Status": {
+          "ref": "Status"
+        },
+        "Message": {
+          "type": "string"
+        },
+        "Result": {
+          "ref": "AccessiIntrospectionResultDto"
+        }
+      }
+    }
+  }
+}
