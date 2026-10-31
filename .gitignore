@@ -36,6 +36,7 @@
 !/test/audit.cjs
 !/test/import-entrypoints.cjs
 !/test/tenants.cjs
+!/test/tenant-stores.cjs
 !/test/integration/
 !/test/integration/**
 

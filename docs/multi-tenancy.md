@@ -248,31 +248,28 @@ proxy.
 
 ## Store Redis condivisi
 
-Con Redis condiviso ogni tenant deve avere un prefisso distinto:
+Con Redis condiviso usare l'helper: crea tutti gli store con prefissi
+`accessi:<tenantId>:` e li collega alle opzioni.
 
 ```ts
-const prefix = getAccessiTenantRedisPrefix(tenant.id); // accessi:acme:
-const options: AccessiOptions = {
-  ...tenant.options,
-  publicAuthRateLimit: {
-    store: createRedisRateLimitStore({ client, keyPrefix: `${prefix}rate:` }),
-  },
-  sessionRevocation: {
-    store: createRedisSessionRevocationStore({ client, keyPrefix: `${prefix}session:` }),
-  },
-  refreshTokenRotation: {
-    store: createRedisRefreshTokenRotationStore({ client, keyPrefix: `${prefix}refresh:` }),
-    enabled: true,
-  },
-  accessTokenRevocation: {
-    store: createRedisAccessTokenRevocationStore({ client, keyPrefix: `${prefix}jti:` }),
-  },
-};
+import { createAccessiTenantStores } from 'emilsoftware-utilities/accessi/server';
+
+const stores = createAccessiTenantStores({
+  tenantId: tenant.id,
+  client: redisClient,
+  encryptionKey: tenant.options.encryptionKey,
+});
+const options: AccessiOptions = stores.applyTo(tenant.options);
 ```
 
+`applyTo` collega `publicAuthRateLimit`, `serviceTokens`,
+`sessionRevocation`, `accessTokenRevocation`, `refreshTokenRotation` e
+`consoleEntry`, preservando le altre opzioni. I prefissi sono disponibili in
+`stores.prefixes`; `getAccessiTenantStorePrefixes(tenantId)` li espone anche
+senza creare gli store.
+
 Senza prefisso due tenant condividerebbero rate limit, revoche e refresh: è un
-leakage. La validazione non può verificarlo (gli store sono codice host), quindi
-va testato.
+leakage. I test di integrazione Redis verificano l'isolamento.
 
 ## Metriche e audit
 

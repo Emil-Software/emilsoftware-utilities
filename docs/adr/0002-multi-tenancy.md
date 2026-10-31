@@ -119,16 +119,11 @@ Questo evita di condividere:
 ### Store condivisi
 
 Se più tenant condividono lo stesso Redis, ogni store deve usare un prefisso
-diverso:
-
-```ts
-const prefix = getAccessiTenantRedisPrefix('acme'); // accessi:acme:
-createRedisRateLimitStore({ client, keyPrefix: `${prefix}rate:` });
-createRedisSessionRevocationStore({ client, keyPrefix: `${prefix}session:` });
-```
-
-La configurazione del tenant espone `options.tenantId`, utile per comporre i
-prefissi e per le etichette di metriche e audit.
+diverso. `createAccessiTenantStores({ tenantId, client, encryptionKey })` crea
+rate limit, revoche, refresh rotation e ticket console con prefissi
+`accessi:<tenantId>:` e li collega con `applyTo(options)`. I prefissi restano
+personalizzabili con `prefix`/`prefixes`, ma non devono mai coincidere tra
+tenant.
 
 ### Osservabilità
 
