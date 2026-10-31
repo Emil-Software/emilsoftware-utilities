@@ -1,3 +1,10 @@
+# [2.0.0-dev.82](https://github.com/Emil-Software/emilsoftware-utilities/compare/v2.0.0-dev.81...v2.0.0-dev.82) (2026-10-31)
+
+
+### Features
+
+* **deploy:** template systemd, Docker e reverse proxy multi-tenant ([33137cd](https://github.com/Emil-Software/emilsoftware-utilities/commit/33137cdd212a9315633a6bbf55c43046e8a5b6c3)), closes [#24](https://github.com/Emil-Software/emilsoftware-utilities/issues/24)
+
 # [2.0.0-dev.81](https://github.com/Emil-Software/emilsoftware-utilities/compare/v2.0.0-dev.80...v2.0.0-dev.81) (2026-10-31)
 
 
