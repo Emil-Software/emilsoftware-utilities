@@ -20,6 +20,8 @@ const EXPECTED = {
   'emilsoftware-utilities/accessi/server': {
     initializeAccessiModule: 'function',
     AccessiModule: 'function',
+    loadAccessiTenantEnvironmentFile: 'function',
+    loadAccessiTenants: 'function',
   },
   'emilsoftware-utilities/accessi/resource-server': {
     createAccessiAuthMiddleware: 'function',
@@ -160,7 +162,41 @@ for (const file of distFiles) {
   assert.equal(typeof contracts.accessiRequirement?.permission, 'function', 'import ESM di contracts');
   const client = await import('emilsoftware-utilities/accessi/client/public');
   assert.equal(typeof client.createAccessiPublicClient, 'function', 'import ESM del client pubblico');
-  console.log('Pack smoke test OK: subpath, scope client, contracts browser-safe ed ESM verificati.');
+
+  // Tenant loader: il tarball deve poter eseguire un *.environment.ts e avere jiti.
+  const {
+    loadAccessiTenantEnvironmentFile,
+    loadAccessiTenants,
+  } = require('emilsoftware-utilities/accessi/server');
+  assert.equal(typeof pkg.dependencies?.jiti, 'string', 'jiti deve essere una dipendenza runtime del pacchetto');
+  assert.ok(require.resolve('jiti'), 'jiti deve essere installato con il pacchetto');
+
+  const tenantsDir = path.join(__dirname, 'tenants');
+  fs.mkdirSync(tenantsDir, { recursive: true });
+  const environmentFile = path.join(tenantsDir, 'tenant-a.environment.ts');
+  fs.writeFileSync(environmentFile, `export default {
+  tenant: { id: 'tenant-a', hosts: ['tenant-a.example.test'], port: 3301 },
+  database: { host: 'db.example.test', database: '/data/tenant-a.fdb' },
+  jwt: { secret: 'pack-smoke-secret-0123456789-0123456789', expiresIn: '1h', issuer: 'https://tenant-a.example.test', audience: 'accessi-api' },
+  email: { host: 'localhost', port: 25, secure: false, requireTLS: false, tls: { rejectUnauthorized: false }, from: 'noreply@example.test', auth: { user: 'u', pass: 'p' } },
+  encryptionKey: '0123456789ABCDEF',
+  confirmationEmailUrl: 'https://tenant-a.example.test',
+  confirmationEmailReturnUrl: 'https://tenant-a.example.test',
+};
+`);
+
+  const single = loadAccessiTenantEnvironmentFile(environmentFile);
+  assert.equal(single.tenant.id, 'tenant-a');
+  assert.equal(single.tenant.options.tenantId, 'tenant-a');
+  assert.equal(single.tenant.options.jwtOptions.issuer, 'https://tenant-a.example.test');
+  assert.equal(single.tenant.options.databaseOptions.port, 3050);
+
+  const registry = loadAccessiTenants({ directory: tenantsDir });
+  assert.equal(registry.tenants.length, 1);
+  assert.equal(registry.resolve({ host: 'tenant-a.example.test' }).tenant.id, 'tenant-a');
+  assert.doesNotMatch(JSON.stringify(registry.summary()), /pack-smoke-secret/);
+
+  console.log('Pack smoke test OK: subpath, scope client, contracts browser-safe, ESM e tenant loader verificati.');
 })().catch((error) => {
   console.error(error);
   process.exit(1);
