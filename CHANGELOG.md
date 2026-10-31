@@ -1,3 +1,10 @@
+# [2.0.0-dev.83](https://github.com/Emil-Software/emilsoftware-utilities/compare/v2.0.0-dev.82...v2.0.0-dev.83) (2026-10-31)
+
+
+### Features
+
+* **accessi:** hot reload della cartella tenant con --watch ([0c6472f](https://github.com/Emil-Software/emilsoftware-utilities/commit/0c6472fe41c184c8f175d798221ee1976b057b7e)), closes [#22](https://github.com/Emil-Software/emilsoftware-utilities/issues/22)
+
 # [2.0.0-dev.82](https://github.com/Emil-Software/emilsoftware-utilities/compare/v2.0.0-dev.81...v2.0.0-dev.82) (2026-10-31)
 
 
