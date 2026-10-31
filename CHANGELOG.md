@@ -1,3 +1,10 @@
+# [2.0.0-dev.81](https://github.com/Emil-Software/emilsoftware-utilities/compare/v2.0.0-dev.80...v2.0.0-dev.81) (2026-10-31)
+
+
+### Features
+
+* **accessi:** store Redis multi-tenant con prefisso automatico ([4cc30f6](https://github.com/Emil-Software/emilsoftware-utilities/commit/4cc30f6d46a606f8555966649c826d6bbc595967)), closes [#21](https://github.com/Emil-Software/emilsoftware-utilities/issues/21)
+
 # [2.0.0-dev.80](https://github.com/Emil-Software/emilsoftware-utilities/compare/v2.0.0-dev.79...v2.0.0-dev.80) (2026-10-30)
 
 
