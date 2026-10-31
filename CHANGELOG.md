@@ -1,3 +1,10 @@
+# [2.0.0-dev.84](https://github.com/Emil-Software/emilsoftware-utilities/compare/v2.0.0-dev.83...v2.0.0-dev.84) (2026-10-31)
+
+
+### Features
+
+* **accessi:** router multi-tenant in-process opt-in con contesto ([e012de6](https://github.com/Emil-Software/emilsoftware-utilities/commit/e012de6fbe8ee98c2b987a29fb7848f036ed36c5)), closes [#23](https://github.com/Emil-Software/emilsoftware-utilities/issues/23)
+
 # [2.0.0-dev.83](https://github.com/Emil-Software/emilsoftware-utilities/compare/v2.0.0-dev.82...v2.0.0-dev.83) (2026-10-31)
 
 
