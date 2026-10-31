@@ -275,6 +275,54 @@ proxy_set_header X-Accessi-Tenant acme;
 e avviare il router con `allowHeader: true` solo nel servizio che si fida del
 proxy.
 
+## Router in-process (opt-in, fase 4)
+
+In alternativa al processo per tenant, un host può montare più app Accessi nello
+stesso processo e usare `createAccessiTenantRouter`:
+
+```ts
+import {
+  configureAccessiTenantAudit,
+  createAccessiService,
+  createAccessiTenantRouter,
+  loadAccessiTenants,
+} from 'emilsoftware-utilities/accessi/server';
+
+const registry = loadAccessiTenants({ directory: './tenants' });
+const acmeService = await createAccessiService({ accessiOptions: acmeOptions });
+const betaService = await createAccessiService({ accessiOptions: betaOptions });
+
+configureAccessiTenantAudit('acme', { store: acmeAuditStore, logger: false });
+configureAccessiTenantAudit('beta', { store: betaAuditStore, logger: false });
+
+const router = createAccessiTenantRouter({
+  registry,
+  handlers: { acme: acmeService.app, beta: betaService.app },
+  allowHeader: false,
+});
+app.use('/api/accessi', router);
+```
+
+Comportamento:
+
+- risoluzione host → path → header fidato, senza fallback;
+- `req.accessiTenant` contiene il tenant risolto;
+- il handler gira dentro `runWithAccessiTenant`, quindi audit e metriche
+  ricevono il label `tenant`;
+- tenant sconosciuto → `404 ACCESSI_TENANT_NOT_FOUND`;
+- tenant senza handler → `501 ACCESSI_TENANT_HANDLER_MISSING`.
+
+Limiti importanti:
+
+- le app devono essere indipendenti (un `createAccessiService` per tenant);
+- le API globali `authorizeAccessi` e `setAccessiAuthService` usano l'ultima
+  istanza inizializzata: in modalità router non sono tenant-aware e vanno
+  evitate; usare i guard/middleware dell'app del tenant;
+- audit e metriche di background (fuori da una richiesta) usano la
+  configurazione di default del processo;
+- il processo-per-tenant resta il default raccomandato: il router è opt-in e
+  non riduce i pool Firebird se le app sono comunque tutte inizializzate.
+
 ## Store Redis condivisi
 
 Con Redis condiviso usare l'helper: crea tutti gli store con prefissi

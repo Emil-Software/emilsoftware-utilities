@@ -1,5 +1,6 @@
 import { Logger } from '../../Logger';
 import { recordAccessiMetric } from '../observability/metrics';
+import { getAccessiTenantId } from '../tenancy/tenantContext';
 
 /** Record di audit normalizzato e gia redatto. */
 export interface AccessiAuditRecord {
@@ -87,12 +88,45 @@ const MAX_OBJECT_KEYS = 100;
 const MAX_DEPTH = 4;
 const PURGE_INTERVAL_MS = 60 * 60 * 1000;
 
-let sinks: AccessiAuditSink[] = [];
-let redactedKeys = new Set(DEFAULT_REDACTED_KEYS);
-let retentionDays: number | undefined;
-let loggerEnabled = true;
-let auditTenantId: string | undefined;
-let lastPurgeAt = 0;
+interface ResolvedAccessiAuditConfig {
+  sinks: AccessiAuditSink[];
+  redactedKeys: Set<string>;
+  retentionDays?: number;
+  loggerEnabled: boolean;
+  tenantId?: string;
+  lastPurgeAt: number;
+}
+
+function resolveConfig(options: AccessiAuditOptions | undefined): ResolvedAccessiAuditConfig {
+  const redactedKeys = new Set(DEFAULT_REDACTED_KEYS);
+  for (const key of options?.redact ?? []) redactedKeys.add(normalizedKey(key));
+  const retentionDays = Number(options?.retentionDays);
+  return {
+    sinks: options?.enabled === false
+      ? []
+      : [
+          ...(options?.store ? [options.store] : []),
+          ...(options?.sinks ?? []).filter((sink) => sink !== options?.store),
+        ],
+    redactedKeys,
+    ...(Number.isFinite(retentionDays) && retentionDays > 0 ? { retentionDays } : {}),
+    loggerEnabled: options?.logger !== false,
+    ...(options?.tenantId ? { tenantId: options.tenantId } : {}),
+    lastPurgeAt: 0,
+  };
+}
+
+let defaultConfig = resolveConfig(undefined);
+const tenantConfigs = new Map<string, ResolvedAccessiAuditConfig>();
+
+function currentConfig(): ResolvedAccessiAuditConfig {
+  const tenantId = getAccessiTenantId();
+  if (tenantId) {
+    const tenantConfig = tenantConfigs.get(tenantId);
+    if (tenantConfig) return tenantConfig;
+  }
+  return defaultConfig;
+}
 
 function normalizedKey(key: string): string {
   return key.toLowerCase().replace(/[-_\s]/g, '');
@@ -105,6 +139,10 @@ function normalizedKey(key: string): string {
  * che un payload applicativo finisca per intero nell'audit.
  */
 export function redactAccessiAuditValue(value: unknown, depth = 0): unknown {
+  return redactValue(value, depth, currentConfig().redactedKeys);
+}
+
+function redactValue(value: unknown, depth: number, keys: Set<string>): unknown {
   if (depth > MAX_DEPTH) return TRUNCATED;
   if (value === null || value === undefined) return value;
   if (typeof value === 'string') {
@@ -114,17 +152,17 @@ export function redactAccessiAuditValue(value: unknown, depth = 0): unknown {
   if (typeof value === 'bigint') return value.toString();
   if (value instanceof Date) return value.toISOString();
   if (value instanceof Error) {
-    return { name: value.name, message: redactAccessiAuditValue(value.message, depth + 1) };
+    return { name: value.name, message: redactValue(value.message, depth + 1, keys) };
   }
   if (Array.isArray(value)) {
-    return value.slice(0, MAX_ARRAY_LENGTH).map((item) => redactAccessiAuditValue(item, depth + 1));
+    return value.slice(0, MAX_ARRAY_LENGTH).map((item) => redactValue(item, depth + 1, keys));
   }
   if (typeof value === 'object') {
     const result: Record<string, unknown> = {};
     for (const [key, entry] of Object.entries(value as Record<string, unknown>).slice(0, MAX_OBJECT_KEYS)) {
-      result[key] = redactedKeys.has(normalizedKey(key))
+      result[key] = keys.has(normalizedKey(key))
         ? REDACTED
-        : redactAccessiAuditValue(entry, depth + 1);
+        : redactValue(entry, depth + 1, keys);
     }
     return result;
   }
@@ -157,13 +195,13 @@ function writeToSink(sink: AccessiAuditSink, record: AccessiAuditRecord): void {
   }
 }
 
-function maybePurge(): void {
-  if (!retentionDays || retentionDays <= 0) return;
+function maybePurge(config: ResolvedAccessiAuditConfig): void {
+  if (!config.retentionDays || config.retentionDays <= 0) return;
   const now = Date.now();
-  if (now - lastPurgeAt < PURGE_INTERVAL_MS) return;
-  lastPurgeAt = now;
-  const before = new Date(now - retentionDays * 24 * 60 * 60 * 1000);
-  for (const sink of sinks) {
+  if (now - config.lastPurgeAt < PURGE_INTERVAL_MS) return;
+  config.lastPurgeAt = now;
+  const before = new Date(now - config.retentionDays * 24 * 60 * 60 * 1000);
+  for (const sink of config.sinks) {
     if (typeof (sink as AccessiAuditQueryableSink).purge !== 'function') continue;
     try {
       const result = (sink as AccessiAuditQueryableSink).purge(before);
@@ -177,43 +215,48 @@ function maybePurge(): void {
 }
 
 /**
- * Configura i sink di audit del processo.
+ * Configura i sink di audit.
  *
- * Chiamato da `AccessiModule.forRoot`. Le opzioni sono globali: un solo modulo
- * Accessi per processo e la configurazione consigliata.
+ * Chiamato da `AccessiModule.forRoot`. Con `tenantId` la configurazione vale
+ * solo per quel tenant e non sovrascrive quella degli altri: e il presupposto
+ * per il router multi-tenant in-process. Senza `tenantId` aggiorna la
+ * configurazione di default (comportamento single-tenant).
  */
 export function configureAccessiAudit(options: AccessiAuditOptions | undefined): void {
-  sinks = [];
-  redactedKeys = new Set(DEFAULT_REDACTED_KEYS);
-  retentionDays = undefined;
-  loggerEnabled = true;
-  auditTenantId = options?.tenantId;
-  lastPurgeAt = 0;
+  defaultConfig = resolveConfig(options);
+}
 
-  for (const key of options?.redact ?? []) redactedKeys.add(normalizedKey(key));
-  loggerEnabled = options?.logger !== false;
-  if (options?.enabled === false) return;
-
-  if (options?.store) sinks.push(options.store);
-  for (const sink of options?.sinks ?? []) {
-    if (!sinks.includes(sink)) sinks.push(sink);
-  }
-  const days = Number(options?.retentionDays);
-  if (Number.isFinite(days) && days > 0) retentionDays = days;
+/**
+ * Configura audit e sink per un tenant specifico (router in-process).
+ *
+ * La configurazione vale quando la richiesta e dentro
+ * `runWithAccessiTenant`/`createAccessiTenantRouter`; gli eventi fuori da un
+ * contesto tenant usano la configurazione di default del processo.
+ */
+export function configureAccessiTenantAudit(
+  tenantId: string,
+  options: AccessiAuditOptions | undefined,
+): void {
+  if (!tenantId) throw new Error('configureAccessiTenantAudit: tenantId obbligatorio.');
+  tenantConfigs.set(tenantId, resolveConfig({ ...(options ?? {}), tenantId }));
 }
 
 /** Ripristina la configurazione iniziale (logger attivo, nessun sink). */
 export function resetAccessiAudit(): void {
-  configureAccessiAudit(undefined);
+  defaultConfig = resolveConfig(undefined);
+  tenantConfigs.clear();
 }
 
 /** Sink interrogabile configurato, usato dagli endpoint amministrativi. */
-export function getAccessiAuditStore(): AccessiAuditQueryableSink | undefined {
-  const configured = sinks.find((sink): sink is AccessiAuditQueryableSink =>
+export function getAccessiAuditStore(tenantId?: string): AccessiAuditQueryableSink | undefined {
+  const resolvedTenant = tenantId ?? getAccessiTenantId();
+  const config = resolvedTenant
+    ? tenantConfigs.get(resolvedTenant) ?? defaultConfig
+    : defaultConfig;
+  return config.sinks.find((sink): sink is AccessiAuditQueryableSink =>
     typeof (sink as AccessiAuditQueryableSink).query === 'function'
     && typeof (sink as AccessiAuditQueryableSink).purge === 'function',
   );
-  return configured;
 }
 
 /**
@@ -223,14 +266,17 @@ export function getAccessiAuditStore(): AccessiAuditQueryableSink | undefined {
  * non interrompe mai il flusso applicativo.
  */
 export function auditAccessi(event: string, details: Record<string, unknown> = {}): void {
+  const config = currentConfig();
+  const contextTenant = getAccessiTenantId();
+  const tenantId = contextTenant ?? config.tenantId;
   const record: AccessiAuditRecord = {
     event,
     timestamp: new Date().toISOString(),
-    ...(auditTenantId ? { tenant: auditTenantId } : {}),
+    ...(tenantId ? { tenant: tenantId } : {}),
     ...redactDetails(details ?? {}),
   };
 
-  if (loggerEnabled) {
+  if (config.loggerEnabled) {
     try {
       new Logger('AccessiAudit').warning(JSON.stringify(record));
     } catch {
@@ -238,6 +284,6 @@ export function auditAccessi(event: string, details: Record<string, unknown> = {
     }
   }
 
-  for (const sink of sinks) writeToSink(sink, record);
-  maybePurge();
+  for (const sink of config.sinks) writeToSink(sink, record);
+  maybePurge(config);
 }

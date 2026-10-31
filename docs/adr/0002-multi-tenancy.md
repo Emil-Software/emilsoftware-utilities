@@ -173,9 +173,11 @@ Negative:
 3. **Fase 3**: migrazione del deployment single-tenant esistente: creare
    `tenants/<id>.environment.ts` dalla configurazione attuale, avviare in parallelo, spostare il DNS,
    spegnere il vecchio servizio.
-4. **Fase 4 (opzionale)**: router in-process con `createAccessiTenantRouter`
-   solo se il costo dei processi diventa un problema e dopo test di leakage
-   dedicati; richiede audit/metriche per istanza, non globali.
+4. **Fase 4 (opt-in, implementata come building block)**: router in-process
+   `createAccessiTenantRouter` con contesto `runWithAccessiTenant`, audit e
+   metriche per tenant. Le app Accessi restano indipendenti e il
+   processo-per-tenant resta il default; le API globali (`authorizeAccessi`)
+   non sono tenant-aware e non vanno usate in questa modalità.
 
 ## Migrazione
 

@@ -370,8 +370,7 @@ export class AccessiModule {
       options.tenantId
         ? { ...(options.audit ?? {}), tenantId: options.audit?.tenantId ?? options.tenantId }
         : options.audit,
-    );
-    return {
+    );    return {
       module: AccessiModule,
       providers: [
         {

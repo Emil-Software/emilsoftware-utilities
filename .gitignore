@@ -39,6 +39,7 @@
 !/test/tenant-stores.cjs
 !/test/deploy-templates.cjs
 !/test/tenant-supervisor.cjs
+!/test/tenant-router.cjs
 !/test/integration/
 !/test/integration/**
 

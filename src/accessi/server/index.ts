@@ -10,6 +10,13 @@ export * from "./standalone";
 export * from "./tenants";
 export * from "./tenantStores";
 export * from "./tenantSupervisor";
+export * from "./tenantRouter";
+export {
+  runWithAccessiTenant,
+  getAccessiTenantContext,
+  getAccessiTenantId,
+} from "../../accessi-module/tenancy/tenantContext";
+export type { AccessiTenantContext } from "../../accessi-module/tenancy/tenantContext";
 export type { AccessiOptions as AccessiServerOptions } from "../../accessi-module";
 export {
   createAccessiOptionsFromEnv,

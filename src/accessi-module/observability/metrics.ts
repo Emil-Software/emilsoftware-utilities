@@ -1,4 +1,5 @@
 import type { AccessiOptions } from '../AccessiModule';
+import { getAccessiTenantId } from '../tenancy/tenantContext';
 
 /** Valore ammesso per un label Prometheus. */
 export type AccessiMetricLabelValue = string | number | boolean | undefined;
@@ -223,13 +224,19 @@ export function getAccessiMetricsSink(options: AccessiOptions | undefined): Acce
   return options?.metrics?.sink ?? defaultRegistry;
 }
 
+function withTenantContext(labels?: AccessiMetricLabels): AccessiMetricLabels | undefined {
+  const tenant = getAccessiTenantId();
+  if (!tenant || labels?.tenant !== undefined) return labels;
+  return { tenant, ...labels };
+}
+
 /** Registra una metrica sul registry globale (usato da store e moduli senza options). */
 export function recordAccessiMetric(
   name: string,
   value = 1,
   labels?: AccessiMetricLabels,
 ): void {
-  defaultRegistry.increment(name, value, labels);
+  defaultRegistry.increment(name, value, withTenantContext(labels));
 }
 
 /** Registra una durata in millisecondi sul registry globale. */
@@ -238,7 +245,7 @@ export function recordAccessiDuration(
   valueMs: number,
   labels?: AccessiMetricLabels,
 ): void {
-  defaultRegistry.observe(name, valueMs, labels);
+  defaultRegistry.observe(name, valueMs, withTenantContext(labels));
 }
 
 /** Render Prometheus del registry globale. */
@@ -266,8 +273,8 @@ export function countAccessiMetric(
   value = 1,
 ): void {
   const withTenant = options?.tenantId
-    ? { tenant: options.tenantId, ...labels }
-    : labels;
+    ? withTenantContext({ tenant: options.tenantId, ...labels })
+    : withTenantContext(labels);
   getAccessiMetricsSink(options)?.increment(accessiMetricName(options, name), value, withTenant);
 }
 
@@ -279,8 +286,8 @@ export function observeAccessiMetric(
   labels?: AccessiMetricLabels,
 ): void {
   const withTenant = options?.tenantId
-    ? { tenant: options.tenantId, ...labels }
-    : labels;
+    ? withTenantContext({ tenant: options.tenantId, ...labels })
+    : withTenantContext(labels);
   const sink = getAccessiMetricsSink(options);
   sink?.observe?.(accessiMetricName(options, name), valueMs, withTenant);
 }

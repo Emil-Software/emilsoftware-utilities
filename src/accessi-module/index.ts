@@ -219,6 +219,7 @@ export {
 export {
     auditAccessi,
     configureAccessiAudit,
+    configureAccessiTenantAudit,
     getAccessiAuditStore,
     redactAccessiAuditValue,
     resetAccessiAudit
