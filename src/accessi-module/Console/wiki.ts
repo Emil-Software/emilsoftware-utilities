@@ -162,7 +162,7 @@ export const WIKI_SECTIONS: WikiSection[] = [
         ],
       ),
       p(`Topologia consigliata: un solo Accessi Service possiede database, encryptionKey, SMTP, chiavi JWT e console. Gli altri backend usano resource-server e client, senza credenziali del database Accessi.`),
-      p(`Multi-tenancy: un database per tenant, configurato da file <id>.environment.ts tipizzati (AccessiTenantEnvironment). Il database resta invariato (nessuna colonna tenant); ogni tenant gira in un processo separato con chiavi, issuer e store propri. Validazione e avvio con npm run accessi:tenants; dettagli in docs/multi-tenancy.md.`),
+      p(`Multi-tenancy: un database per tenant, configurato da file <id>.environment.ts tipizzati (AccessiTenantEnvironment). Il database resta invariato (nessuna colonna tenant); ogni tenant gira in un processo separato con chiavi, issuer e store propri. Validazione e avvio con npm run accessi:tenants; template systemd/Docker/Nginx/Traefik in deploy/; dettagli in docs/multi-tenancy.md.`),
       note('warn', `Root barrel legacy`, `Il root barrel e i deep import restano supportati fino alla prossima major. I nuovi consumer devono usare gli entry point della tabella; la mappa di migrazione e in docs/import-migration.md.`),
       p(`Per avviare Accessi come servizio autonomo usare startAccessiService: espone /health/live, /health/ready, /health/metrics, valida la configurazione e gestisce SIGTERM/SIGINT.`),
       p(`Per parlare con piu Accessi Service o tenant dallo stesso processo usare createAccessiClient: ogni istanza ha base URL e token propri, isolati anche tra richieste concorrenti. configureAccessiClient resta il default globale per le funzioni esportate dal package.`),

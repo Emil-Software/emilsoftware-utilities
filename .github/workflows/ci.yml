@@ -29,6 +29,9 @@ jobs:
       - name: Lint
         run: npm run lint
 
+      - name: Deploy templates
+        run: npm run check:deploy
+
       - name: Unit tests (with coverage thresholds)
         run: npm run test:coverage
 

@@ -1,0 +1,57 @@
+# Accessi multi-tenant con Traefik (file provider).
+#
+# I servizi Accessi ascoltano su porte interne; Traefik termina TLS e instrada
+# per host. Per la variante path usare un middleware StripPrefix.
+
+http:
+  routers:
+    accessi-acme:
+      rule: Host(`accessi.acme.example.com`)
+      entryPoints:
+        - websecure
+      tls: {}
+      service: accessi-acme
+      middlewares:
+        - accessi-headers
+
+    accessi-beta:
+      rule: Host(`accessi.beta.example.com`)
+      entryPoints:
+        - websecure
+      tls: {}
+      service: accessi-beta
+      middlewares:
+        - accessi-headers
+
+  middlewares:
+    accessi-headers:
+      headers:
+        stsSeconds: 31536000
+        stsIncludeSubdomains: true
+        contentTypeNosniff: true
+        referrerPolicy: no-referrer
+        customResponseHeaders:
+          Permissions-Policy: "camera=(), microphone=(), geolocation=()"
+    # Variante path-based:
+    # accessi-strip-acme:
+    #   stripPrefix:
+    #     prefixes:
+    #       - /acme
+
+  services:
+    accessi-acme:
+      loadBalancer:
+        healthCheck:
+          path: /health/ready
+          interval: 15s
+          timeout: 3s
+        servers:
+          - url: http://127.0.0.1:3201
+    accessi-beta:
+      loadBalancer:
+        healthCheck:
+          path: /health/ready
+          interval: 15s
+          timeout: 3s
+        servers:
+          - url: http://127.0.0.1:3202

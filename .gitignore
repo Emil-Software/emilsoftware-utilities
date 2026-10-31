@@ -37,6 +37,7 @@
 !/test/import-entrypoints.cjs
 !/test/tenants.cjs
 !/test/tenant-stores.cjs
+!/test/deploy-templates.cjs
 !/test/integration/
 !/test/integration/**
 

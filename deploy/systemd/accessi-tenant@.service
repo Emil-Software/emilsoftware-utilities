@@ -1,0 +1,46 @@
+# Accessi multi-tenant con systemd
+#
+# Installazione:
+#   cp deploy/systemd/accessi-tenant@.service /etc/systemd/system/
+#   mkdir -p /etc/accessi/tenants
+#   cp tenants/acme.environment.ts /etc/accessi/tenants/acme.environment.ts
+#   install -m 0600 deploy/systemd/tenant.secrets.example /etc/accessi/tenants/acme.secrets
+#   systemctl daemon-reload
+#   systemctl enable --now accessi-tenant@acme
+#
+# La porta viene letta da tenant.port nel file *.environment.ts. Per forzarla:
+#   systemctl edit accessi-tenant@acme
+#   [Service]
+#   Environment=PORT=3201
+
+[Unit]
+Description=Accessi Service tenant %i
+Documentation=file:///opt/accessi/docs/multi-tenancy.md
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=/opt/accessi
+# Solo segreti (password DB, SMTP, chiavi JWT): il manifest tipizzato e' separato.
+EnvironmentFile=-/etc/accessi/tenants/%i.secrets
+Environment=ACCESSI_TENANT_ENVIRONMENT=/etc/accessi/tenants/%i.environment.ts
+Environment=ACCESSI_TENANT_ID=%i
+
+ExecStart=/usr/bin/node /opt/accessi/dist/scripts/startAccessiTenantService.js
+Restart=on-failure
+RestartSec=5
+TimeoutStopSec=30
+KillSignal=SIGTERM
+
+User=accessi
+Group=accessi
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/lib/accessi
+LimitNOFILE=65536
+
+[Install]
+WantedBy=multi-user.target

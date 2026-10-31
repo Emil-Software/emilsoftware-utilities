@@ -176,6 +176,18 @@ services:
       - "127.0.0.1:3201:3201"
 ```
 
+## Template pronti
+
+In `deploy/` ci sono esempi copiabili:
+
+- `deploy/systemd/accessi-tenant@.service` e `tenant.secrets.example`;
+- `deploy/docker/docker-compose.yml`;
+- `deploy/nginx/accessi-tenants.conf`;
+- `deploy/traefik/dynamic.yml`.
+
+La CI esegue `npm run check:deploy` per verificare presenza, coerenza e assenza
+di segreti nei template.
+
 ## Reverse proxy
 
 Il proxy instrada per host o path e **sovrascrive** l'header tenant se lo usa.

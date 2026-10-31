@@ -1,0 +1,51 @@
+# Accessi multi-tenant con Docker Compose.
+#
+# I file *.environment.ts sono montati read-only; i segreti arrivano da
+# env_file esterni al repository. La porta viene da tenant.port; PORT puo
+# sovrascriverla.
+version: "3.9"
+
+x-accessi-tenant: &accessi-tenant
+  image: emilsoftware/accessi:2
+  restart: unless-stopped
+  read_only: true
+  tmpfs:
+    - /tmp
+  security_opt:
+    - no-new-privileges:true
+  healthcheck:
+    test:
+      - CMD-SHELL
+      - >-
+        node -e "fetch('http://127.0.0.1:' + (process.env.PORT || '3200') + '/health/live')
+        .then((response) => process.exit(response.ok ? 0 : 1))
+        .catch(() => process.exit(1))"
+    interval: 15s
+    timeout: 5s
+    retries: 5
+    start_period: 30s
+
+services:
+  accessi-acme:
+    <<: *accessi-tenant
+    environment:
+      ACCESSI_TENANT_ENVIRONMENT: /config/acme.environment.ts
+      ACCESSI_TENANT_ID: acme
+    env_file:
+      - ./secrets/acme.env
+    volumes:
+      - ./tenants:/config:ro
+    ports:
+      - "127.0.0.1:3201:3201"
+
+  accessi-beta:
+    <<: *accessi-tenant
+    environment:
+      ACCESSI_TENANT_ENVIRONMENT: /config/beta.environment.ts
+      ACCESSI_TENANT_ID: beta
+    env_file:
+      - ./secrets/beta.env
+    volumes:
+      - ./tenants:/config:ro
+    ports:
+      - "127.0.0.1:3202:3202"
