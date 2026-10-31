@@ -5,6 +5,10 @@
 //   node scripts/accessi-tenants.cjs --dir ./tenants --list
 //   node scripts/accessi-tenants.cjs --dir ./tenants --resolve app.example.com /api/accessi
 //   node scripts/accessi-tenants.cjs --dir ./tenants --serve --base-port 3200
+//   node scripts/accessi-tenants.cjs --dir ./tenants --serve --watch
+//
+// `--watch` riapplica la cartella quando un *.environment.ts cambia: i tenant
+// invariati non vengono riavviati, un file invalido non tocca quelli attivi.
 //
 // Ogni file `<id>.environment.ts` esporta un oggetto AccessiTenantEnvironment:
 //   tenant, database, jwt, email, encryptionKey, URL e opzioni Accessi tipizzate.
@@ -16,6 +20,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const { spawn } = require('node:child_process');
 const {
+  createAccessiTenantSupervisor,
   loadAccessiTenants,
 } = require('../src/accessi/server');
 
@@ -76,12 +81,11 @@ async function main() {
         };
     const host = arg('host', '127.0.0.1');
     const basePort = Number(arg('base-port', '3200'));
-    const children = [];
-    let stopping = false;
-
-    for (const [index, tenant] of registry.tenants.filter((entry) => entry.enabled).entries()) {
-      const port = tenant.port ?? basePort + index;
-      const child = spawn(runner.command, runner.args, {
+    const supervisor = createAccessiTenantSupervisor({
+      directory,
+      basePort,
+      allowHeader: flag('allow-header'),
+      spawn: (tenant, port) => spawn(runner.command, runner.args, {
         cwd: repository,
         stdio: 'inherit',
         env: {
@@ -90,38 +94,34 @@ async function main() {
           ACCESSI_TENANT_ENVIRONMENT: tenant.environmentFile,
           ACCESSI_TENANT_ID: tenant.id,
         },
-      });
-      children.push({ tenant, child, port });
-      console.log(`Tenant ${tenant.id}: http://${host}:${port} (pid ${child.pid})`);
-      child.on('exit', (code, signal) => {
-        console.error(`Tenant ${tenant.id} terminato (code=${code}, signal=${signal}).`);
-        if (!stopping) process.exitCode = 1;
-      });
-    }
+      }),
+      logger: ({ level, message }) => {
+        if (level === 'error') console.error(message);
+        else if (level === 'warn') console.warn(message);
+        else console.log(message);
+      },
+    });
 
+    await supervisor.start();
+    const state = supervisor.state();
+    if (state.length === 0) {
+      console.warn('Nessun tenant abilitato: il supervisore resta in attesa di modifiche.');
+    }
+    for (const entry of state) {
+      console.log(`Tenant ${entry.id}: http://${host}:${entry.port}`);
+    }
+    if (flag('watch')) supervisor.watch();
+
+    let stopping = false;
     const shutdown = async (signal) => {
       if (stopping) return;
       stopping = true;
       console.log(`Ricevuto ${signal}: arresto tenant...`);
-      for (const { child } of children) child.kill('SIGTERM');
-      setTimeout(() => {
-        for (const { child } of children) child.kill('SIGKILL');
-        process.exit(0);
-      }, 10_000).unref();
+      await supervisor.stop();
+      process.exit(0);
     };
     process.on('SIGTERM', () => void shutdown('SIGTERM'));
     process.on('SIGINT', () => void shutdown('SIGINT'));
-
-    // Il supervisore resta attivo finche ci sono figli; se un tenant termina,
-    // systemd/docker/il gestore di processo lo riavvia. Non riavviare in automatico
-    // evita loop su una configurazione rotta.
-    const checkAllExited = setInterval(() => {
-      if (children.every(({ child }) => child.exitCode !== null || child.signalCode !== null)) {
-        clearInterval(checkAllExited);
-        process.exitCode = 1;
-      }
-    }, 2_000);
-    checkAllExited.unref();
     return;
   }
 

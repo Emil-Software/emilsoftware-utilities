@@ -9,6 +9,7 @@ export * from "../../accessi-module";
 export * from "./standalone";
 export * from "./tenants";
 export * from "./tenantStores";
+export * from "./tenantSupervisor";
 export type { AccessiOptions as AccessiServerOptions } from "../../accessi-module";
 export {
   createAccessiOptionsFromEnv,

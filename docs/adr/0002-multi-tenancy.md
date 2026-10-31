@@ -144,7 +144,7 @@ tenant.
 | Schema per tenant | Firebird non offre schema/search_path; sarebbe un database separato con altro nome. |
 | Due `AccessiModule` nello stesso processo | La configurazione Nest è globale; audit/metriche/logger condividono stato. |
 | Selezione tenant da header non fidato | Permetterebbe a un client di cambiare tenant e tentare leakage; consentito solo dietro proxy che sovrascrive l'header. |
-| Hot reload dei file `.environment.ts` | Nest non smonta moduli a caldo; il riavvio del supervisore è più semplice e sicuro. |
+| Hot reload dei file `.environment.ts` | Nest non smonta moduli a caldo; il supervisore riavvia i processi dei tenant modificati, non l'intero servizio. |
 
 ## Conseguenze
 
@@ -152,7 +152,7 @@ Positive:
 
 - isolamento forte: database, chiavi e processi separati;
 - nessuna migrazione dello schema esistente;
-- aggiunta tenant = nuovo file `.environment.ts` + riavvio del supervisore;
+- aggiunta tenant = nuovo file `.environment.ts` (il supervisore con `--watch` lo avvia senza riavvio manuale);
 - rollback per tenant indipendente.
 
 Negative:
@@ -166,8 +166,8 @@ Negative:
 ## Piano
 
 1. **Fase 1 (questa)**: loader cartella, validazione isolamento, CLI
-   `accessi:tenants` (`--check`, `--list`, `--resolve`, `--serve`), documentazione
-   e test.
+   `accessi:tenants` (`--check`, `--list`, `--resolve`, `--serve`, `--watch`),
+   helper store Redis, documentazione e test.
 2. **Fase 2**: template systemd/docker e reverse proxy host/path; health check
    per tenant nel supervisore.
 3. **Fase 3**: migrazione del deployment single-tenant esistente: creare

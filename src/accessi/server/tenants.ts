@@ -467,6 +467,7 @@ export function loadAccessiTenants(options: LoadAccessiTenantsOptions): AccessiT
   const pathsSeen = new Map<string, string>();
   const jwtSecrets = new Map<string, string>();
   const issuerAudience = new Map<string, string>();
+  const portsSeen = new Map<number, string>();
   for (const tenant of tenants) {
     if (byId.has(tenant.id)) {
       issues.push(`Tenant duplicato "${tenant.id}" (${tenant.file} e ${byId.get(tenant.id)?.file}).`);
@@ -482,6 +483,11 @@ export function loadAccessiTenants(options: LoadAccessiTenantsOptions): AccessiT
       const existing = pathsSeen.get(tenant.path);
       if (existing) issues.push(`Path "${tenant.path}" assegnato a "${existing}" e "${tenant.id}".`);
       else pathsSeen.set(tenant.path, tenant.id);
+    }
+    if (tenant.port !== undefined) {
+      const existing = portsSeen.get(tenant.port);
+      if (existing) issues.push(`Porta ${tenant.port} assegnata a "${existing}" e "${tenant.id}".`);
+      else portsSeen.set(tenant.port, tenant.id);
     }
 
     // Un segreto JWT condiviso rende un token valido su piu tenant.

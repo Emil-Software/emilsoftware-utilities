@@ -126,8 +126,25 @@ Avvia un processo figlio per ogni tenant abilitato:
 - non riavvia automaticamente un figlio: un loop su configurazione rotta è
   peggio di un processo che resta giù; usare systemd/docker/Kubernetes.
 
-Il supervisore legge la cartella all'avvio: **aggiungere o rimuovere un tenant
-richiede un riavvio**. Non c'è hot reload (Nest non smonta moduli a caldo).
+Il supervisore legge la cartella all'avvio. Con `--watch` osserva i file
+`*.environment.ts` e riapplica la configurazione:
+
+```bash
+npm run accessi:tenants -- --dir ./tenants --serve --watch
+```
+
+Regole:
+
+- un file invalido annulla il reload e lascia attivi i tenant correnti;
+- i tenant invariati non vengono riavviati;
+- un tenant modificato viene riavviato sulla stessa porta (breve interruzione);
+- aggiunte e rimozioni avviano/fermano solo il tenant interessato;
+- il polling è di 1 secondo con debounce di 200 ms (`pollIntervalMs`/
+  `debounceMs` nell'API del supervisore).
+
+Senza `--watch` un cambiamento richiede il riavvio del supervisore. Non c'è
+montaggio/smontaggio di moduli Nest a caldo: il reload riavvia i processi
+interessati, non l'intero servizio.
 
 ### systemd (consigliato in produzione)
 
@@ -332,7 +349,8 @@ schema.
 ## Limiti
 
 - Un processo per tenant: più RAM, più pool Firebird, più connessioni SMTP.
-- Nessun hot reload: aggiunta/rimozione richiede restart.
+- Il reload con `--watch` riavvia i processi modificati sulla stessa porta: c'è
+  una breve interruzione per il singolo tenant, non per gli altri.
 - Migrazioni e backup per database.
 - La risoluzione via header è ammessa solo dietro proxy fidato; il client non
   deve poter scegliere il tenant.
