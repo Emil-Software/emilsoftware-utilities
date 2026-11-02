@@ -154,7 +154,7 @@
     "test:integration:fb5": "node test/integration/run-firebird.cjs 5",
     "test:integration:fb3": "node test/integration/run-firebird.cjs 3",
     "test:integration:fb25": "node test/integration/run-firebird.cjs 2.5",
-    "test:accessi-console": "npm run build && node test/console-two-factor.cjs",
+    "test:accessi-console": "npm run build && node test/console/console-two-factor.cjs",
     "test:pack": "node scripts/pack-smoke-test.cjs",
     "test:proxy-ip": "node --test test/proxy-ip.cjs test/readiness.cjs",
     "accessi:seed-admin": "node scripts/seed-accessi-admin.cjs",

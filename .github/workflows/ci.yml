@@ -41,6 +41,9 @@ jobs:
       - name: Build
         run: npm run build
 
+      - name: Console smoke test
+        run: npm run test:accessi-console
+
   packaging:
     name: Package smoke test
     runs-on: ubuntu-latest

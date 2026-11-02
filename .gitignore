@@ -52,6 +52,8 @@
 !/test/tenant-router.cjs
 !/test/integration/
 !/test/integration/**
+!/test/console/
+!/test/console/**
 
 # Contratto OpenAPI generato (npm run generate:accessi-openapi)
 /src/accessi-service/openapi/
