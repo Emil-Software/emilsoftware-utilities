@@ -1,3 +1,18 @@
+# [2.0.0-dev.85](https://github.com/Emil-Software/emilsoftware-utilities/compare/v2.0.0-dev.84...v2.0.0-dev.85) (2026-11-02)
+
+
+### Bug Fixes
+
+* **accessi:** blocca i segreti di default in produzione ([aec9b53](https://github.com/Emil-Software/emilsoftware-utilities/commit/aec9b536d123a480896219d417c83244c98473d6)), closes [#27](https://github.com/Emil-Software/emilsoftware-utilities/issues/27)
+* consenti LICENSE e SECURITY.md nelle convenzioni ([3a85799](https://github.com/Emil-Software/emilsoftware-utilities/commit/3a8579953c0df5f1064e9e994c87c6c72f37e6b9)), closes [#32](https://github.com/Emil-Software/emilsoftware-utilities/issues/32)
+
+
+### Features
+
+* **accessi:** configura HTTP, proxy e rate limit da ambiente ([0fd0f24](https://github.com/Emil-Software/emilsoftware-utilities/commit/0fd0f24fd836d0c4be6d4dac588a1855867c8860)), closes [#30](https://github.com/Emil-Software/emilsoftware-utilities/issues/30)
+* **accessi:** configura migrazioni e bootstrap admin da ambiente ([43ca653](https://github.com/Emil-Software/emilsoftware-utilities/commit/43ca6533772aa7b3ac9faf6a7172567829c0b52a)), closes [#28](https://github.com/Emil-Software/emilsoftware-utilities/issues/28)
+* **accessi:** opzioni operative da ambiente ([5f704c7](https://github.com/Emil-Software/emilsoftware-utilities/commit/5f704c7f9446f1da48172ad1b2d8f65f2ebc8899)), closes [#29](https://github.com/Emil-Software/emilsoftware-utilities/issues/29)
+
 # [2.0.0-dev.84](https://github.com/Emil-Software/emilsoftware-utilities/compare/v2.0.0-dev.83...v2.0.0-dev.84) (2026-10-31)
 
 
