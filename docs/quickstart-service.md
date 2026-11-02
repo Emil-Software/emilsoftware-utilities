@@ -19,6 +19,10 @@ npm install emilsoftware-utilities
 
 ## Configurazione minima
 
+Con `NODE_ENV=production` il servizio rifiuta i segreti di default locali:
+`ACCESSI_JWT_SECRET` e `ACCESSI_ENCRYPTION_KEY` devono essere presenti e diversi
+dai valori di sviluppo. Anche `mockDemoUser` deve restare `false`.
+
 ```ts
 import type { AccessiServerOptions } from 'emilsoftware-utilities/accessi/server';
 

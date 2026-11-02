@@ -257,6 +257,7 @@ Dettagli e flusso browser in [auth-cookies.md](auth-cookies.md).
 
 ## Checklist di produzione
 
+- Con `NODE_ENV=production` il servizio fallisce se `ACCESSI_JWT_SECRET` o `ACCESSI_ENCRYPTION_KEY` mancano o usano i default locali.
 - Database Accessi raggiungibile solo dal servizio.
 - `encryptionKey`, SMTP e chiavi JWT da un secret manager.
 - `issuer` e `audience` espliciti e diversi per ambiente.

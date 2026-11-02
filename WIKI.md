@@ -1635,17 +1635,18 @@ _Le impostazioni che non vanno lasciate al caso in produzione._
 Accessi concentra identità, password, token e chiavi: la configurazione di sicurezza non è opzionale. Questa checklist vale per qualsiasi topologia.
 
 1. Database Accessi raggiungibile solo da Accessi Service: nessun backend fratello ha credenziali del DB.
-2. encryptionKey, SMTP, chiavi JWT private e token di bootstrap vivono in un secret manager, mai nel repository o nei file tenant versionati.
-3. In multi-servizio usa RS256 o ES256 con JWKS; HS256 con segreto condiviso solo come transizione.
-4. Imposta issuer e audience espliciti e diversi per ambiente: un token di staging non deve valere in produzione.
-5. Configura http.trustProxy con il numero esatto di proxy e non fidarti di header tenant o IP inviati dal client.
-6. CORS con origin espliciti: credentials: true solo se usi cookie e mai insieme a wildcard.
-7. Tieni attivi securityHeaders e CSP; se usi cookie, abilita CSRF double-submit e SameSite adeguato.
-8. Configura rate limit pubblico, service token ed edge rate limit; in multi-istanza usa store Redis.
-9. Service token con lo scope minimo (accessi:introspect, accessi:federated:exchange) e rotazione periodica; mai nel browser.
-10. Configura sessionRevocation, accessTokenRevocation e refreshTokenRotation: cambio password, disabilitazione e riuso devono invalidare le sessioni.
-11. Configura audit con retention e sink interrogabile; token, ticket, password e chiavi non devono finire nei log.
-12. Backup del database e test di ripristino; migrazioni collaudate su copia prima del rollout.
+2. Con NODE\_ENV=production il servizio rifiuta JWT secret ed encryptionKey mancanti o uguali ai default locali.
+3. encryptionKey, SMTP, chiavi JWT private e token di bootstrap vivono in un secret manager, mai nel repository o nei file tenant versionati.
+4. In multi-servizio usa RS256 o ES256 con JWKS; HS256 con segreto condiviso solo come transizione.
+5. Imposta issuer e audience espliciti e diversi per ambiente: un token di staging non deve valere in produzione.
+6. Configura http.trustProxy con il numero esatto di proxy e non fidarti di header tenant o IP inviati dal client.
+7. CORS con origin espliciti: credentials: true solo se usi cookie e mai insieme a wildcard.
+8. Tieni attivi securityHeaders e CSP; se usi cookie, abilita CSRF double-submit e SameSite adeguato.
+9. Configura rate limit pubblico, service token ed edge rate limit; in multi-istanza usa store Redis.
+10. Service token con lo scope minimo (accessi:introspect, accessi:federated:exchange) e rotazione periodica; mai nel browser.
+11. Configura sessionRevocation, accessTokenRevocation e refreshTokenRotation: cambio password, disabilitazione e riuso devono invalidare le sessioni.
+12. Configura audit con retention e sink interrogabile; token, ticket, password e chiavi non devono finire nei log.
+13. Backup del database e test di ripristino; migrazioni collaudate su copia prima del rollout.
 
 | Rischio | Contromisura principale |
 | --- | --- |

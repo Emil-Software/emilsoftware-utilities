@@ -1228,6 +1228,7 @@ export const WIKI_SECTIONS: WikiSection[] = [
       p(`Accessi concentra identità, password, token e chiavi: la configurazione di sicurezza non è opzionale. Questa checklist vale per qualsiasi topologia.`),
       list([
         'Database Accessi raggiungibile solo da Accessi Service: nessun backend fratello ha credenziali del DB.',
+        'Con NODE_ENV=production il servizio rifiuta JWT secret ed encryptionKey mancanti o uguali ai default locali.',
         'encryptionKey, SMTP, chiavi JWT private e token di bootstrap vivono in un secret manager, mai nel repository o nei file tenant versionati.',
         'In multi-servizio usa RS256 o ES256 con JWKS; HS256 con segreto condiviso solo come transizione.',
         'Imposta issuer e audience espliciti e diversi per ambiente: un token di staging non deve valere in produzione.',

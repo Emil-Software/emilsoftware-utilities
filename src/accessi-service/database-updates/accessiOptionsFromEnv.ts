@@ -18,6 +18,42 @@ function getOptionalBoolean(env: NodeJS.ProcessEnv, name: string, fallback: bool
   return value.toLowerCase() === "true";
 }
 
+const LOCAL_JWT_SECRET = "local-accessi-update";
+const LOCAL_ENCRYPTION_KEY = "1234567890ABCDEF";
+
+function isProduction(env: NodeJS.ProcessEnv): boolean {
+  return (env.NODE_ENV ?? "").toLowerCase() === "production";
+}
+
+/**
+ * Legge un segreto obbligatorio in produzione.
+ *
+ * In sviluppo mantiene i default locali storici; in produzione un valore
+ * mancante o uguale al default pubblico blocca l'avvio invece di firmare token
+ * con una chiave nota.
+ */
+function getRequiredSecret(
+  env: NodeJS.ProcessEnv,
+  name: string,
+  localFallback: string,
+): string {
+  const value = env[name];
+  if (value !== undefined && value.trim() !== "") {
+    if (isProduction(env) && value === localFallback) {
+      throw new Error(
+        `Variabile ambiente ${name}: il valore di default locale non e ammesso in produzione.`,
+      );
+    }
+    return value;
+  }
+  if (isProduction(env)) {
+    throw new Error(
+      `Variabile ambiente mancante: ${name} (obbligatoria con NODE_ENV=production).`,
+    );
+  }
+  return localFallback;
+}
+
 const JWT_ALGORITHMS = [
   "HS256", "HS384", "HS512",
   "RS256", "RS384", "RS512",
@@ -136,6 +172,12 @@ export function createAccessiOptionsFromEnv(env: NodeJS.ProcessEnv = process.env
   const previousPublicKeys = parseAccessiPreviousPublicKeys(
     env.ACCESSI_JWT_PREVIOUS_PUBLIC_KEYS,
   );
+  const mockDemoUser = getOptionalBoolean(env, "ACCESSI_MOCK_DEMO_USER", false);
+  if (mockDemoUser && isProduction(env)) {
+    throw new Error(
+      "ACCESSI_MOCK_DEMO_USER non puo essere true con NODE_ENV=production: gli utenti demo non devono esistere in produzione.",
+    );
+  }
 
   return {
     databaseOptions,
@@ -145,12 +187,12 @@ export function createAccessiOptionsFromEnv(env: NodeJS.ProcessEnv = process.env
     customResetPage: env.ACCESSI_CUSTOM_RESET_PAGE,
     consoleApiBaseUrl: env.ACCESSI_CONSOLE_API_BASE_URL,
     publicBaseUrl: env.ACCESSI_PUBLIC_BASE_URL,
-    encryptionKey: getEnv(env, "ACCESSI_ENCRYPTION_KEY", "1234567890ABCDEF"),
-    mockDemoUser: getOptionalBoolean(env, "ACCESSI_MOCK_DEMO_USER", false),
+    encryptionKey: getRequiredSecret(env, "ACCESSI_ENCRYPTION_KEY", LOCAL_ENCRYPTION_KEY),
+    mockDemoUser,
     passwordExpiration: getOptionalBoolean(env, "ACCESSI_PASSWORD_EXPIRATION", false),
     autoUpdateDatabase: true,
     jwtOptions: {
-      secret: getEnv(env, "ACCESSI_JWT_SECRET", "local-accessi-update"),
+      secret: getRequiredSecret(env, "ACCESSI_JWT_SECRET", LOCAL_JWT_SECRET),
       expiresIn: getEnv(env, "ACCESSI_JWT_EXPIRES", "24h"),
       ...(env.ACCESSI_JWT_REFRESH_EXPIRES ? { refreshExpiresIn: env.ACCESSI_JWT_REFRESH_EXPIRES } : {}),
       ...(env.ACCESSI_JWT_ISSUER ? { issuer: env.ACCESSI_JWT_ISSUER } : {}),

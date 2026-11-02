@@ -20,6 +20,7 @@
 !/test/accessi-email-config.cjs
 !/test/accessi-catalog-scripts.cjs
 !/test/accessi-docs.cjs
+!/test/accessi-env-config.cjs
 !/test/accessi-schema.cjs
 !/test/accessi-regressions.cjs
 !/test/password-reset-regressions.cjs
