@@ -24,7 +24,7 @@ un'applicazione Angular. Bootstrap 5.3 e' supportato tramite i token CSS
 
 ## Build
 
-`npm run build` compila TypeScript e poi esegue `copy-views.js`, che copia in
+`npm run build` compila TypeScript e poi esegue `scripts/copy-views.cjs`, che copia in
 `dist/angular-components/` i file `.js`, `.html` e `.css` di questa cartella.
 Il pacchetto npm include solo `dist`, quindi i componenti sono disponibili come:
 

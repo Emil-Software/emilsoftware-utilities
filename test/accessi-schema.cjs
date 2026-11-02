@@ -9,9 +9,9 @@ const { Orm } = require('../src/Orm');
 const { Logger } = require('../src/Logger');
 const { AccessiDatabaseUpdater: Updater } = require('../src/accessi-module/database-updates/AccessiDatabaseUpdater');
 const { ACCESSI_VERSION_KEY, ACCESSI_SCHEMA_VERSION } = require('../src/accessi-module/database-updates/accessiSchema');
-const { UserService } = require('../src/accessi-module/Services/UserService/UserService');
-const { FiltriService } = require('../src/accessi-module/Services/FiltriService/FiltriService');
-const { PermissionService } = require('../src/accessi-module/Services/PermissionService/PermissionService');
+const { UserService } = require('../src/accessi-module/services/user-service/UserService');
+const { FiltriService } = require('../src/accessi-module/services/filtri-service/FiltriService');
+const { PermissionService } = require('../src/accessi-module/services/permission-service/PermissionService');
 
 for (const method of ['info', 'log', 'warning', 'error']) Logger.prototype[method] = () => {};
 

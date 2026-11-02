@@ -17,7 +17,7 @@ const {
 const { mergeOpenApiDocuments } = require('../src/openapi/OpenApiMerge');
 const { buildAccessiConsoleUrl } = require('../src/accessi/console');
 const { AccessiIntrospectionController } = require('../src/accessi-module');
-const { AuthService } = require('../src/accessi-module/Services/AuthService/AuthService');
+const { AuthService } = require('../src/accessi-module/services/auth-service/AuthService');
 const { configureAccessiClient, login } = require('../src/accessi/client');
 const { createMemorySessionRevocationStore } = require('../src/accessi-module/security/sessionRevocation');
 

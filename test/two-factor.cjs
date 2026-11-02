@@ -6,12 +6,12 @@ const jwt = require('jsonwebtoken');
 const { plainToInstance } = require('class-transformer');
 const { validate } = require('class-validator');
 const { Orm } = require('../src/Orm');
-const { AuthService } = require('../src/accessi-module/Services/AuthService/AuthService');
-const { TwoFactorService } = require('../src/accessi-module/Services/TwoFactorService/TwoFactorService');
+const { AuthService } = require('../src/accessi-module/services/auth-service/AuthService');
+const { TwoFactorService } = require('../src/accessi-module/services/two-factor-service/TwoFactorService');
 const { FederatedAuthService } = require('../src/accessi-module/federated-auth/FederatedAuthService');
-const { UserService } = require('../src/accessi-module/Services/UserService/UserService');
-const { UserDto } = require('../src/accessi-module/Dtos/UserDto');
-const { StatoRegistrazione } = require('../src/accessi-module/Dtos/StatoRegistrazione');
+const { UserService } = require('../src/accessi-module/services/user-service/UserService');
+const { UserDto } = require('../src/accessi-module/dtos/UserDto');
+const { StatoRegistrazione } = require('../src/accessi-module/dtos/StatoRegistrazione');
 const { isAccessiTokenAllowedForUser } = require('../src/accessi-module/security/authenticatedToken');
 const { getAccessiJwtSecret } = require('../src/accessi-module/security/passwordResetToken');
 const options = { databaseOptions: {}, jwtOptions: { secret: 'test-two-factor-secret', expiresIn: '1h' }, federatedAuthentication: { enabled: true } };
@@ -144,7 +144,7 @@ test('wrong password never issues a second-factor challenge', async t => {
 });
 
 test('Nest guard, Express middleware and token lookup all reject sessions missing required OTP', async () => {
-  const { JwtSimpleGuard } = require('../src/accessi-module/jwt/jwt.strategy');
+  const { JwtSimpleGuard } = require('../src/accessi-module/jwt/JwtSimpleGuard');
   const { AuthenticateGenService } = require('../src/accessi-module/middleware/authenticateGen');
   const user = { ...baseUser, flagDueFattori: true };
   const users = { getAuthenticatedUserSnapshot: async () => user };

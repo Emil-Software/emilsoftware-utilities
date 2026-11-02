@@ -1,4 +1,4 @@
-﻿import { TwoFactorService } from './Services/TwoFactorService/TwoFactorService';
+﻿import { TwoFactorService } from './services/two-factor-service/TwoFactorService';
 /**
  * Modulo che gestisce le operazioni di accesso degli utenti, incluse le rotte, il controller e il modello.
  *
@@ -16,37 +16,37 @@ import type { AccessiEdgeRateLimitOptions } from './security/edgeRateLimit';
 import type { SessionRevocationOptions } from './security/sessionRevocation';
 import type { AccessTokenRevocationOptions } from './security/accessTokenRevocation';
 import type { RefreshTokenRotationOptions } from './security/refreshTokenRotation';
-import { AuthService } from './Services/AuthService/AuthService';
-import { EmailService } from './Services/EmailService/EmailService';
-import { PermissionService } from './Services/PermissionService/PermissionService';
-import { UserService } from './Services/UserService/UserService';
-import { EmailController } from './Controllers/EmailController';
-import { AuthController } from './Controllers/AuthController';
-import { PermissionController } from './Controllers/PermissionController';
-import { UserController } from './Controllers/UserController';
-import { FiltriService } from './Services/FiltriService/FiltriService';
-import { FiltriController } from './Controllers/FiltriController';
-import { ConfiguratorController } from './Controllers/ConfiguratorController';
-import { ConfiguratorService } from './Services/ConfiguratorService/ConfiguratorService';
-import { JwtSimpleGuard } from './jwt/jwt.strategy';
+import { AuthService } from './services/auth-service/AuthService';
+import { EmailService } from './services/email-service/EmailService';
+import { PermissionService } from './services/permission-service/PermissionService';
+import { UserService } from './services/user-service/UserService';
+import { EmailController } from './controllers/EmailController';
+import { AuthController } from './controllers/AuthController';
+import { PermissionController } from './controllers/PermissionController';
+import { UserController } from './controllers/UserController';
+import { FiltriService } from './services/filtri-service/FiltriService';
+import { FiltriController } from './controllers/FiltriController';
+import { ConfiguratorController } from './controllers/ConfiguratorController';
+import { ConfiguratorService } from './services/configurator-service/ConfiguratorService';
+import { JwtSimpleGuard } from './jwt/JwtSimpleGuard';
 import { AuthenticateGenService } from './middleware/authenticateGen';
 import { AccessiDatabaseUpdater } from './database-updates/AccessiDatabaseUpdater';
 import { FederatedAuthService } from './federated-auth/FederatedAuthService';
 import { FederatedAuthController } from './federated-auth/FederatedAuthController';
 import { FederatedAuthExchangeController } from './federated-auth/FederatedAuthExchangeController';
-import { AccessiConsoleController } from './Controllers/AccessiConsoleController';
-import { ConsoleEntryController } from './Controllers/ConsoleEntryController';
-import { ServiceTokenController } from './Controllers/ServiceTokenController';
-import { ServiceTokenService } from './Services/ServiceTokenService/ServiceTokenService';
+import { AccessiConsoleController } from './controllers/AccessiConsoleController';
+import { ConsoleEntryController } from './controllers/ConsoleEntryController';
+import { ServiceTokenController } from './controllers/ServiceTokenController';
+import { ServiceTokenService } from './services/service-token-service/ServiceTokenService';
 import { ServiceTokenGuard } from './security/serviceTokenGuard';
-import { SchemaController } from './Controllers/SchemaController';
-import { AccessiIntrospectionController } from './Controllers/AccessiIntrospectionController';
-import { SchemaExportService } from './Services/SchemaExportService/SchemaExportService';
-import { AdminBootstrapService } from './Services/AdminBootstrapService/AdminBootstrapService';
+import { SchemaController } from './controllers/SchemaController';
+import { AccessiIntrospectionController } from './controllers/AccessiIntrospectionController';
+import { SchemaExportService } from './services/schema-export-service/SchemaExportService';
+import { AdminBootstrapService } from './services/admin-bootstrap-service/AdminBootstrapService';
 import { AccessiJwksBootstrapService } from './security/jwksBootstrap';
 import { assertEmailConfigured } from './security/emailConfiguration';
 import { configureAccessiAudit } from './security/audit';
-import { AccessiAuditController } from './Controllers/AccessiAuditController';
+import { AccessiAuditController } from './controllers/AccessiAuditController';
 
 /** JWT emesso da Accessi dopo un login locale o SSO. Non riutilizzare il segreto del provider SSO. */
 export interface JwtOptions {

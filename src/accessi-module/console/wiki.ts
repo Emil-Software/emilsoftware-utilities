@@ -1,0 +1,915 @@
+/**
+ * Contenuto della Wiki della console Accessi.
+ *
+ * I contenuti sono dati strutturati (non HTML) così da poter essere resi in modo
+ * coerente dalla console e convertiti in un digest compatto per l'IA. Nessun
+ * segreto o dato specifico di un ambiente deve finire qui.
+ */
+
+export type WikiTone = 'info' | 'ok' | 'warn' | 'danger';
+
+export type WikiBlock =
+  | { kind: 'p'; text: string }
+  | { kind: 'h'; text: string }
+  | { kind: 'list'; items: string[]; ordered?: boolean }
+  | { kind: 'code'; language: string; title?: string; code: string; variant?: 'good' | 'bad' }
+  | { kind: 'callout'; tone: WikiTone; title?: string; text: string }
+  | { kind: 'table'; head: string[]; rows: string[][] };
+
+export interface WikiSection {
+  id: string;
+  group: string;
+  title: string;
+  summary: string;
+  blocks: WikiBlock[];
+}
+
+const p = (text: string): WikiBlock => ({ kind: 'p', text });
+const h = (text: string): WikiBlock => ({ kind: 'h', text });
+const list = (items: string[], ordered = false): WikiBlock => ({ kind: 'list', items, ordered });
+const code = (language: string, codeText: string, title?: string, variant?: 'good' | 'bad'): WikiBlock => ({ kind: 'code', language, title, code: codeText, variant });
+const good = (language: string, codeText: string, title?: string): WikiBlock => code(language, codeText, title, 'good');
+const bad = (language: string, codeText: string, title?: string): WikiBlock => code(language, codeText, title, 'bad');
+const note = (tone: WikiTone, title: string, text: string): WikiBlock => ({ kind: 'callout', tone, title, text });
+const table = (head: string[], rows: string[][]): WikiBlock => ({ kind: 'table', head, rows });
+
+export const WIKI_SECTIONS: WikiSection[] = [
+  // -------------------------------------------------------------------------
+  {
+    id: 'panoramica',
+    group: 'Per iniziare',
+    title: 'Panoramica e architettura',
+    summary: 'Che cosa fa Accessi, come si incastra nel backend e come scorre una richiesta.',
+    blocks: [
+      p(`Accessi è un modulo Node/NestJS che aggiunge a un backend già esistente: autenticazione JWT, autorizzazione per ruoli e menu, gestione utenti, reset password, codici email (2FA e passwordless), SSO generico, token macchina-a-macchina e una console amministrativa. Il database è Firebird/InterBase.`),
+      h(`Che cosa possiede il modulo`),
+      list([
+        `Le rotte sotto /api/accessi/* (login, utenti, ruoli, menu, SSO, token, console).`,
+        `Lo schema database del dominio Accessi, riconciliato automaticamente al bootstrap.`,
+        `Il middleware di autorizzazione authorizeAccessi per le rotte della tua applicazione.`,
+        `La console web su /api/accessi/console.`,
+      ]),
+      h(`Che cosa resta alla tua applicazione`),
+      list([
+        `Il proprio frontend e le proprie rotte di business.`,
+        `La validazione dei token dei provider SSO esterni (Accessi non li vede).`,
+        `I segreti: jwtOptions.secret, SMTP, database ed encryptionKey non raggiungono mai il browser.`,
+      ]),
+      h(`Flusso di una richiesta protetta`),
+      list([
+        `Il client chiama una rotta della tua app con header Authorization: Bearer <jwt>.`,
+        `La tua rotta esegue authorizeAccessi, che verifica firma HS256, scadenza e stato utente corrente.`,
+        `Se passi un requisito, il modulo carica ruoli e grant dell'utente e li valuta.`,
+        `Su successo req.user, req.data e (se richiesto) req.userGrants sono popolati; altrimenti risponde con il contratto errore Accessi.`,
+      ], true),
+      note('info', `Due modalità di bootstrap`, `Express esistente: initializeAccessiModule(app, options). NestJS esistente: AccessiModule.forRoot(options) nei tuoi imports. Non usarle entrambe.`),
+    ],
+  },
+  // -------------------------------------------------------------------------
+  {
+    id: 'installazione',
+    group: 'Per iniziare',
+    title: 'Installazione',
+    summary: 'Dipendenze, peer e build.',
+    blocks: [
+      code('bash', `npm install emilsoftware-utilities`, 'Installazione'),
+      p(`La libreria dipende da node-firebird per il database e da Express 5 come peer per il montaggio. È consigliato Node 18 o superiore.`),
+      p(`Il pacchetto è pubblicato in CommonJS con export map esplicita per ogni entry point (accessi/server, accessi/resource-server/*, accessi/client/*, accessi/contracts*, accessi/openapi, accessi/console, accessi/ui): gli import ESM funzionano tramite interop Node. sideEffects elenca solo root barrel, firebirdCompat e bundle console, così il resto è tree-shakable.`),
+      note('warn', `Un solo modulo per processo`, `AccessiModule è @Global(): inizializzalo una sola volta per processo. In caso di più istanze, usa un processo per istanza.`),
+    ],
+  },
+  // -------------------------------------------------------------------------
+  {
+    id: 'bootstrap-express',
+    group: 'Per iniziare',
+    title: 'Bootstrap su Express esistente',
+    summary: 'initializeAccessiModule: ordine corretto e attesa prima di listen.',
+    blocks: [
+      p(`Chiama initializeAccessiModule prima di aprire la porta HTTP. Durante il bootstrap, authorizeAccessi risponde 503 ACCESSI_AUTH_INITIALIZING invece di autorizzare richieste parziali.`),
+      good('ts', [
+        "import express from 'express';",
+        "import { initializeAccessiModule, authorizeAccessi } from 'emilsoftware-utilities';",
+        '',
+        'const app = express();',
+        'app.use(express.json());',
+        '',
+        'await initializeAccessiModule(app, options); // prima di app.listen',
+        '',
+        "app.get('/api/ordini', authorizeAccessi, (req, res) => {",
+        '  res.json({ utente: req.user });',
+        '});',
+        '',
+        "app.get('/api/ordini/scrivi', (req, res, next) =>",
+        '  authorizeAccessi(req, res, next, {',
+        "    requirements: [{ menuCode: 'ORDINI', minPermissionLevel: 20 }],",
+        '  }),',
+        '(req, res) => res.json({ ok: true }));',
+        '',
+        'app.listen(3000);',
+      ].join('\n'), 'Express + Accessi'),
+      bad('ts', [
+        'const app = express();',
+        'app.listen(3000); // porta aperta prima del bootstrap',
+        'await initializeAccessiModule(app, options); // le richieste nel frattempo ricevono 503',
+      ].join('\n'), 'Non aprire la porta prima del bootstrap'),
+      h(`Rotte montate`),
+      p(`Accessi intercetta solo /api/accessi/* e i path OpenAPI configurati (default /accessi/openapi* e /accessi/openapi.json). Tutte le altre rotte passano intatte al tuo stack Express.`),
+      note('ok', `req.user`, `authorizeAccessi popola req.user con il payload utente corrente (utente, codiceUtente, flag) e req.data come alias storico. req.userGrants è presente solo se hai richiesto dei requisiti.`),
+    ],
+  },
+  // -------------------------------------------------------------------------
+  {
+    id: 'bootstrap-nest',
+    group: 'Per iniziare',
+    title: 'Bootstrap su NestJS esistente',
+    summary: 'AccessiModule.forRoot e uso dei provider esportati.',
+    blocks: [
+      p(`Se la tua applicazione è già NestJS, importa AccessiModule.forRoot(options). Il modulo è @Global e riesporta i servizi (AuthService, UserService, PermissionService, FederatedAuthService, ServiceTokenService, ServiceTokenGuard, AuthenticateGenService).`),
+      good('ts', [
+        "import { Module } from '@nestjs/common';",
+        "import { AccessiModule } from 'emilsoftware-utilities';",
+        '',
+        '@Module({',
+        '  imports: [AccessiModule.forRoot(options)],',
+        '})',
+        'export class AppModule {}',
+      ].join('\n'), 'app.module.ts'),
+      p(`Il global prefix api e le rotte /api/accessi/* sono gestiti dal modulo. Le tue rotte Nest si proteggono con JwtSimpleGuard usando il JWT Accessi. Per health e readiness usare createAccessiHealthModule({ accessiOptions }): espone /health/live e /health/ready con lo stesso contratto del servizio standalone (bootstrap, database, store Redis e check aggiuntivi).`),
+    ],
+  },
+  // -------------------------------------------------------------------------
+  {
+    id: 'distribuzione',
+    group: 'Per iniziare',
+    title: 'Distribuzione multi-app e package entry point',
+    summary: 'Come usare Accessi come servizio centrale, come resource server o solo come contratti.',
+    blocks: [
+      p(`Accessi non va montato per forza in ogni backend. La distribuzione consigliata separa il servizio che possiede il database e la console dai backend fratelli che devono solo autenticare le richieste.`),
+      table(
+        ['Entry point', 'Uso', 'Dipendenze server'],
+        [
+          ['accessi/server', 'Bootstrap completo: DB, SMTP, migrazioni, console, API.', 'sì'],
+          ['accessi/resource-server', 'Guard/middleware per backend fratelli: verifica JWT e autorizzazione remota.', 'no'],
+          ['accessi/client', 'Client OpenAPI generato per chiamare Accessi Service.', 'no'],
+          ['accessi/client/public', 'Solo API pubbliche (login, refresh, 2FA, reset password, registrazione, ticket console).', 'no'],
+          ['accessi/client/admin', 'Solo API amministrative (utenti, ruoli, menu, filtri, provider federati, schema).', 'no'],
+          ['accessi/client/service', 'Solo API service-to-service (service token e introspezione), mai nei frontend.', 'no'],
+          ['accessi/contracts', 'Tipi, enum e helper puri browser-safe.', 'no'],
+          ['accessi/contracts/dtos', 'DTO Nest con class-validator e decoratori OpenAPI.', 'no'],
+          ['accessi/openapi', 'setupOpenApi e merge del documento OpenAPI.', 'no'],
+          ['accessi/console', 'Helper per URL console, ticket e 2FA handoff.', 'no'],
+          ['accessi/ui', 'Percorsi degli asset Web Component frameworkless.', 'no'],
+        ],
+      ),
+      p(`Topologia consigliata: un solo Accessi Service possiede database, encryptionKey, SMTP, chiavi JWT e console. Gli altri backend usano resource-server e client, senza credenziali del database Accessi.`),
+      p(`Multi-tenancy: un database per tenant, configurato da file <id>.environment.ts tipizzati (AccessiTenantEnvironment). Il database resta invariato (nessuna colonna tenant); ogni tenant gira in un processo separato con chiavi, issuer e store propri. Validazione e avvio con npm run accessi:tenants; template systemd/Docker/Nginx/Traefik in deploy/; dettagli in docs/multi-tenancy.md.`),
+      note('warn', `Root barrel legacy`, `Il root barrel e i deep import restano supportati fino alla prossima major. I nuovi consumer devono usare gli entry point della tabella; la mappa di migrazione e in docs/import-migration.md.`),
+      p(`Per avviare Accessi come servizio autonomo usare startAccessiService: espone /health/live, /health/ready, /health/metrics, valida la configurazione e gestisce SIGTERM/SIGINT.`),
+      p(`Per parlare con piu Accessi Service o tenant dallo stesso processo usare createAccessiClient: ogni istanza ha base URL e token propri, isolati anche tra richieste concorrenti. configureAccessiClient resta il default globale per le funzioni esportate dal package.`),
+      good('ts', [
+        "// Backend che ospita Accessi",
+        "import { initializeAccessiModule } from 'emilsoftware-utilities/accessi/server';",
+        '',
+        "// Backend fratello: nessun AccessiModule, nessun DB Accessi",
+        "import { createAccessiAuthMiddleware } from 'emilsoftware-utilities/accessi/resource-server';",
+        "import { createAccessiClient } from 'emilsoftware-utilities/accessi/client';",
+        '',
+        "const milano = createAccessiClient({ baseUrl: 'https://accessi-milano.example.com', getToken });",
+        "const roma = createAccessiClient({ baseUrl: 'https://accessi-roma.example.com', token: tokenRoma });",
+        "const [utentiMilano, utentiRoma] = await Promise.all([milano.getUsers(), roma.getUsers()]);",
+      ].join('\n'), 'Import corretti per ruolo'),
+      note('warn', `Un solo proprietario`, `Non montare AccessiModule in due backend puntati allo stesso database: migrazioni, bootstrap admin, ticket console e rate limit diventano ambigui.`),
+      note('info', `Client per scope`, `Usare accessi/client/public nei frontend pubblici, accessi/client/admin nella console e nei tool amministrativi, accessi/client/service solo nei backend fratelli. Gli scope partizionano il client completo e condividono gli stessi tipi; il client completo resta disponibile per compatibilita.`),
+      note('info', `Split in pacchetti`, `Il package resta unico con entry point per scope: decisione, soglie per rivalutarla e piano di migrazione sono nell'ADR docs/adr/0001-split-package.md.`),
+      note('info', `IP reali dietro proxy`, `Imposta http.trustProxy sul numero di proxy davanti al servizio (1 per Nginx/Traefik/ALB, 2 con Cloudflare + ingress) e lascialo false se il servizio e esposto direttamente. Rate limit e audit usano req.ip: dettagli in docs/proxy-ip.md.`),
+      note('info', `Prompt di integrazione`, `Il file integration-prompt.md nella root del repository contiene il contesto completo per frontend, backend e agenti AI.`),
+    ],
+  },
+  // -------------------------------------------------------------------------
+  {
+    id: 'opzioni',
+    group: 'Configurazione',
+    title: 'AccessiOptions (riferimento completo)',
+    summary: 'Ogni campo di configurazione con tipo, obbligo e note.',
+    blocks: [
+      table(
+        ['Campo', 'Tipo', 'Obbligo', 'Note'],
+        [
+          ['databaseOptions', 'Options (node-firebird)', 'sì', 'Connessione Firebird al database Accessi.'],
+          ['confirmationEmailUrl', 'string', 'sì', 'Base URL usata per il reset password.'],
+          ['confirmationEmailReturnUrl', 'string', 'sì', 'URL di ritorno dopo il reset.'],
+          ['confirmationEmailPrefix', 'string', 'no', 'Prefisso passato alla pagina di reset.'],
+          ['customResetPage', 'string', 'no', 'Sostituisce la pagina HTML di reset inclusa.'],
+          ['encryptionKey', 'string', 'sì', 'Compatibilità e migrazione delle password legacy.'],
+          ['mockDemoUser', 'boolean', 'sì', 'Utenti fittizi admin e demo solo fuori produzione.'],
+          ['passwordExpiration', 'boolean', 'no', 'Attiva il controllo della scadenza password al login.'],
+          ['passwordExpirationDays', 'number', 'no', 'Valore predefinito: 90 giorni.'],
+          ['legacyPasswordMigrationOnStartup', 'boolean', 'no', 'Predefinito true: converte le password legacy.'],
+          ['autoUpdateDatabase', 'boolean', 'no', 'Predefinito true: riconcilia lo schema al boot.'],
+          ['jwtOptions', '{ secret, expiresIn, refreshExpiresIn, algorithm, issuer, audience, privateKey, publicKey, keyId, jwksPath, previousPublicKeys, onUnknownKeyId }', 'sì', 'Firma, durata, refresh token, JWKS e rotazione chiavi. Default HS256; RS/ES consigliati per resource server multi-servizio.'],
+          ['emailOptions', 'EmailOptions', 'sì', 'SMTP per reset e codici email.'],
+          ['publicAuthRateLimit', 'PublicAuthRateLimitOptions', 'no', 'Limiti per endpoint pubblici; store condiviso opzionale (Redis) per il cluster.'],
+          ['edgeRateLimit', 'AccessiEdgeRateLimitOptions', 'no', 'Limite grossolano per IP davanti alle rotte Accessi; opzionale, store condiviso supportato.'],
+          ['http', '{ cors, trustProxy, securityHeaders }', 'no', 'CORS, IP reali dietro proxy e header di sicurezza con CSP a nonce per la console e direttive configurabili.'],
+          ['authCookie', '{ enabled, secure, sameSite, csrf, ... }', 'no', 'Cookie HttpOnly e CSRF double-submit al posto del Bearer. Default disattivato.'],
+          ['metrics', '{ enabled, sink, prefix }', 'no', 'Metriche Prometheus di dominio (login, 2FA, refresh, rate limit, store) e sink esterno opzionale.'],
+          ['audit', '{ enabled, sinks, store, retentionDays, redact }', 'no', 'Audit persistente redatto, retention e query/export admin. Default: solo log strutturato.'],
+          ['publicRegistration', '{ enabled }', 'no', 'Registrazione pubblica: disattivata per impostazione predefinita.'],
+          ['federatedAuthentication', 'FederatedAuthenticationOptions', 'no', `Abilita l'SSO generico.`],
+          ['extensionFieldsOptions', 'ExtensionFieldsOptions[]', 'no', 'Tabelle esterne allegate al profilo.'],
+          ['serviceTokens', '{ enabled, defaultTtlDays, rateLimitStore }', 'no', 'Token macchina-a-macchina, abilitati per impostazione predefinita; rate limit condiviso opzionale.'],
+          ['catalogScripts', '{ enabled, folder, ... }', 'no', 'Catalog migrations SQL eseguite dopo la riconciliazione dello schema.'],
+          ['adminBootstrap', '{ enabled, superUser }', 'no', 'Token casuale a ogni avvio per creare il primo admin dalla console.'],
+          ['publicBaseUrl', 'string', 'no', 'Base URL usata solo per loggare console/OpenAPI/API.'],
+          ['consoleApiBaseUrl', 'string', 'no', 'Base URL API per la console quando UI e API sono su domini diversi.'],
+          ['openapi', 'OpenApiSetupOptions', 'no', 'Path, titolo, descrizione e enabled della documentazione OpenAPI. Default invariati.'],
+          ['consoleEntry', '{ ttlMs, store }', 'no', 'TTL e store condiviso dei ticket console (Redis per multi-istanza). Default in memoria.'],
+          ['sessionRevocation', '{ enabled, store, ttlMs }', 'no', 'Revoca sessioni per utente tramite store memory/Redis; abilita POST /api/accessi/auth/revoke-sessions.'],
+          ['accessTokenRevocation', '{ enabled, store, ttlMs }', 'no', 'Revoca dei singoli access token tramite jti (memory/Redis); abilita POST /api/accessi/auth/revoke-token.'],
+          ['refreshTokenRotation', '{ enabled, store, reuseGraceMs, revokeUserSessionsOnReuse }', 'no', 'Refresh token monouso tramite store memory/Redis; al riuso oltre la finestra di grazia revoca la famiglia di token. Consigliato in multi-istanza.'],
+          ['logger', 'LoggerService', 'no', 'Logger Nest del sotto-app; se assente Nest usa il proprio logger.'],
+          ['bufferLogs', 'boolean', 'no', 'Buffer dei log di bootstrap del sotto-app. Default true.'],
+        ],
+      ),
+      good('ts', [
+        "import type { AccessiOptions } from 'emilsoftware-utilities';",
+        '',
+        'export const options: AccessiOptions = {',
+        '  databaseOptions: {',
+        '    host: process.env.ACCESSI_DB_HOST!,',
+        '    port: Number(process.env.ACCESSI_DB_PORT ?? 3050),',
+        '    database: process.env.ACCESSI_DB_NAME!,',
+        '    user: process.env.ACCESSI_DB_USER!,',
+        '    password: process.env.ACCESSI_DB_PASSWORD!,',
+        '  },',
+        "  confirmationEmailUrl: 'https://app.example.com',",
+        "  confirmationEmailReturnUrl: 'https://app.example.com/login',",
+        '  encryptionKey: process.env.ACCESSI_ENCRYPTION_KEY!,',
+        '  mockDemoUser: false,',
+        '  passwordExpiration: true,',
+        '  passwordExpirationDays: 90,',
+        '  jwtOptions: {',
+        "    secret: process.env.ACCESSI_JWT_SECRET!, // almeno 32 caratteri casuali, unico per ambiente",
+        "    expiresIn: '24h',",
+        "    issuer: 'accessi',",
+        "    audience: 'backend-app',",
+        '  },',
+        '  emailOptions: {',
+        '    host: process.env.SMTP_HOST!,',
+        '    port: Number(process.env.SMTP_PORT ?? 587),',
+        '    secure: false,',
+        '    requireTLS: true,',
+        '    tls: { rejectUnauthorized: true },',
+        "    from: 'no-reply@example.com',",
+        '    auth: { user: process.env.SMTP_USER!, pass: process.env.SMTP_PASS! },',
+        '  },',
+        '  publicRegistration: { enabled: false },',
+        '  serviceTokens: { enabled: true, defaultTtlDays: 365 },',
+        '};',
+      ].join('\n'), 'Configurazione tipica'),
+      p(`options.openapi personalizza path, titolo e descrizione della documentazione OpenAPI. Con enabled: false UI e JSON non vengono montati, ma le API /api/accessi restano attive. initializeAccessiModule restituisce { nestApp, document } per mergiare il contratto nel documento OpenAPI unico dell'host.`),
+      good('ts', [
+        'const { document } = await initializeAccessiModule(app, {',
+        '  ...options,',
+        "  openapi: { openApiPath: 'auth/docs', openApiJsonPath: 'auth/docs.json', title: 'Auth API' },",
+        '});',
+        '// document.paths e document.components.schemas sono pronti per il merge',
+      ].join('\n'), 'OpenAPI personalizzato'),
+      bad('ts', [
+        "jwtOptions: { secret: 'accessi', expiresIn: '24h' }, // segreto debole e condiviso",
+        'mockDemoUser: true, // MAI in produzione',
+      ].join('\n'), 'Errori comuni'),
+      note('danger', `Segreti`, `Non versionare i segreti e non passarli al frontend. jwtOptions.secret deve essere identico tra le istanze del backend e diverso da quello dei provider SSO.`),
+    ],
+  },
+  // -------------------------------------------------------------------------
+  {
+    id: 'database',
+    group: 'Configurazione',
+    title: 'Schema e aggiornamento del database',
+    summary: 'Tabelle, riconciliazione automatica e CLI.',
+    blocks: [
+      p(`Accessi possiede lo schema del dominio. Con autoUpdateDatabase true (predefinito) lo riconcilia a ogni avvio; con false verifica comunque la compatibilità in sola lettura e blocca gli avvii incompatibili.`),
+      h(`Tabelle principali`),
+      list([
+        `PARAMETRI, UTENTI, UTENTI_CONFIG, UTENTI_PWD, UTENTI_OLDPWD, UTENTI_GDPR`,
+        `RUOLI, MENU_GRP, MENU_TIPI, MENU, ABILITAZIONI, RUOLI_MNU, UTENTI_RUOLI`,
+        `FILTRI, FILTRI_TIPO`,
+        `SSO_PROVIDER, UTENTI_IDENTITA_EXT`,
+        `ACCESSI_2FA, ACCESSI_SERVICE_TOKEN, ACCESSI_CATALOG_SCRIPT`,
+      ]),
+      code('bash', `npm run db:update:accessi   # riconcilia lo schema\nnpm run db:check:accessi    # verifica senza modificare`, 'CLI schema'),
+      note('warn', `Versioni`, `La libreria richiede uno schema compatibile con la versione corrente (ACCESSI_SCHEMA_VERSION). Se la verifica fallisce, leggi il codice errore ACCESSI_DATABASE_SCHEMA_OUTDATED ed esegui db:update:accessi.`),
+      note('info', `Schema esatto`, `La riconciliazione allinea le tabelle Accessi a "niente in piu, niente in meno": le colonne non previste vengono segnalate come incompatibili e rimosse automaticamente (dopo rename e copie dei dati legacy). Gli indici, i trigger e i CHECK extra non previsti non vengono tolti, ma un indice non previsto su una tabella Accessi viene riportato come avviso senza bloccare l'avvio.`),
+    ],
+  },
+  // -------------------------------------------------------------------------
+  {
+    id: 'catalog-migrations',
+    group: 'Configurazione',
+    title: 'Catalog migrations SQL',
+    summary: 'Allinea menu, ruoli e cataloghi su piu database in modo idempotente.',
+    blocks: [
+      p(`Gli script SQL applicativi (menu, ruoli, tipi, cataloghi) restano nel repository del backend ospitante e Accessi li esegue dopo la riconciliazione dello schema. Ogni script viene tracciato nella tabella ACCESSI_CATALOG_SCRIPT (nome + checksum), quindi viene applicato una sola volta per database.`),
+      h(`Configurazione`),
+      good('ts', [
+        'catalogScripts: {',
+        "  enabled: true,",
+        "  folder: './db/accessi-catalog', // versionata nel repo del backend",
+        "  onChecksumMismatch: 'error',     // 'error' (default) | 'warn' | 'reapply'",
+        "  stopOnError: true,",
+        '}',
+      ].join('\n'), 'AccessiOptions'),
+      list([
+        'Gli script sono ordinati per percorso (usa prefissi numerici: 0001_, 0002_, ...).',
+        'Devono essere idempotenti e ripetibili: UPDATE OR INSERT ... MATCHING, MERGE, DELETE+INSERT mirati.',
+        'Non includere utenti: le catalog migrations allineano solo catalogo e configurazione.',
+        'Supportati stringhe, commenti e statement multipli; SET TERM non serve perché gli script sono solo DML.',
+      ]),
+      note('danger', `Solo righe (DML)`, `Vincolo tassativo: uno script puo eseguire solo INSERT, UPDATE, DELETE, MERGE, SELECT, EXECUTE. Qualunque DDL (CREATE/ALTER/DROP, trigger, procedure, GRANT, transazioni) viene rifiutato. Lo schema si aggiorna solo con db:update:accessi.`),
+      note('info', `File non conformi`, `Un file con statement non consentiti non viene applicato ne registrato nel ledger; il run prosegue con gli altri e il report riporta una voce per ogni file con i relativi messaggi di errore (visibili anche con db:catalog:accessi:check).`),
+      note('info', `allowDdl`, `Disattivato di default. Impostarlo a true disabilita la validazione e permette DDL: usarlo solo consapevolmente e mai come sostituto dell'updater dello schema.`),
+      code('bash', `# Applica (schema + catalog migrations) su un database\nACCESSI_CATALOG_FOLDER=./db/accessi-catalog npm run db:catalog:accessi\n\n# Elenca solo quelle da applicare / modificate\nACCESSI_CATALOG_FOLDER=./db/accessi-catalog npm run db:catalog:accessi:check`, 'CLI catalog migrations'),
+      note('info', `Idempotenza`, `Uno script gia applicato con lo stesso checksum viene saltato. Se il file cambia dopo l'applicazione, con policy error il run si interrompe: non modificare uno script applicato, aggiungine uno nuovo.`),
+    ],
+  },
+  // -------------------------------------------------------------------------
+  {
+    id: 'login',
+    group: 'Autenticazione',
+    title: 'Login locale e JWT',
+    summary: 'Endpoint di login, risposta e gestione della password scaduta.',
+    blocks: [
+      code('http', `POST /api/accessi/auth/login\nContent-Type: application/json\n\n{ "email": "utente@example.com", "password": "Segreta123!" }`, 'Login con password'),
+      p(`La risposta include Result.token (il JWT) e il profilo utente con ruoli e permessi. Se l'account è passwordless, ometti la password: il server risponde con un challenge via email (vedi la sezione su 2FA e passwordless).`),
+      note('info', `Scadenza del token`, `Result.token.expiresIn e sempre espresso in secondi (per esempio 86400 per 24h), indipendentemente dal formato usato in jwtOptions.expiresIn.`),
+      note('info', `Autorizzazioni lato client`, `La fonte autorevole è Result.userGrants.grants: contiene i grant effettivi (ruoli + permessi diretti, livello massimo). Non leggere i permessi dal JWT e non usare Result.utente.permissions: non sono popolati. Per i superutenti grants contiene tutti i menu attivi al livello 30.`),
+      good('ts', [
+        "const res = await fetch('/api/accessi/auth/login', {",
+        "  method: 'POST',",
+        "  headers: { 'Content-Type': 'application/json' },",
+        '  body: JSON.stringify({ email, password }),',
+        '});',
+        'const body = await res.json();',
+        'if (body.Result?.challenge) { /* richiedi il codice */ }',
+        'const token = body.Result?.token;',
+      ].join('\n'), 'Chiamata dal frontend'),
+      note('warn', `Password scaduta`, `Con passwordExpiration attivo, una password scaduta produce una PasswordExpiredResponse con code PASSWORD_EXPIRED. Il client deve avviare il reset della password.`),
+      h(`Verifica del token`),
+      code('http', `POST /api/accessi/auth/get-user-by-token\nContent-Type: application/json\n\n{ "token": "<jwt>" }`, 'get-user-by-token'),
+      p(`Usalo per verificare un JWT e ottenere il profilo corrente (utile al bootstrap di una SPA). Restituisce Result.userData.`),
+    ],
+  },
+  // -------------------------------------------------------------------------
+  {
+    id: 'passwordless-2fa',
+    group: 'Autenticazione',
+    title: 'Codici email, 2FA e passwordless',
+    summary: 'Verifica in due passi, challenge e policy per utente.',
+    blocks: [
+      p(`La verifica con codice email è per-utente (flagDueFattori / UTENTI_CONFIG.FLG2FATT) ed è disattivata per impostazione predefinita. Con passwordlessLoginEnabled (FLGPWDLESS, richiede la 2FA attiva) l'accesso avviene con il solo codice email.`),
+      table(
+        ['Configurazione', 'Accesso locale', 'Accesso SSO'],
+        [
+          ['2FA disattivata', 'Password', 'Provider'],
+          ['2FA attiva', 'Password + codice email', 'Provider + codice email'],
+          ['2FA + passwordless', 'Solo codice email', 'Provider + codice email'],
+        ],
+      ),
+      code('json', `{\n  "Result": {\n    "challenge": {\n      "twoFactorRequired": true,\n      "challengeId": "64-caratteri-esadecimali",\n      "method": "email",\n      "expiresAt": "2026-09-11T14:00:00.000Z",\n      "resendAfterSeconds": 60\n    }\n  }\n}`, 'Risposta con challenge'),
+      code('http', `POST /api/accessi/auth/two-factor/verify\n{ "challengeId": "...", "code": "012345" }\n\nPOST /api/accessi/auth/two-factor/resend\n{ "challengeId": "..." }`, 'Verifica e reinvio'),
+      list([
+        `Il codice ha 6 cifre, dura 10 minuti, consente 5 tentativi totali e al massimo 3 invii per challenge.`,
+        `Fino alla verifica non sono presenti token, profilo o grant.`,
+        `Il challenge non è un JWT e non va usato nell'header Authorization.`,
+      ]),
+      bad('ts', [
+        '// Sbagliato: usare il challenge come token',
+        "fetch('/api/ordini', { headers: { Authorization: 'Bearer ' + challengeId } }); // 401",
+      ].join('\n'), 'Il challenge non è un token'),
+    ],
+  },
+  // -------------------------------------------------------------------------
+  {
+    id: 'reset-password',
+    group: 'Autenticazione',
+    title: 'Reset password',
+    summary: 'Invio email e conferma con token monouso.',
+    blocks: [
+      code('http', `POST /api/accessi/email/send-reset-password-email\n{ "email": "utente@example.com" }\n\nPOST /api/accessi/auth/confirm-reset-password/{token}\n{ "newPassword": "NuovaSegreta123!" }`, 'Reset in due passi'),
+      p(`L'invio non rivela se l'email esiste (anti-enumerazione). Il token di reset è monouso ed è firmato con una chiave dedicata.`),
+      note('warn', `Policy password (solo quando si imposta)`, `Reset, set-password admin e bootstrap richiedono almeno 8 caratteri con maiuscola, minuscola, cifra e carattere speciale, senza spazi e non comuni. Se non conforme l'API risponde 400 con code ACCESSI_WEAK_PASSWORD e l'elenco dei requisiti in details. La policy NON si applica al login: le password preesistenti eventualmente deboli continuano ad autenticare e vengono migrate senza blocco.`),
+      note('info', `Pagina personalizzata`, `Imposta customResetPage per usare la tua pagina di reset invece di quella inclusa. confirmationEmailReturnUrl e confirmationEmailPrefix controllano il ritorno.`),
+    ],
+  },
+  // -------------------------------------------------------------------------
+  {
+    id: 'middleware',
+    group: 'Autorizzazione',
+    title: 'authorizeAccessi (middleware)',
+    summary: 'Proteggere le rotte della tua app con il JWT Accessi.',
+    blocks: [
+      p(`authorizeAccessi è un middleware Express che verifica il JWT, ricarica lo stato utente corrente e applica i requisiti. Su successo prosegue; su errore risponde direttamente con il contratto Accessi (non chiamare un tuo next(error)).`),
+      good('ts', [
+        "app.get('/api/report',",
+        '  (req, res, next) => authorizeAccessi(req, res, next, {',
+        "    requirements: [{ menuCode: 'REPORT', minPermissionLevel: 10 }],",
+        '  }),',
+        '  (req, res) => res.json({ user: req.user, grants: req.userGrants }),',
+        ');',
+      ].join('\n'), 'Rotta protetta'),
+      h(`Che cosa trovi nella request`),
+      list([
+        `req.user e req.data: payload utente corrente (alias storici).`,
+        `req.userGrants: grant effettivi, presente solo quando hai richiesto dei requisiti.`,
+      ]),
+      bad('ts', [
+        "app.get('/api/report', authorizeAccessi, (req, res) => {",
+        '  // Sbagliato: assumere che req.userGrants esista senza requisiti',
+        '  const grants = req.userGrants.grants; // possibile TypeError',
+        '});',
+      ].join('\n'), 'Non dare per scontato req.userGrants'),
+      note('danger', `Lo stato utente è sempre ricontrollato`, `Un JWT valido non basta: se l'utente è stato bloccato, eliminato o ha cambiato policy, il middleware risponde 401 AUTH_USER_DISABLED.`),
+    ],
+  },
+  // -------------------------------------------------------------------------
+  {
+    id: 'resource-server',
+    group: 'Autorizzazione',
+    title: 'Resource server e introspection',
+    summary: 'Proteggere un backend fratello senza accedere al database Accessi.',
+    blocks: [
+      p(`Un backend che non possiede Accessi usa resource-server. La verifica puo essere locale (JWT) oppure delegata all'introspection di Accessi Service. La policy di autorizzazione usa gli stessi accessiRequirement del middleware storico.`),
+      good('ts', [
+        "import { createAccessiAuthMiddleware } from 'emilsoftware-utilities/accessi/resource-server';",
+        '',
+        'app.use(createAccessiAuthMiddleware({',
+        '  jwt: {',
+        '    // In una topologia multi-servizio preferire RS256/JWKS:',
+        '    // publicKey: process.env.ACCESSI_JWT_PUBLIC_KEY,',
+        '    // algorithms: ["RS256"],',
+        '    serverSecret: process.env.ACCESSI_JWT_SECRET, // HS256: deriva la chiave access',
+        '    issuer: "accessi",',
+        '    audience: "backend-a",',
+        '  },',
+        '  introspection: {',
+        '    url: "https://accessi.example.com/api/accessi/auth/introspect",',
+        '    serviceToken: process.env.ACCESSI_SERVICE_TOKEN!,',
+        '  },',
+        '}));',
+      ].join('\n'), 'Express resource server'),
+      good('ts', [
+        "import { createAccessiAuthGuard } from 'emilsoftware-utilities/accessi/resource-server';",
+        '',
+        '@UseGuards(createAccessiAuthGuard({',
+        '  jwt: { publicKey: process.env.ACCESSI_JWT_PUBLIC_KEY, algorithms: ["RS256"] },',
+        '  introspection: { url: process.env.ACCESSI_INTROSPECT_URL!, serviceToken: process.env.ACCESSI_SERVICE_TOKEN! },',
+        '  authorization: { requirements: [{ menuCode: "ORDINI", minPermissionLevel: 20 }] },',
+        '}))',
+        '@Get("ordini")',
+        'list(@Req() req: Request) { return req.user; }',
+      ].join('\n'), 'Guard Nest'),
+      table(
+        ['Campo', 'Obbligo', 'Note'],
+        [
+          ['jwt.serverSecret', 'HS256', 'Segreto grezzo Accessi; il resource server applica la KDF access.'],
+          ['jwt.publicKey / jwt.jwks', 'RS/ES', 'Consigliato in multi-servizio. JWKS ha cache e timeout.'],
+          ['jwt.issuer / jwt.audience', 'no', 'Consigliati per evitare token di altri ambienti.'],
+          ['introspection.url', 'se servono grant', 'Endpoint service-to-service protetto da service token.'],
+          ['introspection.serviceToken', 'se introspection', 'Scope richiesto: accessi:introspect.'],
+          ['authorization', 'no', 'Policy accessiRequirement; senza introspection i grant sono obbligatori.'],
+        ],
+      ),
+      note('warn', `Fail closed`, `Se introspection e configurata ma non raggiungibile, il resource server risponde 503. Non autorizza la richiesta.`),
+      note('info', `Introspection`, `POST /api/accessi/auth/introspect restituisce active=false per token invalido, scaduto o utente disabilitato. I risultati attivi sono cachati lato resource server per 30 secondi per default.`),
+      note('info', `JWKS`, `Con RS256/ES256 Accessi pubblica la JWKS su /accessi/.well-known/jwks.json (configurabile con jwtOptions.jwksPath). Il resource server puo usare jwks.url e ruotare le chiavi con previousPublicKeys.`),
+      note('info', `Revoca`, `revocation.store applica la revoca per utente; revocation.accessTokenStore rifiuta i singoli jti revocati e revocation.familyStore invalida le famiglie di refresh token revocate per riuso sospetto.`),
+      note('info', `Audit`, `I fallimenti di autenticazione del resource server, i blocchi edge, il riuso dei refresh token e le revoche di sessione producono eventi strutturati tramite auditAccessi; i token e i segreti vengono redatti dal Logger.`),
+    ],
+  },
+  // -------------------------------------------------------------------------
+  {
+    id: 'requisiti',
+    group: 'Autorizzazione',
+    title: 'Requisiti e livelli di abilitazione',
+    summary: 'DSL accessiRequirement: permission, and, or, not, custom.',
+    blocks: [
+      p(`I requisiti si compongono con accessiRequirement. La forma storica requirements è un AND di permessi. Il livello è TipoAbilitazione: NESSUNA=0, LETTURA=10, SCRITTURA=20, SPECIAL=30; il confronto è tipoAbilitazione >= soglia.`),
+      good('ts', [
+        "import { authorizeAccessi, accessiRequirement as r } from 'emilsoftware-utilities';",
+        '',
+        '// AND (entrambi i menu)',
+        'const both = r.and(r.permission("ORDINI", 20), r.permission("CLIENTI", 10));',
+        '',
+        '// OR',
+        'const either = r.or(r.permission("REPORT", 10), r.permission("EXPORT", 20));',
+        '',
+        '// NOT + custom',
+        'const policy = r.and(',
+        '  r.permission("AREA_RISERVATA", 10),',
+        '  r.not(r.permission("BLOCCO_TOTALE", 0)),',
+        ');',
+        '',
+        'app.get("/api/riservato", (req, res, next) => authorizeAccessi(req, res, next, {',
+        '  requirementTree: policy,',
+        '  customRequirementHandlers: {',
+        '    stessoReparto: async (ctx) => ctx.userCode === Number(ctx.req.query.reparto),',
+        '  },',
+        '}), handler);',
+      ].join('\n'), 'Policy composte'),
+      bad('ts', [
+        '// Sbagliato: AND/OR senza figli -> errore di configurazione (500 AUTH_REQUIREMENTS_MISCONFIGURED)',
+        'const empty = r.and();',
+      ].join('\n'), 'Configurazione non valida'),
+      note('warn', `custom senza handler`, `Un requisito custom la cui chiave non ha un handler produce 500 AUTH_REQUIREMENTS_MISCONFIGURED: è un errore di programmazione, non un 403.`),
+    ],
+  },
+  // -------------------------------------------------------------------------
+  {
+    id: 'utenti',
+    group: 'Dominio',
+    title: 'Utenti',
+    summary: 'Creazione, aggiornamento, stati e GDPR.',
+    blocks: [
+      h(`Stati di registrazione (STAREG)`),
+      table(
+        ['Valore', 'Nome', 'Effetto sul login'],
+        [
+          ['0', 'NULL', 'Non confermato'],
+          ['5', 'INSERT', 'Non confermato'],
+          ['10', 'INVIO', 'Richiede il rinnovo della password'],
+          ['20', 'CONF', 'Valido'],
+          ['50', 'DELETE', 'Bloccato (soft delete)'],
+          ['99', 'BLOCC', 'Bloccato'],
+        ],
+      ),
+      h(`Endpoint principali (superutente salvo diversamente indicato)`),
+      table(
+        ['Metodo', 'Percorso', 'Descrizione'],
+        [
+          ['GET', '/api/accessi/user/get-users', 'Elenco con paginazione (limit e offset, header X-Total-Count).'],
+          ['POST', '/api/accessi/user/create-managed-user', 'Crea un utente locale e invia il reset password.'],
+          ['PUT', '/api/accessi/user/update-user/:codiceUtente', 'Aggiorna profilo e policy (campi privilegiati solo superutente).'],
+          ['DELETE', '/api/accessi/user/delete-user/:codiceUtente', 'Soft delete: STAREG=DELETE. Admin o superutente.'],
+          ['DELETE', '/api/accessi/user/delete-user-permanent/:codiceUtente', 'Eliminazione definitiva: rimuove utente e record collegati. Solo admin.'],
+          ['POST', '/api/accessi/user/set-password/:codiceUtente', 'Imposta direttamente la password: hash lato backend e scadenza secondo policy, nessuna email.'],
+          ['POST', '/api/accessi/user/set-stato', 'Imposta lo stato di registrazione.'],
+          ['PATCH', '/api/accessi/user/set-gdpr/:codiceUtente', 'Registra il consenso GDPR.'],
+          ['POST', '/api/accessi/user/register', 'Registrazione pubblica, solo se publicRegistration.enabled.'],
+        ],
+      ),
+      note('warn', `Eliminazione: soft o definitiva`, `Il soft delete (STAREG=DELETE) è disponibile per admin e superutenti ed è reversibile. L'eliminazione definitiva rimuove utente e record collegati in transazione ed è riservata agli admin; il superutente senza flag Admin può solo flaggare l'utente come eliminato. Se l'utente ha dati collegati in altre tabelle (per esempio campi estesi del backend) l'eliminazione definitiva fallisce con code ACCESSI_USER_DELETE_HAS_REFERENCES e messaggio esplicito: usa allora il soft delete.`),
+      note('ok', `Creazione con invito atomica`, `La creazione utente con invio email è atomica: se SMTP non è configurato si fallisce prima di scrivere, e se l'invio fallisce l'utente creato viene annullato (codice ACCESSI_USER_INVITE_EMAIL_FAILED). Non restano utenti senza password. In alternativa un admin crea l'utente e imposta la password dal form dedicato.`),
+      note('ok', `Admin: controllo completo del profilo`, `Dalla scheda utente un admin modifica tutti i campi Accessi: anagrafica, cellulare, lingua, avatar, pagina di default, metadata JSON, 2FA/passwordless/login con password, flag, GDPR, stato registrazione e scadenza password. La password si imposta direttamente con set-password. Le scritture sono idempotenti (UPDATE OR INSERT su UTENTI_CONFIG) e verificate dal backend; non serve accedere al database.`),
+      note('info', `Consenso GDPR`, `Il pulsante "Registra consenso GDPR" completa il processo: imposta FLGGDPR e DATGDPR e scrive la riga storica in UTENTI_GDPR (endpoint set-gdpr). Anche impostare flagGdpr via update-user completa il processo con la stessa riga storica.`),
+      good('ts', [
+        "await fetch('/api/accessi/user/create-managed-user', {",
+        "  method: 'POST',",
+        "  headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + adminToken },",
+        '  body: JSON.stringify({',
+        "    email: 'nuovo@example.com',",
+        "    nome: 'Mario',",
+        "    cognome: 'Rossi',",
+        '    roles: [1, 2],',
+        "    permissions: [{ codiceMenu: 'REPORT', tipoAbilitazione: 10 }],",
+        '  }),',
+        '});',
+      ].join('\n'), 'Creazione di un utente gestito'),
+      bad('ts', [
+        '// Sbagliato: inviare flag privilegiati dal frontend pubblico',
+        'fetch("/api/accessi/user/register", {',
+        '  method: "POST",',
+        '  body: JSON.stringify({ email, flagSuper: true }), // ignorato o negato',
+        '});',
+      ].join('\n'), 'Privilegi dal client'),
+      note('info', `Campi di dominio`, `UTENTI_CONFIG contiene i campi di dominio Accessi: FLGSUPER, FLGADMIN, FLG2FATT (2FA), FLGPWDLESS (passwordless), FLGPASSWORD (login locale), CODLINGUA, CELLULARE, PAGDEF (pagina di default) e JSON_METADATA. I flag/colonne applicativi (FLGMOP, FLGPIANA, FLGADDETTI, FLGOSPITI, FLGPIANARFID, FLGCONTA, FLGCUBI, FLGCICLPASS, FLGDIPENDENTI, FLGINVENTARI, CAUMOV, NUMMAC, RAGSOCCLI, ENABLEIA, CELLUTE e NOMECAMPO) sono stati rimossi: i backend devono gestirli in tabelle proprie. Il telefono canonico e UTENTI_CONFIG.CELLULARE.`),
+      note('info', `Autorizzazioni`, `I gruppi/menu si abilitano tramite ABILITAZIONI, RUOLI_MNU e UTENTI_RUOLI. Il vecchio meccanismo NOMECAMPO (flag applicativo su UTENTI_CONFIG) e stato rimosso.`),
+      note('info', `Campi estesi`, `extensionFieldsOptions allega colonne di tabelle applicative al profilo (per esempio la ragione sociale). Le colonne sono in whitelist: non costruirle mai da input HTTP.`),
+    ],
+  },
+  // -------------------------------------------------------------------------
+  {
+    id: 'ruoli',
+    group: 'Dominio',
+    title: 'Ruoli e permessi',
+    summary: 'Assegnazioni sostitutive e composizione dei grant.',
+    blocks: [
+      p(`I ruoli contengono una lista di menu con livello. Le assegnazioni (ruoli e permessi diretti) sono SOSTITUTIVE: invia sempre la lista completa desiderata. I grant effettivi sommano ruoli e permessi diretti prendendo il livello massimo per menu; un livello 0 non annulla un grant del ruolo. I superutenti ricevono tutti i menu attivi al livello massimo.`),
+      table(
+        ['Metodo', 'Percorso', 'Descrizione'],
+        [
+          ['GET', '/api/accessi/permission/roles', 'Ruoli con i menu associati.'],
+          ['POST', '/api/accessi/permission/create-role', 'Crea un ruolo (i menu sono obbligatori).'],
+          ['PUT', '/api/accessi/permission/update-role/:codiceRuolo', 'Aggiorna un ruolo (menu sostitutivi).'],
+          ['DELETE', '/api/accessi/permission/delete-role/:codiceRuolo', 'Elimina ruolo, mapping e assegnazioni.'],
+          ['POST', '/api/accessi/permission/assign-roles/:codiceUtente', `Sostituisce i ruoli dell'utente.`],
+          ['POST', '/api/accessi/permission/assign-permissions/:codiceUtente', 'Sostituisce i permessi diretti.'],
+          ['GET', '/api/accessi/permission/grants/:codiceUtente', 'Grant effettivi, permessi diretti e ruoli.'],
+        ],
+      ),
+      good('ts', [
+        'const role = {',
+        "  descrizioneRuolo: 'Gestore ordini',",
+        '  menu: [',
+        "    { codiceMenu: 'ORDINI', tipoAbilitazione: 20 },",
+        "    { codiceMenu: 'CLIENTI', tipoAbilitazione: 10 },",
+        '  ],',
+        '};',
+        'await createRole(role); // POST /api/accessi/permission/create-role',
+        '',
+        "// Sostitutivo: questa lista diventa l'intero set di ruoli dell'utente",
+        'await assignRolesToUser(codiceUtente, { roles: [3, 7] });',
+      ].join('\n'), 'Creazione di un ruolo e assegnazione'),
+      bad('ts', [
+        "// Sbagliato: pensare che l'assegnazione sia incrementale",
+        'await assignRolesToUser(codiceUtente, { roles: [3] });',
+        "// ora l'utente ha SOLO il ruolo 3, non 3 più quelli di prima",
+      ].join('\n'), 'Assegnazione non additiva'),
+      note('warn', `Menu obbligatori`, `create-role e update-role rifiutano un ruolo senza menu. Se ti serve un ruolo senza accessi, non crearlo.`),
+    ],
+  },
+  // -------------------------------------------------------------------------
+  {
+    id: 'menu',
+    group: 'Dominio',
+    title: 'Menu, gruppi e tipi menu',
+    summary: 'Catalogo di navigazione e CRUD completo (superutente).',
+    blocks: [
+      table(
+        ['Metodo', 'Percorso', 'Descrizione'],
+        [
+          ['GET', '/api/accessi/permission/menus', 'Menu attivi.'],
+          ['GET', '/api/accessi/permission/menu-types', 'Catalogo dei tipi menu.'],
+          ['GET', '/api/accessi/permission/groups-with-menus?includeDisabled=true', 'Gruppi con menu (anche disabilitati).'],
+          ['POST', '/api/accessi/permission/menus', 'Crea un menu.'],
+          ['PUT', '/api/accessi/permission/menus/:codiceMenu', 'Aggiorna un menu.'],
+          ['DELETE', '/api/accessi/permission/menus/:codiceMenu', 'Elimina un menu (con grant e associazioni ai ruoli).'],
+          ['POST', '/api/accessi/permission/menu-groups', 'Crea un gruppo.'],
+          ['PUT', '/api/accessi/permission/menu-groups/:codiceGruppo', 'Aggiorna un gruppo.'],
+          ['DELETE', '/api/accessi/permission/menu-groups/:codiceGruppo', 'Elimina un gruppo (solo se vuoto).'],
+          ['POST/PUT/DELETE', '/api/accessi/permission/menu-types[/:codiceTipo]', 'CRUD dei tipi menu.'],
+        ],
+      ),
+      p(`I codici (CODMNU, CODGRP, CODTIP) sono chiavi immutabili: si indicano in creazione e poi si passano nel percorso. Un gruppo o un tipo si elimina solo se non è referenziato.`),
+      good('ts', [
+        "await createMenuGroup({ codiceGruppo: 'A', descrizioneGruppo: 'Amministrazione', ordineGruppo: 1, enabled: true });",
+        "await createMenuType({ codiceTipo: 'X', descrizioneTipo: 'Operativo' });",
+        "await createMenu({ codiceMenu: 'ORDINI', descrizioneMenu: 'Ordini', codiceGruppo: 'A', tipo: 'X', ordineMenu: 10, enabled: true });",
+      ].join('\n'), 'Catalogo in ordine'),
+      bad('ts', [
+        '// Sbagliato: eliminare un gruppo che contiene menu -> 400 con spiegazione',
+        "await deleteMenuGroup('A'); // contiene N menu",
+      ].join('\n'), 'Vincoli di integrità'),
+    ],
+  },
+  // -------------------------------------------------------------------------
+  {
+    id: 'sso',
+    group: 'SSO',
+    title: 'SSO generico (federated authentication)',
+    summary: 'Il backend valida il provider, Accessi gestisce identità e sessioni.',
+    blocks: [
+      p(`Accessi non valida i token Azure, Google o SAML: è il TUO backend a validare il flusso SSO e a passare solo { provider, subject } verificati a FederatedAuthService. Così issuer, secret e token restano fuori dal modulo.`),
+      good('ts', [
+        "import { FederatedAuthService } from 'emilsoftware-utilities';",
+        '',
+        '// Nel tuo callback SSO, dopo aver validato il token del provider:',
+        'const verified = { provider: "azure-ad-acme", subject: claims.oid };',
+        'const result = await federatedAuthService.authenticate(verified);',
+        '',
+        'if (result.login.challenge) {',
+        '  // 2FA attiva: restituisci il challenge al frontend',
+        '  return res.json({ challenge: result.login.challenge });',
+        '}',
+        'return res.json({ login: result.login, token: result.token });',
+      ].join('\n'), 'Login SSO'),
+      note('info', `Scambio service-to-service`, `Se il backend fratello valida il provider SSO, può scambiare { provider, subject } con POST /api/accessi/federated-auth/exchange usando un service token con scope accessi:federated:exchange. Accessi non riceve il token del provider.`),
+      h(`API amministrative (superutente)`),
+      list([
+        `GET/POST /api/accessi/federated-auth/providers, PATCH/DELETE providers/:provider`,
+        `GET/POST /api/accessi/federated-auth/users/:codiceUtente/identities`,
+        `POST /api/accessi/federated-auth/users (crea un utente SSO-only)`,
+        `PATCH /api/accessi/federated-auth/users/:codiceUtente/password-login`,
+      ]),
+      bad('ts', [
+        "// Sbagliato: far validare il token del provider ad Accessi o fidarsi del frontend",
+        'await federatedAuthService.authenticate({ provider, subject: req.body.email }); // subject non verificato',
+      ].join('\n'), `Non fidarti dell'input`),
+      note('warn', `Provider in uso`, `Un provider si elimina solo se nessuna identità è collegata; altrimenti disabilitalo. La chiave del provider deve coincidere con la configurazione del backend.`),
+    ],
+  },
+  // -------------------------------------------------------------------------
+  {
+    id: 'service-token',
+    group: 'Token di servizio',
+    title: 'Token macchina-a-macchina',
+    summary: 'Autenticazione tecnica con scope: non è un superutente.',
+    blocks: [
+      p(`Formato: st_<id>.<segreto> (segreto da 256 bit). Nel database si salva solo lo SHA-256 del segreto; il segreto è mostrato una sola volta. La verifica restituisce { tokenId, label, scopes }: nessun ruolo o grant.`),
+      note('danger', `Non è un superutente`, `Un service token non apre le API Accessi: abilita solo le rotte della tua app che proteggi con ServiceTokenGuard.`),
+      note('info', `Introspection`, `Per un backend fratello creare un service token con scope accessi:introspect e usarlo in POST /api/accessi/auth/introspect. Il resource server lo configura in introspection.serviceToken.`),
+      note('warn', `Rate limit condiviso`, `In cluster configurare serviceTokens.rateLimitStore e publicAuthRateLimit.store con createRedisRateLimitStore: i contatori in memoria valgono solo per singola istanza.`),
+      note('info', `Edge rate limit`, `Per una soglia grossolana per IP configurare edgeRateLimit: viene applicata davanti alle rotte Accessi. Il gateway/API gateway resta comunque consigliato per bot protection e limiti di connessione.`),
+      good('ts', [
+        "import { ServiceTokenGuard, RequireServiceTokenScopes } from 'emilsoftware-utilities';",
+        '',
+        '@UseGuards(ServiceTokenGuard)',
+        "@RequireServiceTokenScopes('ia')",
+        '@Post("internal/ask")',
+        'ask() { /* req.accessiServiceToken = { tokenId, label, scopes } */ }',
+      ].join('\n'), 'Rotta tecnica protetta'),
+      h(`Gestione (superutente)`),
+      list([
+        `POST /api/accessi/service-token (label, scopes, expiresAt o ttlDays) -> segreto mostrato una volta`,
+        `GET /api/accessi/service-token?includeRevoked=true`,
+        `DELETE /api/accessi/service-token/:tokenId (revoca immediata)`,
+        `POST /api/accessi/service-token/:tokenId/rotate`,
+      ]),
+      bad('ts', [
+        '// Sbagliato: usare un service token per autenticare un utente umano',
+        "fetch('/api/profilo', { headers: { Authorization: 'Bearer ' + serviceToken } }); // req.user assente",
+      ].join('\n'), 'Non è un utente'),
+      note('warn', `Scadenza`, `Senza expiresAt né defaultTtlDays il token non scade: imposta serviceTokens.defaultTtlDays o una scadenza esplicita.`),
+    ],
+  },
+  // -------------------------------------------------------------------------
+  {
+    id: 'console',
+    group: 'Console',
+    title: 'Console amministrativa',
+    summary: 'Accesso, sezioni e che cosa si può fare.',
+    blocks: [
+      p(`La console è servita dal modulo su /api/accessi/console. Non ha stato proprio: ogni azione chiama le API protette con il JWT dell'utente connesso.`),
+      list([
+        `Utenti: elenco, creazione locale o SSO, profilo, ruoli, grant diretti, stato, 2FA e Login as.`,
+        `Ruoli e grant: CRUD dei ruoli con l'albero delle abilitazioni.`,
+        `Menu e gruppi: CRUD di gruppi, menu e tipi menu.`,
+        `Token di servizio: creazione, rotazione, revoca.`,
+        `SSO: provider e identità.`,
+        `Wiki e Changelog: documentazione e novità della libreria.`,
+        `SQL: esporta il DDL delle entità Accessi (tabelle, generatori, FK, indici, check, trigger) per replicare il database.`,
+      ]),
+      note('info', `Superutente (FLGSUPER)`, `Riceve TUTTE le abilitazioni al livello massimo (30) dopo il login. In console vede solo la sezione Utenti e gestisce utenti, ruoli e grant.`),
+      note('info', `Admin (FLGADMIN)`, `Accede a tutta la console (catalogo, token, SSO, utenti) ma NON conferisce abilitazioni: i menu restano quelli assegnati via ABILITAZIONI/RUOLI_MNU. Gerarchia: ADMIN > SUPER > utente.`),
+      note('info', `Gerarchia dei ruoli`, `Vale ADMIN (2) > SUPER (1) > utente comune (0). Un attore può gestire solo utenti di rango pari o inferiore: un superutente può amministrare totalmente utenti comuni e superutenti (profilo, password, flag, ruoli, grant, stato, eliminazione e identità/utenti SSO) ma NON può toccare un admin. Un admin può gestire chiunque. La regola è imposta dal backend (ensureCanManageTargetUser): un tentativo non consentito restituisce 403.`),
+      note('info', `Gestione dei flag`, `Dalla scheda utente i flag sono mostrati in base al ruolo di chi è connesso: un admin può assegnare o togliere sia il flag Admin sia il flag Superutente; un superutente senza flag Admin può gestire solo il flag Superutente. I flag si impostano anche in creazione (utente locale o SSO).`),
+      note('warn', `Ultimo admin`, `Per non restare chiusi fuori dalla console, l'ultimo admin attivo non può essere disattivato, bloccato, eliminato né privato del flag Admin: l'operazione restituisce 400 finché non viene promosso un altro admin.`),
+      note('info', `Accesso`, `Apri /api/accessi/console e accedi con un utente con FLGSUPER o FLGADMIN. Le sezioni sono raggiungibili anche tramite deep link (per esempio /api/accessi/console/menu-e-gruppi/menu).`),
+      note('info', `Bootstrap admin`, `Con adminBootstrap.enabled il backend stampa a ogni avvio un token casuale (monouso, valido fino al riavvio). La sezione "Crea utente admin" nella schermata di login compare solo quando adminBootstrap è abilitato (stato esposto da GET /api/accessi/auth/bootstrap-admin/status): incolla il token e crea il primo admin senza email di conferma. La password è opzionale: se assente viene generata e mostrata una sola volta.`),
+      note('ok', `Auto-ingresso dal frontend`, `Se un frontend ha già una sessione Accessi valida e l'utente è abilitato alla console, può aprire la console senza rifare il login: \`POST /api/accessi/console/entry\` con \`Authorization: Bearer <jwt>\` restituisce un ticket monouso; apri poi \`/api/accessi/console#entry=<ticket>\`. Il JWT non finisce mai nell'URL; il ticket dura 60 secondi ed è utilizzabile una sola volta (endpoint di scambio protetto da rate limit).`),
+      note('info', `Console centralizzata`, `In una topologia multi-backend la console va ospitata una sola volta su Accessi Service. Gli altri backend possono linkarla con \`buildAccessiConsoleUrl\` di \`accessi/console\` oppure proxare \`/api/accessi/*\` sullo stesso dominio. Non copiare gli asset della console in ogni applicazione.`),
+      note('warn', `Ticket multi-istanza`, `I ticket di ingresso console sono in memoria per default. Con piu istanze configurare \`consoleEntry.store\` con \`createRedisConsoleEntryStore\`: il JWT viene cifrato e il consume e atomico.`),
+    ],
+  },
+  // -------------------------------------------------------------------------
+  {
+    id: 'login-as',
+    group: 'Console',
+    title: 'Login as (accesso temporaneo)',
+    summary: 'Superutenti e admin possono generare un URL per entrare in un applicazione come un altro utente.',
+    blocks: [
+      p(`Dalla lista utenti della console il pulsante Login as apre il pannello dedicato: inserisci l'URL dell'applicazione e premi "Genera URL di accesso". Accessi emette un JWT per l'utente target e lo allega all'URL come query parameter \`loginAsToken\`.`),
+      code('http', `POST /api/accessi/user/login-as/:codiceUtente\nContent-Type: application/json\nAuthorization: Bearer <jwt amministratore>\n\n{ "url": "https://app.example.com/dashboard" }`, 'Richiesta'),
+      code('json', `{\n  "Result": {\n    "loginUrl": "https://app.example.com/dashboard?loginAsToken=eyJ...",\n    "token": "eyJ...",\n    "expiresInSeconds": 86400,\n    "expiresAt": "2026-10-24T14:05:00.000Z"\n  }\n}`, 'Risposta'),
+      note('danger', `La durata è quella standard`, `Il token dura quanto la sessione Accessi standard (jwtOptions.expiresIn). È una credenziale: chiunque abbia l'URL può usarlo fino alla scadenza per entrare nell'applicazione come l'utente target. Non condividerlo, non salvarlo in log o documenti e non usarlo in produzione per operazioni distruttive.`),
+      note('info', `Chi può generarlo`, `Solo utenti con FLGSUPER o FLGADMIN. Vale la stessa gerarchia della gestione utenti: un superutente non può impersonare un admin; un admin può impersonare chiunque. Il tentativo non consentito restituisce 403.`),
+      note('warn', `Responsabilità dell applicazione`, `Accessi non controlla l'URL di destinazione né consuma il token al posto dell'applicazione. L'app deve leggere \`loginAsToken\`, validarlo (per esempio con \`POST /api/accessi/auth/get-user-by-token\` o \`authorizeAccessi\`) e decidere cosa consentire. Il token è un access token Accessi a tutti gli effetti, con claim \`loginAs: true\`, \`amr: ["login_as"]\` e \`act\` valorizzato con l'attore.`),
+      p(`Il token viene emesso anche per utenti con 2FA attiva: l'attore ha già completato l'autenticazione amministrativa. Non usare questa funzione per aggirare la 2FA di un utente comune al di fuori di un intervento amministrativo autorizzato.`),
+    ],
+  },
+  // -------------------------------------------------------------------------
+  {
+    id: 'errori',
+    group: 'Riferimenti',
+    title: 'Contratto errori e codici',
+    summary: 'Formato della risposta e codici stabili ACCESSI_* e AUTH_*.',
+    blocks: [
+      p(`Gli errori HTTP delle API Accessi usano un contratto stabile: severity, status, statusCode, code, error (campo legacy uguale a code), message e details per gli errori di validazione.`),
+      code('json', `{\n  "severity": "error",\n  "status": 400,\n  "statusCode": 2,\n  "code": "ACCESSI_VALIDATION_ERROR",\n  "error": "ACCESSI_VALIDATION_ERROR",\n  "message": "La richiesta contiene dati non validi.",\n  "details": ["email: deve essere una stringa."]\n}`, 'Errore di validazione'),
+      table(
+        ['Codice', 'Quando'],
+        [
+          ['ACCESSI_VALIDATION_ERROR', 'Body o parametri non validi (400).'],
+          ['ACCESSI_AUTH_INITIALIZING', 'Bootstrap in corso (503).'],
+          ['ACCESSI_AUTH_NOT_INITIALIZED', 'Modulo non inizializzato (500).'],
+          ['AUTH_HEADER_MISSING / AUTH_TOKEN_MISSING', 'Header Authorization assente (401).'],
+          ['AUTH_TOKEN_INVALID', 'JWT non valido o scaduto (401).'],
+          ['AUTH_USER_DISABLED', 'Utente non più autorizzato (401).'],
+          ['AUTH_INSUFFICIENT_PERMISSIONS', 'Requisiti non soddisfatti (403).'],
+          ['AUTH_REQUIREMENTS_MISCONFIGURED', 'Policy malformata o handler custom mancante (500).'],
+          ['ACCESSI_DATABASE_SCHEMA_OUTDATED', 'Schema del database incompatibile.'],
+          ['ACCESSI_SERVICE_TOKEN_RATE_LIMITED', 'Troppi tentativi (429).'],
+        ],
+      ),
+    ],
+  },
+  // -------------------------------------------------------------------------
+  {
+    id: 'endpoint',
+    group: 'Riferimenti',
+    title: 'Indice degli endpoint',
+    summary: 'Tutte le rotte /api/accessi/* in una tabella.',
+    blocks: [
+      table(
+        ['Area', 'Endpoint principali'],
+        [
+          ['Auth', 'POST auth/login, auth/get-user-by-token, auth/confirm-reset-password/:token, auth/refresh, auth/revoke-sessions, auth/revoke-token, auth/two-factor/verify, auth/two-factor/resend'],
+          ['Email', 'POST email/send-reset-password-email, GET email/reset-password-page/:token'],
+          ['Utenti', 'GET user/get-users, POST user/create-managed-user, PUT user/update-user/:codiceUtente, DELETE user/delete-user/:codiceUtente, DELETE user/delete-user-permanent/:codiceUtente, POST user/set-password/:codiceUtente, POST user/set-stato, PATCH user/set-gdpr/:codiceUtente, POST user/register, POST user/login-as/:codiceUtente'],
+          ['Permessi', 'GET permission/roles, POST permission/create-role, PUT permission/update-role/:codiceRuolo, DELETE permission/delete-role/:codiceRuolo, POST permission/assign-roles/:codiceUtente, POST permission/assign-permissions/:codiceUtente, GET permission/grants/:codiceUtente, GET permission/menus, GET permission/menu-types, GET permission/groups-with-menus'],
+          ['Catalogo', 'POST/PUT/DELETE permission/menus[/:codiceMenu], permission/menu-groups[/:codiceGruppo], permission/menu-types[/:codiceTipo]'],
+          ['Configurator', 'PATCH configurator/menus/:codiceMenu/enabled, PATCH configurator/groups/:codiceGruppo/enabled'],
+          ['SSO', 'GET/POST federated-auth/providers, PATCH/DELETE providers/:provider, GET/POST users/:codiceUtente/identities, POST users, PATCH users/:codiceUtente/password-login'],
+          ['Token', 'POST/GET service-token, DELETE service-token/:tokenId, POST service-token/:tokenId/rotate'],
+          ['Schema', 'GET schema (DDL completo + entità presenti, solo admin)'],
+          ['Console', 'GET console, console/:view, console/:view/:sub, console/assets/:file'],
+        ],
+      ),
+    ],
+  },
+  // -------------------------------------------------------------------------
+  {
+    id: 'antipattern',
+    group: 'Riferimenti',
+    title: 'Antipattern e checklist',
+    summary: 'Che cosa non fare, in breve.',
+    blocks: [
+      list([
+        `Non aprire la porta HTTP prima di initializeAccessiModule.`,
+        `Non usare authorizeAccessi come unico strato: valida sempre anche l'input applicativo.`,
+        `Non dare per scontato che req.userGrants esista se non hai richiesto dei requisiti.`,
+        `Non considerare incrementali assignRolesToUser e assignPermissionsToUser: sono sostitutivi.`,
+        `Non far validare i token SSO ad Accessi: passagli solo { provider, subject } verificati.`,
+        `Non usare un service token come identità utente.`,
+        `Non versionare segreti; jwtOptions.secret deve essere unico per ambiente.`,
+        `Non eliminare gruppi o tipi in uso: gestisci l'errore 400 e disabilita invece.`,
+        `Non usare il challenge 2FA come JWT.`,
+      ]),
+      note('ok', `Checklist di rilascio`, `Schema verificato (db:check), segreti da un secret manager, mockDemoUser=false, rate limit pubblico configurato, SMTP reale testato, serviceTokens.defaultTtlDays impostato.`),
+    ],
+  },
+];
+
+/** Elenco ordinato dei gruppi per l'indice. */
+export function wikiGroups(): Array<{ group: string; sections: WikiSection[] }> {
+  const groups: Array<{ group: string; sections: WikiSection[] }> = [];
+  for (const section of WIKI_SECTIONS) {
+    let bucket = groups.find((item) => item.group === section.group);
+    if (!bucket) {
+      bucket = { group: section.group, sections: [] };
+      groups.push(bucket);
+    }
+    bucket.sections.push(section);
+  }
+  return groups;
+}
+
+/**
+ * Digest compatto in Markdown per l'IA che costruisce il backend integratore.
+ * Deriva dagli stessi dati della wiki, quindi resta sincronizzato.
+ */
+export function buildAiDigest(): string {
+  const lines: string[] = [
+    `# Accessi (emilsoftware-utilities) - guida compatta per l'integrazione backend`,
+    '',
+    `Modulo NestJS/Express + Firebird per autenticazione JWT, autorizzazione per menu, utenti, 2FA e passwordless, SSO generico, service token e console.`,
+    '',
+  ];
+
+  for (const { group, sections } of wikiGroups()) {
+    lines.push(`## ${group}`);
+    for (const section of sections) {
+      lines.push(`### ${section.title}`);
+      lines.push(section.summary);
+      for (const block of section.blocks) {
+        switch (block.kind) {
+          case 'p':
+            lines.push(block.text);
+            break;
+          case 'h':
+            lines.push(`**${block.text}**`);
+            break;
+          case 'list':
+            block.items.forEach((item, index) => lines.push(`${block.ordered ? `${index + 1}.` : '-'} ${item}`));
+            break;
+          case 'code':
+            lines.push('```' + block.language);
+            lines.push(block.code);
+            lines.push('```');
+            break;
+          case 'callout':
+            lines.push(`[${block.tone.toUpperCase()}] ${block.title ? block.title + ': ' : ''}${block.text}`);
+            break;
+          case 'table':
+            lines.push('| ' + block.head.join(' | ') + ' |');
+            lines.push('| ' + block.head.map(() => '---').join(' | ') + ' |');
+            block.rows.forEach((row) => lines.push('| ' + row.join(' | ') + ' |'));
+            break;
+        }
+      }
+      lines.push('');
+    }
+  }
+
+  return lines.join('\n').replace(/\n{3,}/g, '\n\n').trim();
+}

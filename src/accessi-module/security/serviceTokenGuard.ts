@@ -10,7 +10,7 @@ import {
 import { Reflector } from '@nestjs/core';
 import type { Request } from 'express';
 import type { AccessiOptions } from '../AccessiModule';
-import { ServiceTokenService, serviceTokenHasScope, VerifiedServiceToken } from '../Services/ServiceTokenService/ServiceTokenService';
+import { ServiceTokenService, serviceTokenHasScope, VerifiedServiceToken } from '../services/service-token-service/ServiceTokenService';
 import { extractAccessiBearerToken } from './authenticatedToken';
 import { assertServiceTokenRateLimit } from './serviceTokenRateLimit';
 

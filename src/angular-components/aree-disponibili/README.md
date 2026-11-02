@@ -62,7 +62,7 @@ ngOnInit(): void {
 }
 ```
 
-Il pacchetto pubblica `dist/angular-components/...` grazie a `copy-views.js`:
+Il pacchetto pubblica `dist/angular-components/...` grazie a `scripts/copy-views.cjs`:
 gli asset sono gia' dentro `emilsoftware-utilities` (cartella `files: ["dist"]`).
 
 ### Bundler / import

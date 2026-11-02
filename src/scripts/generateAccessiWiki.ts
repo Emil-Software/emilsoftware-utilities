@@ -1,6 +1,6 @@
 /**
  * Genera la Wiki in Markdown per GitHub a partire dalla stessa fonte usata
- * dalla console: `src/accessi-module/Console/wiki.ts`.
+ * dalla console: `src/accessi-module/console/wiki.ts`.
  *
  * Output:
  * - WIKI.md      documentazione completa con indice
@@ -11,8 +11,8 @@
  */
 import { writeFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { WIKI_SECTIONS, wikiGroups, buildAiDigest } from '../accessi-module/Console/wiki';
-import type { WikiBlock, WikiTone } from '../accessi-module/Console/wiki';
+import { WIKI_SECTIONS, wikiGroups, buildAiDigest } from '../accessi-module/console/wiki';
+import type { WikiBlock, WikiTone } from '../accessi-module/console/wiki';
 
 const REPO_ROOT = join(__dirname, '..', '..');
 
@@ -107,7 +107,7 @@ function buildMarkdown(): string {
   return [
     '# Wiki del modulo Accessi',
     '',
-    '> Documento generato automaticamente da `src/accessi-module/Console/wiki.ts` (la stessa fonte della Wiki nella console).',
+    '> Documento generato automaticamente da `src/accessi-module/console/wiki.ts` (la stessa fonte della Wiki nella console).',
     '> Non modificarlo a mano: esegui `npm run generate:accessi-wiki`.',
     '',
     'La stessa documentazione è disponibile, resa in modo interattivo, nella console Accessi su `/api/accessi/console/wiki`.',
@@ -123,7 +123,7 @@ function buildMarkdown(): string {
 }
 
 const aiHeader = [
-  '<!-- Documento generato automaticamente da src/accessi-module/Console/wiki.ts. Non modificare a mano: npm run generate:accessi-wiki. -->',
+  '<!-- Documento generato automaticamente da src/accessi-module/console/wiki.ts. Non modificare a mano: npm run generate:accessi-wiki. -->',
   '',
   '# Guida compatta per l\'IA',
   '',

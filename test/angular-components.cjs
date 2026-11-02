@@ -132,7 +132,7 @@ test('aree-disponibili: documentazione e demo presenti', () => {
     );
   }
 
-  const copy = fs.readFileSync(path.join(ROOT, 'copy-views.js'), 'utf8');
+  const copy = fs.readFileSync(path.join(ROOT, 'scripts/copy-views.cjs'), 'utf8');
   for (const extension of ['.js', '.css', '.html']) {
     assert.ok(copy.includes(`"${extension}"`), `${extension} non copiato in dist`);
   }

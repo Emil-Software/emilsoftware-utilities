@@ -2,7 +2,7 @@ require('ts-node/register/transpile-only');
 require('reflect-metadata');
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
-const full = require('../src/accessi-module/Console/generated/emilsoftware-utilities');
+const full = require('../src/accessi-module/console/generated/emilsoftware-utilities');
 const publicEntry = require('../src/accessi/client/public');
 const adminEntry = require('../src/accessi/client/admin');
 const serviceEntry = require('../src/accessi/client/service');

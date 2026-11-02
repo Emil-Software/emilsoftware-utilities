@@ -8,7 +8,7 @@ require('ts-node/register/transpile-only');
 const { test, before, after } = require('node:test');
 const assert = require('node:assert/strict');
 const { randomBytes } = require('node:crypto');
-const { RedisTestClient } = require('./helpers/redisTestClient.cjs');
+const { RedisTestClient } = require('./helpers/redis-test-client.cjs');
 const {
   createAccessiTenantStores,
   getAccessiTenantStorePrefixes,

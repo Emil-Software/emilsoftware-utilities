@@ -1,11 +1,11 @@
 import type { Application } from "express";
 import type { INestApplication } from "@nestjs/common";
-import { AuthService } from "./Services/AuthService/AuthService";
-import { UserService } from "./Services/UserService/UserService";
-import { EmailService } from "./Services/EmailService/EmailService";
-import { PermissionService } from "./Services/PermissionService/PermissionService";
-import { ServiceTokenService } from "./Services/ServiceTokenService/ServiceTokenService";
-import { TwoFactorService } from "./Services/TwoFactorService/TwoFactorService";
+import { AuthService } from "./services/auth-service/AuthService";
+import { UserService } from "./services/user-service/UserService";
+import { EmailService } from "./services/email-service/EmailService";
+import { PermissionService } from "./services/permission-service/PermissionService";
+import { ServiceTokenService } from "./services/service-token-service/ServiceTokenService";
+import { TwoFactorService } from "./services/two-factor-service/TwoFactorService";
 import { FederatedAuthService } from "./federated-auth/FederatedAuthService";
 import { AuthenticateGenService } from "./middleware/authenticateGen";
 

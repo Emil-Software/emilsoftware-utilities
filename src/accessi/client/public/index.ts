@@ -6,16 +6,16 @@
  * service token). Per quelle usare `accessi/client/admin`.
  */
 import * as generated from '../generated/public';
-import type { AccessiClientConfig } from '../../../accessi-module/Console/accessiFetch';
+import type { AccessiClientConfig } from '../../../accessi-module/console/accessiFetch';
 import {
   createAccessiClientFromModule,
   type AccessiScopedClient,
 } from '../createAccessiClient';
 
 export * from '../generated/public';
-export * from '../../../accessi-module/Console/generated/model';
-export { AccessiRequestError } from '../../../accessi-module/Console/accessiFetch';
-export type { AccessiClientConfig } from '../../../accessi-module/Console/accessiFetch';
+export * from '../../../accessi-module/console/generated/model';
+export { AccessiRequestError } from '../../../accessi-module/console/accessiFetch';
+export type { AccessiClientConfig } from '../../../accessi-module/console/accessiFetch';
 
 /** Client pubblico con configurazione isolata per istanza. */
 export type AccessiPublicClient = AccessiScopedClient<typeof generated>;

@@ -3,7 +3,7 @@ require('reflect-metadata');
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
 const jwt = require('jsonwebtoken');
-const { AuthService } = require('../src/accessi-module/Services/AuthService/AuthService');
+const { AuthService } = require('../src/accessi-module/services/auth-service/AuthService');
 const { createMemorySessionRevocationStore } = require('../src/accessi-module/security/sessionRevocation');
 const {
   createMemoryRefreshTokenRotationStore,

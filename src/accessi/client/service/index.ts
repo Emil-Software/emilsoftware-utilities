@@ -5,16 +5,16 @@
  * Pensato per backend fratelli e job: non va distribuito a frontend pubblici.
  */
 import * as generated from '../generated/service';
-import type { AccessiClientConfig } from '../../../accessi-module/Console/accessiFetch';
+import type { AccessiClientConfig } from '../../../accessi-module/console/accessiFetch';
 import {
   createAccessiClientFromModule,
   type AccessiScopedClient,
 } from '../createAccessiClient';
 
 export * from '../generated/service';
-export * from '../../../accessi-module/Console/generated/model';
-export { AccessiRequestError } from '../../../accessi-module/Console/accessiFetch';
-export type { AccessiClientConfig } from '../../../accessi-module/Console/accessiFetch';
+export * from '../../../accessi-module/console/generated/model';
+export { AccessiRequestError } from '../../../accessi-module/console/accessiFetch';
+export type { AccessiClientConfig } from '../../../accessi-module/console/accessiFetch';
 
 /** Client service-to-service con configurazione isolata per istanza. */
 export type AccessiServiceClient = AccessiScopedClient<typeof generated>;

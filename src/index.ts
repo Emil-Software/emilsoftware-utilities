@@ -15,7 +15,7 @@ import { Orm } from "./Orm";
 import { DateUtilities, RestUtilities, DatabaseUtilities, StatusCode } from "./Utilities";
 import { autobind } from "./autobind";
 import { DocumentGenerator } from "./ContractGenerator";
-import "./firebird-compat";
+import "./firebirdCompat";
 
 export * from "./Orm";
 export * from "./Utilities";
@@ -25,7 +25,7 @@ export * from "./ExecutionTimeLogger";
 export * from "./RoutesLoggerMiddleware";
 export * from "./ContractGenerator";
 export * from "./DatabaseUpdater";
-export * from "./firebird-compat";
+export * from "./firebirdCompat";
 
 export * from "./accessi-module";
 export * from "./allegati-module";

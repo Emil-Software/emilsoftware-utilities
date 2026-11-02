@@ -14,7 +14,7 @@ const {
   setAccessiAuthCookies,
   validateAccessiOptions,
 } = require('../src/accessi-module');
-const { AuthController } = require('../src/accessi-module/Controllers/AuthController');
+const { AuthController } = require('../src/accessi-module/controllers/AuthController');
 
 function fakeResponse() {
   return {

@@ -10,15 +10,15 @@ process.env.ACCESSI_TEST_REQUIRE_DB = '1';
 require('ts-node/register/transpile-only');
 require('reflect-metadata');
 
-const { getContext } = require('../test/integration/helpers/accessiTestContext.cjs');
+const { getContext } = require('../test/integration/helpers/accessi-test-context.cjs');
 const { Orm } = require('../src/Orm');
-const { UserService } = require('../src/accessi-module/Services/UserService/UserService');
-const { FiltriService } = require('../src/accessi-module/Services/FiltriService/FiltriService');
-const { PermissionService } = require('../src/accessi-module/Services/PermissionService/PermissionService');
-const { EmailService } = require('../src/accessi-module/Services/EmailService/EmailService');
-const { TwoFactorService } = require('../src/accessi-module/Services/TwoFactorService/TwoFactorService');
-const { AuthService } = require('../src/accessi-module/Services/AuthService/AuthService');
-const { StatoRegistrazione } = require('../src/accessi-module/Dtos/StatoRegistrazione');
+const { UserService } = require('../src/accessi-module/services/user-service/UserService');
+const { FiltriService } = require('../src/accessi-module/services/filtri-service/FiltriService');
+const { PermissionService } = require('../src/accessi-module/services/permission-service/PermissionService');
+const { EmailService } = require('../src/accessi-module/services/email-service/EmailService');
+const { TwoFactorService } = require('../src/accessi-module/services/two-factor-service/TwoFactorService');
+const { AuthService } = require('../src/accessi-module/services/auth-service/AuthService');
+const { StatoRegistrazione } = require('../src/accessi-module/dtos/StatoRegistrazione');
 
 async function main() {
   const email = (process.env.SEED_ADMIN_EMAIL || 'admin@example.test').trim().toLowerCase();

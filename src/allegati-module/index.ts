@@ -28,4 +28,4 @@ export async function initializeAllegatiModule(app: Application, options: Allega
 }
 
 export { AllegatiModule } from "./AllegatiModule";
-export * from "./Dtos"; // per esportare automaticamente i DTOs tipo AllegatoDto, UploadAllegatoResponseDto, etc.
+export * from "./dtos"; // per esportare automaticamente i DTOs tipo AllegatoDto, UploadAllegatoResponseDto, etc.

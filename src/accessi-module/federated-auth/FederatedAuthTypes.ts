@@ -1,5 +1,5 @@
-import { LoginResult } from '../Dtos/LoginResponse';
-import { TokenResult } from '../Dtos/TokenResult';
+import { LoginResult } from '../dtos/LoginResponse';
+import { TokenResult } from '../dtos/TokenResult';
 
 /**
  * Identita esterna gia verificata dal backend ospitante.

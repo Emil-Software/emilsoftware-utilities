@@ -1,7 +1,7 @@
 import {
   runWithAccessiClient,
   type AccessiClientConfig,
-} from '../../accessi-module/Console/accessiFetch';
+} from '../../accessi-module/console/accessiFetch';
 
 /**
  * Client generato con configurazione isolata per istanza.

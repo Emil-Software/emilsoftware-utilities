@@ -3,10 +3,10 @@ require('reflect-metadata');
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
 const jwt = require('jsonwebtoken');
-const { AuthService } = require('../src/accessi-module/Services/AuthService/AuthService');
-const { UserService } = require('../src/accessi-module/Services/UserService/UserService');
+const { AuthService } = require('../src/accessi-module/services/auth-service/AuthService');
+const { UserService } = require('../src/accessi-module/services/user-service/UserService');
 const { Orm } = require('../src/Orm');
-const { StatoRegistrazione } = require('../src/accessi-module/Dtos/StatoRegistrazione');
+const { StatoRegistrazione } = require('../src/accessi-module/dtos/StatoRegistrazione');
 const {
   createMemorySessionRevocationStore,
   isAccessiTokenRevoked,

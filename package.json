@@ -14,8 +14,8 @@
   },
   "sideEffects": [
     "./dist/index.js",
-    "./dist/firebird-compat.js",
-    "./dist/accessi-module/Console/console.js"
+    "./dist/firebirdCompat.js",
+    "./dist/accessi-module/console/console.js"
   ],
   "exports": {
     ".": {
@@ -102,9 +102,9 @@
       "import": "./dist/accessi/console/index.js",
       "default": "./dist/accessi/console/index.js"
     },
-    "./accessi/console/index.html": "./dist/accessi-module/Console/index.html",
-    "./accessi/console/console.js": "./dist/accessi-module/Console/console.js",
-    "./accessi/console/console.css": "./dist/accessi-module/Console/console.css",
+    "./accessi/console/index.html": "./dist/accessi-module/console/index.html",
+    "./accessi/console/console.js": "./dist/accessi-module/console/console.js",
+    "./accessi/console/console.css": "./dist/accessi-module/console/console.css",
     "./accessi/ui": {
       "types": "./dist/accessi/ui/index.d.ts",
       "require": "./dist/accessi/ui/index.js",
@@ -125,8 +125,8 @@
     "generate:accessi-openapi": "ts-node --transpile-only src/scripts/generateAccessiOpenApi.ts",
     "generate:accessi-client": "orval --config orval.config.ts",
     "generate:accessi-wiki": "ts-node --transpile-only src/scripts/generateAccessiWiki.ts",
-    "build:accessi-console": "esbuild src/accessi-module/Console/console.ts --bundle --platform=browser --format=esm --target=es2020 --loader:.md=text --outfile=dist/accessi-module/Console/console.js",
-    "copy-views": "node copy-views.js",
+    "build:accessi-console": "esbuild src/accessi-module/console/console.ts --bundle --platform=browser --format=esm --target=es2020 --loader:.md=text --outfile=dist/accessi-module/console/console.js",
+    "copy-views": "node scripts/copy-views.cjs",
     "db:update:accessi": "ts-node src/accessi-module/database-updates/runAccessiDbUpdate.ts",
     "db:update:accessi:dist": "npm run build && node dist/accessi-module/database-updates/runAccessiDbUpdate.js",
     "accessi:serve": "ts-node src/scripts/startAccessiService.ts",
@@ -140,7 +140,7 @@
     "typecheck": "tsc --noEmit",
     "lint": "node scripts/lint.cjs",
     "check:deploy": "node scripts/check-deploy-templates.cjs",
-    "test": "npm run typecheck && npm run lint && npm run test:unit",
+    "test": "npm run typecheck && npm run lint && npm run check:naming && npm run test:unit",
     "test:unit": "node --test test/angular-components.cjs test/menus-catalog.mjs test/menu-scopes.cjs test/accessi-regressions.cjs test/password-reset-regressions.cjs test/two-factor.cjs test/accessi-schema.cjs test/utilities-regressions.cjs test/service-token-regressions.cjs test/accessi-email-config.cjs test/accessi-catalog-scripts.cjs test/openapi-config.cjs test/resource-server.cjs test/accessi-security-standards.cjs test/accessi-service.cjs test/refresh-token.cjs test/token-revocation.cjs test/accessi-client.cjs test/accessi-client-scopes.cjs test/openapi-semantic-diff.cjs test/proxy-ip.cjs test/readiness.cjs test/jwt-key-rotation.cjs test/security-headers.cjs test/auth-cookies.cjs test/metrics.cjs test/audit.cjs test/import-entrypoints.cjs test/tenants.cjs test/tenant-stores.cjs test/deploy-templates.cjs test/tenant-supervisor.cjs test/tenant-router.cjs",
     "test:coverage": "node --experimental-test-coverage --test-coverage-lines=50 --test-coverage-functions=60 --test-coverage-branches=60 --test test/angular-components.cjs test/menus-catalog.mjs test/menu-scopes.cjs test/accessi-regressions.cjs test/password-reset-regressions.cjs test/two-factor.cjs test/accessi-schema.cjs test/utilities-regressions.cjs test/service-token-regressions.cjs test/accessi-email-config.cjs test/accessi-catalog-scripts.cjs test/openapi-config.cjs test/resource-server.cjs test/accessi-security-standards.cjs test/accessi-service.cjs test/refresh-token.cjs test/token-revocation.cjs test/accessi-client.cjs test/accessi-client-scopes.cjs test/openapi-semantic-diff.cjs test/proxy-ip.cjs test/readiness.cjs test/jwt-key-rotation.cjs test/security-headers.cjs test/auth-cookies.cjs test/metrics.cjs test/audit.cjs test/import-entrypoints.cjs test/tenants.cjs test/tenant-stores.cjs test/deploy-templates.cjs test/tenant-supervisor.cjs test/tenant-router.cjs",
     "test:accessi": "npm run test:unit",
@@ -164,7 +164,8 @@
     "menus:check": "node scripts/menus/generate.mjs --check",
     "menus:bootstrap": "node scripts/menus/bootstrap.mjs",
     "menus:seed": "node scripts/menus/seed.mjs",
-    "menus:seed:check": "node scripts/menus/seed.mjs --check"
+    "menus:seed:check": "node scripts/menus/seed.mjs --check",
+    "check:naming": "node scripts/check-naming.cjs"
   },
   "publishConfig": {
     "access": "public"

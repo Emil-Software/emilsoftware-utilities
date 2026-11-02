@@ -1,4 +1,4 @@
-﻿import { StatoRegistrazione } from '../Dtos/StatoRegistrazione';
+﻿import { StatoRegistrazione } from '../dtos/StatoRegistrazione';
 
 /** Stato autorevole minimo riletto dal database per ogni verifica JWT. */
 export interface AccessiAuthenticatedUserSnapshot {

@@ -2,12 +2,12 @@
 import { ApiBearerAuth, ApiBody, ApiCreatedResponse, ApiOkResponse, ApiOperation, ApiParam, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { Request, Response } from 'express';
 import { RestUtilities } from '../../Utilities';
-import { ActionResponse, ErrorResponse } from '../Dtos/BaseResponse';
-import { CreateFederatedIdentityRequest, CreateFederatedProviderRequest, CreateFederatedUserRequest, FederatedIdentityListResponse, FederatedIdentityResponse, FederatedProviderListResponse, FederatedProviderResponse, SetPasswordLoginPolicyRequest, UpdateFederatedIdentityRequest, UpdateFederatedProviderRequest } from '../Dtos/FederatedIdentityDtos';
-import { JwtSimpleGuard } from '../jwt/jwt.strategy';
+import { ActionResponse, ErrorResponse } from '../dtos/BaseResponse';
+import { CreateFederatedIdentityRequest, CreateFederatedProviderRequest, CreateFederatedUserRequest, FederatedIdentityListResponse, FederatedIdentityResponse, FederatedProviderListResponse, FederatedProviderResponse, SetPasswordLoginPolicyRequest, UpdateFederatedIdentityRequest, UpdateFederatedProviderRequest } from '../dtos/FederatedIdentityDtos';
+import { JwtSimpleGuard } from '../jwt/JwtSimpleGuard';
 import { ensureAdmin, ensureCanManageTargetUser, ensurePrivilegeFlagChanges, ensureUserManagement, getAuthenticatedAccessiUser } from '../security/accessControl';
 import type { AuthenticatedAccessiUser } from '../security/accessControl';
-import { UserService } from '../Services/UserService/UserService';
+import { UserService } from '../services/user-service/UserService';
 import { FederatedAuthService } from './FederatedAuthService';
 
 /**

@@ -12,7 +12,7 @@ const { autobind } = require('../src/autobind');
 const { Logger } = require('../src/Logger');
 const { checkPublicAuthRateLimit } = require('../src/accessi-module/security/publicAuthRateLimit');
 const { AllegatiAuthorizationGuard } = require('../src/allegati-module/security/allegatiAuthorizationGuard');
-const { toUtcDate, normalizeFirebirdResult } = require('../src/firebird-compat');
+const { toUtcDate, normalizeFirebirdResult } = require('../src/firebirdCompat');
 
 test('timingSafeStringEquals accepts equal values and rejects different ones', () => {
   assert.equal(PasswordUtilities.timingSafeStringEquals('abc', 'abc'), true);

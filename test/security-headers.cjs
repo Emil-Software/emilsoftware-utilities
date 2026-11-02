@@ -9,7 +9,7 @@ const {
   createAccessiSecurityHeadersMiddleware,
   resolveAccessiSecurityHeaders,
 } = require('../src/accessi-module');
-const { AccessiConsoleController } = require('../src/accessi-module/Controllers/AccessiConsoleController');
+const { AccessiConsoleController } = require('../src/accessi-module/controllers/AccessiConsoleController');
 
 function resolved(setting) {
   const value = resolveAccessiSecurityHeaders(setting);

@@ -20,9 +20,9 @@ const {
 const { createMemorySessionRevocationStore } = require('../src/accessi-module/security/sessionRevocation');
 const { checkPublicAuthRateLimit } = require('../src/accessi-module/security/publicAuthRateLimit');
 const { createMemoryRateLimitStore } = require('../src/accessi-module/security/rateLimitStore');
-const { AuthController } = require('../src/accessi-module/Controllers/AuthController');
-const { AccessiIntrospectionController } = require('../src/accessi-module/Controllers/AccessiIntrospectionController');
-const { ConsoleEntryController } = require('../src/accessi-module/Controllers/ConsoleEntryController');
+const { AuthController } = require('../src/accessi-module/controllers/AuthController');
+const { AccessiIntrospectionController } = require('../src/accessi-module/controllers/AccessiIntrospectionController');
+const { ConsoleEntryController } = require('../src/accessi-module/controllers/ConsoleEntryController');
 
 function fakeResponse() {
   return {

@@ -10,7 +10,7 @@ const {
   normalizeServiceTokenScopes,
   serviceTokenHasScope,
   ServiceTokenService,
-} = require('../src/accessi-module/Services/ServiceTokenService/ServiceTokenService');
+} = require('../src/accessi-module/services/service-token-service/ServiceTokenService');
 
 const buildService = (overrides = {}) => new ServiceTokenService({ databaseOptions: {}, ...overrides });
 

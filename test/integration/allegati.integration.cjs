@@ -3,9 +3,9 @@
 const { test, after } = require('node:test');
 const assert = require('node:assert/strict');
 
-const { getContext } = require('./helpers/accessiTestContext.cjs');
+const { getContext } = require('./helpers/accessi-test-context.cjs');
 const { Orm } = require('../../src/Orm');
-const { AllegatiService } = require('../../src/allegati-module/Services/AllegatiService/AllegatiService');
+const { AllegatiService } = require('../../src/allegati-module/services/allegati-service/AllegatiService');
 
 // Il pool e attivo di default: chiudilo a fine suite per permettere l'uscita del processo.
 after(async () => { await Orm.closePools(); });

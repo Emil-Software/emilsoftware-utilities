@@ -5,7 +5,7 @@ import type { INestApplication } from "@nestjs/common";
 import type { OpenAPIObject } from "@nestjs/swagger";
 import { AccessiModule, AccessiOptions } from "./AccessiModule";
 import { Logger } from "../Logger";
-import { AuthService } from "./Services/AuthService/AuthService";
+import { AuthService } from "./services/auth-service/AuthService";
 import {
     buildOpenApiExcludePaths,
     isOpenApiRequestPath,
@@ -174,10 +174,10 @@ export async function initializeAccessiModule(
 }
 
 export { AccessiModule } from "./AccessiModule";
-export { AccessiIntrospectionController } from "./Controllers/AccessiIntrospectionController";
-export { AccessiAuditController } from "./Controllers/AccessiAuditController";
+export { AccessiIntrospectionController } from "./controllers/AccessiIntrospectionController";
+export { AccessiAuditController } from "./controllers/AccessiAuditController";
 export { FederatedAuthExchangeController } from "./federated-auth/FederatedAuthExchangeController";
-export type { AccessiTokenIntrospectionResult } from "./Services/AuthService/AuthService";
+export type { AccessiTokenIntrospectionResult } from "./services/auth-service/AuthService";
 export { AccessiDatabaseUpdater } from "./database-updates/AccessiDatabaseUpdater";
 export type { AccessiOptions, EmailOptions, JwtOptions, ExtensionFieldsOptions, PublicAuthRateLimitOptions, PublicAuthRateLimitRuleOptions } from "./AccessiModule";
 export type { PublicRegistrationOptions, FederatedAuthenticationOptions, ServiceTokenOptions } from "./AccessiModule";
@@ -305,17 +305,17 @@ export {
     discoverCatalogScripts
 } from "./database-updates/AccessiCatalogMigrator";
 export type { CatalogMigrationReport, CatalogScriptMigration } from "./database-updates/AccessiCatalogMigrator";
-export { ServiceTokenService } from './Services/ServiceTokenService/ServiceTokenService';
+export { ServiceTokenService } from './services/service-token-service/ServiceTokenService';
 export type {
     ServiceTokenMetadata,
     IssuedServiceToken,
     VerifiedServiceToken,
     IssueServiceTokenInput
-} from './Services/ServiceTokenService/ServiceTokenService';
-export { SchemaExportService } from './Services/SchemaExportService/SchemaExportService';
-export type { SchemaDdlResult, SchemaDdlSection, SchemaEntitiesResult } from './Services/SchemaExportService/SchemaExportService';
-export { AdminBootstrapService } from './Services/AdminBootstrapService/AdminBootstrapService';
-export type { BootstrapAdminResult } from './Services/AdminBootstrapService/AdminBootstrapService';
+} from './services/service-token-service/ServiceTokenService';
+export { SchemaExportService } from './services/schema-export-service/SchemaExportService';
+export type { SchemaDdlResult, SchemaDdlSection, SchemaEntitiesResult } from './services/schema-export-service/SchemaExportService';
+export { AdminBootstrapService } from './services/admin-bootstrap-service/AdminBootstrapService';
+export type { BootstrapAdminResult } from './services/admin-bootstrap-service/AdminBootstrapService';
 export {
     getOrCreateAdminBootstrapToken,
     getAdminBootstrapToken,
@@ -401,7 +401,7 @@ export type {
 } from './security/jwtTokenOptions';
 export { FederatedAuthService } from './federated-auth/FederatedAuthService';
 export type { FederatedAuthenticationResult, FederatedIdentity, FederatedProvider, VerifiedFederatedIdentity } from './federated-auth/FederatedAuthTypes';
-export * from "./Dtos";
+export * from "./dtos";
 export {
     authorizeAccessi,
     authenticateGen

@@ -4,18 +4,18 @@ const { test, after } = require('node:test');
 const assert = require('node:assert/strict');
 const { randomUUID } = require('node:crypto');
 
-const { getContext } = require('./helpers/accessiTestContext.cjs');
+const { getContext } = require('./helpers/accessi-test-context.cjs');
 const { Orm } = require('../../src/Orm');
 const { AccessiDatabaseUpdater } = require('../../src/accessi-module/database-updates/AccessiDatabaseUpdater');
-const { UserService } = require('../../src/accessi-module/Services/UserService/UserService');
-const { FiltriService } = require('../../src/accessi-module/Services/FiltriService/FiltriService');
-const { PermissionService } = require('../../src/accessi-module/Services/PermissionService/PermissionService');
-const { EmailService } = require('../../src/accessi-module/Services/EmailService/EmailService');
-const { TwoFactorService } = require('../../src/accessi-module/Services/TwoFactorService/TwoFactorService');
-const { AuthService } = require('../../src/accessi-module/Services/AuthService/AuthService');
+const { UserService } = require('../../src/accessi-module/services/user-service/UserService');
+const { FiltriService } = require('../../src/accessi-module/services/filtri-service/FiltriService');
+const { PermissionService } = require('../../src/accessi-module/services/permission-service/PermissionService');
+const { EmailService } = require('../../src/accessi-module/services/email-service/EmailService');
+const { TwoFactorService } = require('../../src/accessi-module/services/two-factor-service/TwoFactorService');
+const { AuthService } = require('../../src/accessi-module/services/auth-service/AuthService');
 const { createPasswordResetToken, getAccessiJwtSecret } = require('../../src/accessi-module/security/passwordResetToken');
-const { ServiceTokenService } = require('../../src/accessi-module/Services/ServiceTokenService/ServiceTokenService');
-const { StatoRegistrazione } = require('../../src/accessi-module/Dtos/StatoRegistrazione');
+const { ServiceTokenService } = require('../../src/accessi-module/services/service-token-service/ServiceTokenService');
+const { StatoRegistrazione } = require('../../src/accessi-module/dtos/StatoRegistrazione');
 
 // Il pool e attivo di default: chiudilo a fine suite per permettere l'uscita del processo.
 after(async () => { await Orm.closePools(); });

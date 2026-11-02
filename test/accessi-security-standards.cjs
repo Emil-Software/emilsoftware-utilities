@@ -13,7 +13,7 @@ const {
   createMemoryConsoleEntryStore,
   createRedisConsoleEntryStore,
 } = require('../src/accessi-module/security/consoleEntry');
-const { ConsoleEntryController } = require('../src/accessi-module/Controllers/ConsoleEntryController');
+const { ConsoleEntryController } = require('../src/accessi-module/controllers/ConsoleEntryController');
 const {
   createMemoryRateLimitStore,
   createRedisRateLimitStore,
@@ -23,7 +23,7 @@ const { assertServiceTokenRateLimit } = require('../src/accessi-module/security/
 const { createAccessiEdgeRateLimitMiddleware } = require('../src/accessi-module/security/edgeRateLimit');
 const { AccessiJwksBootstrapService } = require('../src/accessi-module/security/jwksBootstrap');
 const { FederatedAuthExchangeController } = require('../src/accessi-module/federated-auth/FederatedAuthExchangeController');
-const { AccessiConsoleController } = require('../src/accessi-module/Controllers/AccessiConsoleController');
+const { AccessiConsoleController } = require('../src/accessi-module/controllers/AccessiConsoleController');
 const {
   createMemorySessionRevocationStore,
   createRedisSessionRevocationStore,

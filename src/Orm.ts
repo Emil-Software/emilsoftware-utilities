@@ -8,7 +8,7 @@ import {
     FirebirdOptions,
     normalizeFirebirdOptions,
     normalizeFirebirdResult,
-} from "./firebird-compat";
+} from "./firebirdCompat";
 
 /** Valore scalare di una colonna Firebird (riga flat). */
 export type DbValue = string | number | boolean | Date | Buffer | null | undefined;

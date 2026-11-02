@@ -1,8 +1,8 @@
 import { NextFunction, Request, Response } from "express";
 import { Inject, Injectable } from "@nestjs/common";
 import type { AccessiOptions } from "../AccessiModule";
-import { PermissionService } from "../Services/PermissionService/PermissionService";
-import { UserService } from "../Services/UserService/UserService";
+import { PermissionService } from "../services/permission-service/PermissionService";
+import { UserService } from "../services/user-service/UserService";
 import { Logger } from "../../Logger";
 import {
   AccessiAuthorizationOptions,

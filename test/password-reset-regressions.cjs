@@ -3,7 +3,7 @@ require('reflect-metadata');
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
 const { Orm } = require('../src/Orm');
-const { AuthService } = require('../src/accessi-module/Services/AuthService/AuthService');
+const { AuthService } = require('../src/accessi-module/services/auth-service/AuthService');
 const { createPasswordResetToken, getAccessiJwtSecret } = require('../src/accessi-module/security/passwordResetToken');
 const options = { databaseOptions: {}, jwtOptions: { secret: 'test-reset-secret' } };
 

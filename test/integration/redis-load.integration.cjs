@@ -14,7 +14,7 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
 const { randomBytes } = require('node:crypto');
-const { RedisTestClient } = require('./helpers/redisTestClient.cjs');
+const { RedisTestClient } = require('./helpers/redis-test-client.cjs');
 const { createRedisRateLimitStore } = require('../../src/accessi-module/security/rateLimitStore');
 const { createRedisConsoleEntryStore } = require('../../src/accessi-module/security/consoleEntry');
 const {

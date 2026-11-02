@@ -1,6 +1,6 @@
 # Wiki del modulo Accessi
 
-> Documento generato automaticamente da `src/accessi-module/Console/wiki.ts` (la stessa fonte della Wiki nella console).
+> Documento generato automaticamente da `src/accessi-module/console/wiki.ts` (la stessa fonte della Wiki nella console).
 > Non modificarlo a mano: esegui `npm run generate:accessi-wiki`.
 
 La stessa documentazione è disponibile, resa in modo interattivo, nella console Accessi su `/api/accessi/console/wiki`.
@@ -105,7 +105,7 @@ npm install emilsoftware-utilities
 
 La libreria dipende da node-firebird per il database e da Express 5 come peer per il montaggio. È consigliato Node 18 o superiore.
 
-Il pacchetto è pubblicato in CommonJS con export map esplicita per ogni entry point (accessi/server, accessi/resource-server/\*, accessi/client/\*, accessi/contracts\*, accessi/openapi, accessi/console, accessi/ui): gli import ESM funzionano tramite interop Node. sideEffects elenca solo root barrel, firebird-compat e bundle console, così il resto è tree-shakable.
+Il pacchetto è pubblicato in CommonJS con export map esplicita per ogni entry point (accessi/server, accessi/resource-server/\*, accessi/client/\*, accessi/contracts\*, accessi/openapi, accessi/console, accessi/ui): gli import ESM funzionano tramite interop Node. sideEffects elenca solo root barrel, firebirdCompat e bundle console, così il resto è tree-shakable.
 
 > [!WARNING]
 > **Un solo modulo per processo**

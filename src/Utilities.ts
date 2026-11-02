@@ -1,5 +1,5 @@
 import { Response } from 'express';
-import { FirebirdOptions } from "./firebird-compat";
+import { FirebirdOptions } from "./firebirdCompat";
 import { Logger } from "./Logger";
 import crypto from "crypto";
 

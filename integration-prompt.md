@@ -763,7 +763,7 @@ Checklist:
 
 ### Per un agente AI
 
-> Prima di modificare codice, leggi `integration-prompt.md`, `WIKI.md` e `src/accessi-module/Console/changelog.md`. Rispetta la separazione dei ruoli: `accessi/server` solo sul proprietario del DB, `accessi/resource-server` sui backend fratelli. Non aggiungere dipendenze dal database Accessi nei resource server. Non inventare endpoint: l'introspection e `POST /api/accessi/auth/introspect` con service token scope `accessi:introspect`. Non cambiare i default HS256 senza una finestra di migrazione. Aggiungi test per token valido, scaduto, utente disabilitato, permessi insufficienti e introspection non raggiungibile.
+> Prima di modificare codice, leggi `integration-prompt.md`, `WIKI.md` e `src/accessi-module/console/changelog.md`. Rispetta la separazione dei ruoli: `accessi/server` solo sul proprietario del DB, `accessi/resource-server` sui backend fratelli. Non aggiungere dipendenze dal database Accessi nei resource server. Non inventare endpoint: l'introspection e `POST /api/accessi/auth/introspect` con service token scope `accessi:introspect`. Non cambiare i default HS256 senza una finestra di migrazione. Aggiungi test per token valido, scaduto, utente disabilitato, permessi insufficienti e introspection non raggiungibile.
 
 ---
 

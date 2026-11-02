@@ -10,8 +10,8 @@ devono passare agli entry point dichiarati in `package.json#exports`.
 | Uso | Import consigliato | Legacy |
 | --- | --- | --- |
 | Avvio Accessi Service | `emilsoftware-utilities/accessi/server` | root barrel, `dist/accessi-module` |
-| Contratti e helper browser-safe | `emilsoftware-utilities/accessi/contracts` | `dist/accessi-module/Dtos` |
-| DTO Nest con validazione | `emilsoftware-utilities/accessi/contracts/dtos` | `dist/accessi-module/Dtos` |
+| Contratti e helper browser-safe | `emilsoftware-utilities/accessi/contracts` | `dist/accessi-module/dtos` |
+| DTO Nest con validazione | `emilsoftware-utilities/accessi/contracts/dtos` | `dist/accessi-module/dtos` |
 | Verifica JWT in un backend fratello | `emilsoftware-utilities/accessi/resource-server` | `dist/accessi-module/...` |
 | Client OpenAPI completo | `emilsoftware-utilities/accessi/client` | root barrel |
 | Client solo API pubbliche | `emilsoftware-utilities/accessi/client/public` | — |

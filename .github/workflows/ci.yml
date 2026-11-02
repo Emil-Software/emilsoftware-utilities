@@ -29,6 +29,9 @@ jobs:
       - name: Lint
         run: npm run lint
 
+      - name: Naming conventions
+        run: npm run check:naming
+
       - name: Deploy templates
         run: npm run check:deploy
 

@@ -13,7 +13,7 @@ import {
   ErrorResponse,
   ExchangeFederatedIdentityRequest,
   FederatedExchangeResponse,
-} from '../Dtos';
+} from '../dtos';
 import { RequireServiceTokenScopes, ServiceTokenGuard } from '../security/serviceTokenGuard';
 import { FederatedAuthService } from './FederatedAuthService';
 

@@ -5,8 +5,8 @@
  * Contiene solo tipi, enum e helper puri condivisibili da backend, frontend e
  * resource server.
  */
-export { StatoRegistrazione, StatoRegistrazioneValues } from "../../accessi-module/Dtos/StatoRegistrazione";
-export { TipoAbilitazione } from "../../accessi-module/Dtos/TipoAbilitazione";
+export { StatoRegistrazione, StatoRegistrazioneValues } from "../../accessi-module/dtos/StatoRegistrazione";
+export { TipoAbilitazione } from "../../accessi-module/dtos/TipoAbilitazione";
 
 export {
   accessiRequirement,

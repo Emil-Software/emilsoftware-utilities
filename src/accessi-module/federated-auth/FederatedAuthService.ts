@@ -4,10 +4,10 @@ import { AccessiDatabaseUpdater } from '../database-updates/AccessiDatabaseUpdat
 import { Orm } from '../../Orm';
 import { RestUtilities } from '../../Utilities';
 import type { AccessiOptions } from '../AccessiModule';
-import { RegisterRequest } from '../Dtos/RegisterRequest';
-import { StatoRegistrazione } from '../Dtos/StatoRegistrazione';
-import { AuthService } from '../Services/AuthService/AuthService';
-import { UserService } from '../Services/UserService/UserService';
+import { RegisterRequest } from '../dtos/RegisterRequest';
+import { StatoRegistrazione } from '../dtos/StatoRegistrazione';
+import { AuthService } from '../services/auth-service/AuthService';
+import { UserService } from '../services/user-service/UserService';
 import { isAuthenticatedUserEnabledForJwt } from '../security/authenticatedToken';
 import { revokeAccessiUserSessionsIfConfigured } from '../security/sessionRevocation';
 import { FederatedAuthenticationResult, FederatedIdentity, FederatedProvider, VerifiedFederatedIdentity } from './FederatedAuthTypes';

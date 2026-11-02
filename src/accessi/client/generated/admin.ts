@@ -64,8 +64,8 @@ import type {
   UpdateScopeRequest,
   UserDto,
   UserGrantsResponse
-} from '../../../accessi-module/Console/generated/model'
-import { accessiFetch } from '../../../accessi-module/Console/accessiFetch';
+} from '../../../accessi-module/console/generated/model'
+import { accessiFetch } from '../../../accessi-module/console/accessiFetch';
 
 
 /**
