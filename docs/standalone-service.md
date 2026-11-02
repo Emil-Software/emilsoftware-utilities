@@ -150,6 +150,31 @@ Non eseguire migrazioni DDL con più repliche o con traffico applicativo.
 I booleani accettano `true/false`, `1/0`, `yes/no`, `on/off`; un valore diverso
 blocca l'avvio indicando la variabile da correggere.
 
+### Cookie, osservabilità e tenant da ambiente
+
+| Variabile | Default | Uso |
+| --- | --- | --- |
+| `ACCESSI_AUTH_COOKIE_ENABLED` | assente = Bearer | Abilita la modalità cookie HttpOnly |
+| `ACCESSI_AUTH_COOKIE_SECURE` | `true` | `false` solo in sviluppo HTTP |
+| `ACCESSI_AUTH_COOKIE_SAME_SITE` | `lax` | `strict`, `lax`, `none` |
+| `ACCESSI_AUTH_COOKIE_CSRF` | `double-submit` | `off` solo con protezione CSRF esterna |
+| `ACCESSI_METRICS_ENABLED` | `true` | Metriche di dominio |
+| `ACCESSI_METRICS_PREFIX` | `accessi` | Prefisso dei nomi |
+| `ACCESSI_AUDIT_ENABLED` | `true` | Sink di audit |
+| `ACCESSI_AUDIT_RETENTION_DAYS` | nessuna | Retention dei sink interrogabili |
+| `ACCESSI_AUDIT_LOGGER` | `true` | Scrittura anche sul Logger strutturato |
+| `ACCESSI_PUBLIC_REGISTRATION_ENABLED` | `false` | Registrazione pubblica opt-in |
+| `ACCESSI_FEDERATED_AUTH_ENABLED` | `false` | API SSO generiche |
+| `ACCESSI_FEDERATED_SELF_REGISTRATION` | `false` | Creazione utenti SSO senza master |
+| `ACCESSI_SERVICE_TOKENS_ENABLED` | `true` | API dei service token |
+| `ACCESSI_SERVICE_TOKENS_DEFAULT_TTL_DAYS` | nessuna scadenza | TTL predefinito dei service token |
+| `ACCESSI_TENANT_ID` | assente | Label `tenant` su metriche e audit |
+| `ACCESSI_CONSOLE_ENTRY_TTL_MS` | `60000` | TTL del ticket console |
+
+Gli store Redis (rate limit, ticket, revoche, rotazione refresh, audit) restano
+oggetti runtime: vanno collegati nel bootstrap applicativo con `createAccessiService`
+o `AccessiModule.forRoot`, non tramite variabili d'ambiente.
+
 ## Store condivisi
 
 In multi-istanza configura store condivisi:

@@ -31,6 +31,48 @@ function getOptionalBoolean(env: NodeJS.ProcessEnv, name: string, fallback: bool
   return parseBoolean(value, name);
 }
 
+function getOptionalNumber(env: NodeJS.ProcessEnv, name: string): number | undefined {
+  const value = env[name];
+  if (value === undefined || value.trim() === "") {
+    return undefined;
+  }
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed)) {
+    throw new Error(`Variabile ambiente ${name}: atteso un numero, ricevuto "${value}".`);
+  }
+  return parsed;
+}
+
+function getOptionalPositiveInteger(env: NodeJS.ProcessEnv, name: string): number | undefined {
+  const value = getOptionalNumber(env, name);
+  if (value === undefined) {
+    return undefined;
+  }
+  if (!Number.isInteger(value) || value <= 0) {
+    throw new Error(`Variabile ambiente ${name}: atteso un intero positivo, ricevuto "${env[name]}".`);
+  }
+  return value;
+}
+
+function getOptionalEnum<T extends string>(
+  env: NodeJS.ProcessEnv,
+  name: string,
+  allowed: readonly T[],
+): T | undefined {
+  const value = env[name];
+  if (value === undefined || value.trim() === "") {
+    return undefined;
+  }
+  const normalized = value.trim().toLowerCase();
+  const match = allowed.find((candidate) => candidate === normalized);
+  if (!match) {
+    throw new Error(
+      `Variabile ambiente ${name}: valore "${value}" non valido. Ammessi: ${allowed.join(', ')}.`,
+    );
+  }
+  return match;
+}
+
 const LOCAL_JWT_SECRET = "local-accessi-update";
 const LOCAL_ENCRYPTION_KEY = "1234567890ABCDEF";
 
@@ -192,6 +234,95 @@ export function createAccessiOptionsFromEnv(env: NodeJS.ProcessEnv = process.env
     );
   }
 
+  const authCookieConfigured =
+    env.ACCESSI_AUTH_COOKIE_ENABLED !== undefined ||
+    env.ACCESSI_AUTH_COOKIE_SECURE !== undefined ||
+    env.ACCESSI_AUTH_COOKIE_SAME_SITE !== undefined ||
+    env.ACCESSI_AUTH_COOKIE_DOMAIN !== undefined ||
+    env.ACCESSI_AUTH_COOKIE_CSRF !== undefined ||
+    env.ACCESSI_AUTH_COOKIE_EXPOSE_TOKENS !== undefined;
+  const authCookieSameSite = getOptionalEnum(
+    env,
+    "ACCESSI_AUTH_COOKIE_SAME_SITE",
+    ["strict", "lax", "none"] as const,
+  );
+  const authCookieCsrf = getOptionalEnum(
+    env,
+    "ACCESSI_AUTH_COOKIE_CSRF",
+    ["double-submit", "off"] as const,
+  );
+  const authCookieDomain = env.ACCESSI_AUTH_COOKIE_DOMAIN?.trim();
+  const authCookie = authCookieConfigured
+    ? {
+        enabled: getOptionalBoolean(env, "ACCESSI_AUTH_COOKIE_ENABLED", true),
+        secure: getOptionalBoolean(env, "ACCESSI_AUTH_COOKIE_SECURE", true),
+        ...(authCookieSameSite ? { sameSite: authCookieSameSite } : {}),
+        ...(authCookieDomain ? { domain: authCookieDomain } : {}),
+        ...(authCookieCsrf ? { csrf: authCookieCsrf } : {}),
+        exposeTokens: getOptionalBoolean(env, "ACCESSI_AUTH_COOKIE_EXPOSE_TOKENS", false),
+      }
+    : undefined;
+
+  const auditRetentionDays = getOptionalPositiveInteger(env, "ACCESSI_AUDIT_RETENTION_DAYS");
+  const auditConfigured =
+    env.ACCESSI_AUDIT_ENABLED !== undefined ||
+    auditRetentionDays !== undefined ||
+    env.ACCESSI_AUDIT_LOGGER !== undefined;
+  const audit = auditConfigured
+    ? {
+        enabled: getOptionalBoolean(env, "ACCESSI_AUDIT_ENABLED", true),
+        ...(auditRetentionDays !== undefined ? { retentionDays: auditRetentionDays } : {}),
+        logger: getOptionalBoolean(env, "ACCESSI_AUDIT_LOGGER", true),
+      }
+    : undefined;
+
+  const metricsPrefix = env.ACCESSI_METRICS_PREFIX?.trim();
+  const metricsConfigured =
+    env.ACCESSI_METRICS_ENABLED !== undefined || (metricsPrefix !== undefined && metricsPrefix !== "");
+  const metrics = metricsConfigured
+    ? {
+        enabled: getOptionalBoolean(env, "ACCESSI_METRICS_ENABLED", true),
+        ...(metricsPrefix ? { prefix: metricsPrefix } : {}),
+      }
+    : undefined;
+
+  const serviceTokenTtlDays = getOptionalPositiveInteger(
+    env,
+    "ACCESSI_SERVICE_TOKENS_DEFAULT_TTL_DAYS",
+  );
+  const serviceTokensConfigured =
+    env.ACCESSI_SERVICE_TOKENS_ENABLED !== undefined || serviceTokenTtlDays !== undefined;
+  const serviceTokens = serviceTokensConfigured
+    ? {
+        enabled: getOptionalBoolean(env, "ACCESSI_SERVICE_TOKENS_ENABLED", true),
+        ...(serviceTokenTtlDays !== undefined ? { defaultTtlDays: serviceTokenTtlDays } : {}),
+      }
+    : undefined;
+
+  const federatedConfigured =
+    env.ACCESSI_FEDERATED_AUTH_ENABLED !== undefined ||
+    env.ACCESSI_FEDERATED_SELF_REGISTRATION !== undefined;
+  const federatedAuthentication = federatedConfigured
+    ? {
+        enabled: getOptionalBoolean(env, "ACCESSI_FEDERATED_AUTH_ENABLED", false),
+        allowSelfRegistration: getOptionalBoolean(
+          env,
+          "ACCESSI_FEDERATED_SELF_REGISTRATION",
+          false,
+        ),
+      }
+    : undefined;
+
+  const publicRegistrationConfigured = env.ACCESSI_PUBLIC_REGISTRATION_ENABLED !== undefined;
+  const publicRegistration = publicRegistrationConfigured
+    ? {
+        enabled: getOptionalBoolean(env, "ACCESSI_PUBLIC_REGISTRATION_ENABLED", false),
+      }
+    : undefined;
+
+  const tenantId = env.ACCESSI_TENANT_ID?.trim();
+  const consoleEntryTtlMs = getOptionalPositiveInteger(env, "ACCESSI_CONSOLE_ENTRY_TTL_MS");
+
   return {
     databaseOptions,
     confirmationEmailUrl: getEnv(env, "ACCESSI_CONFIRMATION_EMAIL_URL", "http://localhost"),
@@ -215,6 +346,13 @@ export function createAccessiOptionsFromEnv(env: NodeJS.ProcessEnv = process.env
           },
         }
       : {}),
+    ...(tenantId ? { tenantId } : {}),
+    ...(authCookie ? { authCookie } : {}),
+    ...(audit ? { audit } : {}),
+    ...(metrics ? { metrics } : {}),
+    ...(serviceTokens ? { serviceTokens } : {}),
+    ...(federatedAuthentication ? { federatedAuthentication } : {}),
+    ...(publicRegistration ? { publicRegistration } : {}),
     jwtOptions: {
       secret: getRequiredSecret(env, "ACCESSI_JWT_SECRET", LOCAL_JWT_SECRET),
       expiresIn: getEnv(env, "ACCESSI_JWT_EXPIRES", "24h"),
@@ -242,10 +380,10 @@ export function createAccessiOptionsFromEnv(env: NodeJS.ProcessEnv = process.env
         pass: getEnv(env, "ACCESSI_EMAIL_PASSWORD", "local-password"),
       },
     },
-    ...(env.ACCESSI_CONSOLE_ENTRY_TTL_MS
+    ...(consoleEntryTtlMs !== undefined
       ? {
           consoleEntry: {
-            ttlMs: Number(env.ACCESSI_CONSOLE_ENTRY_TTL_MS),
+            ttlMs: consoleEntryTtlMs,
           },
         }
       : {}),

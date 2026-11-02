@@ -1516,6 +1516,9 @@ await startAccessiService({
 | URL | ACCESSI\_PUBLIC\_BASE\_URL, ACCESSI\_CONFIRMATION\_EMAIL\_URL, ACCESSI\_CONFIRMATION\_RETURN\_EMAIL\_URL, ACCESSI\_CONSOLE\_API\_BASE\_URL | Link nelle email e console su dominio separato |
 | Console | ACCESSI\_CONSOLE\_ENTRY\_TTL\_MS, ACCESSI\_CONSOLE\_ENTRY\_KEY | Ticket monouso; store Redis in multi-istanza |
 | Migrazioni | ACCESSI\_AUTO\_UPDATE\_DATABASE, ACCESSI\_LEGACY\_PASSWORD\_MIGRATION, ACCESSI\_SYSTEM\_SEEDS\_ENABLED, ACCESSI\_ADMIN\_BOOTSTRAP\_ENABLED | false su auto-update per le repliche dopo la migrazione |
+| Cookie | ACCESSI\_AUTH\_COOKIE\_ENABLED, \_SECURE, \_SAME\_SITE, \_DOMAIN, \_CSRF | Bearer resta il default; abilitare solo se serve HttpOnly |
+| Osservabilità | ACCESSI\_METRICS\_\*, ACCESSI\_AUDIT\_\* | Metriche e audit; store e sink restano oggetti runtime |
+| Feature e tenant | ACCESSI\_TENANT\_ID, ACCESSI\_PUBLIC\_REGISTRATION\_ENABLED, ACCESSI\_FEDERATED\_\*, ACCESSI\_SERVICE\_TOKENS\_\* | Registrazione e SSO sono opt-in |
 
 ### Rollout sicuro
 

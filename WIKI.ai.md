@@ -930,6 +930,9 @@ await startAccessiService({
 | URL | ACCESSI_PUBLIC_BASE_URL, ACCESSI_CONFIRMATION_EMAIL_URL, ACCESSI_CONFIRMATION_RETURN_EMAIL_URL, ACCESSI_CONSOLE_API_BASE_URL | Link nelle email e console su dominio separato |
 | Console | ACCESSI_CONSOLE_ENTRY_TTL_MS, ACCESSI_CONSOLE_ENTRY_KEY | Ticket monouso; store Redis in multi-istanza |
 | Migrazioni | ACCESSI_AUTO_UPDATE_DATABASE, ACCESSI_LEGACY_PASSWORD_MIGRATION, ACCESSI_SYSTEM_SEEDS_ENABLED, ACCESSI_ADMIN_BOOTSTRAP_ENABLED | false su auto-update per le repliche dopo la migrazione |
+| Cookie | ACCESSI_AUTH_COOKIE_ENABLED, _SECURE, _SAME_SITE, _DOMAIN, _CSRF | Bearer resta il default; abilitare solo se serve HttpOnly |
+| Osservabilità | ACCESSI_METRICS_*, ACCESSI_AUDIT_* | Metriche e audit; store e sink restano oggetti runtime |
+| Feature e tenant | ACCESSI_TENANT_ID, ACCESSI_PUBLIC_REGISTRATION_ENABLED, ACCESSI_FEDERATED_*, ACCESSI_SERVICE_TOKENS_* | Registrazione e SSO sono opt-in |
 **Rollout sicuro**
 1. Costruisci l artefatto e valida la configurazione prima del deploy: assertValidAccessiOptions blocca gli errori evidenti.
 2. Esegui la migrazione dello schema con un solo processo (autoUpdateDatabase: true oppure npm run db:update:accessi).

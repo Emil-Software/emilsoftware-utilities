@@ -96,3 +96,84 @@ test('#28: un booleano non valido blocca l avvio indicando la variabile', () => 
     /ACCESSI_AUTO_UPDATE_DATABASE/,
   );
 });
+
+test('#29: le opzioni non configurate restano ai default del modulo', () => {
+  const options = createAccessiOptionsFromEnv(baseEnv());
+  assert.equal(options.authCookie, undefined);
+  assert.equal(options.audit, undefined);
+  assert.equal(options.metrics, undefined);
+  assert.equal(options.serviceTokens, undefined);
+  assert.equal(options.federatedAuthentication, undefined);
+  assert.equal(options.publicRegistration, undefined);
+  assert.equal(options.tenantId, undefined);
+});
+
+test('#29: cookie HttpOnly e CSRF si configurano da ambiente', () => {
+  const options = createAccessiOptionsFromEnv(baseEnv({
+    ACCESSI_AUTH_COOKIE_ENABLED: 'true',
+    ACCESSI_AUTH_COOKIE_SECURE: 'false',
+    ACCESSI_AUTH_COOKIE_SAME_SITE: 'lax',
+    ACCESSI_AUTH_COOKIE_DOMAIN: 'example.com',
+    ACCESSI_AUTH_COOKIE_CSRF: 'off',
+    ACCESSI_AUTH_COOKIE_EXPOSE_TOKENS: 'true',
+  }));
+  assert.deepEqual(options.authCookie, {
+    enabled: true,
+    secure: false,
+    sameSite: 'lax',
+    domain: 'example.com',
+    csrf: 'off',
+    exposeTokens: true,
+  });
+  assert.throws(
+    () => createAccessiOptionsFromEnv(baseEnv({ ACCESSI_AUTH_COOKIE_SAME_SITE: 'always' })),
+    /ACCESSI_AUTH_COOKIE_SAME_SITE/,
+  );
+});
+
+test('#29: metriche, audit, service token e tenant si configurano da ambiente', () => {
+  const options = createAccessiOptionsFromEnv(baseEnv({
+    ACCESSI_METRICS_ENABLED: 'false',
+    ACCESSI_METRICS_PREFIX: 'acme',
+    ACCESSI_AUDIT_ENABLED: 'false',
+    ACCESSI_AUDIT_RETENTION_DAYS: '30',
+    ACCESSI_AUDIT_LOGGER: 'false',
+    ACCESSI_SERVICE_TOKENS_ENABLED: 'false',
+    ACCESSI_SERVICE_TOKENS_DEFAULT_TTL_DAYS: '90',
+    ACCESSI_TENANT_ID: 'acme',
+    ACCESSI_CONSOLE_ENTRY_TTL_MS: '45000',
+  }));
+  assert.deepEqual(options.metrics, { enabled: false, prefix: 'acme' });
+  assert.deepEqual(options.audit, { enabled: false, retentionDays: 30, logger: false });
+  assert.deepEqual(options.serviceTokens, { enabled: false, defaultTtlDays: 90 });
+  assert.equal(options.tenantId, 'acme');
+  assert.equal(options.consoleEntry?.ttlMs, 45000);
+});
+
+test('#29: registrazione pubblica e SSO restano opt-in', () => {
+  const defaults = createAccessiOptionsFromEnv(baseEnv());
+  assert.equal(defaults.publicRegistration, undefined);
+  assert.equal(defaults.federatedAuthentication, undefined);
+
+  const enabled = createAccessiOptionsFromEnv(baseEnv({
+    ACCESSI_PUBLIC_REGISTRATION_ENABLED: 'true',
+    ACCESSI_FEDERATED_AUTH_ENABLED: 'true',
+    ACCESSI_FEDERATED_SELF_REGISTRATION: 'true',
+  }));
+  assert.deepEqual(enabled.publicRegistration, { enabled: true });
+  assert.deepEqual(enabled.federatedAuthentication, {
+    enabled: true,
+    allowSelfRegistration: true,
+  });
+});
+
+test('#29: valori numerici non validi bloccano l avvio', () => {
+  assert.throws(
+    () => createAccessiOptionsFromEnv(baseEnv({ ACCESSI_AUDIT_RETENTION_DAYS: '0' })),
+    /ACCESSI_AUDIT_RETENTION_DAYS/,
+  );
+  assert.throws(
+    () => createAccessiOptionsFromEnv(baseEnv({ ACCESSI_CONSOLE_ENTRY_TTL_MS: 'abc' })),
+    /ACCESSI_CONSOLE_ENTRY_TTL_MS/,
+  );
+});
