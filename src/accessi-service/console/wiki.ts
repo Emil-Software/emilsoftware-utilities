@@ -1125,6 +1125,7 @@ export const WIKI_SECTIONS: WikiSection[] = [
           ['Email', 'ACCESSI_EMAIL_HOST, ACCESSI_EMAIL_PORT, ACCESSI_EMAIL_USER, ACCESSI_EMAIL_PASSWORD, ACCESSI_EMAIL_FROM', 'SMTP obbligatorio per reset, 2FA e inviti'],
           ['URL', 'ACCESSI_PUBLIC_BASE_URL, ACCESSI_CONFIRMATION_EMAIL_URL, ACCESSI_CONFIRMATION_RETURN_EMAIL_URL, ACCESSI_CONSOLE_API_BASE_URL', 'Link nelle email e console su dominio separato'],
           ['Console', 'ACCESSI_CONSOLE_ENTRY_TTL_MS, ACCESSI_CONSOLE_ENTRY_KEY', 'Ticket monouso; store Redis in multi-istanza'],
+          ['Migrazioni', 'ACCESSI_AUTO_UPDATE_DATABASE, ACCESSI_LEGACY_PASSWORD_MIGRATION, ACCESSI_SYSTEM_SEEDS_ENABLED, ACCESSI_ADMIN_BOOTSTRAP_ENABLED', 'false su auto-update per le repliche dopo la migrazione'],
         ],
       ),
       h(`Rollout sicuro`),

@@ -68,3 +68,31 @@ test('#27: una configurazione di produzione completa viene accettata', () => {
   assert.equal(options.encryptionKey, 'y'.repeat(32));
   assert.equal(options.mockDemoUser, false);
 });
+
+test('#28: migrazioni, seed e bootstrap admin hanno default sicuri', () => {
+  const options = createAccessiOptionsFromEnv(baseEnv());
+  assert.equal(options.autoUpdateDatabase, true);
+  assert.equal(options.legacyPasswordMigrationOnStartup, true);
+  assert.equal(options.systemSeeds?.enabled, true);
+  assert.equal(options.adminBootstrap, undefined);
+});
+
+test('#28: le opzioni di migrazione e bootstrap si leggono da ambiente', () => {
+  const options = createAccessiOptionsFromEnv(baseEnv({
+    ACCESSI_AUTO_UPDATE_DATABASE: 'false',
+    ACCESSI_LEGACY_PASSWORD_MIGRATION: 'off',
+    ACCESSI_SYSTEM_SEEDS_ENABLED: '0',
+    ACCESSI_ADMIN_BOOTSTRAP_ENABLED: 'yes',
+  }));
+  assert.equal(options.autoUpdateDatabase, false);
+  assert.equal(options.legacyPasswordMigrationOnStartup, false);
+  assert.equal(options.systemSeeds?.enabled, false);
+  assert.equal(options.adminBootstrap?.enabled, true);
+});
+
+test('#28: un booleano non valido blocca l avvio indicando la variabile', () => {
+  assert.throws(
+    () => createAccessiOptionsFromEnv(baseEnv({ ACCESSI_AUTO_UPDATE_DATABASE: 'forse' })),
+    /ACCESSI_AUTO_UPDATE_DATABASE/,
+  );
+});

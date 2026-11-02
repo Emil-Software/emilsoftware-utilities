@@ -138,6 +138,18 @@ Per Docker, Nginx, Traefik e multi-tenant usa i template in
 
 Non eseguire migrazioni DDL con più repliche o con traffico applicativo.
 
+### Migrazioni e seed da ambiente
+
+| Variabile | Default | Uso |
+| --- | --- | --- |
+| `ACCESSI_AUTO_UPDATE_DATABASE` | `true` | `false` sulle repliche: verifica lo schema in sola lettura |
+| `ACCESSI_LEGACY_PASSWORD_MIGRATION` | `true` | Migrazione password legacy al bootstrap |
+| `ACCESSI_SYSTEM_SEEDS_ENABLED` | `true` | Seed di sistema (menu e scope di base) |
+| `ACCESSI_ADMIN_BOOTSTRAP_ENABLED` | `false` | Token monouso per creare il primo admin |
+
+I booleani accettano `true/false`, `1/0`, `yes/no`, `on/off`; un valore diverso
+blocca l'avvio indicando la variabile da correggere.
+
 ## Store condivisi
 
 In multi-istanza configura store condivisi:

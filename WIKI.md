@@ -1515,6 +1515,7 @@ await startAccessiService({
 | Email | ACCESSI\_EMAIL\_HOST, ACCESSI\_EMAIL\_PORT, ACCESSI\_EMAIL\_USER, ACCESSI\_EMAIL\_PASSWORD, ACCESSI\_EMAIL\_FROM | SMTP obbligatorio per reset, 2FA e inviti |
 | URL | ACCESSI\_PUBLIC\_BASE\_URL, ACCESSI\_CONFIRMATION\_EMAIL\_URL, ACCESSI\_CONFIRMATION\_RETURN\_EMAIL\_URL, ACCESSI\_CONSOLE\_API\_BASE\_URL | Link nelle email e console su dominio separato |
 | Console | ACCESSI\_CONSOLE\_ENTRY\_TTL\_MS, ACCESSI\_CONSOLE\_ENTRY\_KEY | Ticket monouso; store Redis in multi-istanza |
+| Migrazioni | ACCESSI\_AUTO\_UPDATE\_DATABASE, ACCESSI\_LEGACY\_PASSWORD\_MIGRATION, ACCESSI\_SYSTEM\_SEEDS\_ENABLED, ACCESSI\_ADMIN\_BOOTSTRAP\_ENABLED | false su auto-update per le repliche dopo la migrazione |
 
 ### Rollout sicuro
 

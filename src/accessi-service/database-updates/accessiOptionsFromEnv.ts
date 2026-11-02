@@ -10,12 +10,25 @@ function getEnv(env: NodeJS.ProcessEnv, names: string | string[], fallback?: str
   return value;
 }
 
+function parseBoolean(value: string, name: string): boolean {
+  const normalized = value.trim().toLowerCase();
+  if (["true", "1", "yes", "on"].includes(normalized)) {
+    return true;
+  }
+  if (["false", "0", "no", "off"].includes(normalized)) {
+    return false;
+  }
+  throw new Error(
+    `Variabile ambiente ${name}: valore booleano non valido "${value}". Usare true/false (oppure 1/0, yes/no, on/off).`,
+  );
+}
+
 function getOptionalBoolean(env: NodeJS.ProcessEnv, name: string, fallback: boolean): boolean {
   const value = env[name];
-  if (value === undefined) {
+  if (value === undefined || value.trim() === "") {
     return fallback;
   }
-  return value.toLowerCase() === "true";
+  return parseBoolean(value, name);
 }
 
 const LOCAL_JWT_SECRET = "local-accessi-update";
@@ -190,7 +203,18 @@ export function createAccessiOptionsFromEnv(env: NodeJS.ProcessEnv = process.env
     encryptionKey: getRequiredSecret(env, "ACCESSI_ENCRYPTION_KEY", LOCAL_ENCRYPTION_KEY),
     mockDemoUser,
     passwordExpiration: getOptionalBoolean(env, "ACCESSI_PASSWORD_EXPIRATION", false),
-    autoUpdateDatabase: true,
+    legacyPasswordMigrationOnStartup: getOptionalBoolean(env, "ACCESSI_LEGACY_PASSWORD_MIGRATION", true),
+    autoUpdateDatabase: getOptionalBoolean(env, "ACCESSI_AUTO_UPDATE_DATABASE", true),
+    systemSeeds: {
+      enabled: getOptionalBoolean(env, "ACCESSI_SYSTEM_SEEDS_ENABLED", true),
+    },
+    ...(env.ACCESSI_ADMIN_BOOTSTRAP_ENABLED
+      ? {
+          adminBootstrap: {
+            enabled: getOptionalBoolean(env, "ACCESSI_ADMIN_BOOTSTRAP_ENABLED", false),
+          },
+        }
+      : {}),
     jwtOptions: {
       secret: getRequiredSecret(env, "ACCESSI_JWT_SECRET", LOCAL_JWT_SECRET),
       expiresIn: getEnv(env, "ACCESSI_JWT_EXPIRES", "24h"),

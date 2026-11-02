@@ -127,7 +127,7 @@ Firebird. In produzione:
    npm run db:update:accessi
    ```
 
-2. Avvia le repliche con `autoUpdateDatabase: false`.
+2. Avvia le repliche con `autoUpdateDatabase: false` (oppure `ACCESSI_AUTO_UPDATE_DATABASE=false` nel servizio standalone).
 3. Crea il primo admin dalla console, abilitando temporaneamente `adminBootstrap`.
    Il token di bootstrap viene stampato all'avvio, è monouso e dura fino al riavvio.
 4. Disabilita `adminBootstrap` dopo la creazione.
