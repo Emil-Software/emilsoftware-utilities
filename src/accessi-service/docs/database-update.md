@@ -4,7 +4,7 @@ Per DBA e backend proprietario del database. Indice completo in
 [`docs/README.md`](../../../docs/README.md); migrazioni e rollout in
 [`WIKI.md`](../../../WIKI.md#versioni-migrazioni-e-deprecazioni).
 
-La libreria richiede lo schema generico dichiarato da `ACCESSI_SCHEMA_VERSION` in `database-updates/accessiSchema.ts` (oggi `1.11.1`) e Firebird **2.5 o successivo**. Lo schema necessario e dichiarato nello stesso file; l'updater confronta questa definizione con i metadati reali del database a ogni avvio.
+La libreria richiede lo schema generico dichiarato da `ACCESSI_SCHEMA_VERSION` in `database-updates/accessiSchema.ts` (oggi `1.12.0`) e Firebird **2.5 o successivo**. Lo schema necessario e dichiarato nello stesso file; l'updater confronta questa definizione con i metadati reali del database a ogni avvio.
 
 Su Firebird 2.5 i generatori sono creati con `CREATE GENERATOR` (in 2.5 non esiste `CREATE SEQUENCE`), mentre da Firebird 3.0 si usa `CREATE SEQUENCE`. Il resto del DDL, le query e la verifica dei metadati sono comuni: l'updater non usa funzionalita introdotte dopo la 2.5 (niente window function, `RDB$RELATION_TYPE` o `NEXT VALUE FOR`).
 
@@ -64,7 +64,7 @@ const report = await AccessiDatabaseUpdater.inspectSchema(options); // sola lett
 await AccessiDatabaseUpdater.assertCompatible(options); // solleva errore se incompatibile
 ```
 
-`docs/accessi.sql` e uno snapshot generico per un database **vuoto**, senza CREATE DATABASE o credenziali. Gli script storici in `database-updates/scripts` documentano i vecchi passaggi e non sono un motore di riconciliazione: su database esistenti usare l'updater. I passaggi esclusivamente applicativi sono mantenuti come file senza operazioni.
+`accessi.sql` e uno snapshot generico per un database **vuoto**, senza CREATE DATABASE o credenziali. Gli script storici in `database-updates/scripts` documentano i vecchi passaggi e non sono un motore di riconciliazione: su database esistenti usare l'updater. I passaggi esclusivamente applicativi sono mantenuti come file senza operazioni.
 
 ## Test
 
