@@ -1,4 +1,4 @@
-﻿require('ts-node/register/transpile-only');
+require('ts-node/register/transpile-only');
 require('reflect-metadata');
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
@@ -6,14 +6,14 @@ const jwt = require('jsonwebtoken');
 const { plainToInstance } = require('class-transformer');
 const { validate } = require('class-validator');
 const { Orm } = require('../src/Orm');
-const { AuthService } = require('../src/accessi-module/services/auth-service/AuthService');
-const { TwoFactorService } = require('../src/accessi-module/services/two-factor-service/TwoFactorService');
-const { FederatedAuthService } = require('../src/accessi-module/federated-auth/FederatedAuthService');
-const { UserService } = require('../src/accessi-module/services/user-service/UserService');
-const { UserDto } = require('../src/accessi-module/dtos/UserDto');
-const { StatoRegistrazione } = require('../src/accessi-module/dtos/StatoRegistrazione');
-const { isAccessiTokenAllowedForUser } = require('../src/accessi-module/security/authenticatedToken');
-const { getAccessiJwtSecret } = require('../src/accessi-module/security/passwordResetToken');
+const { AuthService } = require('../src/accessi-service/services/auth-service/AuthService');
+const { TwoFactorService } = require('../src/accessi-service/services/two-factor-service/TwoFactorService');
+const { FederatedAuthService } = require('../src/accessi-service/federated-auth/FederatedAuthService');
+const { UserService } = require('../src/accessi-service/services/user-service/UserService');
+const { UserDto } = require('../src/accessi-service/dtos/UserDto');
+const { StatoRegistrazione } = require('../src/accessi-service/dtos/StatoRegistrazione');
+const { isAccessiTokenAllowedForUser } = require('../src/accessi-service/security/authenticatedToken');
+const { getAccessiJwtSecret } = require('../src/accessi-service/security/passwordResetToken');
 const options = { databaseOptions: {}, jwtOptions: { secret: 'test-two-factor-secret', expiresIn: '1h' }, federatedAuthentication: { enabled: true } };
 const baseUser = { codiceUtente: 1, email: 'user@example.com', statoRegistrazione: StatoRegistrazione.CONF, flagSuper: false, flagAdmin: false, flagDueFattori: false, passwordlessLoginEnabled: false, passwordLoginEnabled: true };
 
@@ -144,8 +144,8 @@ test('wrong password never issues a second-factor challenge', async t => {
 });
 
 test('Nest guard, Express middleware and token lookup all reject sessions missing required OTP', async () => {
-  const { JwtSimpleGuard } = require('../src/accessi-module/jwt/JwtSimpleGuard');
-  const { AuthenticateGenService } = require('../src/accessi-module/middleware/authenticateGen');
+  const { JwtSimpleGuard } = require('../src/accessi-service/jwt/JwtSimpleGuard');
+  const { AuthenticateGenService } = require('../src/accessi-service/middleware/authenticateGen');
   const user = { ...baseUser, flagDueFattori: true };
   const users = { getAuthenticatedUserSnapshot: async () => user };
   const token = jwt.sign({ utente: baseUser, typ: 'access', amr: ['federated'] }, getAccessiJwtSecret(options, 'access'));

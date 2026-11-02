@@ -7,29 +7,29 @@
  * Per limitare le operazioni disponibili usare gli entry point per scope:
  * `accessi/client/public`, `accessi/client/admin` e `accessi/client/service`.
  */
-import * as generated from "../../accessi-module/console/generated/emilsoftware-utilities";
-import type { AccessiClientConfig } from "../../accessi-module/console/accessiFetch";
+import * as generated from "../../accessi-service/console/generated/emilsoftware-utilities";
+import type { AccessiClientConfig } from "../../accessi-service/console/accessiFetch";
 import {
   createAccessiClientFromModule,
   type AccessiScopedClient,
 } from "./createAccessiClient";
 
-export * from "../../accessi-module/console/generated/emilsoftware-utilities";
-export * from "../../accessi-module/console/generated/model";
-export { AccessiRequestError } from "../../accessi-module/console/accessiFetch";
+export * from "../../accessi-service/console/generated/emilsoftware-utilities";
+export * from "../../accessi-service/console/generated/model";
+export { AccessiRequestError } from "../../accessi-service/console/accessiFetch";
 export {
   ACCESSI_UNAUTHORIZED_EVENT,
   getAccessiClientConfig,
   runWithAccessiClient,
   setAccessiFetchBaseUrl,
   setAccessiFetchTokenProvider,
-} from "../../accessi-module/console/accessiFetch";
-export type { AccessiClientConfig } from "../../accessi-module/console/accessiFetch";
+} from "../../accessi-service/console/accessiFetch";
+export type { AccessiClientConfig } from "../../accessi-service/console/accessiFetch";
 
 import {
   setAccessiFetchBaseUrl,
   setAccessiFetchTokenProvider,
-} from "../../accessi-module/console/accessiFetch";
+} from "../../accessi-service/console/accessiFetch";
 
 /** Client completo: tutte le operazioni, con configurazione isolata per istanza. */
 export type AccessiClient = AccessiScopedClient<typeof generated>;

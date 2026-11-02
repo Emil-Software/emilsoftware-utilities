@@ -9,13 +9,13 @@ const {
   createAccessiHealthModule,
   createAccessiLiveReport,
   readinessHttpStatus,
-} = require('../src/accessi-module');
+} = require('../src/accessi-service');
 const {
   createMemoryRateLimitStore,
-} = require('../src/accessi-module/security/rateLimitStore');
+} = require('../src/accessi-service/security/rateLimitStore');
 const {
   ACCESSI_SCHEMA_VERSION,
-} = require('../src/accessi-module/database-updates/accessiSchema');
+} = require('../src/accessi-service/database-updates/accessiSchema');
 
 const OPTIONS = { databaseOptions: {}, encryptionKey: '0123456789ABCDEF', mockDemoUser: false };
 
@@ -117,7 +117,7 @@ test('la readiness e ok solo se tutti i check passano', async () => {
 });
 
 test('il check database di default riporta l\'errore invece di lanciare', async () => {
-  const { AccessiDatabaseUpdater } = require('../src/accessi-module/database-updates/AccessiDatabaseUpdater');
+  const { AccessiDatabaseUpdater } = require('../src/accessi-service/database-updates/AccessiDatabaseUpdater');
   const original = AccessiDatabaseUpdater.getCurrentVersion;
   AccessiDatabaseUpdater.getCurrentVersion = async () => {
     throw new Error('pool non disponibile');

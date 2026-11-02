@@ -31,8 +31,8 @@ async function main() {
   const profile = fs.mkdtempSync(path.join(os.tmpdir(), 'accessi-console-browser-'));
   const app = express();
   app.use(express.json());
-  app.use('/api/accessi/console/assets', express.static(path.resolve('dist/accessi-module/console')));
-  app.use('/api/accessi/console', (_req, res) => res.sendFile(path.resolve('dist/accessi-module/console/index.html')));
+  app.use('/api/accessi/console/assets', express.static(path.resolve('dist/accessi-service/console')));
+  app.use('/api/accessi/console', (_req, res) => res.sendFile(path.resolve('dist/accessi-service/console/index.html')));
   const user = { codiceUtente: 2, email: 'managed@example.com', flagDueFattori: false, passwordlessLoginEnabled: false, passwordLoginEnabled: true, statoRegistrazione: 1 };
   const challenge = { challengeId: 'a'.repeat(64), expiresAt: new Date(Date.now() + 600000).toISOString(), resendAfterSeconds: 0, twoFactorRequired: true, method: 'email' };
   let profileUpdate;

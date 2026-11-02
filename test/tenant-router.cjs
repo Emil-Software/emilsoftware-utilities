@@ -18,7 +18,7 @@ const {
   configureAccessiTenantAudit,
   createMemoryAccessiAuditSink,
 } = require('../src/accessi/server');
-const { getAccessiMetricsRegistry } = require('../src/accessi-module');
+const { getAccessiMetricsRegistry } = require('../src/accessi-service');
 
 function environmentSource(id, hosts) {
   return `export default {

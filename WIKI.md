@@ -1,6 +1,6 @@
 # Wiki del modulo Accessi
 
-> Documento generato automaticamente da `src/accessi-module/console/wiki.ts` (la stessa fonte della Wiki nella console).
+> Documento generato automaticamente da `src/accessi-service/console/wiki.ts` (la stessa fonte della Wiki nella console).
 > Non modificarlo a mano: esegui `npm run generate:accessi-wiki`.
 
 La stessa documentazione è disponibile, resa in modo interattivo, nella console Accessi su `/api/accessi/console/wiki`.

@@ -7,11 +7,11 @@ const fs = require('node:fs');
 const fb = require('node-firebird');
 const { Orm } = require('../src/Orm');
 const { Logger } = require('../src/Logger');
-const { AccessiDatabaseUpdater: Updater } = require('../src/accessi-module/database-updates/AccessiDatabaseUpdater');
-const { ACCESSI_VERSION_KEY, ACCESSI_SCHEMA_VERSION } = require('../src/accessi-module/database-updates/accessiSchema');
-const { UserService } = require('../src/accessi-module/services/user-service/UserService');
-const { FiltriService } = require('../src/accessi-module/services/filtri-service/FiltriService');
-const { PermissionService } = require('../src/accessi-module/services/permission-service/PermissionService');
+const { AccessiDatabaseUpdater: Updater } = require('../src/accessi-service/database-updates/AccessiDatabaseUpdater');
+const { ACCESSI_VERSION_KEY, ACCESSI_SCHEMA_VERSION } = require('../src/accessi-service/database-updates/accessiSchema');
+const { UserService } = require('../src/accessi-service/services/user-service/UserService');
+const { FiltriService } = require('../src/accessi-service/services/filtri-service/FiltriService');
+const { PermissionService } = require('../src/accessi-service/services/permission-service/PermissionService');
 
 for (const method of ['info', 'log', 'warning', 'error']) Logger.prototype[method] = () => {};
 
@@ -253,7 +253,7 @@ integration('orphaned references prevent certification and preserve the data for
 
 integration('Nest bootstrap awaits validation with SSO enabled and disabled, including repeated starts', async t => {
   const { NestFactory } = require('@nestjs/core');
-  const { AccessiModule } = require('../src/accessi-module/AccessiModule');
+  const { AccessiModule } = require('../src/accessi-service/AccessiModule');
   const o = await database(t);
   o.federatedAuthentication = { enabled: true, autoUpdateSchema: true };
   const app = await NestFactory.createApplicationContext(AccessiModule.forRoot(o), { logger: false, abortOnError: false });
@@ -268,7 +268,7 @@ integration('Nest bootstrap awaits validation with SSO enabled and disabled, inc
 integration('generic SQL snapshot and standalone read-only check match the schema contract', async t => {
   const o = await database(t);
   const major = await engineMajor(o);
-  const snapshot = fs.readFileSync(path.join(__dirname, '../src/accessi-module/docs/accessi.sql'), 'utf8');
+  const snapshot = fs.readFileSync(path.join(__dirname, '../src/accessi-service/docs/accessi.sql'), 'utf8');
   // Lo snapshot documenta la sintassi 3.0+; su 2.5 i generatori usano CREATE GENERATOR.
   const portable = sql => major >= 3 ? sql : sql.replace(/\bCREATE SEQUENCE\b/gi, 'CREATE GENERATOR');
   const [ddl, rest] = snapshot.split('SET TERM ^ ;');
@@ -278,7 +278,7 @@ integration('generic SQL snapshot and standalone read-only check match the schem
   for (const sql of rest.split('SET TERM ; ^')[0].split('^').map(s => s.trim()).filter(Boolean)) await exec(o, portable(sql));
   await Updater.assertCompatible(o);
   const { spawnSync } = require('node:child_process');
-  const result = spawnSync(process.execPath, ['-r', 'ts-node/register/transpile-only', 'src/accessi-module/database-updates/runAccessiDbUpdate.ts', '--check'], {
+  const result = spawnSync(process.execPath, ['-r', 'ts-node/register/transpile-only', 'src/accessi-service/database-updates/runAccessiDbUpdate.ts', '--check'], {
     cwd: path.join(__dirname, '..'), encoding: 'utf8', env: { ...process.env,
       ACCESSI_DB_HOST: '127.0.0.1', ACCESSI_DB_PORT: String(port), ACCESSI_DB_DATABASE: o.databaseOptions.database,
       ACCESSI_DB_USER: o.databaseOptions.user, ACCESSI_DB_PASSWORD: o.databaseOptions.password,

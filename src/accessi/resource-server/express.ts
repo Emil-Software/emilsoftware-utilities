@@ -1,5 +1,5 @@
 import type { NextFunction, Request, Response } from "express";
-import { auditAccessi } from "../../accessi-module/security/audit";
+import { auditAccessi } from "../../accessi-service/security/audit";
 import { AccessiResourceServerError, accessiAuthError } from "./errors";
 import { authenticateAccessiRequest, createAccessiResourceServer } from "./runtime";
 import type { AccessiResourceServerRuntime } from "./runtime";

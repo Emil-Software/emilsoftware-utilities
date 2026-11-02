@@ -16,10 +16,10 @@ const {
 } = require('../src/accessi/resource-server');
 const { mergeOpenApiDocuments } = require('../src/openapi/OpenApiMerge');
 const { buildAccessiConsoleUrl } = require('../src/accessi/console');
-const { AccessiIntrospectionController } = require('../src/accessi-module');
-const { AuthService } = require('../src/accessi-module/services/auth-service/AuthService');
+const { AccessiIntrospectionController } = require('../src/accessi-service');
+const { AuthService } = require('../src/accessi-service/services/auth-service/AuthService');
 const { configureAccessiClient, login } = require('../src/accessi/client');
-const { createMemorySessionRevocationStore } = require('../src/accessi-module/security/sessionRevocation');
+const { createMemorySessionRevocationStore } = require('../src/accessi-service/security/sessionRevocation');
 
 const RAW_SECRET = 'resource-server-test-secret';
 const ACCESS_SECRET = deriveAccessiAccessSecret(RAW_SECRET);

@@ -4,7 +4,7 @@
 const fs = require('node:fs');
 const path = require('node:path');
 
-const specPath = path.join(__dirname, '..', 'src', 'accessi-module', 'openapi', 'accessi.openapi.json');
+const specPath = path.join(__dirname, '..', 'src', 'accessi-service', 'openapi', 'accessi.openapi.json');
 const fingerprintPath = path.join(__dirname, '..', 'docs', 'accessi-openapi-fingerprint.json');
 const updateFingerprint = process.argv.includes('--update');
 const failures = [];

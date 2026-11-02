@@ -19,9 +19,9 @@ const {
   resetAccessiAudit,
   resetAccessiMetrics,
   resolveAccessiVerificationKeys,
-} = require('../src/accessi-module');
-const { AccessiAuditController } = require('../src/accessi-module/controllers/AccessiAuditController');
-const { AuthController } = require('../src/accessi-module/controllers/AuthController');
+} = require('../src/accessi-service');
+const { AccessiAuditController } = require('../src/accessi-service/controllers/AccessiAuditController');
+const { AuthController } = require('../src/accessi-service/controllers/AuthController');
 
 function fakeResponse() {
   return {

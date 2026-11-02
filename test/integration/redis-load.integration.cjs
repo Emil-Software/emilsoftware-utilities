@@ -15,14 +15,14 @@ const fs = require('node:fs');
 const path = require('node:path');
 const { randomBytes } = require('node:crypto');
 const { RedisTestClient } = require('./helpers/redis-test-client.cjs');
-const { createRedisRateLimitStore } = require('../../src/accessi-module/security/rateLimitStore');
-const { createRedisConsoleEntryStore } = require('../../src/accessi-module/security/consoleEntry');
+const { createRedisRateLimitStore } = require('../../src/accessi-service/security/rateLimitStore');
+const { createRedisConsoleEntryStore } = require('../../src/accessi-service/security/consoleEntry');
 const {
   createRedisRefreshTokenRotationStore,
-} = require('../../src/accessi-module/security/refreshTokenRotation');
+} = require('../../src/accessi-service/security/refreshTokenRotation');
 const {
   checkPublicAuthRateLimit,
-} = require('../../src/accessi-module/security/publicAuthRateLimit');
+} = require('../../src/accessi-service/security/publicAuthRateLimit');
 
 const REDIS_URL = (process.env.ACCESSI_TEST_REDIS_URL ?? '').trim();
 const REQUIRE_REDIS = process.env.ACCESSI_TEST_REQUIRE_REDIS === '1';

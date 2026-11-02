@@ -12,15 +12,15 @@ const { test, before, after } = require('node:test');
 const assert = require('node:assert/strict');
 const { randomBytes } = require('node:crypto');
 const { RedisTestClient } = require('./helpers/redis-test-client.cjs');
-const { createRedisRateLimitStore } = require('../../src/accessi-module/security/rateLimitStore');
-const { createRedisConsoleEntryStore } = require('../../src/accessi-module/security/consoleEntry');
-const { createRedisSessionRevocationStore } = require('../../src/accessi-module/security/sessionRevocation');
+const { createRedisRateLimitStore } = require('../../src/accessi-service/security/rateLimitStore');
+const { createRedisConsoleEntryStore } = require('../../src/accessi-service/security/consoleEntry');
+const { createRedisSessionRevocationStore } = require('../../src/accessi-service/security/sessionRevocation');
 const {
   createRedisRefreshTokenRotationStore,
-} = require('../../src/accessi-module/security/refreshTokenRotation');
+} = require('../../src/accessi-service/security/refreshTokenRotation');
 const {
   createRedisAccessTokenRevocationStore,
-} = require('../../src/accessi-module/security/accessTokenRevocation');
+} = require('../../src/accessi-service/security/accessTokenRevocation');
 
 const REDIS_URL = (process.env.ACCESSI_TEST_REDIS_URL ?? '').trim();
 const REQUIRE_REDIS = process.env.ACCESSI_TEST_REQUIRE_REDIS === '1';

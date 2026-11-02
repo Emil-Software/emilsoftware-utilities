@@ -8,28 +8,28 @@ const {
   createAccessiJwksHandler,
   getAccessiJwksPath,
   setupAccessiJwks,
-} = require('../src/accessi-module/security/jwks');
+} = require('../src/accessi-service/security/jwks');
 const {
   createMemoryConsoleEntryStore,
   createRedisConsoleEntryStore,
-} = require('../src/accessi-module/security/consoleEntry');
-const { ConsoleEntryController } = require('../src/accessi-module/controllers/ConsoleEntryController');
+} = require('../src/accessi-service/security/consoleEntry');
+const { ConsoleEntryController } = require('../src/accessi-service/controllers/ConsoleEntryController');
 const {
   createMemoryRateLimitStore,
   createRedisRateLimitStore,
-} = require('../src/accessi-module/security/rateLimitStore');
-const { checkPublicAuthRateLimit } = require('../src/accessi-module/security/publicAuthRateLimit');
-const { assertServiceTokenRateLimit } = require('../src/accessi-module/security/serviceTokenRateLimit');
-const { createAccessiEdgeRateLimitMiddleware } = require('../src/accessi-module/security/edgeRateLimit');
-const { AccessiJwksBootstrapService } = require('../src/accessi-module/security/jwksBootstrap');
-const { FederatedAuthExchangeController } = require('../src/accessi-module/federated-auth/FederatedAuthExchangeController');
-const { AccessiConsoleController } = require('../src/accessi-module/controllers/AccessiConsoleController');
+} = require('../src/accessi-service/security/rateLimitStore');
+const { checkPublicAuthRateLimit } = require('../src/accessi-service/security/publicAuthRateLimit');
+const { assertServiceTokenRateLimit } = require('../src/accessi-service/security/serviceTokenRateLimit');
+const { createAccessiEdgeRateLimitMiddleware } = require('../src/accessi-service/security/edgeRateLimit');
+const { AccessiJwksBootstrapService } = require('../src/accessi-service/security/jwksBootstrap');
+const { FederatedAuthExchangeController } = require('../src/accessi-service/federated-auth/FederatedAuthExchangeController');
+const { AccessiConsoleController } = require('../src/accessi-service/controllers/AccessiConsoleController');
 const {
   createMemorySessionRevocationStore,
   createRedisSessionRevocationStore,
   isAccessiTokenRevoked,
   revokeAccessiUserSessions,
-} = require('../src/accessi-module/security/sessionRevocation');
+} = require('../src/accessi-service/security/sessionRevocation');
 
 function rsaKeys() {
   return generateKeyPairSync('rsa', {

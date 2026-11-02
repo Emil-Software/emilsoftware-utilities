@@ -6,13 +6,13 @@ const http = require('node:http');
 const express = require('express');
 const {
   createAccessiEdgeRateLimitMiddleware,
-} = require('../src/accessi-module/security/edgeRateLimit');
+} = require('../src/accessi-service/security/edgeRateLimit');
 const {
   checkPublicAuthRateLimit,
-} = require('../src/accessi-module/security/publicAuthRateLimit');
+} = require('../src/accessi-service/security/publicAuthRateLimit');
 const {
   createMemoryRateLimitStore,
-} = require('../src/accessi-module/security/rateLimitStore');
+} = require('../src/accessi-service/security/rateLimitStore');
 
 function recordingStore() {
   const inner = createMemoryRateLimitStore();

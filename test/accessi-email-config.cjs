@@ -5,15 +5,15 @@ const assert = require('node:assert/strict');
 
 const { Orm } = require('../src/Orm');
 const { CryptUtilities, PasswordUtilities } = require('../src/Utilities');
-const { AccessiModule } = require('../src/accessi-module/AccessiModule');
-const { UserService } = require('../src/accessi-module/services/user-service/UserService');
-const { EmailService } = require('../src/accessi-module/services/email-service/EmailService');
+const { AccessiModule } = require('../src/accessi-service/AccessiModule');
+const { UserService } = require('../src/accessi-service/services/user-service/UserService');
+const { EmailService } = require('../src/accessi-service/services/email-service/EmailService');
 const {
   isEmailConfigured,
   assertEmailConfigured,
   AccessiEmailNotConfiguredError,
   ACCESSI_EMAIL_NOT_CONFIGURED,
-} = require('../src/accessi-module/security/emailConfiguration');
+} = require('../src/accessi-service/security/emailConfiguration');
 
 const validEmail = () => ({
   host: 'localhost',

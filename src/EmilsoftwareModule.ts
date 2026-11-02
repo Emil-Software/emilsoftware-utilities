@@ -1,6 +1,6 @@
 import { DynamicModule, Module } from "@nestjs/common";
 import type { LoggerService } from "@nestjs/common";
-import { AccessiModule, AccessiOptions } from "./accessi-module/AccessiModule";
+import { AccessiModule, AccessiOptions } from "./accessi-service/AccessiModule";
 import { AllegatiModule, AllegatiOptions } from "./allegati-module/AllegatiModule";
 import { Logger } from "./Logger";
 import type { OpenApiSetupOptions } from "./openapi/OpenApiConfig";

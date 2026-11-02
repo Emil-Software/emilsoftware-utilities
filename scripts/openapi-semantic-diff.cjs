@@ -14,7 +14,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 
 const HTTP_METHODS = ['get', 'post', 'put', 'patch', 'delete', 'options', 'head'];
-const SPEC_PATH = path.join(__dirname, '..', 'src', 'accessi-module', 'openapi', 'accessi.openapi.json');
+const SPEC_PATH = path.join(__dirname, '..', 'src', 'accessi-service', 'openapi', 'accessi.openapi.json');
 const BASELINE_PATH = path.join(__dirname, '..', 'docs', 'accessi-openapi-baseline.json');
 const ALLOWLIST_PATH = path.join(__dirname, '..', 'docs', 'accessi-openapi-breaking-allowlist.json');
 

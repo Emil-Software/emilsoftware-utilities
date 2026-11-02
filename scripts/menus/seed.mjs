@@ -20,7 +20,7 @@ import {
 const SEED_PATH = path.join(
   ROOT,
   'src',
-  'accessi-module',
+  'accessi-service',
   'database-updates',
   'menuScopeSeed.ts',
 );

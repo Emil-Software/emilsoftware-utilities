@@ -18,13 +18,13 @@ const {
   resolveAccessiVerificationKeys,
   validateAccessiOptions,
   verifyAccessiJwt,
-} = require('../src/accessi-module');
+} = require('../src/accessi-service');
 const {
   parseAccessiPreviousPublicKeys,
-} = require('../src/accessi-module/database-updates/accessiOptionsFromEnv');
+} = require('../src/accessi-service/database-updates/accessiOptionsFromEnv');
 const {
   getAccessiJwtSecret,
-} = require('../src/accessi-module/security/passwordResetToken');
+} = require('../src/accessi-service/security/passwordResetToken');
 const {
   createAccessiTokenVerifier,
 } = require('../src/accessi/resource-server');

@@ -223,7 +223,7 @@ export function loadOrvalClient() {
   const clientPath = path.join(
     ROOT,
     'dist',
-    'accessi-module',
+    'accessi-service',
     'console',
     'generated',
     'emilsoftware-utilities.js',
@@ -231,7 +231,7 @@ export function loadOrvalClient() {
   if (!fs.existsSync(clientPath)) {
     throw new Error('Client Orval non compilato: esegui "npm run build" in emilsoftware-utilities.');
   }
-  const fetchPath = path.join(ROOT, 'dist', 'accessi-module', 'console', 'accessiFetch.js');
+  const fetchPath = path.join(ROOT, 'dist', 'accessi-service', 'console', 'accessiFetch.js');
   const api = require(clientPath);
   const mutator = fs.existsSync(fetchPath) ? require(fetchPath) : {};
   return { ...api, setAccessiConsoleToken: mutator.setAccessiConsoleToken };

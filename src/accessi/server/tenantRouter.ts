@@ -1,6 +1,6 @@
 import type { NextFunction, Request, RequestHandler, Response } from 'express';
 import type { AccessiTenant, AccessiTenantRegistry } from './tenants';
-import { runWithAccessiTenant } from '../../accessi-module/tenancy/tenantContext';
+import { runWithAccessiTenant } from '../../accessi-service/tenancy/tenantContext';
 
 /** Request arricchita dal router con il tenant risolto. */
 export interface AccessiTenantAwareRequest extends Request {

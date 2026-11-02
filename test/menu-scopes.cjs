@@ -5,7 +5,7 @@ const {
   MENU_SCOPE_SEED,
   MENU_SCOPE_SEED_VERSION,
   SCOPE_SEED,
-} = require('../src/accessi-module/database-updates/menuScopeSeed');
+} = require('../src/accessi-service/database-updates/menuScopeSeed');
 
 test('seed scope: catalogo coerente e associato ai menu', () => {
   const scopeCodes = new Set(SCOPE_SEED.map((scope) => scope.code));

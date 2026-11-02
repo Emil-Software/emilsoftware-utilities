@@ -5,4 +5,4 @@
  * OpenAPI di Nest. Sono adatti a backend e test, non a bundle frontend leggeri:
  * per i frontend usare i tipi generati dal client OpenAPI.
  */
-export * from "../../accessi-module/dtos";
+export * from "../../accessi-service/dtos";

@@ -1,4 +1,4 @@
-<!-- Documento generato automaticamente da src/accessi-module/console/wiki.ts. Non modificare a mano: npm run generate:accessi-wiki. -->
+<!-- Documento generato automaticamente da src/accessi-service/console/wiki.ts. Non modificare a mano: npm run generate:accessi-wiki. -->
 
 # Guida compatta per l'IA
 

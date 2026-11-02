@@ -6,16 +6,16 @@
  * `accessi/client/public`.
  */
 import * as generated from '../generated/admin';
-import type { AccessiClientConfig } from '../../../accessi-module/console/accessiFetch';
+import type { AccessiClientConfig } from '../../../accessi-service/console/accessiFetch';
 import {
   createAccessiClientFromModule,
   type AccessiScopedClient,
 } from '../createAccessiClient';
 
 export * from '../generated/admin';
-export * from '../../../accessi-module/console/generated/model';
-export { AccessiRequestError } from '../../../accessi-module/console/accessiFetch';
-export type { AccessiClientConfig } from '../../../accessi-module/console/accessiFetch';
+export * from '../../../accessi-service/console/generated/model';
+export { AccessiRequestError } from '../../../accessi-service/console/accessiFetch';
+export type { AccessiClientConfig } from '../../../accessi-service/console/accessiFetch';
 
 /** Client admin con configurazione isolata per istanza. */
 export type AccessiAdminClient = AccessiScopedClient<typeof generated>;

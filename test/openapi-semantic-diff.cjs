@@ -243,7 +243,7 @@ test('buildSnapshot risolve parametri e risposte con $ref', () => {
 });
 
 test('il contratto corrente non introduce breaking change rispetto alla baseline', (t) => {
-  const specPath = path.join(__dirname, '..', 'src', 'accessi-module', 'openapi', 'accessi.openapi.json');
+  const specPath = path.join(__dirname, '..', 'src', 'accessi-service', 'openapi', 'accessi.openapi.json');
   const baselinePath = path.join(__dirname, '..', 'docs', 'accessi-openapi-baseline.json');
   if (!fs.existsSync(specPath)) {
     t.skip('OpenAPI generato non presente: eseguire npm run generate:accessi-openapi');

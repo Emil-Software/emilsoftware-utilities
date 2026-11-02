@@ -1,15 +1,15 @@
-import type { AccessiOptions } from '../../accessi-module/AccessiModule';
+import type { AccessiOptions } from '../../accessi-service/AccessiModule';
 import { getAccessiTenantRedisPrefix } from './tenants';
-import { createRedisRateLimitStore } from '../../accessi-module/security/rateLimitStore';
-import type { RateLimitStore } from '../../accessi-module/security/rateLimitStore';
-import { createRedisConsoleEntryStore } from '../../accessi-module/security/consoleEntry';
-import type { ConsoleEntryStore } from '../../accessi-module/security/consoleEntry';
-import { createRedisSessionRevocationStore } from '../../accessi-module/security/sessionRevocation';
-import type { SessionRevocationStore } from '../../accessi-module/security/sessionRevocation';
-import { createRedisAccessTokenRevocationStore } from '../../accessi-module/security/accessTokenRevocation';
-import type { AccessTokenRevocationStore } from '../../accessi-module/security/accessTokenRevocation';
-import { createRedisRefreshTokenRotationStore } from '../../accessi-module/security/refreshTokenRotation';
-import type { RefreshTokenRotationStore } from '../../accessi-module/security/refreshTokenRotation';
+import { createRedisRateLimitStore } from '../../accessi-service/security/rateLimitStore';
+import type { RateLimitStore } from '../../accessi-service/security/rateLimitStore';
+import { createRedisConsoleEntryStore } from '../../accessi-service/security/consoleEntry';
+import type { ConsoleEntryStore } from '../../accessi-service/security/consoleEntry';
+import { createRedisSessionRevocationStore } from '../../accessi-service/security/sessionRevocation';
+import type { SessionRevocationStore } from '../../accessi-service/security/sessionRevocation';
+import { createRedisAccessTokenRevocationStore } from '../../accessi-service/security/accessTokenRevocation';
+import type { AccessTokenRevocationStore } from '../../accessi-service/security/accessTokenRevocation';
+import { createRedisRefreshTokenRotationStore } from '../../accessi-service/security/refreshTokenRotation';
+import type { RefreshTokenRotationStore } from '../../accessi-service/security/refreshTokenRotation';
 
 /** Client Redis minimo accettato dagli store Accessi. */
 export interface AccessiTenantRedisClient {

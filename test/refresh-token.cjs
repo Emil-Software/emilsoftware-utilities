@@ -3,13 +3,13 @@ require('reflect-metadata');
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
 const jwt = require('jsonwebtoken');
-const { AuthService } = require('../src/accessi-module/services/auth-service/AuthService');
-const { createMemorySessionRevocationStore } = require('../src/accessi-module/security/sessionRevocation');
+const { AuthService } = require('../src/accessi-service/services/auth-service/AuthService');
+const { createMemorySessionRevocationStore } = require('../src/accessi-service/security/sessionRevocation');
 const {
   createMemoryRefreshTokenRotationStore,
   createRedisRefreshTokenRotationStore,
-} = require('../src/accessi-module/security/refreshTokenRotation');
-const { getAccessiJwtSecret } = require('../src/accessi-module/security/passwordResetToken');
+} = require('../src/accessi-service/security/refreshTokenRotation');
+const { getAccessiJwtSecret } = require('../src/accessi-service/security/passwordResetToken');
 
 const USER = {
   codiceUtente: 42,

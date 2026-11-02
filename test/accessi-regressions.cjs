@@ -1,4 +1,4 @@
-﻿require('ts-node/register/transpile-only');
+require('ts-node/register/transpile-only');
 require('reflect-metadata');
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
@@ -8,19 +8,19 @@ const path = require('node:path');
 const { DailyFileTransport } = require('../src/DailyFileTransport');
 const { Logger } = require('../src/Logger');
 const { Orm } = require('../src/Orm');
-const { PermissionService } = require('../src/accessi-module/services/permission-service/PermissionService');
-const { UserService } = require('../src/accessi-module/services/user-service/UserService');
-const { buildAuthenticatedTokenPayload, resolveCodiceUtenteFromTokenPayload, extractAccessiBearerToken, isLoginAsTokenPayload, isAccessiTokenAllowedForUser } = require('../src/accessi-module/security/authenticatedToken');
-const { ensureSuperUser, ensureAdmin, ensureUserManagement, ensureConsoleAccess, ensureSelfOrSuperUser, ensurePrivilegeFlagChanges, accessiUserRank, ensureCanManageTargetUser } = require('../src/accessi-module/security/accessControl');
-const { collectPasswordPolicyViolations, assertStrongPassword } = require('../src/accessi-module/security/passwordPolicy');
-const { AuthService } = require('../src/accessi-module/services/auth-service/AuthService');
-const { FederatedAuthService } = require('../src/accessi-module/federated-auth/FederatedAuthService');
-const { issueConsoleEntryTicket, consumeConsoleEntryTicket, clearConsoleEntryTickets } = require('../src/accessi-module/security/consoleEntry');
-const { buildLoginAsUrl, LOGIN_AS_QUERY_PARAM } = require('../src/accessi-module/security/loginAs');
+const { PermissionService } = require('../src/accessi-service/services/permission-service/PermissionService');
+const { UserService } = require('../src/accessi-service/services/user-service/UserService');
+const { buildAuthenticatedTokenPayload, resolveCodiceUtenteFromTokenPayload, extractAccessiBearerToken, isLoginAsTokenPayload, isAccessiTokenAllowedForUser } = require('../src/accessi-service/security/authenticatedToken');
+const { ensureSuperUser, ensureAdmin, ensureUserManagement, ensureConsoleAccess, ensureSelfOrSuperUser, ensurePrivilegeFlagChanges, accessiUserRank, ensureCanManageTargetUser } = require('../src/accessi-service/security/accessControl');
+const { collectPasswordPolicyViolations, assertStrongPassword } = require('../src/accessi-service/security/passwordPolicy');
+const { AuthService } = require('../src/accessi-service/services/auth-service/AuthService');
+const { FederatedAuthService } = require('../src/accessi-service/federated-auth/FederatedAuthService');
+const { issueConsoleEntryTicket, consumeConsoleEntryTicket, clearConsoleEntryTickets } = require('../src/accessi-service/security/consoleEntry');
+const { buildLoginAsUrl, LOGIN_AS_QUERY_PARAM } = require('../src/accessi-service/security/loginAs');
 const jwt = require('jsonwebtoken');
-const { SchemaExportService } = require('../src/accessi-module/services/schema-export-service/SchemaExportService');
-const { AdminBootstrapService } = require('../src/accessi-module/services/admin-bootstrap-service/AdminBootstrapService');
-const adminBootstrap = require('../src/accessi-module/security/adminBootstrap');
+const { SchemaExportService } = require('../src/accessi-service/services/schema-export-service/SchemaExportService');
+const { AdminBootstrapService } = require('../src/accessi-service/services/admin-bootstrap-service/AdminBootstrapService');
+const adminBootstrap = require('../src/accessi-service/security/adminBootstrap');
 
 test('daily logs append across restart and rotate at local midnight even when idle', async t => {
   const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'accessi-logs-'));

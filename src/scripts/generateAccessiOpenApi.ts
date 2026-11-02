@@ -4,7 +4,7 @@ import { ExpressAdapter } from '@nestjs/platform-express';
 import express from 'express';
 import { mkdir, writeFile } from 'fs/promises';
 import { join } from 'path';
-import { AccessiModule, AccessiOptions } from '../accessi-module/AccessiModule';
+import { AccessiModule, AccessiOptions } from '../accessi-service/AccessiModule';
 
 /**
  * Esporta il contratto OpenAPI dai decorator Nest senza avviare il database.
@@ -39,7 +39,7 @@ async function generateAccessiOpenApi(): Promise<void> {
     app,
     new DocumentBuilder().setTitle('Accessi API').setVersion('1.0').addBearerAuth().build(),
   );
-  const outputDirectory = join(process.cwd(), 'src', 'accessi-module', 'openapi');
+  const outputDirectory = join(process.cwd(), 'src', 'accessi-service', 'openapi');
   await mkdir(outputDirectory, { recursive: true });
   await writeFile(join(outputDirectory, 'accessi.openapi.json'), `${JSON.stringify(document, null, 2)}\n`);
   await app.close();

@@ -5,7 +5,7 @@ import type { AccessiAccessTokenPayload } from "../contracts";
 import { extractAccessiBearerToken, resolveCodiceUtenteFromTokenPayload } from "../contracts";
 import { accessiAuthError } from "./errors";
 import { deriveAccessiAccessSecret } from "./keys";
-import { recordAccessiMetric } from "../../accessi-module/observability/metrics";
+import { recordAccessiMetric } from "../../accessi-service/observability/metrics";
 import type { AccessiJwtAlgorithm, AccessiResourceServerJwtOptions, AccessiUnknownKeyIdEvent } from "./types";
 
 /** Esito della verifica locale di un access token. */

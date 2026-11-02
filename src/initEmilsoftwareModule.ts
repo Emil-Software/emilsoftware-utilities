@@ -15,15 +15,15 @@ import {
     beginAccessiAuthInitialization,
     failAccessiAuthInitialization,
     setAccessiAuthService
-} from "./accessi-module/middleware/authenticateGen";
-import { registerAccessiModuleServices } from "./accessi-module/accessiRuntime";
-import { logAccessiStartup } from "./accessi-module/startupLog";
-import { createAccessiValidationPipe } from './accessi-module/security/accessiValidation';
-import { AccessiHttpExceptionFilter } from './accessi-module/security/AccessiHttpExceptionFilter';
-import { getAccessiJwksPath, setupAccessiJwks } from './accessi-module/security/jwks';
-import { createAccessiEdgeRateLimitMiddleware } from './accessi-module/security/edgeRateLimit';
-import { createAccessiSecurityHeadersMiddleware } from './accessi-module/security/securityHeaders';
-import { createAccessiAuthCookieMiddleware } from './accessi-module/security/authCookies';
+} from "./accessi-service/middleware/authenticateGen";
+import { registerAccessiModuleServices } from "./accessi-service/accessiRuntime";
+import { logAccessiStartup } from "./accessi-service/startupLog";
+import { createAccessiValidationPipe } from './accessi-service/security/accessiValidation';
+import { AccessiHttpExceptionFilter } from './accessi-service/security/AccessiHttpExceptionFilter';
+import { getAccessiJwksPath, setupAccessiJwks } from './accessi-service/security/jwks';
+import { createAccessiEdgeRateLimitMiddleware } from './accessi-service/security/edgeRateLimit';
+import { createAccessiSecurityHeadersMiddleware } from './accessi-service/security/securityHeaders';
+import { createAccessiAuthCookieMiddleware } from './accessi-service/security/authCookies';
 
 /** Esito del bootstrap del modulo unificato. */
 export interface EmilsoftwareModuleInitializationResult {

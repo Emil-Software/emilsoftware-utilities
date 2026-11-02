@@ -89,6 +89,6 @@ test('#20: il root barrel e i deep import legacy continuano a funzionare', () =>
   assert.ok(resourceServer.createAccessiTokenVerifier !== undefined);
 
   // Deep import storico: supportato fino alla prossima major.
-  const legacy = require('../src/accessi-module/security/jwtTokenOptions');
+  const legacy = require('../src/accessi-service/security/jwtTokenOptions');
   assert.equal(typeof legacy.verifyAccessiJwt, 'function');
 });

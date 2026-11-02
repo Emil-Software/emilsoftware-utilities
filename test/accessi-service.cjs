@@ -2,10 +2,10 @@ require('ts-node/register/transpile-only');
 require('reflect-metadata');
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
-const accessiModule = require('../src/accessi-module');
-const { AccessiDatabaseUpdater } = require('../src/accessi-module/database-updates/AccessiDatabaseUpdater');
+const accessiModule = require('../src/accessi-service');
+const { AccessiDatabaseUpdater } = require('../src/accessi-service/database-updates/AccessiDatabaseUpdater');
 const { createAccessiService } = require('../src/accessi/server/standalone');
-const { validateAccessiOptions } = require('../src/accessi-module/security/validateOptions');
+const { validateAccessiOptions } = require('../src/accessi-service/security/validateOptions');
 
 const VALID_OPTIONS = {
   databaseOptions: {},

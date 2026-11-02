@@ -18,6 +18,7 @@
 !/test/menus-catalog.mjs
 !/test/menu-scopes.cjs
 !/test/accessi-email-config.cjs
+!/test/accessi-catalog-scripts.cjs
 !/test/accessi-schema.cjs
 !/test/accessi-regressions.cjs
 !/test/password-reset-regressions.cjs
@@ -51,4 +52,4 @@
 !/test/integration/**
 
 # Contratto OpenAPI generato (npm run generate:accessi-openapi)
-/src/accessi-module/openapi/
+/src/accessi-service/openapi/

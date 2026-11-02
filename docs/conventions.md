@@ -11,6 +11,23 @@ in CI.
   (`.github`, `.vscode`).
 - Non creare nuove cartelle PascalCase o camelCase.
 
+## Layout di Accessi
+
+Accessi è diviso in due livelli con responsabilità diverse:
+
+- `src/accessi/`: **facciata pubblica**. Contiene solo gli entry point
+  esportati in `package.json#exports` (`accessi/server`, `accessi/client`,
+  `accessi/contracts`, `accessi/resource-server`, `accessi/openapi`,
+  `accessi/console`, `accessi/ui`). Non contiene implementazione: riesporta,
+  adatta e documenta.
+- `src/accessi-service/`: **implementazione del servizio**. Contiene il modulo
+  Nest, controller, service, DTO, migrazioni database, console, sicurezza,
+  tenancy e osservabilità.
+
+Regola: il codice applicativo vive in `accessi-service`; se un consumer deve
+importarlo, va esposto da un entry point in `accessi/`. Non importare
+`src/accessi-service/...` direttamente da fuori del pacchetto.
+
 ## File
 
 ### `src/`

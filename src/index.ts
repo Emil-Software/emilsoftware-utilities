@@ -27,7 +27,7 @@ export * from "./ContractGenerator";
 export * from "./DatabaseUpdater";
 export * from "./firebirdCompat";
 
-export * from "./accessi-module";
+export * from "./accessi-service";
 export * from "./allegati-module";
 export * from "node-firebird";
 export { autobind, ExecutionTimeLogger, Logger, LogLevels, Orm, DateUtilities, RestUtilities, DatabaseUtilities, DatabaseUpdater, StatusCode, DocumentGenerator, Firebird };

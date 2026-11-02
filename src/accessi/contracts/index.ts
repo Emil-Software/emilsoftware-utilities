@@ -5,15 +5,15 @@
  * Contiene solo tipi, enum e helper puri condivisibili da backend, frontend e
  * resource server.
  */
-export { StatoRegistrazione, StatoRegistrazioneValues } from "../../accessi-module/dtos/StatoRegistrazione";
-export { TipoAbilitazione } from "../../accessi-module/dtos/TipoAbilitazione";
+export { StatoRegistrazione, StatoRegistrazioneValues } from "../../accessi-service/dtos/StatoRegistrazione";
+export { TipoAbilitazione } from "../../accessi-service/dtos/TipoAbilitazione";
 
 export {
   accessiRequirement,
   buildRequirementTree,
   evaluateRequirement,
   RequirementEvaluationError,
-} from "../../accessi-module/middleware/accessiRequirements";
+} from "../../accessi-service/middleware/accessiRequirements";
 
 export type {
   AccessiGrant,
@@ -27,7 +27,7 @@ export type {
   AccessiAuthorizationOptions,
   AccessiCustomRequirementContext,
   AccessiCustomRequirementHandler,
-} from "../../accessi-module/middleware/accessiRequirements";
+} from "../../accessi-service/middleware/accessiRequirements";
 
 export {
   extractAccessiBearerToken,
@@ -36,11 +36,11 @@ export {
   isLoginAsTokenPayload,
   isAccessiTokenAllowedForUser,
   isAuthenticatedUserEnabledForJwt,
-} from "../../accessi-module/security/authenticatedToken";
+} from "../../accessi-service/security/authenticatedToken";
 
 export type {
   AccessiAuthenticatedUserSnapshot,
-} from "../../accessi-module/security/authenticatedToken";
+} from "../../accessi-service/security/authenticatedToken";
 
 /** Payload di un access token Accessi verificato. Le claim extra restano disponibili. */
 export interface AccessiAccessTokenPayload extends Record<string, unknown> {

@@ -1,6 +1,6 @@
 # Emilsoftware Utilities
 
-Documentazione completa del modulo Accessi, generata da `src/accessi-module/console/wiki.ts` (stessa fonte della Wiki nella console):
+Documentazione completa del modulo Accessi, generata da `src/accessi-service/console/wiki.ts` (stessa fonte della Wiki nella console):
 
 - **[WIKI.md](WIKI.md)** — guida completa con indice, esempi corretti e antipattern.
 - **[WIKI.ai.md](WIKI.ai.md)** — versione compatta da fornire a un'IA che costruisce il backend.
@@ -65,7 +65,7 @@ git push origin main
 
 ## Accessi
 
-La documentazione operativa del modulo accessi si trova in [src/accessi-module/README.md](src/accessi-module/README.md).
+La documentazione operativa del modulo accessi si trova in [src/accessi-service/README.md](src/accessi-service/README.md).
 
 ## Componenti Angular / Browser
 

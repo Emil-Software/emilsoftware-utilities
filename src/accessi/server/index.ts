@@ -5,7 +5,7 @@
  * console e servizi Nest completi. I backend fratelli devono usare
  * `accessi/resource-server` e `accessi/client`.
  */
-export * from "../../accessi-module";
+export * from "../../accessi-service";
 export * from "./standalone";
 export * from "./tenants";
 export * from "./tenantStores";
@@ -15,11 +15,11 @@ export {
   runWithAccessiTenant,
   getAccessiTenantContext,
   getAccessiTenantId,
-} from "../../accessi-module/tenancy/tenantContext";
-export type { AccessiTenantContext } from "../../accessi-module/tenancy/tenantContext";
-export type { AccessiOptions as AccessiServerOptions } from "../../accessi-module";
+} from "../../accessi-service/tenancy/tenantContext";
+export type { AccessiTenantContext } from "../../accessi-service/tenancy/tenantContext";
+export type { AccessiOptions as AccessiServerOptions } from "../../accessi-service";
 export {
   createAccessiOptionsFromEnv,
   createCatalogScriptsOptionsFromEnv,
   parseAccessiPreviousPublicKeys,
-} from "../../accessi-module/database-updates/accessiOptionsFromEnv";
+} from "../../accessi-service/database-updates/accessiOptionsFromEnv";

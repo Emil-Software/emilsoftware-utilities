@@ -9,9 +9,9 @@
     "skipLibCheck": true
   },
   "include": [
-    "src/accessi-module/console/**/*.ts"
+    "src/accessi-service/console/**/*.ts"
   ],
   "exclude": [
-    "src/accessi-module/console/**/*.test.ts"
+    "src/accessi-service/console/**/*.test.ts"
   ]
 }

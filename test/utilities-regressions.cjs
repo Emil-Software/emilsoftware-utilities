@@ -7,10 +7,10 @@ const os = require('node:os');
 const path = require('node:path');
 const { PasswordUtilities, RestUtilities, DateUtilities } = require('../src/Utilities');
 const { Orm } = require('../src/Orm');
-const { getTableColumns, clearTableColumnsCache } = require('../src/accessi-module/database-updates/optionalColumns');
+const { getTableColumns, clearTableColumnsCache } = require('../src/accessi-service/database-updates/optionalColumns');
 const { autobind } = require('../src/autobind');
 const { Logger } = require('../src/Logger');
-const { checkPublicAuthRateLimit } = require('../src/accessi-module/security/publicAuthRateLimit');
+const { checkPublicAuthRateLimit } = require('../src/accessi-service/security/publicAuthRateLimit');
 const { AllegatiAuthorizationGuard } = require('../src/allegati-module/security/allegatiAuthorizationGuard');
 const { toUtcDate, normalizeFirebirdResult } = require('../src/firebirdCompat');
 

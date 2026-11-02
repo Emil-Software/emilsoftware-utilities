@@ -52,7 +52,7 @@ Novità e modifiche rilevanti della libreria `emilsoftware-utilities` (modulo Ac
 
 ### Cambiamenti
 - ORM: `Row` e `DbValue` sono i tipi predefiniti di `Orm.query` e `Orm.execute`; `transactionQuery` usa `Row[]`. Gli usi generici non devono più dichiarare `Record<string, unknown>`.
-- Build: il contratto OpenAPI generato (`src/accessi-module/openapi/`) è ignorato da Git e viene rigenerato da `npm run generate:accessi-openapi`.
+- Build: il contratto OpenAPI generato (`src/accessi-service/openapi/`) è ignorato da Git e viene rigenerato da `npm run generate:accessi-openapi`.
 
 ## 2.0.0-dev.49 (2026-10-15)
 

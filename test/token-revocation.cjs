@@ -3,25 +3,25 @@ require('reflect-metadata');
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
 const jwt = require('jsonwebtoken');
-const { AuthService } = require('../src/accessi-module/services/auth-service/AuthService');
-const { UserService } = require('../src/accessi-module/services/user-service/UserService');
+const { AuthService } = require('../src/accessi-service/services/auth-service/AuthService');
+const { UserService } = require('../src/accessi-service/services/user-service/UserService');
 const { Orm } = require('../src/Orm');
-const { StatoRegistrazione } = require('../src/accessi-module/dtos/StatoRegistrazione');
+const { StatoRegistrazione } = require('../src/accessi-service/dtos/StatoRegistrazione');
 const {
   createMemorySessionRevocationStore,
   isAccessiTokenRevoked,
   revokeAccessiUserSessionsIfConfigured,
-} = require('../src/accessi-module/security/sessionRevocation');
+} = require('../src/accessi-service/security/sessionRevocation');
 const {
   createMemoryRefreshTokenRotationStore,
   createRedisRefreshTokenRotationStore,
-} = require('../src/accessi-module/security/refreshTokenRotation');
+} = require('../src/accessi-service/security/refreshTokenRotation');
 const {
   createMemoryAccessTokenRevocationStore,
   createRedisAccessTokenRevocationStore,
   revokeAccessiAccessToken,
   revokeAccessiAccessTokenIfConfigured,
-} = require('../src/accessi-module/security/accessTokenRevocation');
+} = require('../src/accessi-service/security/accessTokenRevocation');
 
 const USER = {
   codiceUtente: 42,

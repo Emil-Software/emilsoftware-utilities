@@ -8,8 +8,8 @@ const {
   buildAccessiContentSecurityPolicy,
   createAccessiSecurityHeadersMiddleware,
   resolveAccessiSecurityHeaders,
-} = require('../src/accessi-module');
-const { AccessiConsoleController } = require('../src/accessi-module/controllers/AccessiConsoleController');
+} = require('../src/accessi-service');
+const { AccessiConsoleController } = require('../src/accessi-service/controllers/AccessiConsoleController');
 
 function resolved(setting) {
   const value = resolveAccessiSecurityHeaders(setting);

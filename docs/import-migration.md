@@ -1,18 +1,20 @@
 # Migrazione agli entry point Accessi
 
 Il root barrel (`emilsoftware-utilities`) e i deep import
-(`emilsoftware-utilities/dist/accessi-module/...`) restano supportati **fino
-alla prossima major**. Da questa minor sono considerati legacy: i consumer
+(`emilsoftware-utilities/dist/accessi-service/...`) restano supportati **fino
+alla prossima major**. Il layout interno è cambiato: la vecchia cartella
+`dist/accessi-module` ora è `dist/accessi-service`; i subpath pubblici
+(`emilsoftware-utilities/accessi/*`) non cambiano. Da questa minor sono considerati legacy: i consumer
 devono passare agli entry point dichiarati in `package.json#exports`.
 
 ## Mappa consigliata
 
 | Uso | Import consigliato | Legacy |
 | --- | --- | --- |
-| Avvio Accessi Service | `emilsoftware-utilities/accessi/server` | root barrel, `dist/accessi-module` |
-| Contratti e helper browser-safe | `emilsoftware-utilities/accessi/contracts` | `dist/accessi-module/dtos` |
-| DTO Nest con validazione | `emilsoftware-utilities/accessi/contracts/dtos` | `dist/accessi-module/dtos` |
-| Verifica JWT in un backend fratello | `emilsoftware-utilities/accessi/resource-server` | `dist/accessi-module/...` |
+| Avvio Accessi Service | `emilsoftware-utilities/accessi/server` | root barrel, `dist/accessi-service` |
+| Contratti e helper browser-safe | `emilsoftware-utilities/accessi/contracts` | `dist/accessi-service/dtos` |
+| DTO Nest con validazione | `emilsoftware-utilities/accessi/contracts/dtos` | `dist/accessi-service/dtos` |
+| Verifica JWT in un backend fratello | `emilsoftware-utilities/accessi/resource-server` | `dist/accessi-service/...` |
 | Client OpenAPI completo | `emilsoftware-utilities/accessi/client` | root barrel |
 | Client solo API pubbliche | `emilsoftware-utilities/accessi/client/public` | — |
 | Client solo API admin | `emilsoftware-utilities/accessi/client/admin` | — |

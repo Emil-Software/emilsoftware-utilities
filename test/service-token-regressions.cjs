@@ -10,7 +10,7 @@ const {
   normalizeServiceTokenScopes,
   serviceTokenHasScope,
   ServiceTokenService,
-} = require('../src/accessi-module/services/service-token-service/ServiceTokenService');
+} = require('../src/accessi-service/services/service-token-service/ServiceTokenService');
 
 const buildService = (overrides = {}) => new ServiceTokenService({ databaseOptions: {}, ...overrides });
 
@@ -99,7 +99,7 @@ test('issue + verify + revoke usano hash e controlli di stato', async (t) => {
 });
 
 test('rate limit service token consente N tentativi e poi blocca', async () => {
-  const { resetServiceTokenRateLimit, assertServiceTokenRateLimit } = require('../src/accessi-module/security/serviceTokenRateLimit');
+  const { resetServiceTokenRateLimit, assertServiceTokenRateLimit } = require('../src/accessi-service/security/serviceTokenRateLimit');
   resetServiceTokenRateLimit();
   for (let attempt = 0; attempt < 120; attempt += 1) {
     await assertServiceTokenRateLimit('198.51.100.9');
@@ -115,7 +115,7 @@ test('issue rifiuta scadenze passate e label vuote', async () => {
 });
 
 test('ServiceTokenGuard verifica, allega il token e applica gli scope', async () => {
-  const { ServiceTokenGuard } = require('../src/accessi-module/security/serviceTokenGuard');
+  const { ServiceTokenGuard } = require('../src/accessi-service/security/serviceTokenGuard');
   const verified = { tokenId: `st_${'a'.repeat(32)}`, label: 'ia', scopes: ['ia'] };
   const request = { headers: { authorization: `Bearer ${verified.tokenId}.segreto-lungo-abbastanza` } };
   const context = {

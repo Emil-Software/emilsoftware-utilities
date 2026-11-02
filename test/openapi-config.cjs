@@ -14,8 +14,8 @@ const {
   isOpenApiRequestPath,
   setupOpenApi,
 } = require('../src/openapi/OpenApiConfig');
-const { AccessiModule } = require('../src/accessi-module/AccessiModule');
-const { initializeAccessiModule } = require('../src/accessi-module');
+const { AccessiModule } = require('../src/accessi-service/AccessiModule');
+const { initializeAccessiModule } = require('../src/accessi-service');
 const { initEmilsoftwareModule } = require('../src/initEmilsoftwareModule');
 
 const HISTORICAL_DEFAULTS = {

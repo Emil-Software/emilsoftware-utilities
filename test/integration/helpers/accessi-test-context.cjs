@@ -5,7 +5,7 @@ require('reflect-metadata');
 
 const Firebird = require('node-firebird');
 const { DatabaseUtilities } = require('../../../src/Utilities');
-const { AccessiDatabaseUpdater } = require('../../../src/accessi-module/database-updates/AccessiDatabaseUpdater');
+const { AccessiDatabaseUpdater } = require('../../../src/accessi-service/database-updates/AccessiDatabaseUpdater');
 
 const TEST_CONFIG = {
   host: process.env.ACCESSI_TEST_DB_HOST || '127.0.0.1',

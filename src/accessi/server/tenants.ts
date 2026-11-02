@@ -16,16 +16,16 @@ import type {
   PublicRegistrationOptions,
   ServiceTokenOptions,
   SystemSeedsOptions,
-} from '../../accessi-module/AccessiModule';
-import type { AccessiEdgeRateLimitOptions } from '../../accessi-module/security/edgeRateLimit';
-import type { AccessiAuthCookieOptions } from '../../accessi-module/security/authCookies';
-import type { AccessiMetricsOptions } from '../../accessi-module/observability/metrics';
-import type { AccessiAuditOptions } from '../../accessi-module/security/audit';
-import type { SessionRevocationOptions } from '../../accessi-module/security/sessionRevocation';
-import type { AccessTokenRevocationOptions } from '../../accessi-module/security/accessTokenRevocation';
-import type { RefreshTokenRotationOptions } from '../../accessi-module/security/refreshTokenRotation';
+} from '../../accessi-service/AccessiModule';
+import type { AccessiEdgeRateLimitOptions } from '../../accessi-service/security/edgeRateLimit';
+import type { AccessiAuthCookieOptions } from '../../accessi-service/security/authCookies';
+import type { AccessiMetricsOptions } from '../../accessi-service/observability/metrics';
+import type { AccessiAuditOptions } from '../../accessi-service/security/audit';
+import type { SessionRevocationOptions } from '../../accessi-service/security/sessionRevocation';
+import type { AccessTokenRevocationOptions } from '../../accessi-service/security/accessTokenRevocation';
+import type { RefreshTokenRotationOptions } from '../../accessi-service/security/refreshTokenRotation';
 import type { OpenApiSetupOptions } from '../../openapi/OpenApiConfig';
-import { validateAccessiOptions } from '../../accessi-module/security/validateOptions';
+import { validateAccessiOptions } from '../../accessi-service/security/validateOptions';
 
 /** Identita e routing del tenant. */
 export interface AccessiTenantSettings {

@@ -12,8 +12,8 @@ import type {
   GetServiceTokensResponse,
   IntrospectAccessiTokenRequest,
   IntrospectAccessiTokenResponse
-} from '../../../accessi-module/console/generated/model'
-import { accessiFetch } from '../../../accessi-module/console/accessiFetch';
+} from '../../../accessi-service/console/generated/model'
+import { accessiFetch } from '../../../accessi-service/console/accessiFetch';
 
 
 /**

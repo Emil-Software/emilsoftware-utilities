@@ -3,9 +3,9 @@ import type {
   AccessiGrant,
   GrantsResult,
 } from "../contracts";
-import type { SessionRevocationStore } from "../../accessi-module/security/sessionRevocation";
-import type { AccessTokenRevocationStore } from "../../accessi-module/security/accessTokenRevocation";
-import type { RefreshTokenRotationStore } from "../../accessi-module/security/refreshTokenRotation";
+import type { SessionRevocationStore } from "../../accessi-service/security/sessionRevocation";
+import type { AccessTokenRevocationStore } from "../../accessi-service/security/accessTokenRevocation";
+import type { RefreshTokenRotationStore } from "../../accessi-service/security/refreshTokenRotation";
 
 /** Algoritmi JWT supportati dal resource server. */
 export type AccessiJwtAlgorithm =

@@ -1,4 +1,9 @@
-# Accessi Module
+# Accessi Service
+
+Implementazione del servizio Accessi (modulo Nest, controller, service, DTO,
+database, console, sicurezza e tenancy). La facciata pubblica con gli entry
+point del pacchetto vive in [`src/accessi/`](../accessi/); i consumer devono
+importare `emilsoftware-utilities/accessi/*`, mai `src/accessi-service/...`.
 
 > **Wiki completa**: [WIKI.md](../../WIKI.md) (indice, esempi corretti e antipattern) · versione compatta per l'IA: [WIKI.ai.md](../../WIKI.ai.md).
 > Sono generate da `console/wiki.ts` e rigenerate con `npm run generate:accessi-wiki`.

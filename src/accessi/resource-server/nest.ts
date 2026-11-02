@@ -9,7 +9,7 @@ import {
   UnauthorizedException,
 } from "@nestjs/common";
 import type { Request } from "express";
-import { auditAccessi } from "../../accessi-module/security/audit";
+import { auditAccessi } from "../../accessi-service/security/audit";
 import { AccessiResourceServerError } from "./errors";
 import { authenticateAccessiRequest, createAccessiResourceServer } from "./runtime";
 import type { AccessiResourceServerOptions } from "./types";

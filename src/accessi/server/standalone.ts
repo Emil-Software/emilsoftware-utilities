@@ -3,22 +3,22 @@ import type { Application, Request, Response } from 'express';
 import type { Server } from 'http';
 import { Logger } from '../../Logger';
 import { Orm } from '../../Orm';
-import { initializeAccessiModule } from '../../accessi-module';
+import { initializeAccessiModule } from '../../accessi-service';
 import type {
   AccessiModuleInitializationResult,
-} from '../../accessi-module';
-import type { AccessiOptions } from '../../accessi-module/AccessiModule';
-import { createAccessiOptionsFromEnv } from '../../accessi-module/database-updates/accessiOptionsFromEnv';
+} from '../../accessi-service';
+import type { AccessiOptions } from '../../accessi-service/AccessiModule';
+import { createAccessiOptionsFromEnv } from '../../accessi-service/database-updates/accessiOptionsFromEnv';
 import {
   checkAccessiReadiness,
   createAccessiLiveReport,
   readinessHttpStatus,
-} from '../../accessi-module/health/readiness';
-import type { AccessiReadinessCheck } from '../../accessi-module/health/readiness';
-import { assertValidAccessiOptions, validateAccessiOptions } from '../../accessi-module/security/validateOptions';
-import { renderAccessiMetrics } from '../../accessi-module/observability/metrics';
+} from '../../accessi-service/health/readiness';
+import type { AccessiReadinessCheck } from '../../accessi-service/health/readiness';
+import { assertValidAccessiOptions, validateAccessiOptions } from '../../accessi-service/security/validateOptions';
+import { renderAccessiMetrics } from '../../accessi-service/observability/metrics';
 
-export type { AccessiReadinessCheck } from '../../accessi-module/health/readiness';
+export type { AccessiReadinessCheck } from '../../accessi-service/health/readiness';
 
 
 export interface AccessiServiceOptions {

@@ -12,13 +12,13 @@ require('reflect-metadata');
 
 const { getContext } = require('../test/integration/helpers/accessi-test-context.cjs');
 const { Orm } = require('../src/Orm');
-const { UserService } = require('../src/accessi-module/services/user-service/UserService');
-const { FiltriService } = require('../src/accessi-module/services/filtri-service/FiltriService');
-const { PermissionService } = require('../src/accessi-module/services/permission-service/PermissionService');
-const { EmailService } = require('../src/accessi-module/services/email-service/EmailService');
-const { TwoFactorService } = require('../src/accessi-module/services/two-factor-service/TwoFactorService');
-const { AuthService } = require('../src/accessi-module/services/auth-service/AuthService');
-const { StatoRegistrazione } = require('../src/accessi-module/dtos/StatoRegistrazione');
+const { UserService } = require('../src/accessi-service/services/user-service/UserService');
+const { FiltriService } = require('../src/accessi-service/services/filtri-service/FiltriService');
+const { PermissionService } = require('../src/accessi-service/services/permission-service/PermissionService');
+const { EmailService } = require('../src/accessi-service/services/email-service/EmailService');
+const { TwoFactorService } = require('../src/accessi-service/services/two-factor-service/TwoFactorService');
+const { AuthService } = require('../src/accessi-service/services/auth-service/AuthService');
+const { StatoRegistrazione } = require('../src/accessi-service/dtos/StatoRegistrazione');
 
 async function main() {
   const email = (process.env.SEED_ADMIN_EMAIL || 'admin@example.test').trim().toLowerCase();
