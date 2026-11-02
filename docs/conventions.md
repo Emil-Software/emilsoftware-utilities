@@ -1,5 +1,8 @@
 # Convenzioni di nomenclatura
 
+Per chi contribuisce al repository. Indice della documentazione per ruolo in
+[README.md](README.md).
+
 Regole applicate a tutto il repository e verificate da `npm run check:naming`
 in CI.
 

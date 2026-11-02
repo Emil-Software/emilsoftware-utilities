@@ -1,5 +1,9 @@
 # Migrazione agli entry point Accessi
 
+Per chi aggiorna da V1, dal root barrel o dai deep import. Indice completo in
+[README.md](README.md); percorso di upgrade in
+[WIKI.md](../WIKI.md#versioni-migrazioni-e-deprecazioni).
+
 Il root barrel (`emilsoftware-utilities`) e i deep import
 (`emilsoftware-utilities/dist/accessi-service/...`) restano supportati **fino
 alla prossima major**. Il layout interno è cambiato: la vecchia cartella

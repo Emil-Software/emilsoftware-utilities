@@ -1,5 +1,10 @@
 # Autenticazione E Autorizzazione
 
+Per backend che montano Accessi e per backend fratelli. Indice completo in
+[`docs/README.md`](../../../docs/README.md); quickstart in
+[`quickstart-service.md`](../../../docs/quickstart-service.md) e
+[`quickstart-resource-server.md`](../../../docs/quickstart-resource-server.md).
+
 Questa sezione copre login, JWT, middleware e controlli sui permessi.
 
 ## Login
@@ -109,7 +114,7 @@ La console amministrativa (`/api/accessi/console`) usa lo stesso JWT Accessi del
 1. `POST /api/accessi/console/entry` con `Authorization: Bearer <jwt>` (utente con accesso console) -> `Result.ticket` (monouso, valido 60s).
 2. Apri `/api/accessi/console#entry=<ticket>`: la console scambia il ticket con la sessione e entra.
 
-Il JWT non viene mai messo nell'URL; lo scambio (`POST /api/accessi/console/entry/exchange`) e' pubblico, protetto da rate limit (`publicAuthRateLimit.consoleEntry`) e il ticket e' monouso e legato all'utente. Il ticket vive in memoria del processo: con piu' istanze usare sticky session o far completare lo scambio dall'istanza che lo ha emesso. L'accesso richiede `FLGSUPER` o `FLGADMIN`.
+Il JWT non viene mai messo nell'URL; lo scambio (`POST /api/accessi/console/entry/exchange`) e' pubblico, protetto da rate limit (`publicAuthRateLimit.consoleEntry`) e il ticket e' monouso e legato all'utente. In multi-istanza configurare `consoleEntry.store` con `createRedisConsoleEntryStore`: il ticket e' cifrato, ha TTL e il consume e' atomico tra le istanze. L'accesso richiede `FLGSUPER` o `FLGADMIN`.
 
 Handoff 2FA: il backend puo' reindirizzare a `/api/accessi/console/#two-factor=<challengeId>` per completare la verifica sulla console (fragment opaco, rimosso subito; vedi [Codici di accesso, 2FA e SSO](two-factor.md)).
 

@@ -1,4 +1,8 @@
-# Utenti, Ruoli E Permessi
+# Utenti, ruoli e permessi
+
+Per amministratori della console e backend che applicano policy. Indice completo
+in [`docs/README.md`](../../../docs/README.md); percorso console in
+[`WIKI.md`](../../../WIKI.md#console-amministrativa).
 
 Questa sezione copre anagrafica utenti, flag di privilegio, gerarchia, ruoli, permessi, filtri e configurazione menu.
 

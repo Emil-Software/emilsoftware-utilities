@@ -1,5 +1,9 @@
 # Test di concorrenza e carico su Redis
 
+Per sviluppatori e operations che modificano store condivisi. Indice completo in
+[README.md](README.md); store e multi-istanza in
+[WIKI.md](../WIKI.md#store-condivisi-e-multi-istanza).
+
 `npm run test:load:redis` verifica che rate limit, ticket console e refresh
 rotation restino corretti con più istanze Accessi sullo stesso Redis, e produce
 un report di throughput e latenza.

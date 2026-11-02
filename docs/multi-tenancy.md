@@ -1,5 +1,11 @@
 # Multi-tenancy operativa
 
+Questa guida è per chi deve isolare più clienti sullo stesso Accessi. Se ti
+serve un solo database per tutte le applicazioni, non usare la multi-tenancy:
+un Accessi Service con più backend resource server è più semplice e sufficiente
+per la maggior parte dei casi. La mappa completa della documentazione è in
+[README.md](README.md).
+
 Accessi supporta più tenant con **un database per tenant** e un processo di
 servizio per tenant. La configurazione sta in una cartella di file
 `*.environment.ts` tipizzati; la decisione architetturale è in

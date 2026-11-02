@@ -1,5 +1,8 @@
 # Header di sicurezza e CSP
 
+Per backend e team di sicurezza. Indice completo in [README.md](README.md);
+checklist di hardening in [WIKI.md](../WIKI.md#hardening-e-checklist-di-sicurezza).
+
 Accessi applica header di sicurezza alle proprie rotte (`/api/accessi/*`, JWKS e
 documentazione OpenAPI). La configurazione avviene in `http.securityHeaders`:
 

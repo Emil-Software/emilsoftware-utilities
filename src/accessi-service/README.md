@@ -8,13 +8,28 @@ importare `emilsoftware-utilities/accessi/*`, mai `src/accessi-service/...`.
 > **Wiki completa**: [WIKI.md](../../WIKI.md) (indice, esempi corretti e antipattern) · versione compatta per l'IA: [WIKI.ai.md](../../WIKI.ai.md).
 > Sono generate da `console/wiki.ts` e rigenerate con `npm run generate:accessi-wiki`.
 
-Documentazione divisa per argomenti, per renderla piu' leggibile e facile da aggiornare.
+Documentazione divisa per argomenti, per renderla più leggibile e facile da aggiornare.
+
+## Percorsi per ruolo
+
+| Ruolo | Documentazione |
+| --- | --- |
+| Frontend | [Quickstart frontend](../../docs/quickstart-frontend.md), [WIKI.md](../../WIKI.md#login-refresh-2fa-e-reset-password) |
+| Backend proprietario | [Quickstart servizio](../../docs/quickstart-service.md), [Configurazione](docs/configuration.md), [Database](docs/database-update.md) |
+| Backend fratello | [Quickstart resource server](../../docs/quickstart-resource-server.md), [Autenticazione](docs/authentication.md) |
+| Console e amministrazione | [Utenti, ruoli e permessi](docs/users-permissions.md), [WIKI.md](../../WIKI.md#console-amministrativa) |
+| Operations | [Standalone](../../docs/standalone-service.md), [Multi-tenancy](../../docs/multi-tenancy.md), [Metriche](../../docs/metrics.md), [Audit](../../docs/audit.md) |
+| Sicurezza | [JWT e rotazione](../../docs/jwt-key-rotation.md), [Header e CSP](../../docs/security-headers.md), [Cookie e CSRF](../../docs/auth-cookies.md) |
+| AI | [WIKI.ai.md](../../WIKI.ai.md), [integration-prompt.md](../../integration-prompt.md) |
+
+Indice generale per ruolo: [docs/README.md](../../docs/README.md).
 
 ## Indice
 
 - [Panoramica](docs/overview.md)
 - [Configurazione](docs/configuration.md)
 - [Autenticazione e autorizzazione](docs/authentication.md)
+- [Codici di accesso, 2FA e SSO](docs/two-factor.md)
 - [Utenti, ruoli e permessi](docs/users-permissions.md)
 - [Aggiornamento database](docs/database-update.md)
 

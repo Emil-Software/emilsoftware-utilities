@@ -113,6 +113,8 @@ function buildMarkdown(): string {
     'La stessa documentazione è disponibile, resa in modo interattivo, nella console Accessi su `/api/accessi/console/wiki`.',
     'Per una versione compatta da fornire a un\'IA che costruisce il backend integratore, vedi [`WIKI.ai.md`](WIKI.ai.md).',
     '',
+    'Percorsi per ruolo: [`docs/README.md`](docs/README.md) · quickstart [`service`](docs/quickstart-service.md), [`resource server`](docs/quickstart-resource-server.md), [`frontend`](docs/quickstart-frontend.md).',
+    '',
     '## Indice',
     '',
     toc,

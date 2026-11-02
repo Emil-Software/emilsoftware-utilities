@@ -1,5 +1,8 @@
 # Rotazione delle chiavi JWT
 
+Per sicurezza e operations. Indice completo in [README.md](README.md);
+procedura di upgrade in [WIKI.md](../WIKI.md#versioni-migrazioni-e-deprecazioni).
+
 Accessi firma gli access token (e i refresh token, se abilitati) con una chiave
 corrente e pubblica le chiavi pubbliche nella JWKS. La rotazione non deve
 invalidare i token gia emessi: durante il rollout la JWKS contiene la chiave

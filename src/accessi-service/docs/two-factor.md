@@ -1,5 +1,9 @@
 # Codici di accesso, 2FA e SSO
 
+Per backend e frontend che gestiscono il login. Indice completo in
+[`docs/README.md`](../../../docs/README.md); flusso browser in
+[`quickstart-frontend.md`](../../../docs/quickstart-frontend.md).
+
 La verifica email e **opzionale per utente**. Il flag esistente `flagDueFattori` / `UTENTI_CONFIG.FLG2FATT` la abilita; il default resta disattivo. La migrazione non attiva il flag sugli utenti. Eventuali utenti che lo avevano gia attivo iniziano a richiedere il codice.
 
 | Configurazione | Accesso locale | Accesso SSO |

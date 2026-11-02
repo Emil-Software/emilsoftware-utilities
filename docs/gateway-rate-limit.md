@@ -1,5 +1,8 @@
 # Gateway rate limit per Accessi Service
 
+Per operations e sicurezza. Indice completo in [README.md](README.md); rate
+limit applicativo in [WIKI.md](../WIKI.md#store-condivisi-e-multi-istanza).
+
 Il rate limit applicativo di Accessi protegge login, 2FA, reset password, console entry e service token. Il gateway/API gateway resta utile per una protezione per IP, connessioni e bot prima che la richiesta raggiunga Node.
 
 Regole consigliate:

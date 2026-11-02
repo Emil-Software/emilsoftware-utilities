@@ -1,5 +1,9 @@
 # IP reali dietro proxy
 
+Per operations: rate limit, audit e revoca dipendono da `req.ip`. Indice completo
+in [README.md](README.md); deploy e proxy in
+[WIKI.md](../WIKI.md#deploy-del-servizio).
+
 Rate limit, audit e revoca usano `req.ip`. Se il servizio sta dietro un load balancer o un reverse
 proxy, `req.ip` e l'indirizzo del proxy finche `http.trustProxy` non e configurato correttamente:
 

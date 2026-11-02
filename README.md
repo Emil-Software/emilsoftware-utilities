@@ -1,11 +1,59 @@
 # Emilsoftware Utilities
 
-Documentazione completa del modulo Accessi, generata da `src/accessi-service/console/wiki.ts` (stessa fonte della Wiki nella console):
+Libreria e servizio di identità per le applicazioni EmilSoftware.
 
-- **[WIKI.md](WIKI.md)** — guida completa con indice, esempi corretti e antipattern.
-- **[WIKI.ai.md](WIKI.ai.md)** — versione compatta da fornire a un'IA che costruisce il backend.
+## Accessi
 
-Rigenera entrambi con `npm run generate:accessi-wiki` (incluso in `npm run build`).
+Accessi gestisce autenticazione JWT, autorizzazione per menu, utenti e ruoli,
+2FA, SSO, token macchina-a-macchina e console amministrativa su database
+Firebird/InterBase. Può girare dentro un backend esistente oppure come servizio
+autonomo, con backend fratelli che verificano i token senza accedere al database
+Accessi.
+
+### Da dove iniziare
+
+| Sei... | Parti da |
+| --- | --- |
+| Frontend | [Quickstart frontend](docs/quickstart-frontend.md) |
+| Backend che possiede Accessi | [Quickstart servizio](docs/quickstart-service.md) |
+| Backend fratello (resource server) | [Quickstart resource server](docs/quickstart-resource-server.md) |
+| Operations / sicurezza | [WIKI.md](WIKI.md), [standalone-service.md](docs/standalone-service.md) |
+| Multi-tenant | [multi-tenancy.md](docs/multi-tenancy.md), [deploy/](deploy/) |
+| Migrazione o deprecazioni | [import-migration.md](docs/import-migration.md) |
+| Agente AI | [WIKI.ai.md](WIKI.ai.md), [integration-prompt.md](integration-prompt.md) |
+
+Indice completo per ruolo in [docs/README.md](docs/README.md).
+
+### Entry point
+
+| Import | Uso |
+| --- | --- |
+| `emilsoftware-utilities/accessi/server` | Backend proprietario: modulo Nest, bootstrap Express, DB, migrazioni, console, health |
+| `emilsoftware-utilities/accessi/resource-server` | Backend fratello: verifica JWT, guard/middleware, introspection, revoche |
+| `emilsoftware-utilities/accessi/client/public` | Frontend: login, refresh, 2FA, reset password, ticket console |
+| `emilsoftware-utilities/accessi/client/admin` | Console e tool amministrativi |
+| `emilsoftware-utilities/accessi/client/service` | Solo backend: service token e introspezione |
+| `emilsoftware-utilities/accessi/contracts` | Tipi e helper browser-safe |
+| `emilsoftware-utilities/accessi/openapi` | Setup e merge OpenAPI |
+| `emilsoftware-utilities/accessi/console` | URL console e ticket |
+| `emilsoftware-utilities/accessi/ui` | Asset Web Component |
+
+Il livello pubblico è `src/accessi/`; l'implementazione del servizio è
+`src/accessi-service/`. I consumer importano solo gli entry point
+`emilsoftware-utilities/accessi/*`: la regola completa è in
+[docs/conventions.md](docs/conventions.md#layout-di-accessi).
+
+### Documentazione
+
+- **[WIKI.md](WIKI.md)** — guida completa: percorsi, bootstrap, configurazione, autenticazione, autorizzazione, frontend, dominio, console, operazioni, FAQ e glossario.
+- **[WIKI.ai.md](WIKI.ai.md)** — versione compatta da fornire a un'IA.
+- **[integration-prompt.md](integration-prompt.md)** — contesto e prompt operativi per backend, frontend e agenti.
+- **[docs/README.md](docs/README.md)** — indice completo per ruolo e per documento.
+- **[src/accessi-service/README.md](src/accessi-service/README.md)** — documentazione operativa del servizio.
+
+Rigenera WIKI.md e WIKI.ai.md con `npm run generate:accessi-wiki` (incluso in
+`npm run build`).
+
 
 ## Convenzioni
 
@@ -62,10 +110,6 @@ Poi:
 git push origin dev
 Oppure:
 git push origin main
-
-## Accessi
-
-La documentazione operativa del modulo accessi si trova in [src/accessi-service/README.md](src/accessi-service/README.md).
 
 ## Componenti Angular / Browser
 

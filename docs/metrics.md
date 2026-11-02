@@ -1,5 +1,8 @@
 # Metriche e alert
 
+Per operations e SRE. Indice completo in [README.md](README.md); checklist
+operativa in [WIKI.md](../WIKI.md#health-metriche-e-audit).
+
 Accessi espone metriche di dominio in formato Prometheus. Il servizio standalone
 le include in `/health/metrics` insieme alle metriche HTTP di base; un host
 Nest/Express può montare `renderAccessiMetrics()` su una propria rotta protetta.

@@ -6,7 +6,14 @@
 La stessa documentazione è disponibile, resa in modo interattivo, nella console Accessi su `/api/accessi/console/wiki`.
 Per una versione compatta da fornire a un'IA che costruisce il backend integratore, vedi [`WIKI.ai.md`](WIKI.ai.md).
 
+Percorsi per ruolo: [`docs/README.md`](docs/README.md) · quickstart [`service`](docs/quickstart-service.md), [`resource server`](docs/quickstart-resource-server.md), [`frontend`](docs/quickstart-frontend.md).
+
 ## Indice
+
+**Percorsi**
+
+- [Scegli il percorso giusto](#scegli-il-percorso-giusto)
+- [Topologie di deployment](#topologie-di-deployment)
 
 **Per iniziare**
 
@@ -15,6 +22,7 @@ Per una versione compatta da fornire a un'IA che costruisce il backend integrato
 - [Bootstrap su Express esistente](#bootstrap-su-express-esistente)
 - [Bootstrap su NestJS esistente](#bootstrap-su-nestjs-esistente)
 - [Distribuzione multi-app e package entry point](#distribuzione-multi-app-e-package-entry-point)
+- [Verifica rapida dopo il bootstrap](#verifica-rapida-dopo-il-bootstrap)
 
 **Configurazione**
 
@@ -33,6 +41,12 @@ Per una versione compatta da fornire a un'IA che costruisce il backend integrato
 - [authorizeAccessi (middleware)](#authorizeaccessi-middleware)
 - [Resource server e introspection](#resource-server-e-introspection)
 - [Requisiti e livelli di abilitazione](#requisiti-e-livelli-di-abilitazione)
+
+**Frontend**
+
+- [Login, refresh, 2FA e reset password](#login-refresh-2fa-e-reset-password)
+- [Scegliere e configurare il client](#scegliere-e-configurare-il-client)
+- [Modalità cookie HttpOnly e CSRF](#modalità-cookie-httponly-e-csrf)
 
 **Dominio**
 
@@ -53,11 +67,129 @@ Per una versione compatta da fornire a un'IA che costruisce il backend integrato
 - [Console amministrativa](#console-amministrativa)
 - [Login as (accesso temporaneo)](#login-as-accesso-temporaneo)
 
+**Operazioni**
+
+- [Deploy del servizio](#deploy-del-servizio)
+- [Store condivisi e multi-istanza](#store-condivisi-e-multi-istanza)
+- [Hardening e checklist di sicurezza](#hardening-e-checklist-di-sicurezza)
+- [Health, metriche e audit](#health-metriche-e-audit)
+- [Multi-tenancy operativa](#multi-tenancy-operativa)
+- [Versioni, migrazioni e deprecazioni](#versioni-migrazioni-e-deprecazioni)
+
 **Riferimenti**
 
 - [Contratto errori e codici](#contratto-errori-e-codici)
 - [Indice degli endpoint](#indice-degli-endpoint)
 - [Antipattern e checklist](#antipattern-e-checklist)
+- [Problemi comuni e come risolverli](#problemi-comuni-e-come-risolverli)
+- [Glossario](#glossario)
+
+---
+
+## Scegli il percorso giusto
+
+_Chi sei, che cosa devi fare e quale entry point usare._
+
+Accessi è un servizio di identità, non una libreria da montare ovunque. Prima di scrivere codice individua il tuo ruolo nella topologia: cambiano entry point, permessi e responsabilità.
+
+| Sei... | Devi... | Entry point | Guida |
+| --- | --- | --- | --- |
+| Sviluppatore frontend | Login, refresh, 2FA, reset password, chiamare i backend con Bearer | accessi/client/public, accessi/console | Frontend |
+| Backend che possiede il database Accessi | Bootstrap, database, SMTP, migrazioni, console, API | accessi/server | Bootstrap e Operazioni |
+| Backend fratello | Verificare JWT e grant senza credenziali del database Accessi | accessi/resource-server | Resource server e introspection |
+| Console o tool amministrativo | Gestire utenti, ruoli, menu, SSO e token di servizio | accessi/client/admin | Console e Dominio |
+| Job o servizio tecnico | Introspezione token e scambio identità SSO | accessi/client/service | Token macchina-a-macchina |
+| Operations o SRE | Deploy, Redis, health, metriche, audit, backup | accessi/server, deploy/ | Operazioni |
+| DBA | Allineare e verificare lo schema Firebird | CLI db:update:accessi e db:check:accessi | Schema e aggiornamento del database |
+| Agente AI | Costruire un integrazione corretta senza inventare API | integration-prompt.md, WIKI.ai.md | Prompt di integrazione |
+
+> [!TIP]
+> **Regola d'oro**
+> Un solo Accessi Service possiede database, encryptionKey, SMTP, chiavi JWT e console. Gli altri backend sono resource server: verificano i token e chiedono i grant, senza credenziali del database Accessi.
+
+### Percorso minimo: backend che possiede Accessi
+
+1. Leggi Topologie di deployment e scegli servizio dedicato oppure embedded.
+2. Configura AccessiOptions con database, encryptionKey, SMTP e jwtOptions (issuer e audience espliciti).
+3. Chiama initializeAccessiModule oppure AccessiModule.forRoot e attendi il bootstrap prima di aprire la porta HTTP.
+4. Esegui la migrazione dello schema una sola volta e avvia le repliche con autoUpdateDatabase: false.
+5. Verifica /health/ready, crea il primo admin e prova login e una rotta protetta.
+
+### Percorso minimo: backend fratello
+
+1. Non installare AccessiModule e non configurare il database Accessi.
+2. Usa createAccessiAuthMiddleware (Express) o createAccessiAuthGuard (Nest) da accessi/resource-server.
+3. Verifica i JWT con publicKey/JWKS (consigliato) oppure serverSecret solo per HS256 transitorio.
+4. Configura introspection con un service token scope accessi:introspect se servono i grant correnti.
+5. Applica una policy esplicita sulle rotte sensibili e gestisci 401, 403 e 503 senza autorizzare per errore.
+
+### Percorso minimo: frontend
+
+1. Usa accessi/client/public: non importare mai il client admin o un service token nel browser.
+2. Chiama login su Accessi Service, conserva l'access token e gestisci refresh e 2FA.
+3. Verso i backend invia Authorization: Bearer. Non chiamare il database Accessi.
+4. Sul 401 porta l'utente al login; sul 403 mostra un messaggio di permessi insufficienti; sul 503 riprova senza perdere la sessione.
+5. Per la console usa buildAccessiConsoleUrl con il ticket monouso: il JWT non va mai nell'URL.
+
+> [!NOTE]
+> **Documentazione correlata**
+> La mappa completa di file e guide è in docs/README.md. I quickstart copiabili sono docs/quickstart-service.md, docs/quickstart-resource-server.md e docs/quickstart-frontend.md.
+
+---
+
+## Topologie di deployment
+
+_Embedded, servizio centrale o multi-tenant: vantaggi, limiti e quando scegliere quale._
+
+Accessi può vivere dentro un backend già esistente oppure come servizio autonomo. La scelta dipende da chi possiede il database, quanti backend devono autenticare le stesse persone e se serve isolamento tra clienti.
+
+### 1. Accessi embedded in un backend esistente
+
+- Il backend ospitante è anche il proprietario del database Accessi: monta AccessiModule o chiama initializeAccessiModule.
+- Va bene per una sola applicazione o per una fase di migrazione da un monolite.
+- Non montare lo stesso modulo in due backend puntati allo stesso database.
+- La console è servita dallo stesso backend su /api/accessi/console.
+
+### 2. Accessi Service dedicato (consigliato)
+
+**Topologia consigliata**
+
+```text
+Frontend A ─┐
+Frontend B ─┼──> Accessi Service (DB, SMTP, utenti, ruoli, console, SSO, 2FA)
+            │         ▲
+Backend A ──┼─────────┤  introspection / service token
+Backend B ──┘         │
+                      └──> Accessi DB (solo Accessi Service)
+```
+
+- Accessi Service usa accessi/server: possiede database, migrazioni, encryptionKey, SMTP, chiavi JWT e console.
+- I backend fratelli usano accessi/resource-server e non hanno credenziali del database Accessi.
+- I frontend usano accessi/client/public e chiamano i backend con il JWT Accessi.
+- Un solo punto di verità per utenti, ruoli e grant; la console resta centralizzata.
+- È la topologia da preferire quando più applicazioni condividono le stesse identità.
+
+### 3. Un processo per tenant
+
+- Un database e un processo Accessi per tenant: nessuna colonna tenant nel database.
+- Configurazione in file \<id\>.environment.ts tipizzati; validazione e avvio con npm run accessi:tenants.
+- Chiavi JWT, issuer, audience, encryptionKey e prefissi Redis separati per tenant.
+- Supervisore incluso con hot reload, oppure router in-process opt-in per ridurre i processi.
+- Dettagli operativi in docs/multi-tenancy.md e nella sezione Operazioni di questa wiki.
+
+| Topologia | Vantaggi | Limiti | Quando sceglierla |
+| --- | --- | --- | --- |
+| Embedded | Meno processi e deploy semplice | Un solo backend può possedere il DB | Applicazione singola o migrazione iniziale |
+| Servizio dedicato | Confini chiari, più backend, console unica | Un servizio in più da monitorare | Più applicazioni con le stesse identità |
+| Un processo per tenant | Isolamento forte di dati e chiavi | Più processi, più deploy e osservabilità per tenant | Clienti che richiedono database o chiavi separate |
+
+> [!WARNING]
+> **Non mescolare i modelli**
+> Non montare AccessiModule in un backend fratello e non condividere un database Accessi tra più proprietari. Se due processi eseguono migrazioni o emettono ticket console sullo stesso database, il comportamento diventa ambiguo.
+
+> [!NOTE]
+> **Quando basta un resource server**
+> Se il backend non gestisce utenti ma deve solo accettare i token emessi da Accessi Service, non gli serve accessi/server: usa accessi/resource-server e, se servono i grant correnti, l'introspection con un service token.
 
 ---
 
@@ -249,6 +381,39 @@ const [utentiMilano, utentiRoma] = await Promise.all([milano.getUsers(), roma.ge
 > [!NOTE]
 > **Prompt di integrazione**
 > Il file integration-prompt.md nella root del repository contiene il contesto completo per frontend, backend e agenti AI.
+
+---
+
+## Verifica rapida dopo il bootstrap
+
+_Checklist per capire subito se Accessi è configurato correttamente._
+
+Dopo il bootstrap non fidarti solo del log di avvio. Verifica nell'ordine questi punti: un errore a monte rende inutili tutti i test successivi.
+
+1. GET /health/live risponde 200: il processo è vivo.
+2. GET /health/ready risponde 200 e ogni check è verde: bootstrap completato, database raggiungibile, schema allineato e store Redis configurati raggiungibili.
+3. Il primo admin esiste: usa il bootstrap admin dalla console oppure crea l'utente con la CLI, poi disabilita adminBootstrap.
+4. POST /api/accessi/auth/login restituisce un token e Result.token.expiresIn è espresso in secondi.
+5. Una rotta protetta del backend accetta il token e popola req.user; senza token risponde 401 con un codice AUTH\_\*.
+6. Una rotta con requisito e utente senza grant risponde 403 AUTH\_INSUFFICIENT\_PERMISSIONS, non 401.
+7. Con Accessi Service spento, un backend fratello configurato con introspection risponde 503 e non autorizza.
+8. La console si apre e il ticket di ingresso è monouso; in multi-istanza lo store condiviso è configurato.
+
+**Health check**
+
+```bash
+curl -fsS https://accessi.example.com/health/live
+curl -fsS https://accessi.example.com/health/ready
+curl -fsS https://accessi.example.com/health/metrics | head
+```
+
+> [!TIP]
+> **Prima del rilascio**
+> Esegui npm run typecheck, npm test, npm run build, npm run test:pack e npm run check:accessi-openapi. Se hai modificato il contratto OpenAPI, aggiorna il fingerprint con npm run accessi:update-openapi-fingerprint.
+
+> [!WARNING]
+> **Segreti**
+> Non copiare token, ticket console, password o chiavi private nei log, nelle issue o nei documenti. Le verifiche manuali vanno fatte con un utente e un ambiente di test.
 
 ---
 
@@ -725,6 +890,235 @@ const empty = r.and();
 
 ---
 
+## Login, refresh, 2FA e reset password
+
+_Il flusso completo lato browser con accessi/client/public._
+
+Il frontend non monta Accessi e non vede il database: chiama Accessi Service, conserva l'access token e lo invia ai backend come Bearer. Il client pubblico espone solo le operazioni sicure per il browser.
+
+### Flusso di login
+
+1. POST /api/accessi/auth/login con email e password.
+2. Se la risposta contiene challenge e twoFactorRequired, il login non è completo: chiedi il codice e chiama verifyTwoFactor. Nessun JWT è stato emesso.
+3. Se la risposta contiene token, conserva token.value, token.expiresIn (secondi) e, se presente, refreshToken.
+4. Chiama i backend con Authorization: Bearer \<access-token\>.
+5. Prima della scadenza, o dopo un 401 AUTH\_TOKEN\_INVALID, usa refreshAccessToken e riprova una sola volta.
+6. Al logout chiama revokeToken per il token corrente oppure revokeSessions per tutte le sessioni.
+
+**Login dal browser**
+
+```ts
+import { configureAccessiClient, login } from 'emilsoftware-utilities/accessi/client/public';
+
+configureAccessiClient({ baseUrl: 'https://accessi.example.com' });
+
+const response = await login({ email, password });
+const result = response.data.Result;
+
+if (result.challenge?.twoFactorRequired) {
+  // Mostra il campo codice e chiama verifyTwoFactor({ challengeId, code })
+  return { twoFactor: result.challenge };
+}
+
+if (!result.token) throw new Error('Login senza token: controlla la configurazione');
+authStore.setAccessToken(result.token.value);
+authStore.setRefreshToken(result.refreshToken?.value ?? null);
+```
+
+### Refresh e retry
+
+**Refresh con un solo retry**
+
+```ts
+import { refreshAccessToken } from 'emilsoftware-utilities/accessi/client/public';
+
+async function apiFetch(input: RequestInfo, init: RequestInit = {}) {
+  const token = authStore.getAccessToken();
+  const response = await fetch(input, {
+    ...init,
+    headers: { ...init.headers, Authorization: `Bearer ${token}` },
+  });
+
+  if (response.status !== 401) return response;
+
+  const refreshToken = authStore.getRefreshToken();
+  if (!refreshToken) throw new Error("Sessione scaduta");
+
+  const refreshed = await refreshAccessToken({ refreshToken });
+  authStore.setAccessToken(refreshed.data.Result.token.value);
+  authStore.setRefreshToken(refreshed.data.Result.refreshToken?.value ?? null);
+
+  // Un solo retry: se fallisce di nuovo, logout.
+  return fetch(input, {
+    ...init,
+    headers: { ...init.headers, Authorization: `Bearer ${authStore.getAccessToken()}` },
+  });
+}
+```
+
+| Campo | Significato | Uso lato frontend |
+| --- | --- | --- |
+| Result.token.value | Access token JWT | Header Authorization verso i backend, mai nell URL |
+| Result.token.expiresIn | Durata in secondi | Programma il refresh prima della scadenza |
+| Result.refreshToken | Refresh token opzionale | Conservalo separato; non usarlo come Bearer |
+| Result.challenge | Challenge 2FA | Chiedi il codice e completa il login |
+| Result.passwordRequired | Passo password richiesto | Completa il flusso passwordless senza perdere la challenge |
+| Result.utente / userGrants | Profilo e grant | UI, menu e messaggi di permesso |
+
+### Errori da gestire
+
+| HTTP / codice | Cosa fare |
+| --- | --- |
+| 401 AUTH\_TOKEN\_MISSING / AUTH\_TOKEN\_INVALID | Nessun token o token scaduto: refresh e, se fallisce, login |
+| 401 AUTH\_USER\_DISABLED | Sessione non più valida: logout e messaggio dedicato |
+| 403 AUTH\_INSUFFICIENT\_PERMISSIONS | Non fare logout: mostra permessi insufficienti e nascondi l azione |
+| 403 AUTH\_CSRF\_INVALID | Cookie mode: rileggi il cookie CSRF e ripeti la richiesta |
+| 429 | Rate limit: rispetta Retry-After e non ritentare in loop |
+| 503 AUTH\_INTROSPECTION\_UNAVAILABLE / AUTH\_JWKS\_UNAVAILABLE | Servizio non raggiungibile: riprova con backoff, non cancellare la sessione |
+
+### 2FA
+
+La challenge 2FA è un identificativo opaco, non un JWT: non va usato come Bearer e non va salvato come sessione. verifyTwoFactor restituisce il login completo con token e refreshToken. resendTwoFactor rispetta resendAfterSeconds.
+
+### Reset password
+
+Il reset è un flusso pubblico in due passi: sendPasswordResetEmail invia il link, la pagina di reset arriva da Accessi oppure è custom, confirmResetPassword consuma il token monouso e imposta la nuova password. La nuova password deve rispettare la policy (minimo 8 caratteri, maiuscola, minuscola, cifra e carattere speciale). Dopo il reset le sessioni precedenti vengono revocate se sessionRevocation è configurato.
+
+> [!CAUTION]
+> **Mai nel browser**
+> Non importare accessi/client/admin, non usare accessi/client/service e non inserire service token, encryptionKey o chiavi JWT nel bundle. Non mettere JWT o ticket console nell URL o nei log.
+
+> [!NOTE]
+> **Dove conservare il token**
+> Con Bearer evita localStorage se puoi: memoria più refresh token in storage sicuro limita il danno di XSS. Se il browser non può proteggere il token, valuta la modalità cookie HttpOnly con CSRF descritta nella sezione successiva.
+
+---
+
+## Scegliere e configurare il client
+
+_Client pubblico, admin e service: scope, configurazione globale e per istanza._
+
+Il package espone client separati per scope. La scelta non è stilistica: un client troppo ampio porta nel bundle operazioni che il browser non deve poter chiamare.
+
+| Client | Contenuto | Dove usarlo |
+| --- | --- | --- |
+| accessi/client/public | Login, refresh, 2FA, reset password, registrazione, ticket console | Frontend pubblico e SPA |
+| accessi/client/admin | Utenti, ruoli, menu, filtri, provider SSO, schema, audit | Console e tool amministrativi interni |
+| accessi/client/service | Service token e introspezione | Solo backend fratelli e job, mai browser |
+| accessi/client | Client completo generato | Compatibilità e tool interni; non distribuirlo a frontend pubblici |
+| accessi/contracts | Tipi, enum e helper puri | Bundle browser-safe senza Nest o database |
+
+### Configurazione globale
+
+**Client globale**
+
+```ts
+import { configureAccessiClient, login } from 'emilsoftware-utilities/accessi/client/public';
+
+configureAccessiClient({ baseUrl: 'https://accessi.example.com' });
+const response = await login({ email, password });
+
+// Se il token cambia nel tempo, passa un provider invece del valore:
+configureAccessiClient({
+  baseUrl: 'https://accessi.example.com',
+  getToken: () => authStore.getAccessToken(),
+});
+```
+
+### Più Accessi Service o più tenant
+
+**Client isolati per istanza**
+
+```ts
+import { createAccessiPublicClient } from 'emilsoftware-utilities/accessi/client/public';
+
+const milano = createAccessiPublicClient({ baseUrl: 'https://accessi-milano.example.com' });
+const roma = createAccessiPublicClient({ baseUrl: 'https://accessi-roma.example.com', token: tokenRoma });
+
+const [utentiMilano, utentiRoma] = await Promise.all([milano.getUsers(), roma.getUsers()]);
+```
+
+Le istanze create con createAccessiPublicClient, createAccessiAdminClient e createAccessiServiceClient non condividono base URL né token: sono sicure anche con richieste concorrenti. configureAccessiClient resta il default globale per le funzioni esportate direttamente.
+
+### Link alla console
+
+**Apertura console**
+
+```ts
+import { buildAccessiConsoleUrl } from 'emilsoftware-utilities/accessi/console';
+
+const url = buildAccessiConsoleUrl('https://accessi.example.com', { entryTicket: ticket });
+window.location.assign(url);
+```
+
+> [!WARNING]
+> **Ticket, non JWT**
+> Il ticket console è monouso e dura 60 secondi. Non passare il JWT nell URL: buildAccessiConsoleUrl mette il ticket nel fragment e non nel query string.
+
+> [!NOTE]
+> **Tipi condivisi**
+> Tutti gli scope condividono gli stessi tipi generati dall OpenAPI. Se aggiorni il contratto, rigenera il client con npm run generate:accessi-client e verifica con npm run check:accessi-openapi.
+
+---
+
+## Modalità cookie HttpOnly e CSRF
+
+_Quando usare i cookie invece del Bearer e come configurare il browser._
+
+Bearer resta il default. La modalità cookie serve quando il browser non può custodire un access token in memoria in modo sicuro: Accessi invia access e refresh token in cookie HttpOnly e il browser non li legge da JavaScript.
+
+**Abilitazione lato server**
+
+```ts
+const accessiOptions: AccessiOptions = {
+  // ...
+  authCookie: {
+    enabled: true,
+    secure: true,
+    sameSite: 'lax',
+  },
+};
+```
+
+**Login e richiesta con cookie**
+
+```ts
+const response = await fetch('https://accessi.example.com/api/accessi/auth/login', {
+  method: 'POST',
+  credentials: 'include',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({ email, password }),
+});
+
+// Sulle richieste che modificano stato invia il token CSRF double-submit:
+const csrf = document.cookie.split('; ').find((c) => c.startsWith('accessi_csrf='))?.split('=')[1];
+await fetch('/api/ordini', {
+  method: 'POST',
+  credentials: 'include',
+  headers: {
+    'Content-Type': 'application/json',
+    'x-csrf-token': csrf ?? '',
+  },
+  body: JSON.stringify(payload),
+});
+```
+
+- Il login non restituisce più i token nel body, salvo exposeTokens: true.
+- Il refresh avviene dal cookie: POST /api/accessi/auth/refresh può essere chiamato con body vuoto.
+- Le richieste non sicure richiedono x-csrf-token; token mancante o diverso produce 403 AUTH\_CSRF\_INVALID.
+- CORS deve avere credentials: true e un origin esplicito, mai wildcard.
+- La revoca cancella i cookie; logout e revoke-sessions restano gli stessi endpoint.
+
+> [!CAUTION]
+> **CSRF obbligatorio**
+> Non disabilitare CSRF (csrf: off) se non hai un altra protezione equivalente davanti al servizio. Senza CSRF, un sito ostile può inviare richieste autenticate per conto dell utente.
+
+> [!NOTE]
+> **Convivenza con Bearer**
+> Il resource server continua a leggere l header Authorization. In cookie mode il middleware Accessi copia il cookie nell header interno, quindi guard e policy esistenti non cambiano.
+
+---
+
 ## Utenti
 
 _Creazione, aggiornamento, stati e GDPR._
@@ -1092,6 +1486,353 @@ Il token viene emesso anche per utenti con 2FA attiva: l'attore ha già completa
 
 ---
 
+## Deploy del servizio
+
+_Servizio standalone, variabili d ambiente, migrazioni e rollout senza downtime._
+
+Accessi Service è un processo Node che possiede database, migrazioni, SMTP, chiavi JWT e console. In produzione va eseguito come servizio gestito (systemd, container o supervisor) e protetto da TLS.
+
+**Avvio standalone**
+
+```ts
+import { startAccessiService } from 'emilsoftware-utilities/accessi/server';
+
+await startAccessiService({
+  port: Number(process.env.PORT ?? 3000),
+  healthPath: "/health",
+  metrics: true,
+});
+```
+
+### Variabili principali
+
+| Gruppo | Variabili | Note |
+| --- | --- | --- |
+| Database | ACCESSI\_DB\_HOST, ACCESSI\_DB\_PORT, ACCESSI\_DB\_DATABASE, ACCESSI\_DB\_USER, ACCESSI\_DB\_PASSWORD | Firebird 2.5 o successivo |
+| Sicurezza | ACCESSI\_ENCRYPTION\_KEY, ACCESSI\_JWT\_SECRET | Obbligatorie; mai nel repository |
+| JWT | ACCESSI\_JWT\_ALGORITHM, ACCESSI\_JWT\_PRIVATE\_KEY, ACCESSI\_JWT\_PUBLIC\_KEY, ACCESSI\_JWT\_KEY\_ID, ACCESSI\_JWKS\_PATH, ACCESSI\_JWT\_PREVIOUS\_PUBLIC\_KEYS | RS/ES consigliato in multi-servizio |
+| Token | ACCESSI\_JWT\_ISSUER, ACCESSI\_JWT\_AUDIENCE, ACCESSI\_JWT\_EXPIRES, ACCESSI\_JWT\_REFRESH\_EXPIRES | Issuer e audience espliciti per ambiente |
+| Email | ACCESSI\_EMAIL\_HOST, ACCESSI\_EMAIL\_PORT, ACCESSI\_EMAIL\_USER, ACCESSI\_EMAIL\_PASSWORD, ACCESSI\_EMAIL\_FROM | SMTP obbligatorio per reset, 2FA e inviti |
+| URL | ACCESSI\_PUBLIC\_BASE\_URL, ACCESSI\_CONFIRMATION\_EMAIL\_URL, ACCESSI\_CONFIRMATION\_RETURN\_EMAIL\_URL, ACCESSI\_CONSOLE\_API\_BASE\_URL | Link nelle email e console su dominio separato |
+| Console | ACCESSI\_CONSOLE\_ENTRY\_TTL\_MS, ACCESSI\_CONSOLE\_ENTRY\_KEY | Ticket monouso; store Redis in multi-istanza |
+
+### Rollout sicuro
+
+1. Costruisci l artefatto e valida la configurazione prima del deploy: assertValidAccessiOptions blocca gli errori evidenti.
+2. Esegui la migrazione dello schema con un solo processo (autoUpdateDatabase: true oppure npm run db:update:accessi).
+3. Avvia le repliche con autoUpdateDatabase: false: verificano lo schema in sola lettura e non eseguono DDL concorrenti.
+4. Attendi /health/ready prima di inviare traffico dal load balancer.
+5. Ruota una replica alla volta; il servizio gestisce SIGTERM/SIGINT e chiude Nest e i pool Firebird.
+6. Dopo il rollout verifica login, una rotta protetta, introspection e console.
+
+**systemd minimale**
+
+```ini
+[Unit]
+Description=Accessi Service
+After=network.target
+
+[Service]
+WorkingDirectory=/opt/accessi-service
+EnvironmentFile=/etc/accessi/accessi.env
+ExecStart=/usr/bin/node dist/scripts/startAccessiService.js
+Restart=on-failure
+RestartSec=5
+KillSignal=SIGTERM
+TimeoutStopSec=15
+
+[Install]
+WantedBy=multi-user.target
+```
+
+Template pronti per multi-tenant, Docker, Nginx e Traefik sono in deploy/: systemd/accessi-tenant@.service, systemd/tenant.secrets.example, docker/docker-compose.yml, nginx/accessi-tenants.conf e traefik/dynamic.yml. Non contengono segreti e vanno adattati.
+
+> [!WARNING]
+> **Migrazioni**
+> Non eseguire DDL concorrenti con più repliche o con traffico applicativo. Migra prima del rollout e lascia autoUpdateDatabase: false sulle repliche. Fai un backup e collauda su una copia rappresentativa.
+
+> [!WARNING]
+> **Proxy**
+> Imposta http.trustProxy sul numero esatto di proxy davanti al servizio (1 per Nginx/Traefik/ALB, 2 con Cloudflare più ingress). Un valore sbagliato rende rate limit e audit aggirabili tramite header.
+
+> [!NOTE]
+> **Dettagli**
+> Procedura completa in docs/standalone-service.md, deploy/README.md e docs/proxy-ip.md.
+
+---
+
+## Store condivisi e multi-istanza
+
+_Quali store devono stare su Redis e che cosa succede se Redis non risponde._
+
+Con una sola istanza gli store in memoria bastano. Con più repliche o più tenant gli store devono essere condivisi, altrimenti ticket, revoche e rate limit divergono tra processi.
+
+| Store | Opzione | Serve per | Se manca in multi-istanza |
+| --- | --- | --- | --- |
+| Rate limit pubblico | publicAuthRateLimit.store | Login, reset, 2FA, refresh, console entry | Contatori separati per istanza: il limite effettivo si moltiplica |
+| Rate limit service token | serviceTokens.rateLimitStore | Protezione API tecniche | Lo stesso token può superare il limite su istanze diverse |
+| Ticket console | consoleEntry.store | Ingresso console monouso | Il ticket emesso da una istanza non vale su un altra |
+| Revoca sessioni | sessionRevocation.store | Logout globale e cambio password | La revoca vale solo nel processo che la esegue |
+| Revoca access token | accessTokenRevocation.store | Logout del singolo jti | Il token revocato resta valido altrove |
+| Rotazione refresh | refreshTokenRotation.store | Refresh monouso e riuso sospetto | Due refresh concorrenti possono riuscire entrambi |
+| Audit | audit.store o audit.sinks | Record interrogabili e retention | Solo log locale, nessuna query admin |
+
+**Store condivisi**
+
+```ts
+import {
+  createRedisRateLimitStore,
+  createRedisConsoleEntryStore,
+  createRedisSessionRevocationStore,
+  createRedisAccessTokenRevocationStore,
+  createRedisRefreshTokenRotationStore,
+} from 'emilsoftware-utilities/accessi/server';
+
+const rateLimitStore = createRedisRateLimitStore({ client: redis, keyPrefix: "accessi:rate:" });
+
+const options: AccessiServerOptions = {
+  // ...
+  publicAuthRateLimit: { store: rateLimitStore },
+  serviceTokens: { enabled: true, rateLimitStore },
+  consoleEntry: { store: createRedisConsoleEntryStore({ client: redis, encryptionKey }) },
+  sessionRevocation: { store: createRedisSessionRevocationStore({ client: redis, ttlMs }) },
+  accessTokenRevocation: { store: createRedisAccessTokenRevocationStore({ client: redis }) },
+  refreshTokenRotation: { store: createRedisRefreshTokenRotationStore({ client: redis }) },
+};
+```
+
+### Multi-tenant
+
+**Prefissi automatici per tenant**
+
+```ts
+import { createAccessiTenantStores } from 'emilsoftware-utilities/accessi/server';
+
+const stores = createAccessiTenantStores({ tenantId: 'acme', client: redis });
+// rateLimit, consoleEntry, sessionRevocation, accessTokenRevocation,
+// refreshTokenRotation e serviceTokenRateLimit hanno già il prefisso del tenant.
+```
+
+- Non comporre i prefissi a mano: usa createAccessiTenantStores o getAccessiTenantRedisPrefix.
+- Ogni tenant deve avere chiavi JWT, issuer, audience e encryptionKey propri.
+- healthCheck() degli store partecipa a /health/ready: uno store irraggiungibile rende il servizio non pronto.
+- Se Redis non è raggiungibile i controlli falliscono chiusi: l endpoint risponde con errore e non autorizza.
+
+> [!WARNING]
+> **Fail closed**
+> Redis non disponibile non significa limiti disattivati. Significa che le operazioni protette da store condiviso rispondono con errore (spesso 503) finché lo store non torna disponibile.
+
+> [!NOTE]
+> **Test**
+> I test di integrazione Redis sono opt-in con ACCESSI\_TEST\_REDIS\_URL; carico e concorrenza sono in docs/redis-load-testing.md.
+
+---
+
+## Hardening e checklist di sicurezza
+
+_Le impostazioni che non vanno lasciate al caso in produzione._
+
+Accessi concentra identità, password, token e chiavi: la configurazione di sicurezza non è opzionale. Questa checklist vale per qualsiasi topologia.
+
+1. Database Accessi raggiungibile solo da Accessi Service: nessun backend fratello ha credenziali del DB.
+2. encryptionKey, SMTP, chiavi JWT private e token di bootstrap vivono in un secret manager, mai nel repository o nei file tenant versionati.
+3. In multi-servizio usa RS256 o ES256 con JWKS; HS256 con segreto condiviso solo come transizione.
+4. Imposta issuer e audience espliciti e diversi per ambiente: un token di staging non deve valere in produzione.
+5. Configura http.trustProxy con il numero esatto di proxy e non fidarti di header tenant o IP inviati dal client.
+6. CORS con origin espliciti: credentials: true solo se usi cookie e mai insieme a wildcard.
+7. Tieni attivi securityHeaders e CSP; se usi cookie, abilita CSRF double-submit e SameSite adeguato.
+8. Configura rate limit pubblico, service token ed edge rate limit; in multi-istanza usa store Redis.
+9. Service token con lo scope minimo (accessi:introspect, accessi:federated:exchange) e rotazione periodica; mai nel browser.
+10. Configura sessionRevocation, accessTokenRevocation e refreshTokenRotation: cambio password, disabilitazione e riuso devono invalidare le sessioni.
+11. Configura audit con retention e sink interrogabile; token, ticket, password e chiavi non devono finire nei log.
+12. Backup del database e test di ripristino; migrazioni collaudate su copia prima del rollout.
+
+| Rischio | Contromisura principale |
+| --- | --- |
+| Token di un altro ambiente | issuer e audience obbligatori, chiavi diverse per ambiente |
+| Furto di un access token | scadenza breve, revoca per jti, session revocation store condiviso |
+| Riuso di un refresh token | refresh rotation con store Redis e revoca della famiglia |
+| Rate limit aggirato | trustProxy corretto, edge rate limit, store condiviso |
+| XSS che ruba token | cookie HttpOnly con CSRF oppure token in memoria e CSP rigorosa |
+| CSRF su cookie mode | double-submit token e SameSite; mai csrf off senza protezione esterna |
+| Privilegi eccessivi | service token con scope minimo, gerarchia ADMIN \> SUPER, ultimo admin protetto |
+| Dati o token tra tenant | un processo e un DB per tenant, chiavi e prefissi Redis separati |
+| Perdita di audit | sink persistente, retention, export e alert su error rate |
+
+> [!CAUTION]
+> **Mai nel browser**
+> Non esporre accessi/client/admin o accessi/client/service a un frontend pubblico e non inserire service token, chiavi private o encryptionKey nel bundle.
+
+> [!NOTE]
+> **Dettagli**
+> CSP e header in docs/security-headers.md, cookie e CSRF in docs/auth-cookies.md, rotazione chiavi in docs/jwt-key-rotation.md, proxy in docs/proxy-ip.md e gateway in docs/gateway-rate-limit.md.
+
+---
+
+## Health, metriche e audit
+
+_Come capire se Accessi sta funzionando e che cosa monitorare._
+
+Il servizio standalone espone health e metriche; un host Nest/Express può montare gli stessi controlli con createAccessiHealthModule e renderAccessiMetrics.
+
+| Endpoint | Significato | Uso |
+| --- | --- | --- |
+| GET /health/live | Processo vivo | Liveness probe; non controlla il database |
+| GET /health/ready | Bootstrap, DB, schema e store pronti | Readiness probe del load balancer |
+| GET /health/metrics | Metriche Prometheus | Scrape periodico, protetto in rete interna |
+
+**Health in un host Nest**
+
+```ts
+import { createAccessiHealthModule } from 'emilsoftware-utilities/accessi/server';
+
+@Module({
+  imports: [
+    AccessiModule.forRoot(accessiOptions),
+    createAccessiHealthModule({
+      accessiOptions,
+      path: "/health",
+      readinessChecks: [{ name: "coda", check: async () => queue.isReady() }],
+    }),
+  ],
+})
+export class AppModule {}
+```
+
+### Metriche di dominio
+
+- Login riusciti e falliti, 2FA, refresh token e riuso.
+- Blocchi di rate limit pubblico, edge e service token.
+- Introspection, JWKS, revoche sessioni e ticket console.
+- Errori degli store Redis e durata delle operazioni.
+
+### Audit
+
+- Login, logout, revoche, cambio password, 2FA, rate limit e rotazione chiavi producono eventi strutturati.
+- I campi sensibili vengono redatti dal Logger; non aggiungere token o segreti nei metadati.
+- Con un sink interrogabile gli admin usano GET /api/accessi/audit e /audit/export con retention configurabile.
+- Senza sink interrogabile gli endpoint rispondono 501 ACCESSI\_AUDIT\_STORE\_DISABLED, ma il log continua.
+
+> [!TIP]
+> **Alert suggeriti**
+> Error rate 5xx sopra soglia, readiness rossa, errori Redis, aumento di login falliti o 429, kid JWKS sconosciuto, riuso refresh token e audit non raggiungibile.
+
+> [!NOTE]
+> **Dettagli**
+> Metriche e alert in docs/metrics.md; audit, retention ed export in docs/audit.md.
+
+---
+
+## Multi-tenancy operativa
+
+_Un database e un processo per tenant, con configurazione validata e hot reload._
+
+La multi-tenancy di Accessi isola i tenant a livello di processo e database: non esiste una colonna tenant nelle tabelle Accessi. Ogni tenant ha configurazione, chiavi e store propri.
+
+**tenants/acme.environment.ts**
+
+```ts
+import { defineAccessiTenantEnvironment } from 'emilsoftware-utilities/accessi/server';
+
+export default defineAccessiTenantEnvironment({
+  tenant: { id: 'acme', hosts: ['accessi.acme.example.com'], port: 3201, enabled: true },
+  database: {
+    host: process.env.ACME_DB_HOST!,
+    port: 3050,
+    database: process.env.ACME_DB_DATABASE!,
+    user: process.env.ACME_DB_USER!,
+    password: process.env.ACME_DB_PASSWORD!,
+  },
+  jwt: {
+    algorithm: 'RS256',
+    secret: process.env.ACME_JWT_SECRET!,
+    privateKey: process.env.ACME_JWT_PRIVATE_KEY!,
+    publicKey: process.env.ACME_JWT_PUBLIC_KEY!,
+    issuer: 'https://accessi.acme.example.com',
+    audience: 'accessi-api',
+  },
+  encryptionKey: process.env.ACME_ENCRYPTION_KEY!,
+  confirmationEmailUrl: 'https://accessi.acme.example.com',
+  confirmationEmailReturnUrl: 'https://accessi.acme.example.com',
+  email: {
+    host: process.env.ACME_SMTP_HOST!,
+    port: 587,
+    from: 'noreply@acme.example.com',
+    auth: {
+      user: process.env.ACME_SMTP_USER!,
+      pass: process.env.ACME_SMTP_PASSWORD!,
+    },
+  },
+});
+```
+
+**CLI tenant**
+
+```bash
+npm run accessi:tenants -- --dir ./tenants --check
+npm run accessi:tenants -- --dir ./tenants --list
+npm run accessi:tenants -- --dir ./tenants --resolve accessi.acme.example.com /api/accessi
+npm run accessi:tenants -- --dir ./tenants --serve --base-port 3200
+npm run accessi:tenants -- --dir ./tenants --serve --base-port 3200 --watch
+```
+
+- Un processo per tenant è il default: errori, memoria e pool non si mescolano.
+- Il supervisore avvia i tenant abilitati e con --watch applica aggiunte, modifiche e rimozioni senza riavviare i tenant invariati.
+- Se la nuova configurazione non è valida, il supervisore mantiene la precedente e logga l errore.
+- Il router in-process (createAccessiTenantRouter) è opt-in: risolve host, path o header fidato e non accetta header tenant dal client.
+- Metriche e audit ricevono il label tenant; gli store Redis usano prefissi separati tramite createAccessiTenantStores.
+
+> [!CAUTION]
+> **Isolamento**
+> Non condividere chiavi JWT, encryptionKey, database o prefissi Redis tra tenant. Un token o un ticket di un tenant non deve essere valido per un altro.
+
+> [!NOTE]
+> **Dettagli e template**
+> Configurazione, hot reload, router e test di leakage in docs/multi-tenancy.md; systemd, Docker, Nginx e Traefik in deploy/.
+
+---
+
+## Versioni, migrazioni e deprecazioni
+
+_Come aggiornare Accessi senza rompere consumer, token o database._
+
+Il package usa semantic-release: feat e fix su dev producono versioni 2.0.0-dev.N; il merge su main produce la versione stabile. Le modifiche breaking richiedono una major e una finestra di migrazione.
+
+| Cambiamento | Impatto | Procedura |
+| --- | --- | --- |
+| Aggiornamento patch/minor | Nessuna azione di codice attesa | Aggiorna la dipendenza, riavvia e verifica /health/ready |
+| Nuovo schema database | Migrazione DDL | Un solo processo, backup, poi repliche con autoUpdateDatabase: false |
+| Rotazione chiavi JWT | Token firmati con la vecchia chiave | Pubblica la nuova in JWKS, mantieni previousPublicKeys, attendi la scadenza dei token, rimuovi la vecchia |
+| Passaggio a cookie HttpOnly | Cambia il trasporto, non le API | Abilita authCookie, aggiorna CORS e CSRF, testa login, refresh, revoca e console |
+| Passaggio a RS256/JWKS | I token HS256 non sono più validi | Pianifica una finestra: i token emessi prima restano validi solo fino alla scadenza |
+| Deprecazione root barrel o deep import | Import legacy | Passa agli entry point accessi/\*; i deep import restano fino alla prossima major |
+
+### Gate prima del rilascio
+
+**Verifiche**
+
+```bash
+npm run typecheck
+npm test
+npm run build
+npm run test:pack
+npm run check:naming
+npm run check:deploy
+npm run check:accessi-openapi
+```
+
+Se modifichi intenzionalmente il contratto OpenAPI, aggiorna il fingerprint con npm run accessi:update-openapi-fingerprint e includilo nel commit. Il diff semantico in CI blocca rimozioni di operation o schema e breaking change non approvati.
+
+> [!WARNING]
+> **Deep import e root barrel**
+> Sono supportati fino alla prossima major, ma il layout interno può cambiare in una minor. I consumer devono usare gli entry point dichiarati in package.json\#exports. Mappa completa in docs/import-migration.md.
+
+> [!NOTE]
+> **ADR**
+> Le decisioni su split in pacchetti e multi-tenancy sono in docs/adr/0001-split-package.md e docs/adr/0002-multi-tenancy.md.
+
+---
+
 ## Contratto errori e codici
 
 _Formato della risposta e codici stabili ACCESSI\_\* e AUTH\_\*._
@@ -1163,3 +1904,68 @@ _Che cosa non fare, in breve._
 > [!TIP]
 > **Checklist di rilascio**
 > Schema verificato (db:check), segreti da un secret manager, mockDemoUser=false, rate limit pubblico configurato, SMTP reale testato, serviceTokens.defaultTtlDays impostato.
+
+---
+
+## Problemi comuni e come risolverli
+
+_Sintomo, causa probabile e rimedio per gli errori più frequenti._
+
+Prima di cambiare configurazione, leggi il codice di errore: Accessi distingue autenticazione, autorizzazione, bootstrap e disponibilità. Un 503 non è un 401 e un 403 non va risolto facendo logout.
+
+| Sintomo | Causa probabile | Rimedio |
+| --- | --- | --- |
+| 401 AUTH\_TOKEN\_MISSING | Header Authorization assente o malformato | Invia Bearer \<access-token\>; non usare il refresh token come Bearer |
+| 401 AUTH\_TOKEN\_INVALID | Firma, issuer, audience, scadenza o tipo token errati | Allinea issuer/audience e chiavi; rinnova il token con refresh |
+| 401 AUTH\_USER\_DISABLED | Utente bloccato, cancellato o non più autorizzato | Verifica STAREG, flag e stato utente in console |
+| 403 AUTH\_INSUFFICIENT\_PERMISSIONS | Menu o livello insufficiente, grant non aggiornati | Controlla ruoli e grant; verifica che il backend usi introspection se richiede i grant correnti |
+| 403 AUTH\_CSRF\_INVALID | Cookie mode senza header CSRF o token diverso | Invia x-csrf-token letto dal cookie accessi\_csrf |
+| 503 ACCESSI\_AUTH\_INITIALIZING | La porta HTTP è stata aperta prima del bootstrap | Attendi initializeAccessiModule o AccessiModule.forRoot prima di app.listen |
+| 503 AUTH\_INTROSPECTION\_UNAVAILABLE / AUTH\_JWKS\_UNAVAILABLE | Accessi Service o JWKS non raggiungibile | Fail closed: ripristina la rete o il servizio; non autorizzare per errore |
+| 500 ACCESSI\_DATABASE\_SCHEMA\_OUTDATED | Schema Firebird incompatibile | Esegui db:check:accessi, poi la migrazione con un solo processo e backup |
+| 429 ripetuto | Rate limit o edge rate limit superato | Rispetta Retry-After; se dietro proxy verifica trustProxy e il numero di hop |
+| Ticket console non valido | Ticket scaduto, già consumato o emesso da un altra istanza | Rigenera il ticket; in multi-istanza configura consoleEntry.store su Redis |
+| Login senza token e con challenge | 2FA richiesta: il login non è completo | Chiama verifyTwoFactor con challengeId e codice, poi usa il token restituito |
+| Email di reset non ricevute | SMTP non configurato o bloccato | Verifica ACCESSI\_EMAIL\_\*, TLS e mittente; i log riportano l errore SMTP senza password |
+| CORS o cookie ignorati dal browser | Origin non in allowlist o credentials mancanti | Origin esplicito, credentials: true, SameSite/Secure coerenti con HTTPS |
+
+### Come isolare il problema
+
+1. Controlla /health/live e /health/ready: se readiness è rossa, il problema è infrastrutturale.
+2. Leggi il codice nel body della risposta, non solo lo status HTTP.
+3. Verifica lo stato dell utente e i suoi grant in console prima di modificare la policy.
+4. Per i backend fratelli, distingui verifica locale (firma/claim) da introspection (stato e grant correnti).
+5. Riproduci con un utente di test e un token appena emesso; non riusare token trovati nei log.
+
+> [!NOTE]
+> **Serve aiuto in più**
+> Apri una issue con: versione del package, topologia, endpoint chiamato, status e codice errore, estratto di log senza token o segreti. Non allegare database o file di configurazione con credenziali.
+
+---
+
+## Glossario
+
+_I termini usati nella documentazione, senza ambiguità._
+
+| Termine | Significato |
+| --- | --- |
+| Accessi Service | Il servizio che possiede database, migrazioni, encryptionKey, SMTP, chiavi JWT e console |
+| Proprietario | L unico backend o servizio autorizzato a montare AccessiModule e a eseguire migrazioni |
+| Resource server | Backend fratello che verifica i token Accessi e non ha credenziali del database Accessi |
+| Entry point | Subpath pubblico del package, per esempio accessi/server o accessi/client/public |
+| Root barrel | Import legacy da emilsoftware-utilities; resta fino alla prossima major ma non è consigliato |
+| Abilitazione | Permesso su un menu con livello NESSUNA=0, LETTURA=10, SCRITTURA=20, SPECIAL=30 |
+| Grant | Insieme di abilitazioni e ruoli correnti di un utente, letto da Accessi |
+| Menu code | Codice stabile del menu usato nelle policy di autorizzazione |
+| Service token | Credenziale macchina-a-macchina con scope, non un utente e mai per il browser |
+| Introspection | Chiamata service-to-service che restituisce active, profilo e grant correnti di un token |
+| JWKS | Documento con le chiavi pubbliche per verificare JWT asimmetrici |
+| kid | Identificativo della chiave JWT, usato per la rotazione |
+| jti | Identificativo del singolo JWT, usato per la revoca puntuale |
+| Refresh family | Catena di refresh token collegati; il riuso di uno consumato revoca la famiglia |
+| Console ticket | Ticket monouso e a scadenza breve per aprire la console senza rimettere il JWT nell URL |
+| Tenant | Cliente isolato con database, processo, chiavi e store propri |
+| Sink | Destinazione esterna per audit o metriche (Redis, HTTP, callback, OpenTelemetry) |
+| Readiness | Stato che indica se il servizio può ricevere traffico: bootstrap, DB, schema e store |
+| Fail closed | In caso di dubbio o dipendenza non raggiungibile, la richiesta viene rifiutata |
+| CSRF double-submit | Cookie leggibile più header uguale per proteggere le richieste che modificano stato |

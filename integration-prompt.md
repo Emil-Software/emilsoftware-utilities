@@ -1,8 +1,16 @@
 # Integration prompt — Accessi (`emilsoftware-utilities`)
 
-Questo documento e il contesto unico da passare a un agente AI o a uno sviluppatore che deve integrare Accessi in un backend, in un frontend o in un altro servizio.
+Questo documento è il contesto unico da passare a un agente AI o a uno sviluppatore che deve integrare Accessi in un backend, in un frontend o in un altro servizio.
 
-L'obiettivo e evitare l'errore piu comune: **montare `AccessiModule` ovunque**. Accessi e un servizio di identita; gli altri backend sono resource server.
+Documentazione correlata:
+
+- [`docs/README.md`](docs/README.md): indice completo per ruolo.
+- [`WIKI.md`](WIKI.md): guida estesa; [`WIKI.ai.md`](WIKI.ai.md): digest compatto.
+- [`docs/quickstart-service.md`](docs/quickstart-service.md): backend che possiede Accessi.
+- [`docs/quickstart-resource-server.md`](docs/quickstart-resource-server.md): backend fratello.
+- [`docs/quickstart-frontend.md`](docs/quickstart-frontend.md): login e chiamate dal browser.
+
+L'obiettivo è evitare l'errore più comune: **montare `AccessiModule` ovunque**. Accessi è un servizio di identità; gli altri backend sono resource server.
 
 ---
 
@@ -51,7 +59,9 @@ Se per ora Accessi e montato dentro Backend A, va bene: Backend A e il proprieta
 | `emilsoftware-utilities/accessi/console` | `buildAccessiConsoleUrl`, URL console e ticket. |
 | `emilsoftware-utilities/accessi/ui` | Percorsi asset Web Component frameworkless. |
 
-Il root export `emilsoftware-utilities` resta per retrocompatibilita, ma nei nuovi progetti usare gli entry point sopra.
+Il root export `emilsoftware-utilities` resta per retrocompatibilità, ma nei nuovi progetti usare gli entry point sopra.
+
+La facciata pubblica vive in `src/accessi/`; l'implementazione del servizio in `src/accessi-service/`. I consumer importano solo `emilsoftware-utilities/accessi/*`, mai i path interni.
 
 ---
 
@@ -151,7 +161,7 @@ const options: AccessiServerOptions = {
   databaseOptions: {
     host: process.env.ACCESSI_DB_HOST!,
     port: Number(process.env.ACCESSI_DB_PORT ?? 3050),
-    database: process.env.ACCESSI_DB_NAME!,
+    database: process.env.ACCESSI_DB_DATABASE!,
     user: process.env.ACCESSI_DB_USER!,
     password: process.env.ACCESSI_DB_PASSWORD!,
   },
@@ -173,13 +183,13 @@ const options: AccessiServerOptions = {
     // keyId: "accessi-2026-01",
   },
   emailOptions: {
-    host: process.env.SMTP_HOST!,
-    port: Number(process.env.SMTP_PORT ?? 587),
+    host: process.env.ACCESSI_EMAIL_HOST!,
+    port: Number(process.env.ACCESSI_EMAIL_PORT ?? 587),
     secure: false,
     requireTLS: true,
     tls: { rejectUnauthorized: true },
-    from: "no-reply@example.com",
-    auth: { user: process.env.SMTP_USER!, pass: process.env.SMTP_PASS! },
+    from: process.env.ACCESSI_EMAIL_FROM!,
+    auth: { user: process.env.ACCESSI_EMAIL_USER!, pass: process.env.ACCESSI_EMAIL_PASSWORD! },
   },
   serviceTokens: { enabled: true, defaultTtlDays: 365 },
 };
@@ -351,6 +361,18 @@ Configurazioni di riferimento: `docs/gateway-rate-limit.md`.
 Resource server ed edge rate limit producono eventi strutturati tramite `auditAccessi`. I campi sensibili vengono redatti dal Logger. Disattivabile con `audit: false` nelle rispettive opzioni.
 
 Nel servizio standalone le metriche Prometheus sono su `/health/metrics`.
+
+### Cookie HttpOnly e CSRF
+
+Bearer resta il default. Con `authCookie` Accessi invia access e refresh token in cookie `HttpOnly`, non li restituisce nel body (salvo `exposeTokens: true`) e richiede l'header CSRF double-submit sulle richieste che modificano stato. CORS deve avere `credentials: true` e un origin esplicito. Dettagli: `docs/auth-cookies.md`.
+
+### Metriche e audit
+
+Le metriche di dominio coprono login, 2FA, refresh, rate limit, introspection, JWKS, revoche, ticket console e store Redis; l'audit persistente ha sink, retention ed endpoint admin `GET /api/accessi/audit` e `/audit/export`. Dettagli: `docs/metrics.md` e `docs/audit.md`.
+
+### Multi-tenancy
+
+Un database e un processo per tenant, configurazione in `*.environment.ts`, supervisore con hot reload, router in-process opt-in e store Redis con prefisso per tenant. Dettagli: `docs/multi-tenancy.md` e `deploy/README.md`.
 
 ---
 
@@ -675,7 +697,7 @@ Accessi Service:
 ```env
 ACCESSI_DB_HOST=
 ACCESSI_DB_PORT=3050
-ACCESSI_DB_NAME=
+ACCESSI_DB_DATABASE=
 ACCESSI_DB_USER=
 ACCESSI_DB_PASSWORD=
 ACCESSI_ENCRYPTION_KEY=
@@ -689,14 +711,16 @@ ACCESSI_JWT_ALGORITHM=RS256
 ACCESSI_JWT_PRIVATE_KEY=
 ACCESSI_JWT_PUBLIC_KEY=
 ACCESSI_JWT_KEY_ID=
+ACCESSI_JWT_PREVIOUS_PUBLIC_KEYS=
 ACCESSI_JWKS_PATH=accessi/.well-known/jwks.json
 ACCESSI_CONSOLE_ENTRY_TTL_MS=60000
 ACCESSI_CONSOLE_ENTRY_KEY=
-SMTP_HOST=
-SMTP_PORT=587
-SMTP_USER=
-SMTP_PASS=
+ACCESSI_EMAIL_HOST=
+ACCESSI_EMAIL_PORT=587
+ACCESSI_EMAIL_USER=
+ACCESSI_EMAIL_PASSWORD=
 ACCESSI_EMAIL_FROM=
+ACCESSI_PUBLIC_BASE_URL=
 ```
 
 Backend fratello:

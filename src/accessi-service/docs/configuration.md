@@ -27,11 +27,18 @@ Il modulo non legge direttamente il file `.env`: riceve un oggetto `AccessiOptio
 - `audit`: audit persistente con sink Redis/HTTP/callback, redazione di token e segreti, retention e endpoint admin `GET /api/accessi/audit` e `/audit/export`. Vedi `docs/audit.md`
 - `tenantId`: identificativo del tenant quando la configurazione arriva da un file `*.environment.ts`; aggiunge il label `tenant` a metriche e audit. Vedi `docs/multi-tenancy.md`
 - `sessionRevocation`: store memory/Redis per revocare tutte le sessioni di un utente
-- `refreshTokenRotation`: store memory/Redis per rendere il refresh token monouso
+- `accessTokenRevocation`: store memory/Redis per revocare singoli access token tramite `jti`
+- `refreshTokenRotation`: store memory/Redis per rendere il refresh token monouso e revocare le famiglie sospette
 - `validateAccessiOptions` / `assertValidAccessiOptions`: validazione fail-fast della configurazione
-- `serviceTokens`: token macchina-a-macchina; lo scope `accessi:introspect` abilita l'introspection per i backend fratelli
-- `emailOptions`: configurazione SMTP per le mail di reset
+- `serviceTokens`: token macchina-a-macchina, TTL, rate limit e scope; `accessi:introspect` abilita l'introspection per i backend fratelli
+- `emailOptions`: configurazione SMTP per le mail di reset, 2FA e inviti
 - `extensionFieldsOptions`: tabelle esterne opzionali da allegare al login
+- `adminBootstrap`: bootstrap del primo admin con token monouso stampato all'avvio; disabilitarlo dopo la creazione
+- `publicBaseUrl`, `consoleApiBaseUrl`: URL pubblici per link email e console su dominio separato
+- `federatedAuthentication`: provider SSO, self-registration e scambio identità service-to-service
+- `publicRegistration`: abilitazione e policy della registrazione pubblica
+- `catalogScripts`: migrazioni SQL idempotenti per menu, ruoli e cataloghi applicativi
+- `legacyPasswordMigrationOnStartup`: migrazione delle password legacy al primo avvio
 - `autoUpdateDatabase`: se `false`, disabilita le modifiche automatiche ma verifica comunque lo schema al boot e blocca avvii incompatibili; dettagli in [Aggiornamento database](database-update.md)
 
 ## Differenza tra modulo e updater
@@ -41,3 +48,10 @@ La configurazione completa serve al modulo `accessi` quando gira dentro il backe
 Lo script di aggiornamento database riusa la stessa struttura `AccessiOptions`, quindi legge anche variabili che non servono direttamente alla migrazione ma che fanno parte della configurazione completa del modulo.
 
 Per il dettaglio vedi [Aggiornamento database](database-update.md).
+
+## Vedi anche
+
+- [Indice per ruolo](../../../docs/README.md)
+- [Quickstart servizio](../../../docs/quickstart-service.md)
+- [Deploy e variabili d'ambiente](../../../docs/standalone-service.md)
+- [WIKI completa](../../../WIKI.md#accessioptions-riferimento-completo)

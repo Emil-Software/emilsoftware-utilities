@@ -1,31 +1,51 @@
 # Panoramica
 
-Il modulo `accessi` gestisce:
+Accessi è il servizio di identità di `emilsoftware-utilities`. Gestisce:
 
-- autenticazione con JWT
-- autorizzazione basata su ruoli e permessi
-- registrazione, reset password e GDPR
-- accesso temporaneo **Login as** per superutenti e admin
-- filtri utente
-- abilitazione e disabilitazione di menu e gruppi
-- aggiornamento automatico del database
+- autenticazione con JWT (HS256 transitorio, RS256/ES256 consigliato);
+- autorizzazione basata su menu, ruoli e abilitazioni;
+- registrazione, reset password, 2FA e passwordless;
+- SSO generico e scambio identità service-to-service;
+- accesso temporaneo **Login as** per superutenti e admin;
+- filtri utente, menu, gruppi e tipi menu;
+- token macchina-a-macchina con scope;
+- console amministrativa e aggiornamento automatico dello schema Firebird.
+
+## Ruoli e topologia
+
+La documentazione completa per ruolo è in
+[`docs/README.md`](../../../docs/README.md). In sintesi:
+
+- il **backend proprietario** monta `AccessiModule` o chiama
+  `initializeAccessiModule` e usa `emilsoftware-utilities/accessi/server`;
+- i **backend fratelli** usano `emilsoftware-utilities/accessi/resource-server`
+  e non hanno credenziali del database Accessi;
+- i **frontend** usano `emilsoftware-utilities/accessi/client/public` e chiamano
+  i backend con il JWT Accessi;
+- la **console** è centralizzata su Accessi Service.
+
+Quickstart:
+
+- [Servizio](../../../docs/quickstart-service.md)
+- [Resource server](../../../docs/quickstart-resource-server.md)
+- [Frontend](../../../docs/quickstart-frontend.md)
 
 ## Inizializzazione
 
-Il modulo si puo' inizializzare in due modi:
+- `initializeAccessiModule(app, options)` monta Accessi su un'app Express
+  esistente.
+- `AccessiModule.forRoot(options)` integra Accessi in un'app Nest.
+- `startAccessiService(options)` avvia Accessi come servizio autonomo.
 
-- `initializeAccessiModule(app, options)` se vuoi montare solo Accessi su una app Express esistente
-- `initEmilsoftwareModule(app, options)` se usi il modulo unificato con eventuali allegati
-
-`AccessiModule` e' `@Global()`, quindi i provider sono disponibili in tutta l'app dopo l'inizializzazione.
-
-In una topologia con piu backend, solo il servizio che possiede il database Accessi deve usare `accessi/server`. Gli altri backend usano `accessi/resource-server` (guard/middleware e introspection) e `accessi/client`. Vedi `integration-prompt.md` nella root del repository.
-
-Accessi puo girare anche come servizio autonomo con `startAccessiService`: health/readiness, metriche, validazione configurazione e shutdown graceful sono inclusi. Dettagli in [`docs/standalone-service.md`](../../../docs/standalone-service.md).
+`AccessiModule` è `@Global()`: inizializzalo una sola volta per processo. Attendi
+sempre il bootstrap prima di aprire la porta HTTP.
 
 ## Punti di ingresso utili
 
 - [Configurazione](configuration.md)
 - [Autenticazione e autorizzazione](authentication.md)
+- [Codici di accesso, 2FA e SSO](two-factor.md)
 - [Utenti, ruoli e permessi](users-permissions.md)
 - [Aggiornamento database](database-update.md)
+- [WIKI completa](../../../WIKI.md)
+- [Indice per ruolo](../../../docs/README.md)

@@ -1,5 +1,9 @@
 # Autenticazione via cookie httpOnly e CSRF
 
+Per frontend e backend che non possono custodire un access token in memoria.
+Indice completo in [README.md](README.md); flusso browser in
+[quickstart-frontend.md](quickstart-frontend.md).
+
 Bearer resta il default: nessun comportamento cambia finché non si abilita
 esplicitamente la modalità cookie.
 

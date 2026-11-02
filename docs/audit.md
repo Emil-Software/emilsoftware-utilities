@@ -1,5 +1,9 @@
 # Audit persistente
 
+Per sicurezza, compliance e operations. Indice completo della documentazione in
+[README.md](README.md); panoramica delle operazioni in
+[WIKI.md](../WIKI.md#health-metriche-e-audit).
+
 `auditAccessi` scrive un record strutturato per ogni evento di sicurezza. Di
 default il record finisce nel log (`AccessiAudit`); con `audit.sinks` può essere
 persistito su Redis, inoltrato a un collector HTTP o scritto su database e
