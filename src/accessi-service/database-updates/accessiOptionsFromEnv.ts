@@ -73,6 +73,50 @@ function getOptionalEnum<T extends string>(
   return match;
 }
 
+/** Interpreta `ACCESSI_HTTP_TRUST_PROXY` come Express: booleano, hop o stringa. */
+function parseTrustProxy(value: string, name: string): boolean | number | string {
+  const trimmed = value.trim();
+  if (trimmed === "") {
+    throw new Error(`Variabile ambiente ${name}: valore vuoto.`);
+  }
+  if (/^\d+$/.test(trimmed)) {
+    return Number(trimmed);
+  }
+  const normalized = trimmed.toLowerCase();
+  if (normalized === "true" || normalized === "false") {
+    return normalized === "true";
+  }
+  // Express accetta anche 'loopback' e CIDR/IP: li passiamo cosi come sono.
+  return trimmed;
+}
+
+function parseCorsOrigins(value: string, name: string): string | string[] {
+  const parts = value
+    .split(",")
+    .map((part) => part.trim())
+    .filter((part) => part !== "");
+  if (parts.length === 0) {
+    throw new Error(`Variabile ambiente ${name}: elenco di origin vuoto.`);
+  }
+  if (parts.includes("*") && parts.length > 1) {
+    throw new Error(`Variabile ambiente ${name}: "*" non puo essere combinato con altri origin.`);
+  }
+  return parts.length === 1 ? parts[0]! : parts;
+}
+
+const PUBLIC_RATE_LIMIT_SCOPES = [
+  ["login", "LOGIN"],
+  ["register", "REGISTER"],
+  ["passwordResetEmail", "PASSWORD_RESET_EMAIL"],
+  ["passwordResetConfirm", "PASSWORD_RESET_CONFIRM"],
+  ["refresh", "REFRESH"],
+  ["getUserByToken", "GET_USER_BY_TOKEN"],
+  ["twoFactorVerify", "TWO_FACTOR_VERIFY"],
+  ["twoFactorResend", "TWO_FACTOR_RESEND"],
+  ["adminBootstrap", "ADMIN_BOOTSTRAP"],
+  ["consoleEntry", "CONSOLE_ENTRY"],
+] as const;
+
 const LOCAL_JWT_SECRET = "local-accessi-update";
 const LOCAL_ENCRYPTION_KEY = "1234567890ABCDEF";
 
@@ -323,6 +367,104 @@ export function createAccessiOptionsFromEnv(env: NodeJS.ProcessEnv = process.env
   const tenantId = env.ACCESSI_TENANT_ID?.trim();
   const consoleEntryTtlMs = getOptionalPositiveInteger(env, "ACCESSI_CONSOLE_ENTRY_TTL_MS");
 
+  const trustProxy =
+    env.ACCESSI_HTTP_TRUST_PROXY !== undefined
+      ? parseTrustProxy(env.ACCESSI_HTTP_TRUST_PROXY, "ACCESSI_HTTP_TRUST_PROXY")
+      : undefined;
+  const securityHeaders =
+    env.ACCESSI_SECURITY_HEADERS !== undefined
+      ? getOptionalBoolean(env, "ACCESSI_SECURITY_HEADERS", true)
+      : undefined;
+  const corsOrigin =
+    env.ACCESSI_CORS_ORIGINS !== undefined
+      ? parseCorsOrigins(env.ACCESSI_CORS_ORIGINS, "ACCESSI_CORS_ORIGINS")
+      : undefined;
+  const corsCredentials = getOptionalBoolean(env, "ACCESSI_CORS_CREDENTIALS", false);
+  if (corsOrigin === "*" && corsCredentials) {
+    throw new Error(
+      "ACCESSI_CORS_ORIGINS: \"*\" non puo essere usato con ACCESSI_CORS_CREDENTIALS=true.",
+    );
+  }
+  const cors =
+    corsOrigin !== undefined
+      ? { origin: corsOrigin, credentials: corsCredentials }
+      : undefined;
+  const http =
+    trustProxy !== undefined || securityHeaders !== undefined || cors !== undefined
+      ? {
+          ...(trustProxy !== undefined ? { trustProxy } : {}),
+          ...(securityHeaders !== undefined ? { securityHeaders } : {}),
+          ...(cors !== undefined ? { cors } : {}),
+        }
+      : undefined;
+
+  const defaultRateWindowMs = getOptionalPositiveInteger(
+    env,
+    "ACCESSI_PUBLIC_RATE_LIMIT_WINDOW_MS",
+  );
+  const defaultRateMaxAttempts = getOptionalPositiveInteger(
+    env,
+    "ACCESSI_PUBLIC_RATE_LIMIT_MAX_ATTEMPTS",
+  );
+  if ((defaultRateWindowMs === undefined) !== (defaultRateMaxAttempts === undefined)) {
+    throw new Error(
+      "ACCESSI_PUBLIC_RATE_LIMIT_WINDOW_MS e ACCESSI_PUBLIC_RATE_LIMIT_MAX_ATTEMPTS devono essere configurate insieme.",
+    );
+  }
+  const publicAuthRateLimitRules: Record<
+    string,
+    { windowMs: number; maxAttempts: number }
+  > = {};
+  for (const [key, suffix] of PUBLIC_RATE_LIMIT_SCOPES) {
+    const windowMs =
+      getOptionalPositiveInteger(env, `ACCESSI_PUBLIC_RATE_LIMIT_${suffix}_WINDOW_MS`) ??
+      defaultRateWindowMs;
+    const maxAttempts =
+      getOptionalPositiveInteger(env, `ACCESSI_PUBLIC_RATE_LIMIT_${suffix}_MAX_ATTEMPTS`) ??
+      defaultRateMaxAttempts;
+    if ((windowMs === undefined) !== (maxAttempts === undefined)) {
+      throw new Error(
+        `ACCESSI_PUBLIC_RATE_LIMIT_${suffix}_WINDOW_MS e ACCESSI_PUBLIC_RATE_LIMIT_${suffix}_MAX_ATTEMPTS devono essere configurate insieme.`,
+      );
+    }
+    if (windowMs !== undefined && maxAttempts !== undefined) {
+      publicAuthRateLimitRules[key] = { windowMs, maxAttempts };
+    }
+  }
+  const publicAuthRateLimitEnabled = getOptionalBoolean(
+    env,
+    "ACCESSI_PUBLIC_RATE_LIMIT_ENABLED",
+    true,
+  );
+  const publicAuthRateLimitConfigured =
+    env.ACCESSI_PUBLIC_RATE_LIMIT_ENABLED !== undefined ||
+    Object.keys(publicAuthRateLimitRules).length > 0;
+  const publicAuthRateLimit = publicAuthRateLimitConfigured
+    ? {
+        enabled: publicAuthRateLimitEnabled,
+        ...publicAuthRateLimitRules,
+      }
+    : undefined;
+
+  const edgeWindowMs = getOptionalPositiveInteger(env, "ACCESSI_EDGE_RATE_LIMIT_WINDOW_MS");
+  const edgeMaxAttempts = getOptionalPositiveInteger(env, "ACCESSI_EDGE_RATE_LIMIT_MAX_ATTEMPTS");
+  if ((edgeWindowMs === undefined) !== (edgeMaxAttempts === undefined)) {
+    throw new Error(
+      "ACCESSI_EDGE_RATE_LIMIT_WINDOW_MS e ACCESSI_EDGE_RATE_LIMIT_MAX_ATTEMPTS devono essere configurate insieme.",
+    );
+  }
+  const edgeRateLimitConfigured =
+    env.ACCESSI_EDGE_RATE_LIMIT_ENABLED !== undefined ||
+    edgeWindowMs !== undefined ||
+    edgeMaxAttempts !== undefined;
+  const edgeRateLimit = edgeRateLimitConfigured
+    ? {
+        enabled: getOptionalBoolean(env, "ACCESSI_EDGE_RATE_LIMIT_ENABLED", true),
+        ...(edgeWindowMs !== undefined ? { windowMs: edgeWindowMs } : {}),
+        ...(edgeMaxAttempts !== undefined ? { maxAttempts: edgeMaxAttempts } : {}),
+      }
+    : undefined;
+
   return {
     databaseOptions,
     confirmationEmailUrl: getEnv(env, "ACCESSI_CONFIRMATION_EMAIL_URL", "http://localhost"),
@@ -353,6 +495,9 @@ export function createAccessiOptionsFromEnv(env: NodeJS.ProcessEnv = process.env
     ...(serviceTokens ? { serviceTokens } : {}),
     ...(federatedAuthentication ? { federatedAuthentication } : {}),
     ...(publicRegistration ? { publicRegistration } : {}),
+    ...(http ? { http } : {}),
+    ...(publicAuthRateLimit ? { publicAuthRateLimit } : {}),
+    ...(edgeRateLimit ? { edgeRateLimit } : {}),
     jwtOptions: {
       secret: getRequiredSecret(env, "ACCESSI_JWT_SECRET", LOCAL_JWT_SECRET),
       expiresIn: getEnv(env, "ACCESSI_JWT_EXPIRES", "24h"),

@@ -22,6 +22,10 @@ e accetta la stessa sintassi di Express: `false`, numero di hop, `true`, `'loopb
 | Servizio esposto direttamente | `false` (default) | `X-Forwarded-For` viene ignorato: nessun bypass via header |
 | Un proxy davanti (Nginx, Traefik, ALB) | `1` | Il proxy deve **accodare** l'IP reale in `X-Forwarded-For` |
 | Due proxy (Cloudflare + Nginx, CDN + ingress) | `2` | Contare solo i proxy che il servizio vede davvero |
+
+Nel servizio standalone il valore si imposta anche con
+`ACCESSI_HTTP_TRUST_PROXY` (per esempio `1`). Un valore non valido blocca
+l'avvio.
 | Solo proxy locali | `'loopback'` | Fidarsi di `127.0.0.1`/`::1`, non di altre reti |
 | Rete privata dedicata ai proxy | `'loopback, 10.0.0.0/8'` | Elencare le CIDR dei proxy, non usare `true` |
 | `trustProxy: true` | **sconsigliato** | Fidarsi di tutti gli hop rende scegliibile dal client il valore piu a sinistra |

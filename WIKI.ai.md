@@ -933,6 +933,8 @@ await startAccessiService({
 | Cookie | ACCESSI_AUTH_COOKIE_ENABLED, _SECURE, _SAME_SITE, _DOMAIN, _CSRF | Bearer resta il default; abilitare solo se serve HttpOnly |
 | Osservabilità | ACCESSI_METRICS_*, ACCESSI_AUDIT_* | Metriche e audit; store e sink restano oggetti runtime |
 | Feature e tenant | ACCESSI_TENANT_ID, ACCESSI_PUBLIC_REGISTRATION_ENABLED, ACCESSI_FEDERATED_*, ACCESSI_SERVICE_TOKENS_* | Registrazione e SSO sono opt-in |
+| HTTP e proxy | ACCESSI_HTTP_TRUST_PROXY, ACCESSI_CORS_ORIGINS, ACCESSI_CORS_CREDENTIALS, ACCESSI_SECURITY_HEADERS | trust proxy corretto per rate limit e audit |
+| Rate limit | ACCESSI_PUBLIC_RATE_LIMIT_*, ACCESSI_EDGE_RATE_LIMIT_* | Finestra e tentativi dello stesso scope vanno configurati insieme |
 **Rollout sicuro**
 1. Costruisci l artefatto e valida la configurazione prima del deploy: assertValidAccessiOptions blocca gli errori evidenti.
 2. Esegui la migrazione dello schema con un solo processo (autoUpdateDatabase: true oppure npm run db:update:accessi).

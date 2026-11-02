@@ -1519,6 +1519,8 @@ await startAccessiService({
 | Cookie | ACCESSI\_AUTH\_COOKIE\_ENABLED, \_SECURE, \_SAME\_SITE, \_DOMAIN, \_CSRF | Bearer resta il default; abilitare solo se serve HttpOnly |
 | Osservabilità | ACCESSI\_METRICS\_\*, ACCESSI\_AUDIT\_\* | Metriche e audit; store e sink restano oggetti runtime |
 | Feature e tenant | ACCESSI\_TENANT\_ID, ACCESSI\_PUBLIC\_REGISTRATION\_ENABLED, ACCESSI\_FEDERATED\_\*, ACCESSI\_SERVICE\_TOKENS\_\* | Registrazione e SSO sono opt-in |
+| HTTP e proxy | ACCESSI\_HTTP\_TRUST\_PROXY, ACCESSI\_CORS\_ORIGINS, ACCESSI\_CORS\_CREDENTIALS, ACCESSI\_SECURITY\_HEADERS | trust proxy corretto per rate limit e audit |
+| Rate limit | ACCESSI\_PUBLIC\_RATE\_LIMIT\_\*, ACCESSI\_EDGE\_RATE\_LIMIT\_\* | Finestra e tentativi dello stesso scope vanno configurati insieme |
 
 ### Rollout sicuro
 

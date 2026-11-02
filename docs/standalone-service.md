@@ -175,6 +175,26 @@ Gli store Redis (rate limit, ticket, revoche, rotazione refresh, audit) restano
 oggetti runtime: vanno collegati nel bootstrap applicativo con `createAccessiService`
 o `AccessiModule.forRoot`, non tramite variabili d'ambiente.
 
+### HTTP, proxy e rate limit da ambiente
+
+| Variabile | Default | Uso |
+| --- | --- | --- |
+| `ACCESSI_HTTP_TRUST_PROXY` | `false` | `1` per un proxy, `2` per due hop, `loopback` o CIDR |
+| `ACCESSI_CORS_ORIGINS` | assente | Lista separata da virgola; `*` solo senza credenziali |
+| `ACCESSI_CORS_CREDENTIALS` | `false` | `true` obbligatorio con cookie HttpOnly |
+| `ACCESSI_SECURITY_HEADERS` | `true` | Header di sicurezza e CSP |
+| `ACCESSI_PUBLIC_RATE_LIMIT_ENABLED` | `true` | Rate limit degli endpoint pubblici |
+| `ACCESSI_PUBLIC_RATE_LIMIT_WINDOW_MS` | default modulo | Finestra globale per tutti gli scope |
+| `ACCESSI_PUBLIC_RATE_LIMIT_MAX_ATTEMPTS` | default modulo | Tentativi globali per tutti gli scope |
+| `ACCESSI_PUBLIC_RATE_LIMIT_<SCOPE>_WINDOW_MS` | eredita il globale | Override per `LOGIN`, `REGISTER`, `REFRESH`, `TWO_FACTOR_VERIFY`, `CONSOLE_ENTRY`, ... |
+| `ACCESSI_PUBLIC_RATE_LIMIT_<SCOPE>_MAX_ATTEMPTS` | eredita il globale | Override per lo stesso scope |
+| `ACCESSI_EDGE_RATE_LIMIT_ENABLED` | `false` | Limite grossolano prima delle rotte Accessi |
+| `ACCESSI_EDGE_RATE_LIMIT_WINDOW_MS` | `60000` | Finestra dell'edge rate limit |
+| `ACCESSI_EDGE_RATE_LIMIT_MAX_ATTEMPTS` | `300` | Tentativi dell'edge rate limit |
+
+Finestra e tentativi di uno stesso scope devono essere configurati insieme;
+altrimenti l'avvio fallisce con il nome della variabile mancante.
+
 ## Store condivisi
 
 In multi-istanza configura store condivisi:

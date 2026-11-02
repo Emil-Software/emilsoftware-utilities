@@ -177,3 +177,66 @@ test('#29: valori numerici non validi bloccano l avvio', () => {
     /ACCESSI_CONSOLE_ENTRY_TTL_MS/,
   );
 });
+
+test('#30: proxy, CORS e header si configurano da ambiente', () => {
+  const options = createAccessiOptionsFromEnv(baseEnv({
+    ACCESSI_HTTP_TRUST_PROXY: '1',
+    ACCESSI_CORS_ORIGINS: 'https://app.example.com,https://admin.example.com',
+    ACCESSI_CORS_CREDENTIALS: 'true',
+    ACCESSI_SECURITY_HEADERS: 'false',
+  }));
+  assert.deepEqual(options.http, {
+    trustProxy: 1,
+    securityHeaders: false,
+    cors: {
+      origin: ['https://app.example.com', 'https://admin.example.com'],
+      credentials: true,
+    },
+  });
+
+  assert.equal(
+    createAccessiOptionsFromEnv(baseEnv({ ACCESSI_HTTP_TRUST_PROXY: 'loopback' }))?.http?.trustProxy,
+    'loopback',
+  );
+  assert.equal(
+    createAccessiOptionsFromEnv(baseEnv({ ACCESSI_HTTP_TRUST_PROXY: 'false' }))?.http?.trustProxy,
+    false,
+  );
+  assert.throws(
+    () => createAccessiOptionsFromEnv(baseEnv({
+      ACCESSI_CORS_ORIGINS: '*',
+      ACCESSI_CORS_CREDENTIALS: 'true',
+    })),
+    /ACCESSI_CORS_ORIGINS/,
+  );
+});
+
+test('#30: rate limit pubblico e edge si configurano da ambiente', () => {
+  const options = createAccessiOptionsFromEnv(baseEnv({
+    ACCESSI_PUBLIC_RATE_LIMIT_WINDOW_MS: '60000',
+    ACCESSI_PUBLIC_RATE_LIMIT_MAX_ATTEMPTS: '100',
+    ACCESSI_PUBLIC_RATE_LIMIT_LOGIN_MAX_ATTEMPTS: '5',
+    ACCESSI_EDGE_RATE_LIMIT_ENABLED: 'true',
+    ACCESSI_EDGE_RATE_LIMIT_WINDOW_MS: '30000',
+    ACCESSI_EDGE_RATE_LIMIT_MAX_ATTEMPTS: '50',
+  }));
+
+  assert.equal(options.publicAuthRateLimit?.enabled, true);
+  assert.deepEqual(options.publicAuthRateLimit?.login, { windowMs: 60000, maxAttempts: 5 });
+  assert.deepEqual(options.publicAuthRateLimit?.refresh, { windowMs: 60000, maxAttempts: 100 });
+  assert.deepEqual(options.edgeRateLimit, {
+    enabled: true,
+    windowMs: 30000,
+    maxAttempts: 50,
+  });
+
+  assert.equal(
+    createAccessiOptionsFromEnv(baseEnv({ ACCESSI_PUBLIC_RATE_LIMIT_ENABLED: 'false' }))
+      ?.publicAuthRateLimit?.enabled,
+    false,
+  );
+  assert.throws(
+    () => createAccessiOptionsFromEnv(baseEnv({ ACCESSI_EDGE_RATE_LIMIT_WINDOW_MS: '1000' })),
+    /ACCESSI_EDGE_RATE_LIMIT/,
+  );
+});
