@@ -50,6 +50,7 @@ Il livello pubblico è `src/accessi/`; l'implementazione del servizio è
 - **[integration-prompt.md](integration-prompt.md)** — contesto e prompt operativi per backend, frontend e agenti.
 - **[docs/README.md](docs/README.md)** — indice completo per ruolo e per documento.
 - **[src/accessi-service/README.md](src/accessi-service/README.md)** — documentazione operativa del servizio.
+- **[SECURITY.md](SECURITY.md)** — come segnalare una vulnerabilità e versioni supportate.
 
 Rigenera WIKI.md e WIKI.ai.md con `npm run generate:accessi-wiki` (incluso in
 `npm run build`).

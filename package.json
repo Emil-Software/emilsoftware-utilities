@@ -2,6 +2,9 @@
   "name": "emilsoftware-utilities",
   "version": "2.0.0-dev.84",
   "description": "Utilities for EmilSoftware",
+  "engines": {
+    "node": ">=18"
+  },
   "main": "dist/index.js",
   "module": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -231,7 +234,8 @@
     "dist",
     "deploy",
     "integration-prompt.md",
-    "docs"
+    "docs",
+    "SECURITY.md"
   ],
   "config": {
     "commitizen": {
