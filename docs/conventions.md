@@ -55,7 +55,7 @@ importarlo, va esposto da un entry point in `accessi/`. Non importare
 ### Root
 
 - File convenzionali in maiuscolo: `README.md`, `CHANGELOG.md`, `WIKI.md`,
-  `WIKI.ai.md`.
+  `WIKI.ai.md`, `LICENSE`, `SECURITY.md`.
 - Configurazione in minuscolo/kebab: `package.json`, `tsconfig.json`,
   `docker-compose.test.yml`.
 - Nessun artefatto locale o IDE tracciato.

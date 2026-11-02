@@ -14,6 +14,8 @@ const ROOT_EXCEPTIONS = new Set([
   'CHANGELOG.md',
   'WIKI.md',
   'WIKI.ai.md',
+  'LICENSE',
+  'SECURITY.md',
 ]);
 const KEBAB_EXCEPTIONS = new Set([
   'README.md',
