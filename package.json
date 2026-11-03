@@ -1,6 +1,6 @@
 {
   "name": "emilsoftware-utilities",
-  "version": "2.0.0-dev.85",
+  "version": "2.0.0-dev.86",
   "description": "Utilities for EmilSoftware",
   "engines": {
     "node": ">=18"

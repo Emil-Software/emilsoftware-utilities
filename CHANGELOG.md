@@ -1,3 +1,10 @@
+# [2.0.0-dev.86](https://github.com/Emil-Software/emilsoftware-utilities/compare/v2.0.0-dev.85...v2.0.0-dev.86) (2026-11-03)
+
+
+### Features
+
+* trigger release ([7fbd36b](https://github.com/Emil-Software/emilsoftware-utilities/commit/7fbd36b0e22827e152b84b7024f5c9700679483c))
+
 # [2.0.0-dev.85](https://github.com/Emil-Software/emilsoftware-utilities/compare/v2.0.0-dev.84...v2.0.0-dev.85) (2026-11-02)
 
 
