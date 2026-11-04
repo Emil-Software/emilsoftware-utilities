@@ -1,3 +1,10 @@
+# [2.0.0-dev.89](https://github.com/Emil-Software/emilsoftware-utilities/compare/v2.0.0-dev.88...v2.0.0-dev.89) (2026-11-04)
+
+
+### Features
+
+* **accessi:** preflight bloccante dello schema con prompt migrazione ([9ef45fa](https://github.com/Emil-Software/emilsoftware-utilities/commit/9ef45fafe5880bef7aac71b06930fa463ee8a1e7)), closes [#35](https://github.com/Emil-Software/emilsoftware-utilities/issues/35)
+
 # [2.0.0-dev.88](https://github.com/Emil-Software/emilsoftware-utilities/compare/v2.0.0-dev.87...v2.0.0-dev.88) (2026-11-04)
 
 
