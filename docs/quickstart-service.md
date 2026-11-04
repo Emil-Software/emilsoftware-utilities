@@ -56,6 +56,7 @@ const options: AccessiServerOptions = {
     audience: process.env.ACCESSI_JWT_AUDIENCE ?? 'backend-app',
   },
   autoUpdateDatabase: true,
+  databaseMigration: 'ask', // migrate o fail nei container senza TTY
   mockDemoUser: false,
 };
 ```
@@ -118,8 +119,17 @@ export class AppModule {}
 
 ## Database e primo admin
 
-Al primo avvio con `autoUpdateDatabase: true` Accessi riconcilia lo schema
-Firebird. In produzione:
+Al primo avvio Accessi esegue un preflight bloccante: se il database non è alla
+versione attesa mostra `Non siamo alla versione corretta di Accessi` e chiede
+`Vuoi avviare la migrazione? SI - NO`. `NO` interrompe l'avvio; `SI` esegue la
+migrazione idempotente e ricontrolla lo schema.
+
+La policy si controlla con `databaseMigration` (default `ask`) o
+`ACCESSI_DB_MIGRATION_POLICY=ask|migrate|fail`. In container o CI senza TTY `ask`
+equivale a `NO`: usa `migrate` per automatizzare o `fail` per bloccare subito.
+`autoUpdateDatabase: false` forza `fail`.
+
+In produzione:
 
 1. Esegui la migrazione con un solo processo:
 
@@ -127,7 +137,7 @@ Firebird. In produzione:
    npm run db:update:accessi
    ```
 
-2. Avvia le repliche con `autoUpdateDatabase: false` (oppure `ACCESSI_AUTO_UPDATE_DATABASE=false` nel servizio standalone).
+2. Avvia le repliche con `autoUpdateDatabase: false` (oppure `ACCESSI_AUTO_UPDATE_DATABASE=false` nel servizio standalone): verificano lo schema e non eseguono DDL.
 3. Crea il primo admin dalla console, abilitando temporaneamente `adminBootstrap`.
    Il token di bootstrap viene stampato all'avvio, è monouso e dura fino al riavvio.
 4. Disabilita `adminBootstrap` dopo la creazione.

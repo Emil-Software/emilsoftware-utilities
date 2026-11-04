@@ -59,6 +59,7 @@ Per il multi-istanza:
 ## Flussi per gli integratori
 
 - **Bootstrap Express**: chiamare `initializeAccessiModule(app, options)` prima di aprire la porta HTTP. Il middleware esportato `authorizeAccessi` diventa disponibile al termine del bootstrap.
+- **Database**: prima di creare il container Nest il bootstrap legge versione e schema reali. Se non sono allineati chiede `Vuoi avviare la migrazione? SI - NO` (policy `databaseMigration`); `NO` interrompe l'avvio. In container senza TTY usare `migrate` o `fail`.
 - **Rotta protetta**: applicare `authorizeAccessi` con `accessiRequirement` per verificare JWT, stato utente e grant. Il middleware popola `req.user`; con una policy popola anche `req.userGrants`.
 - **Login locale**: usare `POST /api/accessi/auth/login`. Un utente configurato solo SSO riceve `PASSWORD_LOGIN_DISABLED` e il frontend deve avviare il flusso SSO del backend. `Result.token.expiresIn` e sempre espresso in secondi.
 - **Login SSO**: il backend valida token, issuer, audience e firma del proprio provider; poi passa solo `{ provider, subject }` a `FederatedAuthService.authenticate`. Accessi non riceve token esterni e resta l'unica fonte per ruoli e grant.

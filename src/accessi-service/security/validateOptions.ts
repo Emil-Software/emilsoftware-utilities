@@ -47,6 +47,25 @@ export function validateAccessiOptions(options: AccessiOptions): AccessiOptionsV
   if (!options?.databaseOptions) {
     addError('ACCESSI_DB_OPTIONS_MISSING', 'databaseOptions e obbligatorio.');
   }
+  if (
+    options?.databaseMigration !== undefined &&
+    !['ask', 'migrate', 'fail'].includes(options.databaseMigration)
+  ) {
+    addError(
+      'ACCESSI_DATABASE_MIGRATION_POLICY_INVALID',
+      'databaseMigration deve essere "ask", "migrate" o "fail".',
+    );
+  }
+  if (
+    options?.autoUpdateDatabase === false &&
+    options.databaseMigration !== undefined &&
+    options.databaseMigration !== 'fail'
+  ) {
+    addWarning(
+      'ACCESSI_DATABASE_MIGRATION_POLICY_IGNORED',
+      'autoUpdateDatabase: false forza la policy "fail": la migrazione non verra eseguita.',
+    );
+  }
 
   const jwt = options?.jwtOptions;
   const secret = jwt?.secret || process.env.ACC_JWT_SECRET;

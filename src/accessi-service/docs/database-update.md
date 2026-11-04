@@ -10,10 +10,16 @@ Su Firebird 2.5 i generatori sono creati con `CREATE GENERATOR` (in 2.5 non esis
 
 ## Avvio del modulo
 
-- `autoUpdateDatabase: true` (default): riconcilia gli oggetti mancanti e verifica il risultato prima di completare `onModuleInit()`.
-- `autoUpdateDatabase: false`: esegue la stessa verifica in **sola lettura**. Se lo schema non e compatibile, l'inizializzazione fallisce con l'elenco degli oggetti da correggere. Non crea tabelle, non aggiorna versioni e non esegue migrazioni.
+Prima di completare il bootstrap (e comunque prima di aprire la porta HTTP), ogni modalita di avvio esegue un preflight read-only: legge la versione in `PARAMETRI`, la confronta con `ACCESSI_SCHEMA_VERSION` e ispeziona lo schema reale. Con `initializeAccessiModule` parte prima di creare il container Nest; con `AccessiModule.forRoot` gira in `onModuleInit`. Se il database e sano l'avvio prosegue; altrimenti:
 
-Il controllo vale per Nest diretto, `initializeAccessiModule` e `initEmilsoftwareModule`. L'applicazione ospitante deve attendere il bootstrap prima di accettare traffico. Il servizio SSO attende la stessa inizializzazione: non esiste piu un secondo percorso DDL concorrente. `federatedAuthentication.autoUpdateSchema` e deprecato; la configurazione autorevole e `autoUpdateDatabase`. La creazione delle strutture SSO/2FA non abilita queste funzionalita per gli utenti.
+- `databaseMigration: 'ask'` (default, `ACCESSI_DB_MIGRATION_POLICY=ask`): su TTY mostra `Non siamo alla versione corretta di Accessi.` e chiede `Vuoi avviare la migrazione? SI - NO`. `NO` interrompe l'avvio; `SI` esegue la migrazione idempotente e ripete il check.
+- `databaseMigration: 'migrate'`: esegue la migrazione senza chiedere.
+- `databaseMigration: 'fail'`: blocca l'avvio con un errore esplicito.
+- `autoUpdateDatabase: false`: forza `fail` e resta una modalita di **sola lettura**. Se lo schema non e compatibile, l'inizializzazione fallisce con l'elenco degli oggetti da correggere; non crea tabelle, non aggiorna versioni e non esegue migrazioni.
+
+In container o CI senza TTY `ask` equivale a `NO`: impostare `migrate` per automatizzare la migrazione o `fail` per bloccare subito. Uno schema piu recente della libreria non viene mai retrocesso. Se dopo la migrazione il database non e sano, l'avvio si ferma.
+
+Il controllo vale per Nest diretto, `initializeAccessiModule`, `initEmilsoftwareModule`, il servizio standalone e la CLI. L'applicazione ospitante deve attendere il bootstrap prima di accettare traffico. Il servizio SSO attende la stessa inizializzazione: non esiste piu un secondo percorso DDL concorrente. `federatedAuthentication.autoUpdateSchema` e deprecato; la configurazione autorevole e `databaseMigration`/`autoUpdateDatabase`. La creazione delle strutture SSO/2FA non abilita queste funzionalita per gli utenti.
 
 La generazione OpenAPI ispeziona soltanto i decorator e non avvia il ciclo di vita del modulo o una connessione al database.
 

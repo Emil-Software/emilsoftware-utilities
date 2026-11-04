@@ -308,7 +308,7 @@ mockDemoUser: true, // MAI in produzione
 
 ### Schema e aggiornamento del database
 Tabelle, riconciliazione automatica e CLI.
-Accessi possiede lo schema del dominio. Con autoUpdateDatabase true (predefinito) lo riconcilia a ogni avvio; con false verifica comunque la compatibilità in sola lettura e blocca gli avvii incompatibili.
+Accessi possiede lo schema del dominio. Prima di completare il bootstrap esegue un preflight read-only: legge la versione in PARAMETRI e verifica lo schema reale. Se non sono allineati mostra "Non siamo alla versione corretta di Accessi" e chiede "Vuoi avviare la migrazione? SI - NO". NO interrompe l'avvio; SI esegue la migrazione idempotente e ripete il check. Con initializeAccessiModule il check parte prima di creare il container Nest; con AccessiModule.forRoot gira in onModuleInit, prima di app.listen(). Con autoUpdateDatabase false il controllo resta in sola lettura e un database non sano blocca l'avvio.
 **Tabelle principali**
 - PARAMETRI, UTENTI, UTENTI_CONFIG, UTENTI_PWD, UTENTI_OLDPWD, UTENTI_GDPR
 - RUOLI, MENU_GRP, MENU_TIPI, MENU, ABILITAZIONI, RUOLI_MNU, UTENTI_RUOLI
@@ -319,7 +319,8 @@ Accessi possiede lo schema del dominio. Con autoUpdateDatabase true (predefinito
 npm run db:update:accessi   # riconcilia lo schema
 npm run db:check:accessi    # verifica senza modificare
 ```
-[WARN] Versioni: La libreria richiede uno schema compatibile con la versione corrente (ACCESSI_SCHEMA_VERSION). Se la verifica fallisce, leggi il codice errore ACCESSI_DATABASE_SCHEMA_OUTDATED ed esegui db:update:accessi.
+[WARN] Versioni: La libreria richiede uno schema compatibile con la versione corrente (ACCESSI_SCHEMA_VERSION). Se il preflight fallisce, leggi il codice errore ACCESSI_DATABASE_SCHEMA_OUTDATED oppure esegui db:update:accessi.
+[WARN] Policy di migrazione: databaseMigration (ACCESSI_DB_MIGRATION_POLICY) vale ask (default), migrate o fail. In container o CI senza TTY ask equivale a NO: imposta migrate per automatizzare la migrazione o fail per bloccare subito. Uno schema più recente della libreria non viene mai retrocesso.
 [INFO] Schema esatto: La riconciliazione allinea le tabelle Accessi a "niente in piu, niente in meno": le colonne non previste vengono segnalate come incompatibili e rimosse automaticamente (dopo rename e copie dei dati legacy). Gli indici, i trigger e i CHECK extra non previsti non vengono tolti, ma un indice non previsto su una tabella Accessi viene riportato come avviso senza bloccare l'avvio.
 
 ### Catalog migrations SQL
@@ -929,7 +930,7 @@ await startAccessiService({
 | Email | ACCESSI_EMAIL_HOST, ACCESSI_EMAIL_PORT, ACCESSI_EMAIL_USER, ACCESSI_EMAIL_PASSWORD, ACCESSI_EMAIL_FROM | SMTP obbligatorio per reset, 2FA e inviti |
 | URL | ACCESSI_PUBLIC_BASE_URL, ACCESSI_CONFIRMATION_EMAIL_URL, ACCESSI_CONFIRMATION_RETURN_EMAIL_URL, ACCESSI_CONSOLE_API_BASE_URL | Link nelle email e console su dominio separato |
 | Console | ACCESSI_CONSOLE_ENTRY_TTL_MS, ACCESSI_CONSOLE_ENTRY_KEY | Ticket monouso; store Redis in multi-istanza |
-| Migrazioni | ACCESSI_AUTO_UPDATE_DATABASE, ACCESSI_LEGACY_PASSWORD_MIGRATION, ACCESSI_SYSTEM_SEEDS_ENABLED, ACCESSI_ADMIN_BOOTSTRAP_ENABLED | false su auto-update per le repliche dopo la migrazione |
+| Migrazioni | ACCESSI_AUTO_UPDATE_DATABASE, ACCESSI_DB_MIGRATION_POLICY, ACCESSI_LEGACY_PASSWORD_MIGRATION, ACCESSI_SYSTEM_SEEDS_ENABLED, ACCESSI_ADMIN_BOOTSTRAP_ENABLED | ask su TTY; migrate o fail in container; false su auto-update per le repliche |
 | Cookie | ACCESSI_AUTH_COOKIE_ENABLED, _SECURE, _SAME_SITE, _DOMAIN, _CSRF | Bearer resta il default; abilitare solo se serve HttpOnly |
 | Osservabilità | ACCESSI_METRICS_*, ACCESSI_AUDIT_* | Metriche e audit; store e sink restano oggetti runtime |
 | Feature e tenant | ACCESSI_TENANT_ID, ACCESSI_PUBLIC_REGISTRATION_ENABLED, ACCESSI_FEDERATED_*, ACCESSI_SERVICE_TOKENS_* | Registrazione e SSO sono opt-in |
@@ -937,7 +938,7 @@ await startAccessiService({
 | Rate limit | ACCESSI_PUBLIC_RATE_LIMIT_*, ACCESSI_EDGE_RATE_LIMIT_* | Finestra e tentativi dello stesso scope vanno configurati insieme |
 **Rollout sicuro**
 1. Costruisci l artefatto e valida la configurazione prima del deploy: assertValidAccessiOptions blocca gli errori evidenti.
-2. Esegui la migrazione dello schema con un solo processo (autoUpdateDatabase: true oppure npm run db:update:accessi).
+2. Esegui la migrazione dello schema con un solo processo (databaseMigration: migrate oppure npm run db:update:accessi).
 3. Avvia le repliche con autoUpdateDatabase: false: verificano lo schema in sola lettura e non eseguono DDL concorrenti.
 4. Attendi /health/ready prima di inviare traffico dal load balancer.
 5. Ruota una replica alla volta; il servizio gestisce SIGTERM/SIGINT e chiude Nest e i pool Firebird.
@@ -960,7 +961,7 @@ TimeoutStopSec=15
 WantedBy=multi-user.target
 ```
 Template pronti per multi-tenant, Docker, Nginx e Traefik sono in deploy/: systemd/accessi-tenant@.service, systemd/tenant.secrets.example, docker/docker-compose.yml, nginx/accessi-tenants.conf e traefik/dynamic.yml. Non contengono segreti e vanno adattati.
-[WARN] Migrazioni: Non eseguire DDL concorrenti con più repliche o con traffico applicativo. Migra prima del rollout e lascia autoUpdateDatabase: false sulle repliche. Fai un backup e collauda su una copia rappresentativa.
+[WARN] Migrazioni: Non eseguire DDL concorrenti con più repliche o con traffico applicativo. Migra prima del rollout e lascia autoUpdateDatabase: false sulle repliche. In container imposta ACCESSI_DB_MIGRATION_POLICY=migrate o fail: senza TTY il default ask non può chiedere conferma. Fai un backup e collauda su una copia rappresentativa.
 [WARN] Proxy: Imposta http.trustProxy sul numero esatto di proxy davanti al servizio (1 per Nginx/Traefik/ALB, 2 con Cloudflare più ingress). Un valore sbagliato rende rate limit e audit aggirabili tramite header.
 [INFO] Dettagli: Procedura completa in docs/standalone-service.md, deploy/README.md e docs/proxy-ip.md.
 

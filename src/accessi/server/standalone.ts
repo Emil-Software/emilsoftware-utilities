@@ -147,7 +147,14 @@ export async function createAccessiService(
     });
   }
 
-  const result = await initializeAccessiModule(app, accessiOptions);
+  let result: AccessiModuleInitializationResult;
+  try {
+    result = await initializeAccessiModule(app, accessiOptions);
+  } catch (error) {
+    // Nessun listener e nessun handle DB residuo: il processo standalone puo uscire.
+    await Orm.closePools().catch(() => undefined);
+    throw error;
+  }
   nestApp = result.nestApp;
   document = result.document;
   initialized = true;

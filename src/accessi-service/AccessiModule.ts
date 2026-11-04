@@ -31,6 +31,7 @@ import { ConfiguratorService } from './services/configurator-service/Configurato
 import { JwtSimpleGuard } from './jwt/JwtSimpleGuard';
 import { AuthenticateGenService } from './middleware/authenticateGen';
 import { AccessiDatabaseUpdater } from './database-updates/AccessiDatabaseUpdater';
+import type { AccessiDatabaseMigrationPolicy } from './database-updates/accessiDatabaseStartup';
 import { FederatedAuthService } from './federated-auth/FederatedAuthService';
 import { FederatedAuthController } from './federated-auth/FederatedAuthController';
 import { FederatedAuthExchangeController } from './federated-auth/FederatedAuthExchangeController';
@@ -276,6 +277,16 @@ export interface AccessiOptions {
   legacyPasswordMigrationOnStartup?: boolean;
   /** Riconcilia lo schema al bootstrap (default `true`). Con `false` verifica comunque la compatibilita in sola lettura e blocca avvii incompatibili. */
   autoUpdateDatabase?: boolean;
+  /**
+   * Cosa fare quando il database non e alla versione attesa all'avvio.
+   *
+   * - `ask` (default): chiede SI/NO su TTY; in sessione non interattiva blocca l'avvio.
+   * - `migrate`: esegue la migrazione idempotente senza chiedere.
+   * - `fail`: blocca l'avvio con un errore esplicito.
+   *
+   * `autoUpdateDatabase: false` forza sempre `fail`.
+   */
+  databaseMigration?: AccessiDatabaseMigrationPolicy;
   /** Parametri JWT dei token emessi da Accessi. */
   jwtOptions: JwtOptions;
   /** Parametri SMTP per reset e attivazione password. */

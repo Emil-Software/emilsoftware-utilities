@@ -42,6 +42,7 @@ async function database(t) {
   return {
     databaseOptions,
     autoUpdateDatabase: true,
+    databaseMigration: 'migrate',
     jwtOptions: { secret: 'schema-test-only', expiresIn: '1h' },
     // L'email e obbligatoria per il bootstrap del modulo.
     emailOptions: { host: 'localhost', port: 25, secure: false, requireTLS: false, tls: { rejectUnauthorized: false }, from: 'test@example.local', auth: { user: 'test', pass: 'test' } },
@@ -212,7 +213,13 @@ integration('detect inactive triggers, missing constraints and damaged sequence 
 test('parallel module lifecycle hooks share one initialization and read-only failures can retry', async t => {
   let calls = 0;
   const o = { databaseOptions: {}, autoUpdateDatabase: false };
-  t.mock.method(Updater, 'assertCompatible', async () => { calls++; if (calls === 1) throw new Error('incompatible'); });
+  t.mock.method(Updater, 'getCurrentVersion', async () => ACCESSI_SCHEMA_VERSION);
+  t.mock.method(Updater, 'inspectSchema', async () => {
+    calls++;
+    return calls === 1
+      ? { compatible: false, issues: ['incompatible'], warnings: [] }
+      : { compatible: true, issues: [], warnings: [] };
+  });
   await assert.rejects(Promise.all([Updater.initialize(o), Updater.initialize(o)]), /incompatible/);
   assert.equal(calls, 1);
   await Updater.initialize(o);
@@ -277,6 +284,8 @@ integration('generic SQL snapshot and standalone read-only check match the schem
   }
   for (const sql of rest.split('SET TERM ; ^')[0].split('^').map(s => s.trim()).filter(Boolean)) await exec(o, portable(sql));
   await Updater.assertCompatible(o);
+  // Lo snapshot non inserisce la versione: la aggiunge chi migra. Il check la richiede.
+  await exec(o, 'UPDATE OR INSERT INTO PARAMETRI (CODPAR, DESPAR) VALUES (?, ?) MATCHING (CODPAR)', [ACCESSI_VERSION_KEY, ACCESSI_SCHEMA_VERSION]);
   const { spawnSync } = require('node:child_process');
   const result = spawnSync(process.execPath, ['-r', 'ts-node/register/transpile-only', 'src/accessi-service/database-updates/runAccessiDbUpdate.ts', '--check'], {
     cwd: path.join(__dirname, '..'), encoding: 'utf8', env: { ...process.env,
@@ -286,5 +295,5 @@ integration('generic SQL snapshot and standalone read-only check match the schem
     },
   });
   assert.equal(result.status, 0, result.stderr + result.stdout);
-  assert.equal(await Updater.getCurrentVersion(o), null, 'read-only check must not write the version');
+  assert.equal(await Updater.getCurrentVersion(o), ACCESSI_SCHEMA_VERSION, 'read-only check must not change the version');
 });

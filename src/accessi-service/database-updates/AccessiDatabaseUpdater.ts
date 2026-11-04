@@ -6,6 +6,11 @@ import { Logger } from '../../Logger';
 import { ACCESSI_SCHEMA_VERSION, ACCESSI_VERSION_KEY, accessiTables, accessiForeignKeys, accessiIndexes, accessiTriggers, accessiGenerators, accessiChecks, accessiRenamedColumns, accessiObsoleteColumns, accessiColumnCopies } from './accessiSchema';
 import { applyCatalogScripts } from './AccessiCatalogMigrator';
 import { applyMenuScopeSeeds } from './menuScopeSeeder';
+import { ensureAccessiDatabase, evaluateAccessiDatabasePreflight } from './accessiDatabaseStartup';
+import type {
+  AccessiDatabasePreflightReport,
+  AccessiDatabaseStartupDependencies,
+} from './accessiDatabaseStartup';
 
 type Row = Record<string, unknown>;
 export interface AccessiSchemaReport { compatible: boolean; issues: string[]; warnings: string[]; }
@@ -14,36 +19,46 @@ export interface AccessiSchemaReport { compatible: boolean; issues: string[]; wa
 @Injectable()
 export class AccessiDatabaseUpdater extends DatabaseUpdater implements OnModuleInit {
   protected static override logger = new Logger(AccessiDatabaseUpdater.name);
-  private static readonly initialization = new WeakMap<AccessiOptions, Promise<void>>();
+  private static readonly startup = new Map<string, Promise<AccessiDatabasePreflightReport>>();
   private static readonly running = new Map<string, Promise<void>>();
 
   constructor(@Inject('ACCESSI_OPTIONS') private readonly accessiOptions: AccessiOptions) { super(); }
 
-  async onModuleInit(): Promise<void> { await AccessiDatabaseUpdater.initialize(this.accessiOptions); }
+  async onModuleInit(): Promise<void> { await AccessiDatabaseUpdater.ensure(this.accessiOptions); }
 
-  /** Shared bootstrap barrier for services in the same Nest module. Failed attempts may be retried. */
-  static initialize(options: AccessiOptions): Promise<void> {
-    let pending = this.initialization.get(options);
+  private static databaseKey(options: AccessiOptions): string {
+    const db = options.databaseOptions;
+    return JSON.stringify([db.host ?? 'localhost', db.port ?? 3050, db.database]);
+  }
+
+  /**
+   * Preflight bloccante condiviso da tutti i bootstrap.
+   *
+   * La cache dura quanto la chiamata: un fallimento puo essere ritentato e una
+   * nuova applicazione con le stesse opzioni rivalida lo schema.
+   */
+  static ensure(options: AccessiOptions): Promise<AccessiDatabasePreflightReport> {
+    const key = this.databaseKey(options);
+    let pending = this.startup.get(key);
     if (!pending) {
-      pending = this.bootstrap(options);
-      this.initialization.set(options, pending);
-      const cleanup = () => this.initialization.delete(options);
+      pending = ensureAccessiDatabase(options, this.startupDependencies());
+      this.startup.set(key, pending);
+      const cleanup = () => { if (this.startup.get(key) === pending) this.startup.delete(key); };
       pending.then(cleanup, cleanup);
     }
     return pending;
   }
 
-  /**
-   * Prima riconcilia lo schema, poi applica le catalog migrations applicative (menu, ruoli, ...).
-   * Con `autoUpdateDatabase: false` la verifica resta in sola lettura e le catalog migrations
-   * non vengono eseguite automaticamente.
-   */
-  private static async bootstrap(options: AccessiOptions): Promise<void> {
-    if (options.autoUpdateDatabase === false) {
-      await this.assertCompatible(options);
-      return;
-    }
+  /** Compatibilita con i bootstrap esistenti: equivalente a `ensure`. */
+  static async initialize(options: AccessiOptions): Promise<void> {
+    await this.ensure(options);
+  }
 
+  /**
+   * Migrazione idempotente, seed e catalog scripts. Non esegue il preflight:
+   * chiamare `ensure` per il percorso di avvio.
+   */
+  static async migrate(options: AccessiOptions): Promise<void> {
     await this.run(options);
     await applyMenuScopeSeeds(options);
     if (options.catalogScripts?.enabled) {
@@ -51,7 +66,25 @@ export class AccessiDatabaseUpdater extends DatabaseUpdater implements OnModuleI
     }
   }
 
+  private static startupDependencies(): AccessiDatabaseStartupDependencies {
+    return {
+      getVersion: (options) => this.getCurrentVersion(options),
+      inspect: (options) => this.inspectSchema(options),
+      migrate: (options) => this.migrate(options),
+      log: (message) => this.logger.info(message),
+    };
+  }
+
   static getLatestVersion(): string { return ACCESSI_SCHEMA_VERSION; }
+
+  /** Preflight read-only: versione dichiarata + ispezione reale, senza prompt e senza DDL. */
+  static async preflight(options: AccessiOptions): Promise<AccessiDatabasePreflightReport> {
+    return evaluateAccessiDatabasePreflight(
+      await this.getCurrentVersion(options),
+      ACCESSI_SCHEMA_VERSION,
+      await this.inspectSchema(options),
+    );
+  }
 
   static async getCurrentVersion(options: AccessiOptions): Promise<string | null> {
     if (!(await this.tableExists(options.databaseOptions, 'PARAMETRI'))) return null;
@@ -63,8 +96,7 @@ export class AccessiDatabaseUpdater extends DatabaseUpdater implements OnModuleI
 
   /** Serialize callers targeting the same database in this process. Cross-process DDL is a deployment concern. */
   static run(options: AccessiOptions): Promise<void> {
-    const db = options.databaseOptions;
-    const key = JSON.stringify([db.host ?? 'localhost', db.port ?? 3050, db.database]);
+    const key = this.databaseKey(options);
     const previous = this.running.get(key) ?? Promise.resolve();
     const pending = previous.catch(() => {}).then(() => this.reconcile(options));
     this.running.set(key, pending);

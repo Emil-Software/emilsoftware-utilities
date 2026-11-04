@@ -240,3 +240,19 @@ test('#30: rate limit pubblico e edge si configurano da ambiente', () => {
     /ACCESSI_EDGE_RATE_LIMIT/,
   );
 });
+
+test('#35: la policy di migrazione si legge da ambiente', () => {
+  assert.equal(
+    createAccessiOptionsFromEnv(baseEnv({ ACCESSI_DB_MIGRATION_POLICY: 'migrate' })).databaseMigration,
+    'migrate',
+  );
+  assert.equal(
+    createAccessiOptionsFromEnv(baseEnv({ ACCESSI_DB_MIGRATION_POLICY: 'fail' })).databaseMigration,
+    'fail',
+  );
+  assert.equal(createAccessiOptionsFromEnv(baseEnv()).databaseMigration, undefined);
+  assert.throws(
+    () => createAccessiOptionsFromEnv(baseEnv({ ACCESSI_DB_MIGRATION_POLICY: 'sempre' })),
+    /ACCESSI_DB_MIGRATION_POLICY/,
+  );
+});

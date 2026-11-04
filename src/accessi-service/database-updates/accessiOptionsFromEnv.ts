@@ -366,6 +366,11 @@ export function createAccessiOptionsFromEnv(env: NodeJS.ProcessEnv = process.env
 
   const tenantId = env.ACCESSI_TENANT_ID?.trim();
   const consoleEntryTtlMs = getOptionalPositiveInteger(env, "ACCESSI_CONSOLE_ENTRY_TTL_MS");
+  const databaseMigration = getOptionalEnum(
+    env,
+    "ACCESSI_DB_MIGRATION_POLICY",
+    ["ask", "migrate", "fail"] as const,
+  );
 
   const trustProxy =
     env.ACCESSI_HTTP_TRUST_PROXY !== undefined
@@ -478,6 +483,7 @@ export function createAccessiOptionsFromEnv(env: NodeJS.ProcessEnv = process.env
     passwordExpiration: getOptionalBoolean(env, "ACCESSI_PASSWORD_EXPIRATION", false),
     legacyPasswordMigrationOnStartup: getOptionalBoolean(env, "ACCESSI_LEGACY_PASSWORD_MIGRATION", true),
     autoUpdateDatabase: getOptionalBoolean(env, "ACCESSI_AUTO_UPDATE_DATABASE", true),
+    ...(databaseMigration ? { databaseMigration } : {}),
     systemSeeds: {
       enabled: getOptionalBoolean(env, "ACCESSI_SYSTEM_SEEDS_ENABLED", true),
     },

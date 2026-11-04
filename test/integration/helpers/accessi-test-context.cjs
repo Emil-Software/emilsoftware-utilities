@@ -44,6 +44,7 @@ function buildAccessiOptions() {
     encryptionKey: '0123456789ABCDEF',
     mockDemoUser: false,
     autoUpdateDatabase: true,
+    databaseMigration: 'migrate',
     legacyPasswordMigrationOnStartup: false,
     jwtOptions: { secret: 'integration-secret', expiresIn: '1h' },
     emailOptions: {

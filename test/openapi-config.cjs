@@ -1,6 +1,6 @@
 require('ts-node/register/transpile-only');
 require('reflect-metadata');
-const { test } = require('node:test');
+const { test, beforeEach, afterEach } = require('node:test');
 const assert = require('node:assert/strict');
 const express = require('express');
 const { NestFactory } = require('@nestjs/core');
@@ -16,7 +16,25 @@ const {
 } = require('../src/openapi/OpenApiConfig');
 const { AccessiModule } = require('../src/accessi-service/AccessiModule');
 const { initializeAccessiModule } = require('../src/accessi-service');
+const { AccessiDatabaseUpdater } = require('../src/accessi-service/database-updates/AccessiDatabaseUpdater');
 const { initEmilsoftwareModule } = require('../src/initEmilsoftwareModule');
+
+const ACCESSI_DATABASE_OK = {
+  status: 'ok',
+  reason: 'none',
+  currentVersion: '1.12.0',
+  expectedVersion: '1.12.0',
+  issues: [],
+  warnings: [],
+};
+let originalDatabaseEnsure;
+beforeEach(() => {
+  originalDatabaseEnsure = AccessiDatabaseUpdater.ensure;
+  AccessiDatabaseUpdater.ensure = async () => ACCESSI_DATABASE_OK;
+});
+afterEach(() => {
+  AccessiDatabaseUpdater.ensure = originalDatabaseEnsure;
+});
 
 const HISTORICAL_DEFAULTS = {
   enabled: true,

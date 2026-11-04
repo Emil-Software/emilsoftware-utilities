@@ -138,11 +138,43 @@ Per Docker, Nginx, Traefik e multi-tenant usa i template in
 
 Non eseguire migrazioni DDL con più repliche o con traffico applicativo.
 
+### Check bloccante all'avvio
+
+Ogni avvio con Accessi, in qualunque modalità (servizio standalone,
+`initializeAccessiModule`, `AccessiModule.forRoot`, CLI), esegue un preflight
+read-only prima di completare il bootstrap e comunque prima di aprire la porta
+HTTP. Con `initializeAccessiModule` il check parte prima di creare il container
+Nest; con `AccessiModule.forRoot` gira in `onModuleInit`, quindi prima di
+`app.listen()`:
+
+1. legge la versione in `PARAMETRI` e la confronta con `ACCESSI_SCHEMA_VERSION`;
+2. verifica lo schema reale con la stessa ispezione della riconciliazione.
+
+Se il database è sano, l'avvio prosegue senza domande. Se manca, è più vecchio o
+è difforme:
+
+```text
+Non siamo alla versione corretta di Accessi.
+Corrente: 1.11.0 - Attesa: 1.12.0
+Vuoi avviare la migrazione? SI - NO
+```
+
+- `SI`: esegue la migrazione idempotente, i seed e le catalog migration, poi
+  ripete il check. Se il database non è sano, l'avvio si ferma.
+- `NO`: chiude i pool e interrompe l'avvio (exit code 1 per CLI e servizio
+  standalone, errore tipizzato per l'host embedded).
+
+Policy: `ACCESSI_DB_MIGRATION_POLICY=ask|migrate|fail` (default `ask`). In
+container o CI senza TTY `ask` equivale a `NO`: usare `migrate` per automatizzare
+o `fail` per bloccare subito. `ACCESSI_AUTO_UPDATE_DATABASE=false` forza `fail`.
+Uno schema più recente della libreria non viene mai retrocesso.
+
 ### Migrazioni e seed da ambiente
 
 | Variabile | Default | Uso |
 | --- | --- | --- |
-| `ACCESSI_AUTO_UPDATE_DATABASE` | `true` | `false` sulle repliche: verifica lo schema in sola lettura |
+| `ACCESSI_AUTO_UPDATE_DATABASE` | `true` | `false` sulle repliche: verifica lo schema in sola lettura e forza la policy `fail` |
+| `ACCESSI_DB_MIGRATION_POLICY` | `ask` | `ask` chiede SI/NO su TTY; `migrate` migra; `fail` blocca |
 | `ACCESSI_LEGACY_PASSWORD_MIGRATION` | `true` | Migrazione password legacy al bootstrap |
 | `ACCESSI_SYSTEM_SEEDS_ENABLED` | `true` | Seed di sistema (menu e scope di base) |
 | `ACCESSI_ADMIN_BOOTSTRAP_ENABLED` | `false` | Token monouso per creare il primo admin |
@@ -315,6 +347,7 @@ Dettagli e flusso browser in [auth-cookies.md](auth-cookies.md).
 ## Checklist di produzione
 
 - Con `NODE_ENV=production` il servizio fallisce se `ACCESSI_JWT_SECRET` o `ACCESSI_ENCRYPTION_KEY` mancano o usano i default locali.
+- In container/CI impostare `ACCESSI_DB_MIGRATION_POLICY=migrate` (o `fail`): senza TTY il default `ask` non può chiedere conferma.
 - Database Accessi raggiungibile solo dal servizio.
 - `encryptionKey`, SMTP e chiavi JWT da un secret manager.
 - `issuer` e `audience` espliciti e diversi per ambiente.

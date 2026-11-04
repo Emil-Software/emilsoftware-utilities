@@ -39,7 +39,8 @@ Il modulo non legge direttamente il file `.env`: riceve un oggetto `AccessiOptio
 - `publicRegistration`: abilitazione e policy della registrazione pubblica
 - `catalogScripts`: migrazioni SQL idempotenti per menu, ruoli e cataloghi applicativi
 - `legacyPasswordMigrationOnStartup`: migrazione delle password legacy al primo avvio
-- `autoUpdateDatabase`: se `false`, disabilita le modifiche automatiche ma verifica comunque lo schema al boot e blocca avvii incompatibili; dettagli in [Aggiornamento database](database-update.md)
+- `autoUpdateDatabase`: se `false`, disabilita le modifiche automatiche, forza la policy `databaseMigration: fail` e blocca avvii incompatibili; dettagli in [Aggiornamento database](database-update.md)
+- `databaseMigration`: `ask` (default) chiede SI/NO su TTY, `migrate` esegue la migrazione idempotente, `fail` blocca; in container senza TTY usare `migrate` o `fail`
 
 ## Differenza tra modulo e updater
 

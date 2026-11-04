@@ -1,7 +1,6 @@
 import { AccessiDatabaseUpdater } from "./AccessiDatabaseUpdater";
 import { createAccessiOptionsFromEnv } from "./accessiOptionsFromEnv";
 import { Orm } from "../../Orm";
-import { applyMenuScopeSeeds } from "./menuScopeSeeder";
 
 async function main(): Promise<void> {
   const options = createAccessiOptionsFromEnv();
@@ -12,10 +11,18 @@ async function main(): Promise<void> {
     `[Accessi DB Update] Target: ${options.databaseOptions.host}:${options.databaseOptions.port} -> ${options.databaseOptions.database}`
   );
 
-  if (checkOnly) await AccessiDatabaseUpdater.assertCompatible(options);
-  else {
-    await AccessiDatabaseUpdater.run(options);
-    await applyMenuScopeSeeds(options);
+  if (checkOnly) {
+    const report = await AccessiDatabaseUpdater.preflight(options);
+    if (report.status !== 'ok') {
+      const current = report.currentVersion ?? 'non inizializzato';
+      throw new Error(
+        `Schema Accessi non allineato: corrente ${current}, attesa ${report.expectedVersion}.` +
+          (report.issues.length > 0 ? `\n- ${report.issues.join('\n- ')}` : ''),
+      );
+    }
+    console.log(`[Accessi DB Update] Schema e versione OK: ${report.expectedVersion}`);
+  } else {
+    await AccessiDatabaseUpdater.migrate(options);
   }
 
   const currentVersion = await AccessiDatabaseUpdater.getCurrentVersion(options);

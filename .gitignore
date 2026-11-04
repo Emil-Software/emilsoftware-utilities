@@ -19,6 +19,7 @@
 !/test/menu-scopes.cjs
 !/test/accessi-email-config.cjs
 !/test/accessi-catalog-scripts.cjs
+!/test/accessi-database-startup.cjs
 !/test/accessi-docs.cjs
 !/test/accessi-env-config.cjs
 !/test/accessi-schema.cjs

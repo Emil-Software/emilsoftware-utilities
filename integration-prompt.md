@@ -170,6 +170,7 @@ const options: AccessiServerOptions = {
   encryptionKey: process.env.ACCESSI_ENCRYPTION_KEY!,
   mockDemoUser: false,
   autoUpdateDatabase: true,
+  databaseMigration: "ask", // migrate o fail in container senza TTY
   legacyPasswordMigrationOnStartup: true,
   jwtOptions: {
     secret: process.env.ACCESSI_JWT_SECRET!,

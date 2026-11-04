@@ -4,6 +4,7 @@ import { ExpressAdapter } from "@nestjs/platform-express";
 import type { INestApplication } from "@nestjs/common";
 import type { OpenAPIObject } from "@nestjs/swagger";
 import { AccessiModule, AccessiOptions } from "./AccessiModule";
+import { AccessiDatabaseUpdater } from "./database-updates/AccessiDatabaseUpdater";
 import { Logger } from "../Logger";
 import { AuthService } from "./services/auth-service/AuthService";
 import {
@@ -63,14 +64,16 @@ export async function initializeAccessiModule(
     app: Application,
     options: AccessiOptions
 ): Promise<AccessiModuleInitializationResult> {
-    // Il servizio email e obbligatorio: reset password, 2FA e creazione utente ne dipendono.
-    assertEmailConfigured(options);
     const logger: Logger = new Logger("initializeAccessiModule");
     beginAccessiAuthInitialization();
     const startedAt = performance.now();
     const resolvedOpenApi = resolveAccessiOpenApiOptions(options.openapi);
 
     try {
+        // Preflight bloccante: nessuna rotta, provider o listener prima che il DB sia sano.
+        await AccessiDatabaseUpdater.ensure(options);
+        // Il servizio email e obbligatorio: reset password, 2FA e creazione utente ne dipendono.
+        assertEmailConfigured(options);
         logger.info("Inizializzazione modulo accessi avviata.");
         logger.info(`Target database accessi: ${describeDatabaseTarget(options)}`);
         logger.info(
@@ -179,6 +182,29 @@ export { AccessiAuditController } from "./controllers/AccessiAuditController";
 export { FederatedAuthExchangeController } from "./federated-auth/FederatedAuthExchangeController";
 export type { AccessiTokenIntrospectionResult } from "./services/auth-service/AuthService";
 export { AccessiDatabaseUpdater } from "./database-updates/AccessiDatabaseUpdater";
+export {
+    AccessiDatabaseMigrationDeclinedError,
+    AccessiDatabaseMigrationFailedError,
+    AccessiDatabaseSchemaNewerError,
+    AccessiDatabaseSchemaOutdatedError,
+    AccessiDatabaseStartupError,
+    askAccessiDatabaseMigration,
+    compareAccessiSchemaVersions,
+    ensureAccessiDatabase,
+    evaluateAccessiDatabasePreflight,
+    formatAccessiDatabaseMigrationPrompt,
+    isInteractiveAccessiSession,
+    resolveAccessiDatabaseMigrationPolicy
+} from "./database-updates/accessiDatabaseStartup";
+export type {
+    AccessiDatabaseMigrationPolicy,
+    AccessiDatabasePreflightReason,
+    AccessiDatabasePreflightReport,
+    AccessiDatabasePreflightStatus,
+    AccessiDatabaseStartupDependencies,
+    AccessiDatabaseStartupErrorCode,
+    AccessiSchemaInspection
+} from "./database-updates/accessiDatabaseStartup";
 export type { AccessiOptions, EmailOptions, JwtOptions, ExtensionFieldsOptions, PublicAuthRateLimitOptions, PublicAuthRateLimitRuleOptions } from "./AccessiModule";
 export type { PublicRegistrationOptions, FederatedAuthenticationOptions, ServiceTokenOptions } from "./AccessiModule";
 export type { CatalogScriptsOptions, CatalogScriptChecksumPolicy, ConsoleEntryOptions } from "./AccessiModule";
