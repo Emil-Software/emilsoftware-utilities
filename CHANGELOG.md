@@ -1,3 +1,10 @@
+# [2.0.0-dev.87](https://github.com/Emil-Software/emilsoftware-utilities/compare/v2.0.0-dev.86...v2.0.0-dev.87) (2026-11-04)
+
+
+### Bug Fixes
+
+* **deps:** aggiorna tutte le dipendenze ([546c975](https://github.com/Emil-Software/emilsoftware-utilities/commit/546c9757c1744aa2fda09a3af429ab4946aaa100)), closes [#34](https://github.com/Emil-Software/emilsoftware-utilities/issues/34)
+
 # [2.0.0-dev.86](https://github.com/Emil-Software/emilsoftware-utilities/compare/v2.0.0-dev.85...v2.0.0-dev.86) (2026-11-03)
 
 
