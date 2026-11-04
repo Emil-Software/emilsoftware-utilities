@@ -1,3 +1,10 @@
+# [2.0.0-dev.88](https://github.com/Emil-Software/emilsoftware-utilities/compare/v2.0.0-dev.87...v2.0.0-dev.88) (2026-11-04)
+
+
+### Bug Fixes
+
+* nuova versione libreria ([6abfdae](https://github.com/Emil-Software/emilsoftware-utilities/commit/6abfdaed9c294ce03e94f8c36f319035b27dd89d))
+
 # [2.0.0-dev.87](https://github.com/Emil-Software/emilsoftware-utilities/compare/v2.0.0-dev.86...v2.0.0-dev.87) (2026-11-04)
 
 
