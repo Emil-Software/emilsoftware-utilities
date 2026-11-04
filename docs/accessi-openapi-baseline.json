@@ -2056,6 +2056,140 @@
           "ref": "ErrorResponse"
         }
       }
+    },
+    "queryAudit": {
+      "method": "GET",
+      "path": "/api/accessi/audit",
+      "security": [
+        "bearer"
+      ],
+      "parameters": {
+        "query:event": {
+          "required": false,
+          "schema": {
+            "type": "string"
+          }
+        },
+        "query:from": {
+          "required": false,
+          "schema": {
+            "type": "string"
+          }
+        },
+        "query:to": {
+          "required": false,
+          "schema": {
+            "type": "string"
+          }
+        },
+        "query:codiceUtente": {
+          "required": false,
+          "schema": {
+            "type": "number"
+          }
+        },
+        "query:limit": {
+          "required": false,
+          "schema": {
+            "type": "number"
+          }
+        },
+        "query:offset": {
+          "required": false,
+          "schema": {
+            "type": "number"
+          }
+        },
+        "query:order": {
+          "required": false,
+          "schema": {
+            "type": "string",
+            "enum": [
+              "\"asc\"",
+              "\"desc\""
+            ]
+          }
+        }
+      },
+      "requestBody": null,
+      "responses": {
+        "200": {
+          "type": "none"
+        },
+        "401": {
+          "ref": "ErrorResponse"
+        },
+        "403": {
+          "ref": "ErrorResponse"
+        },
+        "501": {
+          "ref": "ErrorResponse"
+        }
+      }
+    },
+    "exportAudit": {
+      "method": "GET",
+      "path": "/api/accessi/audit/export",
+      "security": [
+        "bearer"
+      ],
+      "parameters": {
+        "query:event": {
+          "required": false,
+          "schema": {
+            "type": "string"
+          }
+        },
+        "query:from": {
+          "required": false,
+          "schema": {
+            "type": "string"
+          }
+        },
+        "query:to": {
+          "required": false,
+          "schema": {
+            "type": "string"
+          }
+        },
+        "query:codiceUtente": {
+          "required": false,
+          "schema": {
+            "type": "number"
+          }
+        },
+        "query:limit": {
+          "required": false,
+          "schema": {
+            "type": "number"
+          }
+        },
+        "query:offset": {
+          "required": false,
+          "schema": {
+            "type": "number"
+          }
+        },
+        "query:order": {
+          "required": false,
+          "schema": {
+            "type": "string",
+            "enum": [
+              "\"asc\"",
+              "\"desc\""
+            ]
+          }
+        }
+      },
+      "requestBody": null,
+      "responses": {
+        "200": {
+          "type": "none"
+        },
+        "501": {
+          "ref": "ErrorResponse"
+        }
+      }
     }
   },
   "schemas": {
@@ -2147,9 +2281,6 @@
     },
     "GetUserByTokenRequest": {
       "type": "object",
-      "required": [
-        "token"
-      ],
       "properties": {
         "token": {
           "type": "string"
@@ -2271,7 +2402,7 @@
       ],
       "properties": {
         "twoFactorRequired": {
-          "type": "number",
+          "type": "boolean",
           "enum": [
             "true"
           ]
@@ -2631,7 +2762,7 @@
       "type": "object",
       "properties": {
         "passwordRequired": {
-          "type": "number",
+          "type": "boolean",
           "enum": [
             "true"
           ]
@@ -2726,9 +2857,6 @@
     },
     "RefreshTokenRequest": {
       "type": "object",
-      "required": [
-        "refreshToken"
-      ],
       "properties": {
         "refreshToken": {
           "type": "string"

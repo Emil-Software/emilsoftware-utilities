@@ -6,7 +6,7 @@ il [quickstart resource server](quickstart-resource-server.md).
 
 ## Prerequisiti
 
-- Node.js 18 o superiore.
+- Node.js 20 o superiore (per compilare dal sorgente serve Node.js 22.18 o superiore).
 - Firebird/InterBase 2.5 o superiore raggiungibile dal servizio.
 - Un server SMTP: Accessi lo richiede per reset password, 2FA e inviti.
 - Un secret manager o variabili d'ambiente per database, `encryptionKey`, SMTP e chiavi JWT.

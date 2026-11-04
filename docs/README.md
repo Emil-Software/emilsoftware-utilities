@@ -94,7 +94,7 @@ alla prossima major, ma sono legacy. La mappa di migrazione è in
 
 ## Compatibilità
 
-- Node.js 18 o superiore.
+- Node.js 20 o superiore (per compilare dal sorgente serve Node.js 22.18 o superiore).
 - Firebird/InterBase 2.5 o superiore.
 - Package CommonJS con export map esplicita; gli import ESM funzionano per interop.
 - `sideEffects` limitato a root barrel, `firebirdCompat` e bundle console.
