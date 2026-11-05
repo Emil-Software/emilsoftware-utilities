@@ -1,3 +1,10 @@
+# [2.0.0-dev.90](https://github.com/Emil-Software/emilsoftware-utilities/compare/v2.0.0-dev.89...v2.0.0-dev.90) (2026-11-05)
+
+
+### Features
+
+* nuova distribuzione ([a6e1376](https://github.com/Emil-Software/emilsoftware-utilities/commit/a6e1376c3664d347ca3acdf54abb4237f8eb7d4a))
+
 # [2.0.0-dev.89](https://github.com/Emil-Software/emilsoftware-utilities/compare/v2.0.0-dev.88...v2.0.0-dev.89) (2026-11-04)
 
 
