@@ -1,3 +1,10 @@
+# [2.0.0-dev.92](https://github.com/Emil-Software/emilsoftware-utilities/compare/v2.0.0-dev.91...v2.0.0-dev.92) (2026-11-06)
+
+
+### Features
+
+* **accessi:** gestisci le associazioni menu/scope nella console ([489e0cc](https://github.com/Emil-Software/emilsoftware-utilities/commit/489e0cc2002dd3138eb245687fe5aab524768ee3)), closes [#37](https://github.com/Emil-Software/emilsoftware-utilities/issues/37)
+
 # [2.0.0-dev.91](https://github.com/Emil-Software/emilsoftware-utilities/compare/v2.0.0-dev.90...v2.0.0-dev.91) (2026-11-06)
 
 
