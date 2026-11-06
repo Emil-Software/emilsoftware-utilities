@@ -1,3 +1,10 @@
+# [2.0.0-dev.91](https://github.com/Emil-Software/emilsoftware-utilities/compare/v2.0.0-dev.90...v2.0.0-dev.91) (2026-11-06)
+
+
+### Bug Fixes
+
+* **openapi:** non loggare localhost:3000 hardcoded ([562c6d6](https://github.com/Emil-Software/emilsoftware-utilities/commit/562c6d6cfb23395b9a7f3eed2df9b07f94c831b5)), closes [#36](https://github.com/Emil-Software/emilsoftware-utilities/issues/36)
+
 # [2.0.0-dev.90](https://github.com/Emil-Software/emilsoftware-utilities/compare/v2.0.0-dev.89...v2.0.0-dev.90) (2026-11-05)
 
 
