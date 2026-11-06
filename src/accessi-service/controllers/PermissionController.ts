@@ -33,6 +33,7 @@ import { AssignRolesToUserRequest } from '../dtos/AssignRolesToUserRequest';
 import {
   CreateScopeRequest,
   GetMenuScopesResponse,
+  GetScopeMenusResponse,
   GetScopesResponse,
   SetMenuScopesRequest,
   SetScopeMenusRequest,
@@ -708,6 +709,19 @@ export class PermissionController {
       ensureAdmin(getAuthenticatedAccessiUser(request), 'Solo gli amministratori possono modificare gli scope.');
       await this.permissionService.setMenuScopes(codiceMenu, body.scopes);
       return RestUtilities.sendOKMessage(res, `Scope del menu ${codiceMenu} aggiornati con successo.`);
+    } catch (error) {
+      return this.sendControllerError(res, error);
+    }
+  }
+
+  @ApiOperation({ summary: 'Menu associati a uno scope', operationId: 'getScopeMenus' })
+  @ApiParam({ name: 'codiceScope', description: 'Codice dello scope', required: true })
+  @ApiOkResponse({ description: 'Menu dello scope', type: GetScopeMenusResponse })
+  @Get('scopes/:codiceScope/menus')
+  async getScopeMenus(@Param('codiceScope') codiceScope: string, @Res() res: Response) {
+    try {
+      const menus = await this.permissionService.getScopeMenus(codiceScope);
+      return RestUtilities.sendBaseResponse(res, menus);
     } catch (error) {
       return this.sendControllerError(res, error);
     }

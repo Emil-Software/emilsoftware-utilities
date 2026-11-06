@@ -60,6 +60,7 @@ export * from './getMenusResponse';
 export * from './getMenuTypesResponse';
 export * from './getRolesResponse';
 export * from './getSchemaResponse';
+export * from './getScopeMenusResponse';
 export * from './getScopesResponse';
 export * from './getServiceTokensParams';
 export * from './getServiceTokensResponse';

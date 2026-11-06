@@ -1082,6 +1082,20 @@ export class PermissionService {
         );
     }
 
+    /** Menu associati a uno scope. */
+    public async getScopeMenus(codiceScope: string): Promise<string[]> {
+        const scope = this.normalizeScopeCode(codiceScope);
+        await this.assertScopeExists(scope);
+        const rows = await Orm.query(
+            this.accessiOptions.databaseOptions,
+            'SELECT CODICE_MENU FROM MENU_SCOPES WHERE CODICE_SCOPE = ? ORDER BY CODICE_MENU',
+            [scope],
+        );
+        return rows
+            .map((row) => String((row as Record<string, unknown>).CODICE_MENU ?? (row as Record<string, unknown>).codiceMenu ?? '').trim())
+            .filter((value) => value.length > 0);
+    }
+
     /** Scope associati a un menu. */
     public async getMenuScopes(codiceMenu: string): Promise<string[]> {
         const code = String(codiceMenu ?? '').trim().toUpperCase();

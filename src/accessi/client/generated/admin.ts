@@ -39,6 +39,7 @@ import type {
   GetMenusResponse,
   GetRolesResponse,
   GetSchemaResponse,
+  GetScopeMenusResponse,
   GetScopesResponse,
   GetUserRolesAndGrantsParams,
   GetUsersParams,
@@ -1401,6 +1402,42 @@ return accessiFetch<setMenuScopesResponse>(getSetMenuScopesUrl(codiceMenu),
     method: 'PUT',
     headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
     body: JSON.stringify(setMenuScopesRequest)
+  }
+);}
+
+
+
+export type getScopeMenusResponse200 = {
+  data: GetScopeMenusResponse
+  status: 200
+}
+
+export type getScopeMenusResponseSuccess = (getScopeMenusResponse200) & {
+  headers: Headers;
+};
+;
+
+export type getScopeMenusResponse = (getScopeMenusResponseSuccess)
+
+export const getGetScopeMenusUrl = (codiceScope: string,) => {
+
+
+
+
+  return `/api/accessi/permission/scopes/${codiceScope}/menus`
+}
+
+/**
+ * @summary Menu associati a uno scope
+ */
+export const getScopeMenus = async (codiceScope: string, options?: Parameters<typeof accessiFetch>[1]): Promise<getScopeMenusResponse> => {
+
+  return accessiFetch<getScopeMenusResponse>(getGetScopeMenusUrl(codiceScope),
+  {
+    ...options,
+    method: 'GET'
+
+
   }
 );}
 

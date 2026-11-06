@@ -80,3 +80,8 @@ export class GetMenuScopesResponse extends BaseResponse {
   @ApiProperty({ type: [String], description: 'Codici degli scope associati al menu.' })
   Result!: string[];
 }
+
+export class GetScopeMenusResponse extends BaseResponse {
+  @ApiProperty({ type: [String], description: 'Codici dei menu associati allo scope.' })
+  Result!: string[];
+}

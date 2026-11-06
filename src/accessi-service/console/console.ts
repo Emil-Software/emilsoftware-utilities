@@ -29,6 +29,7 @@
   getGroupsWithMenus,
   getMenuScopes,
   getMenuTypes,
+  getScopeMenus,
   getScopes,
   getRoles,
   getSchema,
@@ -46,6 +47,7 @@
   setGdpr,
   setGroupEnabled,
   setMenuEnabled,
+  setMenuScopes,
   setScopeMenus,
   setStatoRegistrazione,
   setUserPassword,
@@ -1466,7 +1468,7 @@ function menusTable(entries: Array<{ menu: MenuEntity; group: GroupWithMenusEnti
     if (!codice) return 'Non indicato';
     return menuTypes.find((type) => type.codiceTipo === codice)?.descrizioneTipo || codice;
   };
-  return `<div class="menu-table-wrap"><table><thead><tr><th>Stato</th><th>Menu</th><th>Codice</th><th>Gruppo</th><th>Ordine</th><th>Tipo</th><th>Pagina</th><th></th></tr></thead><tbody>${entries.map(({ menu, group }) => `<tr class="${menu.enabled === false ? 'is-disabled' : ''}" data-menu-group="${escapeHtml(group.codiceGruppo)}"><td><label class="table-toggle"><input type="checkbox" data-menu="${escapeHtml(menu.codiceMenu)}" ${menu.enabled !== false ? 'checked' : ''}><span>${menu.enabled === false ? 'Disabilitato' : 'Abilitato'}</span></label></td><td><strong>${escapeHtml(menu.descrizioneMenu)}</strong>${menu.note ? `<br><span class="muted">${escapeHtml(menu.note)}</span>` : ''}</td><td><code>${escapeHtml(menu.codiceMenu)}</code></td><td>${escapeHtml(group.descrizioneGruppo)}</td><td>${escapeHtml(menu.ordineMenu)}</td><td>${escapeHtml(typeLabel(menu.tipo))}</td><td>${menu.pagina ? `<code>${escapeHtml(menu.pagina)}</code>` : '<span class="muted">Non indicata</span>'}</td><td class="row-actions"><button type="button" data-menu-edit="${escapeHtml(menu.codiceMenu)}">Modifica</button><button type="button" class="danger-button" data-menu-delete="${escapeHtml(menu.codiceMenu)}">Elimina</button></td></tr>`).join('') || '<tr><td colspan="8" class="muted">Nessun menu configurato.</td></tr>'}</tbody></table></div>`;
+  return `<div class="menu-table-wrap"><table><thead><tr><th>Stato</th><th>Menu</th><th>Codice</th><th>Gruppo</th><th>Ordine</th><th>Tipo</th><th>Pagina</th><th></th></tr></thead><tbody>${entries.map(({ menu, group }) => `<tr class="${menu.enabled === false ? 'is-disabled' : ''}" data-menu-group="${escapeHtml(group.codiceGruppo)}"><td><label class="table-toggle"><input type="checkbox" data-menu="${escapeHtml(menu.codiceMenu)}" ${menu.enabled !== false ? 'checked' : ''}><span>${menu.enabled === false ? 'Disabilitato' : 'Abilitato'}</span></label></td><td><strong>${escapeHtml(menu.descrizioneMenu)}</strong>${menu.note ? `<br><span class="muted">${escapeHtml(menu.note)}</span>` : ''}</td><td><code>${escapeHtml(menu.codiceMenu)}</code></td><td>${escapeHtml(group.descrizioneGruppo)}</td><td>${escapeHtml(menu.ordineMenu)}</td><td>${escapeHtml(typeLabel(menu.tipo))}</td><td>${menu.pagina ? `<code>${escapeHtml(menu.pagina)}</code>` : '<span class="muted">Non indicata</span>'}</td><td class="row-actions"><button type="button" class="secondary" data-menu-scopes="${escapeHtml(menu.codiceMenu)}">Scope</button><button type="button" data-menu-edit="${escapeHtml(menu.codiceMenu)}">Modifica</button><button type="button" class="danger-button" data-menu-delete="${escapeHtml(menu.codiceMenu)}">Elimina</button></td></tr>`).join('') || '<tr><td colspan="8" class="muted">Nessun menu configurato.</td></tr>'}</tbody></table></div>`;
 }
 
 /** Tabella del catalogo tipi menu con azioni di modifica ed eliminazione. */
@@ -1529,6 +1531,9 @@ async function showMenuItems(): Promise<void> {
       await setMenuEnabled(input.dataset.menu ?? '', { enabled: input.checked });
       showNotice('Menu aggiornato.');
     });
+  });
+  document.querySelectorAll<HTMLButtonElement>('[data-menu-scopes]').forEach((button) => {
+    button.onclick = () => handleAction(() => showMenuScopeForm(button.dataset.menuScopes ?? ''));
   });
   document.querySelectorAll<HTMLButtonElement>('[data-menu-edit]').forEach((button) => {
     button.onclick = () => showMenuForm(entries.find((entry) => entry.menu.codiceMenu === button.dataset.menuEdit)?.menu, groups, menuTypes);
@@ -1595,14 +1600,31 @@ function showScopeForm(scope?: ScopeEntity): void {
 async function showScopeMenus(codiceScope: string): Promise<void> {
   const [groupsResponse, assignedResponse] = await Promise.all([
     getGroupsWithMenus({ includeDisabled: true }),
-    getMenuScopes(codiceScope),
+    getScopeMenus(codiceScope),
   ]);
   const groups = result<GroupWithMenusEntity[]>(groupsResponse);
   const assigned = new Set(result<string[]>(assignedResponse));
-  render(`<form id="scope-menus"><h2>Menu dello scope ${escapeHtml(codiceScope)}</h2><p class="form-help">Seleziona i menu visibili nelle applicazioni associate a questo scope. Il salvataggio sostituisce l'elenco.</p>
-    ${groups.map((group) => `<fieldset class="grant-menu-group"><legend>${escapeHtml(group.descrizioneGruppo)}</legend>${group.menus.map((menu) => `<label class="check"><input type="checkbox" name="menu" value="${escapeHtml(menu.codiceMenu)}" ${assigned.has(menu.codiceMenu) ? 'checked' : ''}><span>${escapeHtml(menu.descrizioneMenu)} <code>${escapeHtml(menu.codiceMenu)}</code></span></label>`).join('')}</fieldset>`).join('')}
+  render(`<form id="scope-menus"><h2>Menu dello scope ${escapeHtml(codiceScope)}</h2><p class="form-help">Seleziona i menu visibili nelle applicazioni associate a questo scope. Usa la casella del gruppo per selezionare o deselezionare tutti i suoi menu. Il salvataggio sostituisce l'elenco.</p>
+    ${groups.map((group) => `<fieldset class="grant-menu-group"><legend><label class="check"><input type="checkbox" data-scope-group="${escapeHtml(group.codiceGruppo)}"><span>${escapeHtml(group.descrizioneGruppo)} <span class="muted">(tutti)</span></span></label></legend>${group.menus.map((menu) => `<label class="check"><input type="checkbox" name="menu" value="${escapeHtml(menu.codiceMenu)}" ${assigned.has(menu.codiceMenu) ? 'checked' : ''}><span>${escapeHtml(menu.descrizioneMenu)} <code>${escapeHtml(menu.codiceMenu)}</code></span></label>`).join('')}</fieldset>`).join('')}
     <div class="toolbar"><button>Salva</button><button type="button" class="secondary" id="cancel-scope-menus">Indietro</button></div></form>`);
   const form = byId('scope-menus') as HTMLFormElement;
+  form.querySelectorAll<HTMLFieldSetElement>('fieldset').forEach(syncScopeGroupToggle);
+  form.querySelectorAll<HTMLInputElement>('[data-scope-group]').forEach((toggle) => {
+    toggle.onchange = () => {
+      const fieldset = toggle.closest('fieldset') as HTMLFieldSetElement | null;
+      if (!fieldset) return;
+      fieldset.querySelectorAll<HTMLInputElement>('input[name="menu"]').forEach((input) => {
+        input.checked = toggle.checked;
+      });
+      syncScopeGroupToggle(fieldset);
+    };
+  });
+  form.querySelectorAll<HTMLInputElement>('input[name="menu"]').forEach((input) => {
+    input.onchange = () => {
+      const fieldset = input.closest('fieldset') as HTMLFieldSetElement | null;
+      if (fieldset) syncScopeGroupToggle(fieldset);
+    };
+  });
   form.onsubmit = (event) => {
     event.preventDefault();
     handleAction(async () => {
@@ -1613,6 +1635,40 @@ async function showScopeMenus(codiceScope: string): Promise<void> {
     });
   };
   byId('cancel-scope-menus').onclick = () => handleAction(showMenuScopes);
+}
+
+/** Allinea la casella del gruppo allo stato dei menu selezionati. */
+function syncScopeGroupToggle(fieldset: HTMLFieldSetElement): void {
+  const toggle = fieldset.querySelector<HTMLInputElement>('[data-scope-group]');
+  if (!toggle) return;
+  const menus = Array.from(fieldset.querySelectorAll<HTMLInputElement>('input[name="menu"]'));
+  const selected = menus.filter((menu) => menu.checked).length;
+  toggle.checked = menus.length > 0 && selected === menus.length;
+  toggle.indeterminate = selected > 0 && selected < menus.length;
+}
+
+/** Assegna gli scope applicativi a un singolo menu. */
+async function showMenuScopeForm(codiceMenu: string): Promise<void> {
+  const [scopesResponse, assignedResponse] = await Promise.all([
+    getScopes(),
+    getMenuScopes(codiceMenu),
+  ]);
+  const scopes = result<ScopeEntity[]>(scopesResponse);
+  const assigned = new Set(result<string[]>(assignedResponse));
+  render(`<form id="menu-scopes"><h2>Scope del menu ${escapeHtml(codiceMenu)}</h2><p class="form-help">Seleziona le applicazioni in cui il menu e visibile. Il salvataggio sostituisce l'elenco.</p>
+    ${scopes.map((scope) => `<label class="check"><input type="checkbox" name="scope" value="${escapeHtml(scope.codice)}" ${assigned.has(scope.codice) ? 'checked' : ''}><span>${escapeHtml(scope.nome)} <code>${escapeHtml(scope.codice)}</code></span></label>`).join('') || '<p class="muted">Nessuno scope configurato.</p>'}
+    <div class="toolbar"><button>Salva</button><button type="button" class="secondary" id="cancel-menu-scopes">Indietro</button></div></form>`);
+  const form = byId('menu-scopes') as HTMLFormElement;
+  form.onsubmit = (event) => {
+    event.preventDefault();
+    handleAction(async () => {
+      const selected = new FormData(form).getAll('scope').map((value) => String(value));
+      await setMenuScopes(codiceMenu, { scopes: selected });
+      showNotice('Scope del menu aggiornati.');
+      await showMenuItems();
+    });
+  };
+  byId('cancel-menu-scopes').onclick = () => handleAction(showMenuItems);
 }
 
 /** Gestione dei tipi menu: elenco, creazione, modifica ed eliminazione. */

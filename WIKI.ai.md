@@ -786,6 +786,10 @@ Catalogo di navigazione e CRUD completo (superutente).
 | GET | /api/accessi/permission/menus | Menu attivi. |
 | GET | /api/accessi/permission/menu-types | Catalogo dei tipi menu. |
 | GET | /api/accessi/permission/groups-with-menus?includeDisabled=true | Gruppi con menu (anche disabilitati). |
+| GET | /api/accessi/permission/scopes | Catalogo degli scope applicativi. |
+| GET/PUT | /api/accessi/permission/menus/:codiceMenu/scopes | Scope di un menu (sostituzione completa). |
+| GET/PUT | /api/accessi/permission/scopes/:codiceScope/menus | Menu di uno scope (sostituzione completa). |
+| POST/PUT/DELETE | /api/accessi/permission/scopes[/:codiceScope] | CRUD degli scope applicativi. |
 | POST | /api/accessi/permission/menus | Crea un menu. |
 | PUT | /api/accessi/permission/menus/:codiceMenu | Aggiorna un menu. |
 | DELETE | /api/accessi/permission/menus/:codiceMenu | Elimina un menu (con grant e associazioni ai ruoli). |
@@ -794,6 +798,7 @@ Catalogo di navigazione e CRUD completo (superutente).
 | DELETE | /api/accessi/permission/menu-groups/:codiceGruppo | Elimina un gruppo (solo se vuoto). |
 | POST/PUT/DELETE | /api/accessi/permission/menu-types[/:codiceTipo] | CRUD dei tipi menu. |
 I codici (CODMNU, CODGRP, CODTIP) sono chiavi immutabili: si indicano in creazione e poi si passano nel percorso. Un gruppo o un tipo si elimina solo se non è referenziato.
+Uno scope decide in quali applicazioni un menu è visibile. L'app passa gli scope al login (`scope=STEX`) e i grant vengono filtrati tramite MENU_SCOPES; un menu può appartenere a più scope. La console modifica le associazioni da entrambi i lati: menu -> scope e scope -> menu, anche selezionando un intero gruppo.
 ```ts
 await createMenuGroup({ codiceGruppo: 'A', descrizioneGruppo: 'Amministrazione', ordineGruppo: 1, enabled: true });
 await createMenuType({ codiceTipo: 'X', descrizioneTipo: 'Operativo' });
@@ -1191,8 +1196,8 @@ Tutte le rotte /api/accessi/* in una tabella.
 | Auth | POST auth/login, auth/get-user-by-token, auth/confirm-reset-password/:token, auth/refresh, auth/revoke-sessions, auth/revoke-token, auth/two-factor/verify, auth/two-factor/resend |
 | Email | POST email/send-reset-password-email, GET email/reset-password-page/:token |
 | Utenti | GET user/get-users, POST user/create-managed-user, PUT user/update-user/:codiceUtente, DELETE user/delete-user/:codiceUtente, DELETE user/delete-user-permanent/:codiceUtente, POST user/set-password/:codiceUtente, POST user/set-stato, PATCH user/set-gdpr/:codiceUtente, POST user/register, POST user/login-as/:codiceUtente |
-| Permessi | GET permission/roles, POST permission/create-role, PUT permission/update-role/:codiceRuolo, DELETE permission/delete-role/:codiceRuolo, POST permission/assign-roles/:codiceUtente, POST permission/assign-permissions/:codiceUtente, GET permission/grants/:codiceUtente, GET permission/menus, GET permission/menu-types, GET permission/groups-with-menus |
-| Catalogo | POST/PUT/DELETE permission/menus[/:codiceMenu], permission/menu-groups[/:codiceGruppo], permission/menu-types[/:codiceTipo] |
+| Permessi | GET permission/roles, POST permission/create-role, PUT permission/update-role/:codiceRuolo, DELETE permission/delete-role/:codiceRuolo, POST permission/assign-roles/:codiceUtente, POST permission/assign-permissions/:codiceUtente, GET permission/grants/:codiceUtente, GET permission/menus, GET permission/menu-types, GET permission/groups-with-menus, GET permission/scopes, GET/PUT permission/menus/:codiceMenu/scopes, GET/PUT permission/scopes/:codiceScope/menus |
+| Catalogo | POST/PUT/DELETE permission/menus[/:codiceMenu], permission/menu-groups[/:codiceGruppo], permission/menu-types[/:codiceTipo], permission/scopes[/:codiceScope] |
 | Configurator | PATCH configurator/menus/:codiceMenu/enabled, PATCH configurator/groups/:codiceGruppo/enabled |
 | SSO | GET/POST federated-auth/providers, PATCH/DELETE providers/:provider, GET/POST users/:codiceUtente/identities, POST users, PATCH users/:codiceUtente/password-login |
 | Token | POST/GET service-token, DELETE service-token/:tokenId, POST service-token/:tokenId/rotate |

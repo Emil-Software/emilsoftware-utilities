@@ -1,6 +1,8 @@
 require('ts-node/register/transpile-only');
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const path = require('node:path');
 const {
   MENU_SCOPE_SEED,
   MENU_SCOPE_SEED_VERSION,
@@ -34,4 +36,18 @@ test('seed scope: i codici menu rispettano il limite della colonna', () => {
     assert.ok(scope.code.length <= 20, `codice scope troppo lungo: ${scope.code}`);
     assert.ok(scope.name.trim().length > 0, `scope ${scope.code} senza nome`);
   }
+});
+
+test('console: il dettaglio di uno scope carica i menu dello scope, non gli scope di un menu', () => {
+  const source = fs.readFileSync(
+    path.join(__dirname, '..', 'src', 'accessi-service', 'console', 'console.ts'),
+    'utf8',
+  );
+  assert.match(source, /getScopeMenus\(codiceScope\)/, 'lo scope deve leggere i menu con getScopeMenus');
+  assert.doesNotMatch(
+    source,
+    /getMenuScopes\(codiceScope\)/,
+    'getMenuScopes accetta un codice menu: usarlo con lo scope produce "Il menu ... non esiste"',
+  );
+  assert.match(source, /setMenuScopes\(codiceMenu, \{ scopes: selected \}\)/, 'il menu deve poter assegnare i propri scope');
 });

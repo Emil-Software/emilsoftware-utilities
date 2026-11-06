@@ -133,6 +133,34 @@ test('getMenus returns the camelCase menu contract with ordering metadata', asyn
   ]);
 });
 
+test('getScopeMenus returns the menus assigned to a scope and normalizes the code', async t => {
+  const calls = [];
+  t.mock.method(Orm, 'query', async (_options, sql, params) => {
+    calls.push({ sql, params });
+    if (sql.includes('COUNT(*) FROM SCOPES')) return [{ COUNT: 1 }];
+    return [{ CODICE_MENU: 'MNUMAIN' }, { codiceMenu: 'MNUUTENTI' }];
+  });
+
+  const service = new PermissionService({ databaseOptions: {} });
+  const menus = await service.getScopeMenus('stex');
+
+  assert.deepEqual(menus, ['MNUMAIN', 'MNUUTENTI']);
+  assert.match(calls[0].sql, /FROM SCOPES/);
+  assert.match(calls[1].sql, /FROM MENU_SCOPES/);
+  assert.match(calls[1].sql, /CODICE_SCOPE = \?/);
+  assert.deepEqual(calls[1].params, ['STEX']);
+});
+
+test('getScopeMenus rejects a scope that does not exist', async t => {
+  t.mock.method(Orm, 'query', async (_options, sql) => {
+    if (sql.includes('COUNT(*) FROM SCOPES')) return [{ COUNT: 0 }];
+    return [];
+  });
+
+  const service = new PermissionService({ databaseOptions: {} });
+  await assert.rejects(() => service.getScopeMenus('NOPE'), /Lo scope NOPE non esiste/);
+});
+
 test('legacy role menus survive missing description and default to read level', async t => {
   t.mock.method(Orm, 'query', async (_options, sql) => {
     if (sql.includes('FLGSUPER')) return [{ FLAG_SUPER: '0' }];
