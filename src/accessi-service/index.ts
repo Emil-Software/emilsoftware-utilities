@@ -67,7 +67,10 @@ export async function initializeAccessiModule(
     const logger: Logger = new Logger("initializeAccessiModule");
     beginAccessiAuthInitialization();
     const startedAt = performance.now();
-    const resolvedOpenApi = resolveAccessiOpenApiOptions(options.openapi);
+    const resolvedOpenApi = resolveAccessiOpenApiOptions(
+        options.publicBaseUrl !== undefined ? { publicBaseUrl: options.publicBaseUrl } : undefined,
+        options.openapi
+    );
 
     try {
         // Preflight bloccante: nessuna rotta, provider o listener prima che il DB sia sano.

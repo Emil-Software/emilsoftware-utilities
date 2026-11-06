@@ -56,6 +56,9 @@ export async function initEmilsoftwareModule(
         // `/<modulo>/openapi`).
         // Precedenza: EmilsoftwareOptions.openapi > AccessiOptions.openapi > default.
         const resolvedOpenApi = resolveAccessiOpenApiOptions(
+            options?.accessiOptions?.publicBaseUrl !== undefined
+                ? { publicBaseUrl: options.accessiOptions.publicBaseUrl }
+                : undefined,
             options?.accessiOptions?.openapi,
             options?.openapi
         );

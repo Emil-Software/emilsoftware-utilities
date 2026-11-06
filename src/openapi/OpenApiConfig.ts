@@ -17,17 +17,25 @@ export type OpenApiSetupOptions = {
     openApiJsonPath?: string;
     title?: string;
     description?: string;
+    /**
+     * Base URL pubblica usata nei log degli indirizzi OpenAPI.
+     *
+     * Se assente si prova a ricavare la porta dal server HTTP; se non e
+     * determinabile viene loggato il solo path relativo, mai `localhost:3000`.
+     */
+    publicBaseUrl?: string;
     /** Callback invocata subito dopo la generazione del documento OpenAPI. */
     onDocument?: (document: OpenAPIObject) => void;
 };
 
-/** Opzioni OpenAPI risolte: nessun campo opzionale salvo il callback. */
+/** Opzioni OpenAPI risolte: nessun campo opzionale salvo callback e base URL. */
 export interface ResolvedOpenApiSetupOptions {
     enabled: boolean;
     openApiPath: string;
     openApiJsonPath: string;
     title: string;
     description: string;
+    publicBaseUrl?: string;
     onDocument?: (document: OpenAPIObject) => void;
 }
 
@@ -62,6 +70,13 @@ function normalizeOpenApiJsonPath(value: string): string {
     return value.replace(/^\/+|\/+$/g, "");
 }
 
+/** Normalizza una base URL rimuovendo spazi e slash finali; vuota diventa `undefined`. */
+function normalizePublicBaseUrl(value: string | undefined): string | undefined {
+    const trimmed = value?.trim();
+    if (!trimmed) return undefined;
+    return trimmed.replace(/\/+$/, "");
+}
+
 /**
  * Unisce i livelli di configurazione ignorando le proprieta `undefined`.
  *
@@ -80,6 +95,7 @@ function mergeOpenApiSetupOptions(
         if (override.openApiJsonPath !== undefined) merged.openApiJsonPath = override.openApiJsonPath;
         if (override.title !== undefined) merged.title = override.title;
         if (override.description !== undefined) merged.description = override.description;
+        if (override.publicBaseUrl !== undefined) merged.publicBaseUrl = override.publicBaseUrl;
         if (override.onDocument !== undefined) merged.onDocument = override.onDocument;
     }
     return merged;
@@ -108,6 +124,7 @@ export function resolveOpenApiSetupOptions(
     const jsonPathCandidate = explicitJsonPath
         ?? (hasOverrides ? `${openApiPath}.json` : (merged.openApiJsonPath ?? `${openApiPath}.json`));
     const openApiJsonPath = normalizeOpenApiJsonPath(jsonPathCandidate) || `${openApiPath}.json`;
+    const publicBaseUrl = normalizePublicBaseUrl(merged.publicBaseUrl);
 
     return {
         enabled: merged.enabled !== false,
@@ -115,6 +132,7 @@ export function resolveOpenApiSetupOptions(
         openApiJsonPath,
         title: merged.title ?? "API Documentation",
         description: merged.description ?? "API per la gestione di accessi utenti e allegati",
+        ...(publicBaseUrl ? { publicBaseUrl } : {}),
         ...(merged.onDocument ? { onDocument: merged.onDocument } : {}),
     };
 }
@@ -150,6 +168,40 @@ export function isOpenApiRequestPath(path: string, options: ResolvedOpenApiSetup
     if (path === uiPath || path.startsWith(`${uiPath}/`)) return true;
 
     return path === `/${options.openApiJsonPath}` || path === `/${options.openApiPath}-json`;
+}
+
+/**
+ * Risolve la base URL da usare nei log OpenAPI.
+ *
+ * Ordine: `publicBaseUrl` configurata, porta del server HTTP, nessuna base
+ * (il chiamante loggera il path relativo). Non esiste un fallback a `3000`.
+ */
+export function resolveOpenApiDocumentationBaseUrl(
+    app: Pick<INestApplication, "getHttpServer">,
+    options?: Pick<OpenApiSetupOptions, "publicBaseUrl">,
+): string | undefined {
+    const publicBaseUrl = normalizePublicBaseUrl(options?.publicBaseUrl);
+    if (publicBaseUrl) return publicBaseUrl;
+
+    const serverAddress = app.getHttpServer()?.address?.();
+    if (serverAddress && typeof serverAddress === "object") {
+        const port = (serverAddress as AddressInfo).port;
+        if (Number.isInteger(port) && port > 0) {
+            return `http://localhost:${port}`;
+        }
+    }
+
+    return undefined;
+}
+
+/** Compone l'URL OpenAPI; senza base URL restituisce il solo path relativo. */
+export function formatOpenApiDocumentationUrl(
+    baseUrl: string | undefined,
+    path: string,
+): string {
+    const relativePath = `/${normalizeOpenApiPath(path)}`;
+    const normalizedBaseUrl = normalizePublicBaseUrl(baseUrl);
+    return normalizedBaseUrl ? `${normalizedBaseUrl}${relativePath}` : relativePath;
 }
 
 /**
@@ -193,16 +245,13 @@ export function setupOpenApi(app: INestApplication, options?: OpenApiSetupOption
         });
     }
 
-    const serverAddress = app.getHttpServer()?.address?.();
-    const port = serverAddress && typeof serverAddress === "object"
-        ? (serverAddress as AddressInfo).port
-        : 3000;
+    const baseUrl = resolveOpenApiDocumentationBaseUrl(app, resolved);
 
     logger.info(
-        `OpenAPI documentation available at: http://localhost:${port}/${resolved.openApiPath}`
+        `OpenAPI documentation available at: ${formatOpenApiDocumentationUrl(baseUrl, resolved.openApiPath)}`
     );
     logger.info(
-        `OpenAPI JSON available at: http://localhost:${port}/${resolved.openApiJsonPath}`
+        `OpenAPI JSON available at: ${formatOpenApiDocumentationUrl(baseUrl, resolved.openApiJsonPath)}`
     );
 
     return document;

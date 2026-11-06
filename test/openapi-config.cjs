@@ -10,10 +10,13 @@ const {
   DEFAULT_ACCESSI_OPENAPI,
   resolveAccessiOpenApiOptions,
   resolveOpenApiSetupOptions,
+  resolveOpenApiDocumentationBaseUrl,
+  formatOpenApiDocumentationUrl,
   buildOpenApiExcludePaths,
   isOpenApiRequestPath,
   setupOpenApi,
 } = require('../src/openapi/OpenApiConfig');
+const { Logger } = require('../src/Logger');
 const { AccessiModule } = require('../src/accessi-service/AccessiModule');
 const { initializeAccessiModule } = require('../src/accessi-service');
 const { AccessiDatabaseUpdater } = require('../src/accessi-service/database-updates/AccessiDatabaseUpdater');
@@ -179,6 +182,136 @@ test('override espliciti undefined non cancellano i default', () => {
 
   assert.equal(resolved.openApiPath, 'accessi/openapi');
   assert.equal(resolved.title, 'Accessi API Documentation');
+});
+
+test('publicBaseUrl viene normalizzata e propagata senza alterare i default', () => {
+  assert.equal(resolveAccessiOpenApiOptions().publicBaseUrl, undefined);
+  assert.equal(
+    resolveAccessiOpenApiOptions({ publicBaseUrl: ' https://accessi.example.test/ ' }).publicBaseUrl,
+    'https://accessi.example.test',
+  );
+
+  // Un override senza publicBaseUrl non cancella quella del livello precedente.
+  const inherited = resolveAccessiOpenApiOptions(
+    { publicBaseUrl: 'https://accessi.example.test/' },
+    { title: 'Host title' },
+  );
+  assert.equal(inherited.publicBaseUrl, 'https://accessi.example.test');
+  assert.equal(inherited.title, 'Host title');
+
+  // Il livello successivo vince quando la publicBaseUrl e esplicita.
+  assert.equal(
+    resolveAccessiOpenApiOptions(
+      { publicBaseUrl: 'https://accessi.example.test' },
+      { publicBaseUrl: 'https://host.example.test/' },
+    ).publicBaseUrl,
+    'https://host.example.test',
+  );
+});
+
+test('resolveOpenApiDocumentationBaseUrl non usa mai 3000 come fallback', () => {
+  const listeningApp = { getHttpServer: () => ({ address: () => ({ port: 4321 }) }) };
+  const notListeningApp = { getHttpServer: () => ({ address: () => null }) };
+  const pipeApp = { getHttpServer: () => ({ address: () => '\\\\.\\pipe\\accessi' }) };
+
+  assert.equal(
+    resolveOpenApiDocumentationBaseUrl(listeningApp),
+    'http://localhost:4321',
+  );
+  assert.equal(
+    resolveOpenApiDocumentationBaseUrl(notListeningApp),
+    undefined,
+  );
+  assert.equal(resolveOpenApiDocumentationBaseUrl(pipeApp), undefined);
+  assert.equal(
+    resolveOpenApiDocumentationBaseUrl(notListeningApp, { publicBaseUrl: 'https://accessi.example.test/' }),
+    'https://accessi.example.test',
+  );
+  assert.equal(
+    formatOpenApiDocumentationUrl(undefined, '/accessi/openapi/'),
+    '/accessi/openapi',
+  );
+});
+
+test('setupOpenApi logga path relativi quando la porta non e determinabile', t => {
+  const document = { openapi: '3.0.0', paths: {} };
+  t.mock.method(SwaggerModule, 'createDocument', () => document);
+  t.mock.method(SwaggerModule, 'setup', () => undefined);
+  const log = t.mock.method(Logger.prototype, 'info', () => undefined);
+  const app = createFakeApp();
+  app.getHttpServer = () => ({ address: () => null });
+
+  setupOpenApi(app, {
+    openApiPath: 'accessi/openapi',
+    openApiJsonPath: 'accessi/openapi.json',
+  });
+
+  const messages = log.mock.calls.map(call => String(call.arguments[0]));
+  assert.ok(messages.includes('OpenAPI documentation available at: /accessi/openapi'));
+  assert.ok(messages.includes('OpenAPI JSON available at: /accessi/openapi.json'));
+  assert.equal(messages.some(message => message.includes('localhost:3000')), false);
+});
+
+test('setupOpenApi usa publicBaseUrl nei log quando configurata', t => {
+  const document = { openapi: '3.0.0', paths: {} };
+  t.mock.method(SwaggerModule, 'createDocument', () => document);
+  t.mock.method(SwaggerModule, 'setup', () => undefined);
+  const log = t.mock.method(Logger.prototype, 'info', () => undefined);
+
+  setupOpenApi(createFakeApp(), {
+    openApiPath: 'accessi/openapi',
+    openApiJsonPath: 'accessi/openapi.json',
+    publicBaseUrl: 'https://accessi.example.test/',
+  });
+
+  const messages = log.mock.calls.map(call => String(call.arguments[0]));
+  assert.ok(messages.includes(
+    'OpenAPI documentation available at: https://accessi.example.test/accessi/openapi',
+  ));
+  assert.ok(messages.includes(
+    'OpenAPI JSON available at: https://accessi.example.test/accessi/openapi.json',
+  ));
+});
+
+test('setupOpenApi usa la porta effettiva quando il server e in ascolto', t => {
+  const document = { openapi: '3.0.0', paths: {} };
+  t.mock.method(SwaggerModule, 'createDocument', () => document);
+  t.mock.method(SwaggerModule, 'setup', () => undefined);
+  const log = t.mock.method(Logger.prototype, 'info', () => undefined);
+
+  setupOpenApi(createFakeApp(), {
+    openApiPath: 'accessi/openapi',
+    openApiJsonPath: 'accessi/openapi.json',
+  });
+
+  const messages = log.mock.calls.map(call => String(call.arguments[0]));
+  assert.ok(messages.includes(
+    'OpenAPI documentation available at: http://localhost:4321/accessi/openapi',
+  ));
+  assert.ok(messages.includes(
+    'OpenAPI JSON available at: http://localhost:4321/accessi/openapi.json',
+  ));
+});
+
+test('initializeAccessiModule propaga AccessiOptions.publicBaseUrl ai log OpenAPI', async t => {
+  const document = { openapi: '3.0.0', paths: {} };
+  const nestApp = createFakeNestApp();
+  t.mock.method(NestFactory, 'create', async () => nestApp);
+  t.mock.method(SwaggerModule, 'createDocument', () => document);
+  t.mock.method(SwaggerModule, 'setup', () => undefined);
+  const log = t.mock.method(Logger.prototype, 'info', () => undefined);
+
+  await initializeAccessiModule(express(), buildAccessiOptions({
+    publicBaseUrl: 'https://accessi.example.test/',
+  }));
+
+  const messages = log.mock.calls.map(call => String(call.arguments[0]));
+  assert.ok(messages.includes(
+    'OpenAPI documentation available at: https://accessi.example.test/accessi/openapi',
+  ));
+  assert.ok(messages.includes(
+    'OpenAPI JSON available at: https://accessi.example.test/accessi/openapi.json',
+  ));
 });
 
 test('setupOpenApi mantiene i default generici e monta il documento', t => {
